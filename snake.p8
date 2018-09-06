@@ -494,7 +494,11 @@ gamedraw=function()
 		elseif a.typ==apple.slow then
 			spr(51,a.x*8,a.y*8)
 		else
-			spr(48,a.x*8,a.y*8)
+			if a.rottime<45 and a.rottime%4<2 then
+				spr(49,a.x*8,a.y*8)
+			else
+			 spr(48,a.x*8,a.y*8)
+			end
 		end
 	end
 	
