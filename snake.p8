@@ -90,6 +90,15 @@ apple.new=function(typ)
 	return a
 end
 
+apple.hastyp=function(typ)
+	for a in all(apples) do
+		if a.typ==typ then
+			return true
+			end
+	end
+	return false
+end
+
 apple.nearany=function(x,y)
 	for a in all(apples) do
 		if abs(a.x-x)<=1 and
@@ -493,6 +502,7 @@ gameupdate=function()
 				else
 					msg.newscore(a.x*8,a.y*8,'yum!')
 				end
+				apple.new(apple.norm)
 			elseif a.typ==apple.fast then
 				if snaketime>snaketimemin then
 					snaketime-=1
@@ -506,9 +516,19 @@ gameupdate=function()
 				end
 				_score=50
 			end
-			apple.new(a.typ)
 			snakegrow+=1
 			score+=_score
+		end
+
+		-- add new faster/slower
+		if apple.hastyp(apple.slow)==false and
+				 snaketime<snaketimemax then
+			apple.new(apple.slow)
+		end
+
+		if apple.hastyp(apple.fast)==false and
+				 snaketime>snaketimemin then
+			apple.new(apple.fast)
 		end
 		
 		-- go rotten
