@@ -428,19 +428,29 @@ gameupdate=function()
   	s=snake[i]
   	if snake1x==s[1] and
   				snake1y==s[2] then
-  		chgscene('splash')
+				deathreason='snake'
+				chgscene('gameover')
   	end
   end
   for p in all(poops) do
   	if snake1x==p.x and
   				snake1y==p.y then
-  		chgscene('splash')
+				deathreason='poop'
+				chgscene('gameover')
+			end
+		end
+		for b in all(beetles) do
+			if snake1x==b.x and
+						snake1y==b.y then
+				deathreason='beetle'
+				chgscene('gameover')
   	end
   end
   if snake1x<0 or snake1x>15 or
   			snake1y<0 or snake1y>15 then
-  	chgscene('splash')
-  end
+			deathreason='border'
+				chgscene('gameover')
+		end
  end
 
  -- update beetles
@@ -684,7 +694,7 @@ function chgscene(s)
 	if s=='game' then
 		curscene=s
 		gameinit()
-	elseif s=='splash' then
+	else
 		curscene=s
 	end
 end
@@ -694,6 +704,12 @@ function _update()
 	if curscene=='game' then
 		gameupdate()
 	elseif curscene=='splash' then
+		t+=1
+		if btn(4) or btn(5) then
+			t=0
+			chgscene('game')
+		end
+	elseif curscene=='gameover' then
 		t+=1
 		if btn(4) or btn(5) then
 			t=0
@@ -739,9 +755,20 @@ function _draw()
 		end
 		
 		if t%20<10 then
- 		print('press 🅾️ to start',
- 				30,110,7)
- 	end
+			print('press 🅾️ to start',
+					30,110,7)
+		end
+	elseif curscene=='gameover' then
+		pal(14,13)
+		gamedraw()
+		deaths={
+			beetle='beetles are poisonous',
+			poop='that\'s disgusting',
+			border='you can\'t go outside',
+			snake='don\'t eat yourself',
+		}
+		s=deaths[deathreason]
+		print(s,64-#s*2,100,7)
 	end
 end
 
