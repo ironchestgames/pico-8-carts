@@ -738,6 +738,8 @@ function _draw()
 			border='you can\'t go outside',
 			snake='don\'t eat yourself',
 		}
+		s='game over'
+		print(s,64-#s*2,30,8)
 		s=deaths[deathreason]
 		print(s,64-#s*2,50,1)
 		s='score: '..score
