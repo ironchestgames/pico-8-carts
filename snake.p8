@@ -175,19 +175,19 @@ beetle.new=function(p)
 
 	i=0
 	repeat
-	 b.d=flr(rnd(3))
+		b.d=flr(rnd(3))
 		if b.d==right then
 			b.x=0
 			b.y=p.y
 		elseif b.d==left then
-		 b.x=15
-		 b.y=p.y
+			b.x=15
+			b.y=p.y
 		elseif b.d==down then
-		 b.x=p.x
-		 b.y=0
+			b.x=p.x
+			b.y=0
 		elseif b.d==up then
-		 b.x=p.x
-		 b.y=15
+			b.x=p.x
+			b.y=15
 		end
 		i+=1
 	until i==4 or isposempty(b.x,b.y)
@@ -229,8 +229,8 @@ end
 
 getemptypos=function()
 	repeat
- 	x=flr(rnd()*16)
- 	y=flr(rnd()*16)
+		x=flr(rnd()*16)
+		y=flr(rnd()*16)
 	until isposempty(x,y)
 	return x,y
 end
@@ -299,17 +299,17 @@ addinp=function(i)
 	if #inputq>0 then
 		last=inputq[#inputq]
 		if
- 			(i==left and last!=right) or
- 			(i==right and last!=left) or
- 			(i==up and last!=down) or
- 			(i==down and last!=up) then
+				(i==left and last!=right) or
+				(i==right and last!=left) or
+				(i==up and last!=down) or
+				(i==down and last!=up) then
 			add(inputq,i)
 		end
 	elseif
- 	 (i==left and snakedir!=right) or
- 		(i==right and snakedir!=left) or
- 		(i==up and snakedir!=down) or
- 		(i==down and snakedir!=up) then
+			(i==left and snakedir!=right) or
+			(i==right and snakedir!=left) or
+			(i==up and snakedir!=down) or
+			(i==down and snakedir!=up) then
 		add(inputq,i)
 	end
 end
@@ -324,9 +324,9 @@ gameinit=function()
 	snakegrow=1
 	snakedir=down
 	snake={
-	 {8,5},
-	 {8,4},
-	 {8,3},
+		{8,5},
+		{8,4},
+		{8,3},
 	}
 
 	score=0
@@ -370,51 +370,51 @@ gameupdate=function()
 		end
 		
 		-- calc new pos
- 	newx=snake[1][1]
- 	newy=snake[1][2]
- 	if snakedir==left then
- 	 newx+=-1
- 	elseif snakedir==right then
- 		newx+=1
- 	elseif snakedir==up then
- 		newy+=-1
- 	elseif snakedir==down then
- 		newy+=1
- 	end
- 	
- 	-- grow snake
- 	if snakegrow>0 then
- 		snake=unshift(snake,{
- 			newx,
- 			newy,
- 		})
- 		snakegrow-=1
- 	-- ...or move it
- 	else
-  	for i=#snake,2,-1 do
-  		before=snake[i-1]
-  		cur=snake[i]
-  		cur[1]=before[1]
-  		cur[2]=before[2]
-  	end
-  	snake[1][1]=newx
-  	snake[1][2]=newy
-  end
-  
-  -- game over check
-  snake1x=snake[1][1]
-  snake1y=snake[1][2]
-  for i=2,#snake do
-  	s=snake[i]
-  	if snake1x==s[1] and
-  				snake1y==s[2] then
+		newx=snake[1][1]
+		newy=snake[1][2]
+		if snakedir==left then
+			newx+=-1
+		elseif snakedir==right then
+			newx+=1
+		elseif snakedir==up then
+			newy+=-1
+		elseif snakedir==down then
+			newy+=1
+		end
+		
+		-- grow snake
+		if snakegrow>0 then
+			snake=unshift(snake,{
+				newx,
+				newy,
+			})
+			snakegrow-=1
+		-- ...or move it
+		else
+			for i=#snake,2,-1 do
+				before=snake[i-1]
+				cur=snake[i]
+				cur[1]=before[1]
+				cur[2]=before[2]
+			end
+			snake[1][1]=newx
+			snake[1][2]=newy
+		end
+		
+		-- game over check
+		snake1x=snake[1][1]
+		snake1y=snake[1][2]
+		for i=2,#snake do
+			s=snake[i]
+			if snake1x==s[1] and
+						snake1y==s[2] then
 				deathreason='snake'
 				chgscene('gameover')
-  	end
-  end
-  for p in all(poops) do
-  	if snake1x==p.x and
-  				snake1y==p.y then
+			end
+		end
+		for p in all(poops) do
+			if snake1x==p.x and
+						snake1y==p.y then
 				deathreason='poop'
 				chgscene('gameover')
 			end
@@ -424,113 +424,113 @@ gameupdate=function()
 						snake1y==b.y then
 				deathreason='beetle'
 				chgscene('gameover')
-  	end
-  end
-  if snake1x<0 or snake1x>15 or
-  			snake1y<0 or snake1y>15 then
+			end
+		end
+		if snake1x<0 or snake1x>15 or
+					snake1y<0 or snake1y>15 then
 			deathreason='border'
 				chgscene('gameover')
 		end
- end
+	end
 
- -- update beetles
- if #poops>=1 and #beetles==0 then
- 	beetle.new(poop.getrnd())
- end
+	-- update beetles
+	if #poops>=1 and #beetles==0 then
+		beetle.new(poop.getrnd())
+	end
 
- for b in all(beetles) do
- 	if isoutside(b.x,b.y) then
- 		del(beetles,b)
- 	elseif b.movetime<=0 then
+	for b in all(beetles) do
+		if isoutside(b.x,b.y) then
+			del(beetles,b)
+		elseif b.movetime<=0 then
 
-	 	nextx=b.x
-	 	nexty=b.y
-	 	if b.d==right then
-	 		nextx+=1
-	 	elseif b.d==left then
-	 	 nextx-=1
-	 	elseif b.d==down then
-	 	 nexty+=1
-	 	elseif b.d==up then
-	 	 nexty-=1
-	 	end
+			nextx=b.x
+			nexty=b.y
+			if b.d==right then
+				nextx+=1
+			elseif b.d==left then
+				nextx-=1
+			elseif b.d==down then
+				nexty+=1
+			elseif b.d==up then
+				nexty-=1
+			end
 
-	 	p=poop.getpoop(nextx,nexty)
-	 	if isposempty(nextx,nexty) then
-	 		b.x=nextx
-	 		b.y=nexty
-	 	elseif p!=nil then
-	 		poop.remove(p)
-	 		_score=100*b.scorefactor
-	 		score+=_score
-	 		b.scorefactor+=1
-	 		msg.newscore(p.x*8,p.y*8,_score..'')
-	 	else
-	 		b.d+=1 -- rotate direction
-	 		if b.d>3 then
-	 			b.d=0
-	 		end
-	 	end
-	 	b.movetime=b.movespd
-	 else
-	 	b.movetime-=1
-	 end
- end
- 
- -- update apple
- for a in all(apples) do
- 
- 	-- get eaten
- 	if a.x==snake[1][1] and
- 				a.y==snake[1][2] then
- 		del(apples,a)
- 		if a.typ==apple.norm then
- 			_score=200
-  		last=snake[#snake]
-  		if a.rotten==true then
-   			poop.new(last[1],last[2])
-   	else
-   	 msg.newscore(a.x*8,a.y*8,'yum!')
-   	end
-  	elseif a.typ==apple.fast then
-  		if snaketime>snaketimemin then
-	  		snaketime-=1
-	  		msg.newfaster(a.x*8,a.y*8)
-	  	end
-	  	_score=50
-  	elseif a.typ==apple.slow then
-  		if snaketime<snaketimemax then
-	  		snaketime+=1
-	  		msg.newslower(a.x*8,a.y*8)
-	  	end
-	  	_score=50
-  	end
-  	apple.new(a.typ)
- 		snakegrow+=1
- 		score+=_score
- 	end
- 	
- 	-- go rotten
- 	if a.typ==apple.norm and
+			p=poop.getpoop(nextx,nexty)
+			if isposempty(nextx,nexty) then
+				b.x=nextx
+				b.y=nexty
+			elseif p!=nil then
+				poop.remove(p)
+				_score=100*b.scorefactor
+				score+=_score
+				b.scorefactor+=1
+				msg.newscore(p.x*8,p.y*8,_score..'')
+			else
+				b.d+=1 -- rotate direction
+				if b.d>3 then
+					b.d=0
+				end
+			end
+			b.movetime=b.movespd
+		else
+			b.movetime-=1
+		end
+	end
+	
+	-- update apple
+	for a in all(apples) do
+	
+		-- get eaten
+		if a.x==snake[1][1] and
+					a.y==snake[1][2] then
+			del(apples,a)
+			if a.typ==apple.norm then
+				_score=200
+				last=snake[#snake]
+				if a.rotten==true then
+						poop.new(last[1],last[2])
+				else
+					msg.newscore(a.x*8,a.y*8,'yum!')
+				end
+			elseif a.typ==apple.fast then
+				if snaketime>snaketimemin then
+					snaketime-=1
+					msg.newfaster(a.x*8,a.y*8)
+				end
+				_score=50
+			elseif a.typ==apple.slow then
+				if snaketime<snaketimemax then
+					snaketime+=1
+					msg.newslower(a.x*8,a.y*8)
+				end
+				_score=50
+			end
+			apple.new(a.typ)
+			snakegrow+=1
+			score+=_score
+		end
+		
+		-- go rotten
+		if a.typ==apple.norm and
 				a.rotten==false then
 			a.rottime-=1
 			if a.rottime<=0 then
- 			a.rotten=true
- 		end
+				a.rotten=true
+			end
 		end
 
- end
- 
- -- update messages
- for m in all(msgs) do
- 	m.tim-=1
- 	if m.tim<=0 then
- 		del(msgs,m)
- 	end
- 	if m.move==true then
+	end
+	
+	-- update messages
+	for m in all(msgs) do
+		m.tim-=1
+		if m.tim<=0 then
+			del(msgs,m)
+		end
+		if m.move==true then
 			m.y-=0.5
 		end
- end
+	end
 end
 
 gamedraw=function()
@@ -634,7 +634,7 @@ gamedraw=function()
 			if a.rottime<45 and a.rottime%4<2 then
 				spr(49,a.x*8,a.y*8)
 			else
-			 spr(48,a.x*8,a.y*8)
+				spr(48,a.x*8,a.y*8)
 			end
 		end
 	end
