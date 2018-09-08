@@ -676,6 +676,7 @@ end
 
 curscene='splash'
 function chgscene(s)
+	t=0
 	if s=='game' then
 		curscene=s
 		gameinit()
@@ -690,12 +691,16 @@ function _update()
 		gameupdate()
 	elseif curscene=='splash' then
 		if btn(4) or btn(5) then
-			t=0
 			chgscene('game')
 		end
 	elseif curscene=='gameover' then
-		if btn(4) or btn(5) then
-			t=0
+		if	t>60 and (
+					btn(0) or
+					btn(1) or
+					btn(2) or
+					btn(3) or
+					btn(4) or
+					btn(5)) then
 			chgscene('game')
 		end
 	end
