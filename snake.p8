@@ -263,6 +263,7 @@ snake={}
 
 -- score
 score=0
+bestscore=0
 
 -- messages
 msgs={}
@@ -681,6 +682,10 @@ function chgscene(s)
 		curscene=s
 		gameinit()
 	else
+		if s=='gameover' and
+					score>bestscore then
+			bestscore=score
+		end
 		curscene=s
 	end
 end
@@ -742,8 +747,16 @@ function _draw()
 		print(s,64-#s*2,30,8)
 		s=deaths[deathreason]
 		print(s,64-#s*2,50,1)
-		s='score: '..score
-		print(s,64-#s*2,80,12)
+
+		c=12
+		if score==bestscore then
+			c=({8,10,11})[flr(t%9/3)+1]
+		end
+		s='score '..score
+		x=64-#s*2
+		print(s,x,80,c)
+		s=' best '..bestscore
+		print(s,x,90,c)
 	end
 end
 
