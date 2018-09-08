@@ -704,13 +704,11 @@ function _update()
 	if curscene=='game' then
 		gameupdate()
 	elseif curscene=='splash' then
-		t+=1
 		if btn(4) or btn(5) then
 			t=0
 			chgscene('game')
 		end
 	elseif curscene=='gameover' then
-		t+=1
 		if btn(4) or btn(5) then
 			t=0
 			chgscene('game')
@@ -760,7 +758,9 @@ function _draw()
 		end
 	elseif curscene=='gameover' then
 		pal(14,13)
+		pal(7,15)
 		gamedraw()
+
 		deaths={
 			beetle='beetles are poisonous',
 			poop='that\'s disgusting',
@@ -768,7 +768,9 @@ function _draw()
 			snake='don\'t eat yourself',
 		}
 		s=deaths[deathreason]
-		print(s,64-#s*2,100,7)
+		print(s,64-#s*2,50,1)
+		s='score: '..score
+		print(s,64-#s*2,80,12)
 	end
 end
 
