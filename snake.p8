@@ -168,6 +168,7 @@ beetle={}
 
 beetle.new=function(p)
 	b={}
+	b.scorefactor=1
 	b.movespd=10
 	b.movetime=b.movespd
 	b.p=p
@@ -262,27 +263,6 @@ snake={}
 
 -- score
 score=0
-
-getscoreinc=function()
-	scoreinc={
-		[1]=600,
-		[2]=360,
-		[3]=320,
-		[4]=280,
-		[5]=230,
-		[6]=200,
-		[7]=170,
-		[8]=140,
-		[9]=120,
-		[10]=100,
-		[11]=80,
-		[12]=60,
-		[13]=40,
-		[14]=30,
-		[15]=20,
-	}
-	return scoreinc[snaketime]
-end
 
 -- messages
 msgs={}
@@ -481,6 +461,10 @@ gameupdate=function()
 	 		b.y=nexty
 	 	elseif p!=nil then
 	 		poop.remove(p)
+	 		_score=100*b.scorefactor
+	 		score+=_score
+	 		b.scorefactor+=1
+	 		msg.newscore(p.x*8,p.y*8,_score..'')
 	 	else
 	 		b.d+=1 -- rotate direction
 	 		if b.d>3 then
@@ -500,13 +484,12 @@ gameupdate=function()
  	if a.x==snake[1][1] and
  				a.y==snake[1][2] then
  		del(apples,a)
- 		_score=getscoreinc()
  		if a.typ==apple.norm then
+ 			_score=200
   		last=snake[#snake]
   		if a.rotten==true then
    			poop.new(last[1],last[2])
    	else
-   	 _score*=2
    	 msg.newscore(a.x*8,a.y*8,'yum!')
    	end
   	elseif a.typ==apple.fast then
@@ -514,11 +497,13 @@ gameupdate=function()
 	  		snaketime-=1
 	  		msg.newfaster(a.x*8,a.y*8)
 	  	end
+	  	_score=50
   	elseif a.typ==apple.slow then
   		if snaketime<snaketimemax then
 	  		snaketime+=1
 	  		msg.newslower(a.x*8,a.y*8)
 	  	end
+	  	_score=50
   	end
   	apple.new(a.typ)
  		snakegrow+=1
