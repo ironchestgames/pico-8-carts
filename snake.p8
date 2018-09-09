@@ -3,6 +3,7 @@ version 16
 __lua__
 -- utils and globals
 
+version='1.0.0-1'
 t=0 -- frame counter
 chgscene=nil
 right=0
@@ -764,6 +765,8 @@ function _draw()
 			print('press 🅾️ to start',
 					30,110,7)
 		end
+
+		print('v'..version,1,122,7)
 	elseif curscene=='gameover' then
 		pal(14,13)
 		pal(7,15)
