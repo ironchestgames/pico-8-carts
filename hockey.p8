@@ -1,0 +1,99 @@
+pico-8 cartridge // http://www.pico-8.com
+version 16
+__lua__
+
+function distance(x1,y1,x2,y2)
+ return sqrt((x2-x1)^2+(y2-y1)^2)
+end
+
+team1=1
+team2=2
+
+function newpuck(x,y)
+ local p={
+  x=x,
+  y=y,
+  r=1,
+  player=nil,
+ }
+ return p
+end
+
+function newplayer(x,y,team)
+ local p={
+  x=x,
+  y=y,
+  r=3,
+  team=team,
+ }
+ return p
+end
+
+player1idx=1
+teammembers={}
+puck=nil
+
+function _init()
+
+ -- init teammembers
+ startingpos={
+  {30,30},
+ }
+ for pos in all(startingpos) do
+  add(teammembers,newplayer(pos[1],pos[2],team2))
+ end
+
+ -- init puck
+ puck=newpuck(64,64)
+
+end
+
+function _update60()
+ player1player=teammembers[player1idx]
+
+ if btn(0) then
+  print('dfdf')
+  player1player.x-=1
+ elseif btn(1) then
+  player1player.x+=1
+ end
+
+ if btn(2) then
+  player1player.y-=1
+ elseif btn(3) then
+  player1player.y+=1
+ end
+
+ if puck.player == nil and
+   distance(player1player.x,player1player.y,
+   puck.x,puck.y) < 5 then
+  puck.player=player1player
+ end
+
+ if puck.player != nil then
+  puck.x=puck.player.x+5
+  puck.y=puck.player.y
+ end
+end
+
+function _draw()
+ cls(7)
+
+ spr(2,puck.x,puck.y)
+
+ for player in all(teammembers) do
+  spr(
+    player.team-1,
+    player.x-1,
+    player.y-6)
+ end
+end
+
+__gfx__
+00000000000000005500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+080000000c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+88800000ccc000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+88280000cc4c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+88820000ccc400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+80802000c0c040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+80800220c0c004400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
