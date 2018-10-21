@@ -21,6 +21,19 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  printh(result,'debug',false)
 end
 
+ismusicplaying=false
+function playmusic()
+ if ismusicplaying == false then
+  ismusicplaying=true
+  music(0)
+ end
+end
+
+function stopmusic()
+ ismusicplaying=false
+ music(-1)
+end
+
 function ticktotimestr(tick)
  local d=flr(tick*1/60*100)
  local s=flr(tick/60)
@@ -537,8 +550,8 @@ playerconfs={
 breeds={
  { -- bc
   sprstart=16,
-  attentionr=38,
-  runspd=0.45,
+  attentionr=34,
+  runspd=0.5,
   sendrange=12,
   sendspd=1.38,
   name='blizz',
@@ -556,7 +569,7 @@ breeds={
  { -- jack russel
   sprstart=23,
   attentionr=38,
-  runspd=0.7,
+  runspd=0.82,
   sendrange=10,
   sendspd=1.0,
   name='jack',
@@ -564,10 +577,10 @@ breeds={
  },
  { -- papillon
   sprstart=48,
-  attentionr=74,
+  attentionr=80,
   runspd=0.55,
-  sendrange=15,
-  sendspd=1.0,
+  sendrange=18,
+  sendspd=1.1,
   name='pixie',
   id=5,
  },
@@ -610,7 +623,7 @@ breeds={
 }
 
 -- load course data
-function loadcourse(_courseindex)
+function loadcourse(_courseid)
  local _obstacles={}
  local _handlerpos={}
  local _dogpos={}
@@ -622,7 +635,7 @@ function loadcourse(_courseindex)
   [3]=newtunnel, -- forest green
  }
 
- local courseidxtoname={
+ local courseidtoname={
   [1]='jumps 1',
   [2]='jumps 2',
   [3]='jumps 3',
@@ -647,8 +660,8 @@ function loadcourse(_courseindex)
   [3]=0.5,
  }
 
- local offx=((_courseindex-1)%8)*16
- local offy=8*4*2+flr((_courseindex-1)/8)*16
+ local offx=((_courseid-1)%8)*16
+ local offy=8*4*2+flr((_courseid-1)/8)*16
 
  -- go through 16x15 pixels to create course
  for i=0,239 do
@@ -726,8 +739,8 @@ function loadcourse(_courseindex)
   dogpos=_dogpos,
   course=_course,
   obstacles=_obstacles,
-  coursenr=_courseindex, -- note: used for times
-  name=courseidxtoname[_courseindex],
+  coursenr=_courseid, -- note: used for times
+  name=courseidtoname[_courseid],
  }
 end
 
@@ -891,6 +904,8 @@ function gameinit()
  end
 
  sfx(5)
+
+ stopmusic()
 end
 
 function gameupdate()
@@ -1319,7 +1334,7 @@ function gameupdate()
 
   add(coursesummary,obj)
 
-  music(0)
+  playmusic()
  end
 
  -- game over cleanup
@@ -1654,7 +1669,7 @@ function gamedraw()
 
  -- course cleared
  if coursecleared == true then
-  drawsign('course '..currentcourseidx..' cleared')
+  drawsign('course cleared')
  end
 
  -- debug draw
@@ -1769,7 +1784,7 @@ function readyplayerdraw()
  cls(14)
 
  -- title texts
- local s='course '..currentcourseidx
+ local s='course start'
  print(s,64-#s*2,10,7)
  s='player '..currentplayerconf.skin..' ready!'
  print(s,64-#s*2,24,7)
@@ -1866,6 +1881,9 @@ function coursesummarydraw()
  -- draw title
  local s='course summary'
  print(s,64-#s*2,8,7)
+
+ s=courses[currentcourseidx].name
+ print(s,64-#s*2,16,7)
  
  -- draw all competing players results
  local i=0
@@ -1884,7 +1902,7 @@ function coursesummarydraw()
    end
   end
 
-  print(s,64-11*2,25+i*8)
+  print(s,64-11*2,27+i*8)
 
   i+=1
  end
@@ -1940,6 +1958,30 @@ function coursesummarydraw()
     offy+7)
  end
 
+ -- draw competing players not on the podium
+ local xpos={10,28,90,108}
+ local y=107
+ for i=1,#coursesummary do
+  local _result=coursesummary[i]
+  if _result.disqualified or i == 4 then
+   local _x=xpos[i]
+   local _flipped=false
+   local _dogxoff=-7
+   if i >= 3 then
+    _flipped=true
+    _dogxoff=-_dogxoff
+   end
+   sethandlerskinpals(coursesummary[i].player.skin)
+   spr(0,xpos[i],y,1,1,_flipped)
+   pal()
+
+   spr(
+     breeds[coursesummary[i].player.dog].sprstart+5+tick%14/7,
+     xpos[i]-_dogxoff,
+     y,1,1,_flipped)
+  end
+ end
+
  -- if only one player, show no podium
  if #coursesummary == 1 then
   rectfill(0,64,128,128,14)
@@ -1969,7 +2011,7 @@ function playersetupinit()
  menux=1
  menuy=1
  blinkfast=false
- music(0)
+ playmusic()
 end
 
 function playersetupupdate()
@@ -1991,6 +2033,7 @@ function playersetupupdate()
  -- show instructions
  if btnp(5) then
   showinginstructions=true
+  sfx(8)
   return
  end
 
@@ -2000,6 +2043,7 @@ function playersetupupdate()
   -- toggle players
   if menuy == 1 then
    playerconfs[menux].isplaying=not playerconfs[menux].isplaying
+   sfx(9)
 
   -- selection player dogs
   elseif menuy == 2 then
@@ -2007,6 +2051,7 @@ function playersetupupdate()
    if playerconfs[menux].dog > #breeds then
     playerconfs[menux].dog=1
    end
+   sfx(9)
 
   -- go to course selection
   elseif menuy == 3 then
@@ -2038,12 +2083,16 @@ function playersetupupdate()
  -- move selection
  if btnp(2) then
   menuy=mid(menuy-1,1,3)
+  sfx(8)
  elseif btnp(3) then
   menuy=mid(menuy+1,1,3)
+  sfx(8)
  elseif btnp(0) then
   menux=mid(menux-1,1,4)
+  sfx(8)
  elseif btnp(1) then
   menux=mid(menux+1,1,4)
+  sfx(8)
  end
 
 end
@@ -2207,7 +2256,7 @@ function courseselectionupdate()
   courseselectiondone=true
   blinkfast=true
   sfx(4)
-  music(-1)
+  stopmusic()
 
   -- reset playerconf
   for playerconf in all(playerconfs) do
@@ -2225,9 +2274,11 @@ function courseselectionupdate()
  if btnp(2) then
   currentcourseidx=mid(currentcourseidx-1,1,#courses)
   courseblinkindex=1
+  sfx(8)
  elseif btnp(3) then
   currentcourseidx=mid(currentcourseidx+1,1,#courses)
   courseblinkindex=1
+  sfx(8)
  end
 
  -- blink obstacle order
@@ -2735,8 +2786,8 @@ __sfx__
 000700001f450164500f4500f4501d450244502945029450034002e450304503045033450354503a4503f40000400004000040000400004000040000400004000040000400004000040000400004000040000400
 010400000c531005350c5030050300503005030050300503005030050300503005030050300503005030050300503005030050300503005030050300503005030050300500005000050000500005000050000500
 000700040c61500503006150050300503005030050300503005030050300503005030050300503005030050300503005030050000500005000050000500005000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000100002f0202f0002f0002200003000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00010000320202e0202f0203701000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __music__
