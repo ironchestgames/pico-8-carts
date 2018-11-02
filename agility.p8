@@ -274,10 +274,10 @@ function newjump(x,y,a)
  -- init handler send area
  local _sendarea=initrotatedrect({
   t=rect,
-  x=-21,
-  y=-3,
-  w=42,
-  h=19,
+  x=-18,
+  y=-12,
+  w=36,
+  h=25,
   obstacle=obstacle_bar,
  },a,x,y)
 
