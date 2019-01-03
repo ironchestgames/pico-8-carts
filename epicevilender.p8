@@ -84,11 +84,21 @@ function createentity(params) -- note: mutates params
  params.facingx=0
  params.facingy=0
 
- -- animation
- params.currentframe=0
- params.counter=0
+ -- animations
+ for state in all({'idling','moving','recovering','usingskill'}) do
+  local anim=params[state .. '_anim']
+  if anim then
+   anim.counter=0
+   anim.currentframe=1
+  end
+ end
 
  return params
+end
+
+function getcurrentanimframe(entity)
+ local anim=entity[entity.state .. '_anim']
+ return anim[anim.currentframe],anim
 end
 
 function _init()
@@ -109,12 +119,13 @@ function _init()
      w=3,
      h=4,
      spd=0.5,
-     sx=0,
-     sy=8,
-     sw=3,
-     sh=4,
-     framecount=2,
-     frameduration=8,
+     idling_anim={
+      {0,8,3,4},
+     },
+     moving_anim={
+      {0,8,3,4,duration=8},
+      {3,8,3,4,duration=8},
+     },
     })
     add(entities,avatar)
     _col=0 -- note: make tile ground
@@ -129,12 +140,13 @@ function _init()
      w=3,
      h=4,
      spd=0.25,
-     sx=0,
-     sy=16,
-     sw=3,
-     sh=4,
-     framecount=2,
-     frameduration=16,
+     idling_anim={
+      {0,16,3,4},
+     },
+     moving_anim={
+      {0,16,3,4,duration=16},
+      {3,16,3,4,duration=16},
+     },
     })
     add(entities,enemy)
     _col=0 -- note: make tile ground
@@ -235,16 +247,15 @@ function _update60()
 
  -- animation update
  for entity in all(entities) do
-  if entity.state == 'idling' then
-   entity.currentframe=0
 
-  elseif entity.state == 'moving' then
-   entity.counter+=1
-   if entity.counter >= entity.frameduration then
-    entity.counter=0
-    entity.currentframe+=1
-    if entity.currentframe >= entity.framecount then
-     entity.currentframe=0
+  local frame,anim=getcurrentanimframe(entity)
+  if frame.duration != nil then
+   anim.counter+=1
+   if anim.counter >= frame.duration then
+    anim.counter=0
+    anim.currentframe+=1
+    if anim.currentframe > #anim then
+     anim.currentframe=1
     end
    end
   end
@@ -265,23 +276,21 @@ function _draw()
  end
 
  for entity in all(entities) do
-  -- note: all anims are left-to-right in the sheet,
-  --       and all frames are expected to have the same width
+  local frame,anim=getcurrentanimframe(entity)
   local fliph=false
   if entity.facingx == -1 then
    fliph=true
   end
   sspr(
-   entity.sx+(entity.currentframe*entity.sw),
-   entity.sy,
-   entity.sw,
-   entity.sh,
+   frame[1],
+   frame[2],
+   frame[3],
+   frame[4],
    entity.x,
    entity.y,
-   entity.sw,
-   entity.sh,
-   fliph
-   )
+   frame[3],
+   frame[4],
+   fliph)
  end
 end
 
