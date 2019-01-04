@@ -45,6 +45,45 @@ function isinsidewall(aabb,floormap)
  return false
 end
 
+function haslos(x0,y0,x1,y1)
+ local result={}
+ local dx=abs(x1-x0)
+ local dy=abs(y1-y0)
+ local x=x0
+ local y=y0
+ local n=1+dx+dy
+ local x_inc=-1
+ if x1 > x0 then
+  x_inc=1
+ end
+
+ local y_inc=-1
+ if y1 > y0 then
+  y_inc=1
+ end
+
+ local error=dx-dy
+ dx*=2
+ dy*=2
+
+ while (n > 0) do
+  n-=1
+
+  if floormap[flr(y/8)][flr(x/8)] == 1 then
+   return false
+  end
+
+  if error > 0 then
+   x+=x_inc
+   error-=dy
+  else
+   y+=y_inc
+   error+=dx
+  end
+ end
+ return true
+end
+
 function ensuretypes(types,obj)
  for key,value in pairs(types) do
   if type(obj[key]) != value then
@@ -101,6 +140,18 @@ function getcurrentanimframe(entity)
  return anim[anim.currentframe],anim
 end
 
+aibehaviours={
+ standingstill=function(entity)
+  entity.dx=0
+  entity.dy=0
+ end,
+ movingtotarget=function(entity)
+  local a=atan2(entity.ai.targetx-entity.x,entity.ai.targety-entity.y)
+  entity.dx=cos(a)*entity.spd
+  entity.dy=sin(a)*entity.spd
+ end,
+}
+
 function _init()
  floormap={} -- reset floormap
 
@@ -123,8 +174,8 @@ function _init()
       {0,8,3,4},
      },
      moving_anim={
-      {0,8,3,4,duration=8},
       {3,8,3,4,duration=8},
+      {0,8,3,4,duration=8},
      },
     })
     add(entities,avatar)
@@ -144,8 +195,48 @@ function _init()
       {0,16,3,4},
      },
      moving_anim={
-      {0,16,3,4,duration=16},
       {3,16,3,4,duration=16},
+      {0,16,3,4,duration=16},
+     },
+     ai={
+      targetx=nil,
+      targety=nil,
+      losmemoryduration=200,
+      losmemorycount=200,
+      moving=aibehaviours.movingtotarget,
+      idling=aibehaviours.standingstill,
+      update=function(entity) -- todo: move out of skeleton?
+
+       local ai=entity.ai
+
+       -- prio 1 - check for los to avatar
+       if haslos(entity.x,entity.y,avatar.x,avatar.y) then
+        ai.targetx=avatar.x
+        ai.targety=avatar.y
+        ai.losmemorycount=ai.losmemoryduration
+
+       -- prio 2 - has target last seen pos
+       elseif ai.targetx != nil then
+        ai.losmemorycount-=1
+
+        -- forget target last seen pos
+        if ai.losmemorycount <= 0 then
+         ai.targetx=nil
+         ai.targety=nil
+        end
+       end
+
+       -- decide
+       if ai.targetx != nil then
+        entity.state='moving'
+       else
+        entity.state='idling'
+       end
+
+       -- perform
+       ai[entity.state](entity)
+
+      end,
      },
     })
     add(entities,enemy)
@@ -204,13 +295,8 @@ function _update60()
 
  -- enemies
  for entity in all(entities) do
-  if entity != avatar then
-   -- move towards avatar
-   -- todo: add better ai
-   entity.state='moving'
-   local a=atan2(avatar.x-entity.x,avatar.y-entity.y)
-   entity.dx=cos(a)*entity.spd
-   entity.dy=sin(a)*entity.spd
+  if entity.t == 'skeleton' then
+   entity.ai.update(entity)
   end
  end
 
