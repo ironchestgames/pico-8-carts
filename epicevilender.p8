@@ -76,6 +76,10 @@ function haslos(x0,y0,x1,y1) -- todo: refactor names to start at index 1
    return false
   end
 
+  if isdebug == true then
+   pset(x,y,3)
+  end
+
   if error > 0 then
    x+=x_inc
    error-=dy
@@ -85,6 +89,12 @@ function haslos(x0,y0,x1,y1) -- todo: refactor names to start at index 1
   end
  end
  return true
+end
+
+function dist(x1,y1,x2,y2)
+ local dx=x2-x1
+ local dy=y2-y1
+ return sqrt(dx*dx+dy*dy)
 end
 
 -- function ensuretypes(types,obj)
@@ -104,6 +114,17 @@ function copytable(t)
  return newt
 end
 
+function nearestvalue(t,n)
+ local smallestsofar,smallestindex
+ for i,y in all(t) do
+  if not smallestsofar or (math.abs(n-y) < smallestsofar) then
+   smallestsofar=math.abs(n-y)
+   smallestindex=i
+  end
+ end
+ return t[smallestindex]
+end
+
 function updatehitbox(obj)
  local hitbox=obj.hitbox
  local offsets=obj.hitboxoffsets
@@ -118,7 +139,6 @@ dpadinput={}
 floormap={} -- the current map
 avatar={} -- avatar actor handle
 actors={} -- actors
-effects={} -- attacks, etc.
 messages={} -- texts in game area
 
 idcount=0
@@ -145,6 +165,7 @@ function createactor(params) -- note: mutates params
  params.facingy=0
 
  -- animations
+ -- todo: do this more efficiently
  for state in all({'idling','moving','recovering','usingskill'}) do
   local anim=params[state .. '_anim']
   if anim then
@@ -162,14 +183,169 @@ function getcurrentanimframe(actor)
 end
 
 aibehaviours={
+
  standingstill=function(actor)
   actor.dx=0
   actor.dy=0
  end,
+
  movingtotarget=function(actor)
   local a=atan2(actor.ai.targetx-actor.x,actor.ai.targety-actor.y)
   actor.dx=cos(a)*actor.spd
   actor.dy=sin(a)*actor.spd
+ end,
+
+ justattacked=function(actor)
+  actor.state_counter-=1
+  actor.state='recovering'
+  if actor.state_counter <= 0 then
+   actor.state='idling'
+  end
+ end,
+
+ attackfacing=function(actor)
+  local a=atan2(actor.facingx,actor.facingy)
+  local duration=8
+  local frame={16,8,4,6,duration=duration}
+  local spriteoffsetx=-1.5
+  local spriteoffsety=-4
+  local yoffset=-2
+  if a == 0 or a == 0.5 then
+   yoffset=-3
+  end
+  if a == 0.125 or
+     a == 0.375 then
+   frame={32,8,8,5,duration=duration}
+   spriteoffsetx=-5
+   spriteoffsety=-2
+   if a == 0.375 then
+    spriteoffsetx=-2
+   end
+  elseif a == 0.625 or
+         a == 0.875 then
+   frame={40,8,5,8,duration=duration}
+   spriteoffsetx=-2
+   spriteoffsety=-5
+  elseif a == 0.25 or
+         a == 0.75 then
+   frame={23,8,9,3,duration=duration}
+   spriteoffsetx=-4.5
+   spriteoffsety=0
+   if a == 0.25 then
+    spriteoffsety=-2
+   end
+  end
+
+  local effect=createactor({
+   t='attack',
+   team=actor.team,
+   state='idling',
+   x=actor.x+cos(a)*5,
+   y=actor.y+sin(a)*5+yoffset,
+   spd=0,
+   a=a,
+   spriteoffsetx=spriteoffsetx,
+   spriteoffsety=spriteoffsety,
+   hitboxoffsets={-2,-2,2,2},
+   hitbox={},
+   idling_anim={
+    currentframe=1,
+    counter=0,
+    frames={frame},
+    removemeondone=true,
+   },
+   draw=drawfunctions.drawweaponeffect,
+  })
+  updatehitbox(effect)
+  add(actors,effect)
+
+  -- todo: better specifying what type of recovering
+  actor.state='recovering'
+  actor.state_counter=duration
+ end,
+}
+
+
+drawfunctions={
+ drawcharacter=function(actor)
+  local frame,anim=getcurrentanimframe(actor)
+  local fliph=false
+  if actor.facingx == -1 then
+   fliph=true
+  end
+
+  if isdebug then
+   rectfill(
+    actor.hitbox.x1,
+    actor.hitbox.y1,
+    actor.hitbox.x2,
+    actor.hitbox.y2,
+    10)
+
+   if actor.ai and actor.ai.targetx then
+    haslos(actor.x,actor.y,actor.ai.targetx,actor.ai.targety)
+   end
+  end
+
+  -- draw actor sprite frame
+  sspr(
+   frame[1],
+   frame[2],
+   frame[3],
+   frame[4],
+   actor.x+actor.spriteoffsetx,
+   actor.y+actor.spriteoffsety,
+   frame[3],
+   frame[4],
+   fliph)
+
+  if isdebug then
+   pset(actor.x,actor.y,12)
+   pset(
+    actor.x+actor.facingx*4,
+    actor.y+actor.facingy*4,
+    12)
+  end
+ end,
+
+ drawweaponeffect=function(actor)
+  local frame,anim=getcurrentanimframe(actor)
+  local fliph=false
+  local flipv=false
+  if actor.a == 0.5 or
+     actor.a == 0.375 or
+     actor.a == 0.625 then
+   fliph=true
+  end
+  if actor.a == 0.75 then
+   flipv=true
+  end
+
+  if isdebug then
+   rectfill(
+    actor.hitbox.x1,
+    actor.hitbox.y1,
+    actor.hitbox.x2,
+    actor.hitbox.y2,
+    9)
+  end
+
+  -- draw actor sprite frame
+  sspr(
+   frame[1],
+   frame[2],
+   frame[3],
+   frame[4],
+   actor.x+actor.spriteoffsetx,
+   actor.y+actor.spriteoffsety,
+   frame[3],
+   frame[4],
+   fliph,
+   flipv)
+
+  if isdebug then
+   pset(actor.x,actor.y,12)
+  end
  end,
 }
 
@@ -184,7 +360,6 @@ function _init()
  }
  floormap={}
  actors={}
- effects={}
  messages={}
 
  -- init floormap
@@ -197,6 +372,7 @@ function _init()
    if _col == 15 then
     avatar=createactor({
      t='avatar',
+     team='avatar',
      x=_x*8,
      y=_y*8,
      spriteoffsetx=-1.5,
@@ -217,6 +393,7 @@ function _init()
        --       depending on type of recovery
       frames={{0,8,3,4,duration=0}},
      },
+     draw=drawfunctions.drawcharacter,
     })
     add(actors,avatar)
     _col=0 -- note: make tile ground
@@ -226,6 +403,7 @@ function _init()
    if _col == 6 then
     local enemy=createactor({
      t='skeleton',
+     team='enemy',
      x=_x*8,
      y=_y*8,
      spriteoffsetx=-1.5,
@@ -241,24 +419,44 @@ function _init()
        {0,16,3,4,duration=16},
       },
      },
+     recovering_anim={
+      frames={{0,16,3,4,duration=0}},
+     },
+     draw=drawfunctions.drawcharacter,
      ai={
       targetx=nil,
       targety=nil,
-      losmemoryduration=200,
-      losmemorycount=200,
+      losmemoryduration=300,
+      losmemorycount=300,
       moving=aibehaviours.movingtotarget,
       idling=aibehaviours.standingstill,
+      recovering=aibehaviours.justattacked,
+      usingskill=aibehaviours.attackfacing,
       update=function(actor) -- todo: move out of skeleton?
 
        local ai=actor.ai
+       local newstate='idling'
 
-       -- prio 1 - check for los to avatar
-       if haslos(actor.x,actor.y,avatar.x,avatar.y) then
+       if actor.state == 'recovering' then
+        -- pass
+
+       -- prio 1 - attack if in range
+       elseif actor.ai.targetx and
+              dist(
+               actor.x,
+               actor.y,
+               actor.ai.targetx,
+               actor.ai.targety) < 5 then
+        actor.state='usingskill'
+
+       -- prio 2 - check for los to avatar
+       elseif haslos(actor.x,actor.y,avatar.x,avatar.y) then
         ai.targetx=avatar.x
         ai.targety=avatar.y
         ai.losmemorycount=ai.losmemoryduration
+        actor.state='moving'
 
-       -- prio 2 - has target last seen pos
+       -- prio 3 - has target last seen pos
        elseif ai.targetx != nil then
         ai.losmemorycount-=1
 
@@ -266,14 +464,8 @@ function _init()
         if ai.losmemorycount <= 0 then
          ai.targetx=nil
          ai.targety=nil
+         actor.state='idling'
         end
-       end
-
-       -- decide
-       if ai.targetx != nil then
-        actor.state='moving'
-       else
-        actor.state='idling'
        end
 
        -- perform
@@ -375,62 +567,12 @@ function _update60()
 
  -- consider attack input
  if btnp(4) then
-  local duration=8
-  local a=atan2(avatar.facingx,avatar.facingy)
-  local frame={16,8,4,6,duration=duration}
-  local spriteoffsetx=-1.5
-  local spriteoffsety=-4
-  local yoffset=-3
-  if a == 0.125 or
-     a == 0.375 then
-   frame={32,8,8,5,duration=duration}
-   spriteoffsetx=-5
-   spriteoffsety=-2
-   if a == 0.375 then
-    spriteoffsetx=-2
-   end
-   yoffset=-2
-  elseif a == 0.625 or
-         a == 0.875 then
-   frame={40,8,5,8,duration=duration}
-   spriteoffsetx=-2
-   spriteoffsety=-5
-   yoffset=-2
-  elseif a == 0.25 or
-         a == 0.75 then
-   frame={23,8,9,3,duration=duration}
-   spriteoffsetx=-4.5
-   spriteoffsety=0
-   if a == 0.25 then
-    spriteoffsety=-2
-   end
-   yoffset=-2
-  end
-
-  local effect={
-   x=avatar.x+cos(a)*5,
-   y=avatar.y+sin(a)*5+yoffset,
-   a=a,
-   spriteoffsetx=spriteoffsetx,
-   spriteoffsety=spriteoffsety,
-   hitboxoffsets={-2,-2,2,2},
-   hitbox={},
-   anim={
-    currentframe=1,
-    counter=0,
-    frames={frame},
-   }
-  }
-  updatehitbox(effect)
-  add(effects,effect)
-
-  avatar.state='recovering'
-  avatar.state_counter=duration
+  aibehaviours.attackfacing(avatar)
  end
 
  -- enemies
  for actor in all(actors) do
-  if actor.t == 'skeleton' then
+  if actor.ai != nil then
    actor.ai.update(actor)
   end
  end
@@ -467,23 +609,27 @@ function _update60()
   updatehitbox(actor)
  end
 
- -- check actor against effects
+ -- check actor hitboxes against others
  for actor in all(actors) do
-  for effect in all(effects) do
-   if isaabbscolliding(actor.hitbox,effect.hitbox) then
-    if actor != avatar then -- todo: better check
-     local message={
-      x=effect.x,
-      y=effect.y-10,
-      text='hit',
-      col=8,
-      counter=50,
-     }
-     add(messages,message)
+  for other in all(actors) do
+   if actor != other and
+      actor.removeme != true and
+      other.removeme != true and
+      actor.team != other.team and
+      isaabbscolliding(actor.hitbox,other.hitbox) then
 
-     -- todo: better hp handling
-     actor.removeme=true
-    end
+    -- todo: better hp handling
+    actor.removeme=true
+
+    -- create message
+    local message={
+     x=other.x,
+     y=other.y-10,
+     text='hit',
+     col=8,
+     counter=50,
+    }
+    add(messages,message)
    end
   end
  end
@@ -498,24 +644,10 @@ function _update60()
     anim.counter=0
     anim.currentframe+=1
     if anim.currentframe > #anim.frames then
+     if anim.removemeondone == true then
+      actor.removeme=true
+     end
      anim.currentframe=1
-    end
-   end
-  end
- end
-
- -- effect animation update
- for effect in all(effects) do
-  local anim=effect.anim
-  local frame=anim.frames[anim.currentframe]
-  if frame.duration != nil then
-   anim.counter+=1
-   if anim.counter >= frame.duration then
-    anim.counter=0
-    if anim.currentframe >= #anim then
-     effect.removeme=true
-    else
-     anim.currentframe+=1
     end
    end
   end
@@ -545,13 +677,6 @@ function _update60()
   end
  end
 
- -- remove effects
- for effect in all(effects) do
-  if effect.removeme then
-   del(effects,effect)
-  end
- end
-
 end
 
 
@@ -568,84 +693,14 @@ function _draw()
   end
  end
 
+ -- todo: sort on y and z
+ --       maybe z can be layers?
+ --       per z add 128 (plus margin)
+ --       to y when sorting
+
  -- draw actors
  for actor in all(actors) do
-  local frame,anim=getcurrentanimframe(actor)
-  local fliph=false
-  if actor.facingx == -1 then
-   fliph=true
-  end
-
-  if isdebug then
-   rectfill(
-    actor.hitbox.x1,
-    actor.hitbox.y1,
-    actor.hitbox.x2,
-    actor.hitbox.y2,
-    10)
-  end
-
-  -- draw actor sprite frame
-  sspr(
-   frame[1],
-   frame[2],
-   frame[3],
-   frame[4],
-   actor.x+actor.spriteoffsetx,
-   actor.y+actor.spriteoffsety,
-   frame[3],
-   frame[4],
-   fliph)
-
-  if isdebug then
-   pset(actor.x,actor.y,12)
-   pset(
-     actor.x+actor.facingx*4,
-     actor.y+actor.facingy*4,
-     12)
-  end
- end
-
- -- draw effects
- for effect in all(effects) do
-  local anim=effect.anim
-  local frame=anim.frames[anim.currentframe]
-  local fliph=false
-  local flipv=false
-  if effect.a == 0.5 or
-     effect.a == 0.375 or
-     effect.a == 0.625 then
-   fliph=true
-  end
-  if effect.a == 0.75 then
-   flipv=true
-  end
-
-  if isdebug then
-   rectfill(
-    effect.hitbox.x1,
-    effect.hitbox.y1,
-    effect.hitbox.x2,
-    effect.hitbox.y2,
-    9)
-  end
-
-  -- draw effect sprite frame
-  sspr(
-   frame[1],
-   frame[2],
-   frame[3],
-   frame[4],
-   effect.x+effect.spriteoffsetx,
-   effect.y+effect.spriteoffsety,
-   frame[3],
-   frame[4],
-   fliph,
-   flipv)
-
-   if isdebug then
-    pset(effect.x,effect.y,12)
-   end
+  actor.draw(actor)
  end
 
  -- draw messages
