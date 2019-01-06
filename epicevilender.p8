@@ -4,6 +4,9 @@ __lua__
 -- epic evil ender
 -- by ironchest games
 
+poke(24365,1) -- note: enable devkit
+isdebug=false
+
 printh('debug started','debug',true)
 function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  local ss={_s2,_s3,_s4,_s5,_s6,_s7,_s8}
@@ -14,28 +17,28 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  printh(result,'debug',false)
 end
 
+
 function isaabbscolliding(aabb1,aabb2)
- if aabb1.x < aabb2.x + aabb2.w and
-    aabb1.x + aabb1.w > aabb2.x and
-    aabb1.y < aabb2.y + aabb2.h and
-    aabb1.y + aabb1.h > aabb2.y then
-  return true
- end
- return false
+ return aabb1.x1 < aabb2.x2 and
+        aabb1.x2 > aabb2.x1 and
+        aabb1.y1 < aabb2.y2 and
+        aabb1.y2 > aabb2.y1
 end
 
 function isinsidewall(aabb,floormap)
  local wallaabb={
-  x=0,
-  y=0,
-  w=8,
-  h=8,
+  x1=0,
+  y1=0,
+  x2=8,
+  y2=8,
  }
  for _y=0,#floormap do
   for _x=0,#floormap[_y] do
    if floormap[_y][_x] == 1 then
-    wallaabb.x=_x*8
-    wallaabb.y=_y*8
+    wallaabb.x1=_x*8
+    wallaabb.y1=_y*8
+    wallaabb.x2=wallaabb.x1+8
+    wallaabb.y2=wallaabb.y1+8
     if isaabbscolliding(aabb,wallaabb) then
      return true
     end
@@ -45,7 +48,7 @@ function isinsidewall(aabb,floormap)
  return false
 end
 
-function haslos(x0,y0,x1,y1)
+function haslos(x0,y0,x1,y1) -- todo: refactor names to start at index 1
  local result={}
  local dx=abs(x1-x0)
  local dy=abs(y1-y0)
@@ -84,14 +87,14 @@ function haslos(x0,y0,x1,y1)
  return true
 end
 
-function ensuretypes(types,obj)
- for key,value in pairs(types) do
-  if type(obj[key]) != value then
-   local message=key .. ', expected ' .. value .. ', got ' .. type(obj[key]) .. ' (' .. tostr(obj[key])  .. ')'
-   assert(false,message)
-  end
- end
-end
+-- function ensuretypes(types,obj)
+--  for key,value in pairs(types) do
+--   if type(obj[key]) != value then
+--    local message=key .. ', expected ' .. value .. ', got ' .. type(obj[key]) .. ' (' .. tostr(obj[key])  .. ')'
+--    assert(false,message)
+--   end
+--  end
+-- end
 
 function copytable(t)
  local newt={}
@@ -101,9 +104,22 @@ function copytable(t)
  return newt
 end
 
+function updatehitbox(obj)
+ local hitbox=obj.hitbox
+ local offsets=obj.hitboxoffsets
+ hitbox.x1=obj.x+offsets[1]
+ hitbox.y1=obj.y+offsets[2]
+ hitbox.x2=obj.x+offsets[3]
+ hitbox.y2=obj.y+offsets[4]
+end
+
+lastdirinput=nil
+
 floormap={} -- the current map
 avatar={} -- avatar actor handle
 actors={} -- actors
+effects={} -- attacks, etc.
+messages={} -- texts in game area
 
 idcount=0
 function createactor(params) -- note: mutates params
@@ -114,6 +130,11 @@ function createactor(params) -- note: mutates params
 
  -- state
  params.state='idling'
+ params.state_counter=0
+
+ -- init hitbox
+ params.hitbox={}
+ updatehitbox(params)
 
  -- movement
  params.dx=0
@@ -153,7 +174,11 @@ aibehaviours={
 }
 
 function _init()
- floormap={} -- reset floormap
+ -- reset collections
+ floormap={}
+ actors={}
+ effects={}
+ messages={}
 
  -- init floormap
  for _y=0,15 do
@@ -167,8 +192,9 @@ function _init()
      t='avatar',
      x=_x*8,
      y=_y*8,
-     w=3,
-     h=4,
+     spriteoffsetx=-1.5,
+     spriteoffsety=-4,
+     hitboxoffsets={-1.5,-4,1.5,0},
      spd=0.5,
      idling_anim={
       {0,8,3,4},
@@ -176,6 +202,9 @@ function _init()
      moving_anim={
       {3,8,3,4,duration=8},
       {0,8,3,4,duration=8},
+     },
+     recovering_anim={
+      {0,8,3,4,duration=0}, -- note: duration is dynamically set
      },
     })
     add(actors,avatar)
@@ -188,8 +217,9 @@ function _init()
      t='skeleton',
      x=_x*8,
      y=_y*8,
-     w=3,
-     h=4,
+     spriteoffsetx=-1.5,
+     spriteoffsety=-4,
+     hitboxoffsets={-1.5,-4,1.5,0},
      spd=0.25,
      idling_anim={
       {0,16,3,4},
@@ -248,10 +278,18 @@ function _init()
   end
  end
 
-
 end
 
 function _update60()
+
+ --note: devkit debug
+ if stat(30)==true then
+  c=stat(31)
+  if c == 'd' then
+   isdebug=not isdebug
+   debug('isdebug',isdebug)
+  end
+ end
 
  -- consider input
  local dx=0
@@ -281,6 +319,20 @@ function _update60()
   end
   avatar.dx=dx
   avatar.dy=dy
+
+ elseif avatar.state == 'recovering' then
+
+  -- count down
+  avatar.state_counter-=1
+
+  -- go into idling when done
+  if avatar.state_counter <= 0 then
+   avatar.state='idling'
+  end
+
+  -- do not move
+  avatar.dx=0
+  avatar.dy=0
  end
 
  -- set facing
@@ -293,6 +345,61 @@ function _update60()
  avatar.facingx=facingx
  avatar.facingy=facingy
 
+ -- consider attack input
+ if btnp(4) then
+  local duration=10
+  local a=atan2(avatar.dx,avatar.dy)
+  local frame={16,8,4,6,duration=duration}
+  local spriteoffsetx=-1.5
+  local spriteoffsety=-4
+  local yoffset=-3
+  if a == 0.125 or
+     a == 0.375 then
+   frame={32,8,8,5,duration=duration}
+   spriteoffsetx=-5
+   spriteoffsety=-2
+   if a == 0.375 then
+    spriteoffsetx=-2
+   end
+   yoffset=-2
+  elseif a == 0.625 or
+         a == 0.875 then
+   frame={40,8,5,8,duration=duration}
+   spriteoffsetx=-2
+   spriteoffsety=-5
+   yoffset=-2
+  elseif a == 0.25 or
+         a == 0.75 then
+   frame={23,8,9,3,duration=duration}
+   spriteoffsetx=-4.5
+   spriteoffsety=0
+   if a == 0.25 then
+    spriteoffsety=-2
+   end
+   yoffset=-2
+  end
+
+  local effect={
+   x=avatar.x+cos(a)*5,
+   y=avatar.y+sin(a)*5+yoffset,
+   a=a,
+   spriteoffsetx=spriteoffsetx,
+   spriteoffsety=spriteoffsety,
+   hitboxoffsets={-2,-2,2,2},
+   hitbox={},
+   anim={
+    currentframe=1,
+    counter=0,
+    frames={frame},
+   }
+  }
+  updatehitbox(effect)
+  add(effects,effect)
+
+  avatar.state='recovering'
+  avatar.state_counter=duration
+ end
+
  -- enemies
  for actor in all(actors) do
   if actor.t == 'skeleton' then
@@ -303,35 +410,57 @@ function _update60()
  -- movement check against floormap
  for actor in all(actors) do
   -- next pos with new x
-  local newaabb={
-   x=actor.x+actor.dx*actor.spd,
-   y=actor.y,
-   w=actor.w,
-   h=actor.h,
-  }
-  local newx=newaabb.x
+  local newaabb=copytable(actor.hitbox)
+  local nextdx=actor.dx*actor.spd
+  newaabb.x1+=nextdx
+  newaabb.x2+=nextdx
 
   -- is it inside wall?
   if isinsidewall(newaabb,floormap) then
-   newx=actor.x
+   nextdx=0
   end
 
   -- reset x and set new y
-  newaabb.x=actor.x
-  newaabb.y=actor.y+actor.dy*actor.spd
-  local newy=newaabb.y
+  newaabb=copytable(actor.hitbox)
+  local nextdy=actor.dy*actor.spd
+  newaabb.y1+=nextdy
+  newaabb.y2+=nextdy
 
   -- is it inside wall?
   if isinsidewall(newaabb,floormap) then
-   newy=actor.y
+   nextdy=0
   end
 
-  -- set actors new pos
-  actor.x=newx
-  actor.y=newy
+  -- set actor new pos
+  actor.x+=nextdx
+  actor.y+=nextdy
+
+  -- update hitbox
+  updatehitbox(actor)
  end
 
- -- animation update
+ -- check actor against effects
+ for actor in all(actors) do
+  for effect in all(effects) do
+   if isaabbscolliding(actor.hitbox,effect.hitbox) then
+    if actor != avatar then -- todo: better check
+     local message={
+      x=effect.x,
+      y=effect.y-10,
+      text='hit',
+      col=8,
+      counter=50,
+     }
+     add(messages,message)
+
+     -- todo: better hp handling
+     actor.removeme=true
+    end
+   end
+  end
+ end
+
+ -- actor animation update
  for actor in all(actors) do
 
   local frame,anim=getcurrentanimframe(actor)
@@ -346,8 +475,57 @@ function _update60()
    end
   end
  end
-  
+
+ -- effect animation update
+ for effect in all(effects) do
+  local anim=effect.anim
+  local frame=anim.frames[anim.currentframe]
+  if frame.duration != nil then
+   anim.counter+=1
+   if anim.counter >= frame.duration then
+    anim.counter=0
+    if anim.currentframe >= #anim then
+     effect.removeme=true
+    else
+     anim.currentframe+=1
+    end
+   end
+  end
+ end
+
+ -- message update
+ for message in all(messages) do
+
+  -- perform count down
+  message.counter-=1
+
+  -- float upwards
+  if message.counter % 10 == 0 then
+   message.y-=1
+  end
+
+  -- remove if countdown is finished
+  if message.counter < 0 then
+   del(messages,message)
+  end
+ end
+
+ -- remove actors
+ for actor in all(actors) do
+  if actor.removeme then
+   del(actors,actor)
+  end
+ end
+
+ -- remove effects
+ for effect in all(effects) do
+  if effect.removeme then
+   del(effects,effect)
+  end
+ end
+
 end
+
 
 function _draw()
  cls()
@@ -369,16 +547,82 @@ function _draw()
   if actor.facingx == -1 then
    fliph=true
   end
+
+  if isdebug then
+   rectfill(
+    actor.hitbox.x1,
+    actor.hitbox.y1,
+    actor.hitbox.x2,
+    actor.hitbox.y2,
+    10)
+  end
+
+  -- draw actor sprite frame
   sspr(
    frame[1],
    frame[2],
    frame[3],
    frame[4],
-   actor.x,
-   actor.y,
+   actor.x+actor.spriteoffsetx,
+   actor.y+actor.spriteoffsety,
    frame[3],
    frame[4],
    fliph)
+
+  if isdebug then
+   pset(actor.x,actor.y,12)
+  end
+ end
+
+ -- draw effects
+ for effect in all(effects) do
+  local anim=effect.anim
+  local frame=anim.frames[anim.currentframe]
+  local fliph=false
+  local flipv=false
+  if effect.a == 0.5 or
+     effect.a == 0.375 or
+     effect.a == 0.625 then
+   fliph=true
+  end
+  if effect.a == 0.75 then
+   flipv=true
+  end
+
+  if isdebug then
+   rectfill(
+    effect.hitbox.x1,
+    effect.hitbox.y1,
+    effect.hitbox.x2,
+    effect.hitbox.y2,
+    9)
+  end
+
+  -- draw effect sprite frame
+  sspr(
+   frame[1],
+   frame[2],
+   frame[3],
+   frame[4],
+   effect.x+effect.spriteoffsetx,
+   effect.y+effect.spriteoffsety,
+   frame[3],
+   frame[4],
+   fliph,
+   flipv)
+
+   if isdebug then
+    pset(effect.x,effect.y,12)
+   end
+ end
+
+ -- draw messages
+ for message in all(messages) do
+  print(
+   message.text,
+   message.x,
+   message.y,
+   message.col)
  end
 end
 
@@ -392,14 +636,14 @@ __gfx__
 11011011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10010011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0f00f000000000007000000007000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-55555500000000007700007000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-05005000000000007777770000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-50505000000000007777000000770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000007770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000077770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0f00f000000000000700000077777000007777000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+55555500000000000070000777777770077777700007000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+05005000000000000070000700000007700077770007700000000000000000000000000000000000000000000000000000000000000000000000000000000000
+50505000000000000077000000000000000007700007700000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000777000000000000000007000077700000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000007777000000000000000000007777700000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000777000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 06006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 66666600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 06006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -451,16 +695,16 @@ __gfx__
 11111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-100600000f0011110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+100000000f0011110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000000000011110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000100000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+10060100060006010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000100000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-10000100000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-10000100600111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+10000100000111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10010100000111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10010100000111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10010000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-10000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+10000060006000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 11111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
