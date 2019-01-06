@@ -113,7 +113,7 @@ function updatehitbox(obj)
  hitbox.y2=obj.y+offsets[4]
 end
 
-lastdirinput=nil
+dpadinput={}
 
 floormap={} -- the current map
 avatar={} -- avatar actor handle
@@ -175,6 +175,13 @@ aibehaviours={
 
 function _init()
  -- reset collections
+ dpadinput={
+  active=false,
+  [0]=false,
+  [1]=false,
+  [2]=false,
+  [3]=false,
+ }
  floormap={}
  actors={}
  effects={}
@@ -292,10 +299,20 @@ function _update60()
  end
 
  -- consider input
+ if btn(0) or
+    btn(1) or
+    btn(2) or
+    btn(3) then
+  dpadinput.active=true
+  for i=0,3 do
+   dpadinput[i]=btn(i)
+  end
+ else
+  dpadinput.active=false
+ end
  local dx=0
  local dy=0
- local facingx=avatar.facingx
- local facingy=avatar.facingy
+
  if btn(0) then
   dx+=-1
  elseif btn(1) then
@@ -307,7 +324,6 @@ function _update60()
  elseif btn(3) then
   dy+=1
  end
- facingy=dy
 
  -- consider avatar movement input
  if avatar.state == 'idling' or
@@ -336,19 +352,25 @@ function _update60()
  end
 
  -- set facing
- if dx != 0 then
-  facingx=dx
+ if dpadinput[0] then
+  avatar.facingx=-1
+ elseif dpadinput[1] then
+  avatar.facingx=1
+ else
+  avatar.facingx=0
  end
- if dy != 0 then
-  facingy=dy
+ if dpadinput[2] then
+  avatar.facingy=-1
+ elseif dpadinput[3] then
+  avatar.facingy=1
+ else
+  avatar.facingy=0
  end
- avatar.facingx=facingx
- avatar.facingy=facingy
 
  -- consider attack input
  if btnp(4) then
-  local duration=10
-  local a=atan2(avatar.dx,avatar.dy)
+  local duration=8
+  local a=atan2(avatar.facingx,avatar.facingy)
   local frame={16,8,4,6,duration=duration}
   local spriteoffsetx=-1.5
   local spriteoffsety=-4
@@ -571,6 +593,10 @@ function _draw()
 
   if isdebug then
    pset(actor.x,actor.y,12)
+   pset(
+     actor.x+actor.facingx*4,
+     actor.y+actor.facingy*4,
+     12)
   end
  end
 
