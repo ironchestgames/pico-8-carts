@@ -158,7 +158,7 @@ end
 
 function getcurrentanimframe(actor)
  local anim=actor[actor.state .. '_anim']
- return anim[anim.currentframe],anim
+ return anim.frames[anim.currentframe],anim
 end
 
 aibehaviours={
@@ -204,14 +204,18 @@ function _init()
      hitboxoffsets={-1.5,-4,1.5,0},
      spd=0.5,
      idling_anim={
-      {0,8,3,4},
+      frames={{0,8,3,4}},
      },
      moving_anim={
-      {3,8,3,4,duration=8},
-      {0,8,3,4,duration=8},
+      frames={
+       {3,8,3,4,duration=8},
+       {0,8,3,4,duration=8},
+      },
      },
      recovering_anim={
-      {0,8,3,4,duration=0}, -- note: duration is dynamically set
+       -- note: duration should be dynamically set
+       --       depending on type of recovery
+      frames={{0,8,3,4,duration=0}},
      },
     })
     add(actors,avatar)
@@ -229,11 +233,13 @@ function _init()
      hitboxoffsets={-1.5,-4,1.5,0},
      spd=0.25,
      idling_anim={
-      {0,16,3,4},
+      frames={{0,16,3,4}},
      },
      moving_anim={
-      {3,16,3,4,duration=16},
-      {0,16,3,4,duration=16},
+      frames={
+       {3,16,3,4,duration=16},
+       {0,16,3,4,duration=16},
+      },
      },
      ai={
       targetx=nil,
@@ -491,7 +497,7 @@ function _update60()
    if anim.counter >= frame.duration then
     anim.counter=0
     anim.currentframe+=1
-    if anim.currentframe > #anim then
+    if anim.currentframe > #anim.frames then
      anim.currentframe=1
     end
    end
