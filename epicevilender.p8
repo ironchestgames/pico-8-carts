@@ -134,6 +134,12 @@ function updatehitbox(obj)
  hitbox.y2=obj.y+offsets[4]
 end
 
+items={
+ -- name, color
+ {'sword',6,},
+ {'shield',4,},
+}
+
 dpadinput={}
 
 floormap={} -- the current map
@@ -299,6 +305,33 @@ drawfunctions={
    frame[4],
    fliph)
 
+  -- draw actor mainhand item
+  if actor.items and actor.items.mainhand then
+   local mainhandoffsetx=-1
+   if fliph then
+    mainhandoffsetx=3
+   end
+   line(
+    actor.x+actor.spriteoffsetx+mainhandoffsetx,
+    actor.y+actor.spriteoffsety,
+    actor.x+actor.spriteoffsetx+mainhandoffsetx,
+    actor.y+actor.spriteoffsety+1,
+    actor.items.mainhand[2])
+  end
+
+  if actor.items and actor.items.offhand then
+   local offhandoffsetx=2
+   if fliph then
+    offhandoffsetx=-1
+   end
+   rectfill(
+    actor.x+actor.spriteoffsetx+offhandoffsetx,
+    actor.y+actor.spriteoffsety+1,
+    actor.x+actor.spriteoffsetx+offhandoffsetx+1,
+    actor.y+actor.spriteoffsety+2,
+    actor.items.offhand[2])
+  end
+
   if isdebug then
    pset(actor.x,actor.y,12)
    pset(
@@ -394,6 +427,10 @@ function _init()
       frames={{0,8,3,4,duration=0}},
      },
      draw=drawfunctions.drawcharacter,
+     items={
+      mainhand=items[1],
+      offhand=items[2],
+     }
     })
     add(actors,avatar)
     _col=0 -- note: make tile ground
