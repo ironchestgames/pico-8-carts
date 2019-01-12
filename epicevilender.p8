@@ -18,27 +18,26 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
 end
 
 
+
 function isaabbscolliding(aabb1,aabb2)
- return aabb1.x1 < aabb2.x2 and
-        aabb1.x2 > aabb2.x1 and
-        aabb1.y1 < aabb2.y2 and
-        aabb1.y2 > aabb2.y1
+ return aabb1.x - aabb1.halfw < aabb2.x + aabb2.halfw and
+        aabb1.x + aabb1.halfw > aabb2.x - aabb2.halfw and
+        aabb1.y - aabb1.halfh < aabb2.y + aabb2.halfh and
+        aabb1.y + aabb1.halfh > aabb2.y - aabb2.halfh
 end
 
+wallaabb={
+ x=0,
+ y=0,
+ halfw=4,
+ halfh=4,
+}
 function isinsidewall(aabb,floormap)
- local wallaabb={
-  x1=0,
-  y1=0,
-  x2=8,
-  y2=8,
- }
  for _y=0,#floormap do
   for _x=0,#floormap[_y] do
    if floormap[_y][_x] == 1 then
-    wallaabb.x1=_x*8
-    wallaabb.y1=_y*8
-    wallaabb.x2=wallaabb.x1+8
-    wallaabb.y2=wallaabb.y1+8
+    wallaabb.x=_x*8+wallaabb.halfw
+    wallaabb.y=_y*8+wallaabb.halfh
     if isaabbscolliding(aabb,wallaabb) then
      return true
     end
@@ -97,14 +96,14 @@ function dist(x1,y1,x2,y2)
  return sqrt(dx*dx+dy*dy)
 end
 
--- function ensuretypes(types,obj)
---  for key,value in pairs(types) do
---   if type(obj[key]) != value then
---    local message=key .. ', expected ' .. value .. ', got ' .. type(obj[key]) .. ' (' .. tostr(obj[key])  .. ')'
---    assert(false,message)
---   end
---  end
--- end
+function normalize(n)
+ if n > 0 then
+  return 1
+ elseif n < 0 then
+  return -1
+ end
+ return 0
+end
 
 function copytable(t)
  local newt={}
@@ -114,79 +113,92 @@ function copytable(t)
  return newt
 end
 
-function nearestvalue(t,n)
- local smallestsofar,smallestindex
- for i,y in all(t) do
-  if not smallestsofar or (math.abs(n-y) < smallestsofar) then
-   smallestsofar=math.abs(n-y)
-   smallestindex=i
-  end
- end
- return t[smallestindex]
-end
-
-function updatehitbox(obj)
- local hitbox=obj.hitbox
- local offsets=obj.hitboxoffsets
- hitbox.x1=obj.x+offsets[1]
- hitbox.y1=obj.y+offsets[2]
- hitbox.x2=obj.x+offsets[3]
- hitbox.y2=obj.y+offsets[4]
-end
-
-items={
- -- name, color
- {'sword',6,},
- {'shield',4,},
+btnmasktoangle={
+ [2]=0, -- right
+ [6]=0.125, -- right/up
+ [4]=0.25, -- up
+ [5]=0.375, -- up/left
+ [1]=0.5, -- left
+ [9]=0.625, -- left/down
+ [8]=0.75, -- down
+ [10]=0.875, -- down/right
 }
 
-dpadinput={}
+function floormapcollision(_floormap,aabb,dx,dy)
+ local _dx,_dy=dx,dy
+
+ -- next pos with new x
+ local newaabb=copytable(aabb)
+ newaabb.x+=_dx
+
+ -- is it inside wall?
+ if isinsidewall(newaabb,_floormap) then
+  _dx=0
+ end
+
+ -- reset x and set new y
+ newaabb=copytable(aabb)
+ newaabb.y+=_dy
+
+ -- is it inside wall?
+ if isinsidewall(newaabb,_floormap) then
+  _dy=0
+ end
+
+ return _dx,_dy
+end
 
 floormap={} -- the current map
 avatar={} -- avatar actor handle
 actors={} -- actors
-messages={} -- texts in game area
 
-idcount=0
 function createactor(params) -- note: mutates params
- 
- -- unique id
- params.id=idcount
- idcount+=1
 
  -- state
  params.state='idling'
  params.state_counter=0
 
- -- init hitbox
- params.hitbox={}
- updatehitbox(params)
-
  -- movement
  params.dx=0
  params.dy=0
 
- -- direction
- params.facingx=0
- params.facingy=0
-
- -- animations
- -- todo: do this more efficiently
- for state in all({'idling','moving','recovering','usingskill'}) do
-  local anim=params[state .. '_anim']
-  if anim then
-   anim.counter=0
-   anim.currentframe=1
-  end
- end
-
  return params
 end
 
-function getcurrentanimframe(actor)
- local anim=actor[actor.state .. '_anim']
- return anim.frames[anim.currentframe],anim
+function updateavatarstate(avatar)
+ if avatar.state_counter > 0 then
+  avatar.state_counter-=1
+  if avatar.state_counter <= 0 then
+   if avatar.state == 'attacking' then
+    avatar.state='idling'
+   end
+  end
+ end
 end
+
+aimodes={
+ normal=function(actor)
+
+  local ai=actor.ai
+  local newstate='idling'
+
+  -- prio 1 - check for los to avatar
+  if haslos(actor.x,actor.y,avatar.x,avatar.y) then
+   ai.targetx=avatar.x
+   ai.targety=avatar.y
+   actor.state='moving'
+
+  else
+   ai.targetx=nil
+   ai.targety=nil
+   actor.state='idling'
+  end
+
+  -- perform
+  ai[actor.state](actor)
+
+ end,
+}
 
 aibehaviours={
 
@@ -200,200 +212,14 @@ aibehaviours={
   actor.dx=cos(a)*actor.spd
   actor.dy=sin(a)*actor.spd
  end,
-
- justattacked=function(actor)
-  actor.state_counter-=1
-  actor.state='recovering'
-  if actor.state_counter <= 0 then
-   actor.state='idling'
-  end
- end,
-
- attackfacing=function(actor)
-  local a=atan2(actor.facingx,actor.facingy)
-  local duration=8
-  local frame={16,8,4,6,duration=duration}
-  local spriteoffsetx=-1.5
-  local spriteoffsety=-4
-  local yoffset=-2
-  if a == 0 or a == 0.5 then
-   yoffset=-3
-  end
-  if a == 0.125 or
-     a == 0.375 then
-   frame={32,8,8,5,duration=duration}
-   spriteoffsetx=-5
-   spriteoffsety=-2
-   if a == 0.375 then
-    spriteoffsetx=-2
-   end
-  elseif a == 0.625 or
-         a == 0.875 then
-   frame={40,8,5,8,duration=duration}
-   spriteoffsetx=-2
-   spriteoffsety=-5
-  elseif a == 0.25 or
-         a == 0.75 then
-   frame={23,8,9,3,duration=duration}
-   spriteoffsetx=-4.5
-   spriteoffsety=0
-   if a == 0.25 then
-    spriteoffsety=-2
-   end
-  end
-
-  local effect=createactor({
-   t='attack',
-   team=actor.team,
-   state='idling',
-   x=actor.x+cos(a)*5,
-   y=actor.y+sin(a)*5+yoffset,
-   spd=0,
-   a=a,
-   spriteoffsetx=spriteoffsetx,
-   spriteoffsety=spriteoffsety,
-   hitboxoffsets={-2,-2,2,2},
-   hitbox={},
-   idling_anim={
-    currentframe=1,
-    counter=0,
-    frames={frame},
-    removemeondone=true,
-   },
-   draw=drawfunctions.drawweaponeffect,
-  })
-  updatehitbox(effect)
-  add(actors,effect)
-
-  -- todo: better specifying what type of recovering
-  actor.state='recovering'
-  actor.state_counter=duration
- end,
 }
 
-
-drawfunctions={
- drawcharacter=function(actor)
-  local frame,anim=getcurrentanimframe(actor)
-  local fliph=false
-  if actor.facingx == -1 then
-   fliph=true
-  end
-
-  if isdebug then
-   rectfill(
-    actor.hitbox.x1,
-    actor.hitbox.y1,
-    actor.hitbox.x2,
-    actor.hitbox.y2,
-    10)
-
-   if actor.ai and actor.ai.targetx then
-    haslos(actor.x,actor.y,actor.ai.targetx,actor.ai.targety)
-   end
-  end
-
-  -- draw actor sprite frame
-  sspr(
-   frame[1],
-   frame[2],
-   frame[3],
-   frame[4],
-   actor.x+actor.spriteoffsetx,
-   actor.y+actor.spriteoffsety,
-   frame[3],
-   frame[4],
-   fliph)
-
-  -- draw actor mainhand item
-  if actor.items and actor.items.mainhand then
-   local mainhandoffsetx=-1
-   if fliph then
-    mainhandoffsetx=3
-   end
-   line(
-    actor.x+actor.spriteoffsetx+mainhandoffsetx,
-    actor.y+actor.spriteoffsety,
-    actor.x+actor.spriteoffsetx+mainhandoffsetx,
-    actor.y+actor.spriteoffsety+1,
-    actor.items.mainhand[2])
-  end
-
-  if actor.items and actor.items.offhand then
-   local offhandoffsetx=2
-   if fliph then
-    offhandoffsetx=-1
-   end
-   rectfill(
-    actor.x+actor.spriteoffsetx+offhandoffsetx,
-    actor.y+actor.spriteoffsety+1,
-    actor.x+actor.spriteoffsetx+offhandoffsetx+1,
-    actor.y+actor.spriteoffsety+2,
-    actor.items.offhand[2])
-  end
-
-  if isdebug then
-   pset(actor.x,actor.y,12)
-   pset(
-    actor.x+actor.facingx*4,
-    actor.y+actor.facingy*4,
-    12)
-  end
- end,
-
- drawweaponeffect=function(actor)
-  local frame,anim=getcurrentanimframe(actor)
-  local fliph=false
-  local flipv=false
-  if actor.a == 0.5 or
-     actor.a == 0.375 or
-     actor.a == 0.625 then
-   fliph=true
-  end
-  if actor.a == 0.75 then
-   flipv=true
-  end
-
-  if isdebug then
-   rectfill(
-    actor.hitbox.x1,
-    actor.hitbox.y1,
-    actor.hitbox.x2,
-    actor.hitbox.y2,
-    9)
-  end
-
-  -- draw actor sprite frame
-  sspr(
-   frame[1],
-   frame[2],
-   frame[3],
-   frame[4],
-   actor.x+actor.spriteoffsetx,
-   actor.y+actor.spriteoffsety,
-   frame[3],
-   frame[4],
-   fliph,
-   flipv)
-
-  if isdebug then
-   pset(actor.x,actor.y,12)
-  end
- end,
-}
 
 function _init()
+
  -- reset collections
- dpadinput={
-  active=false,
-  [0]=false,
-  [1]=false,
-  [2]=false,
-  [3]=false,
- }
  floormap={}
  actors={}
- messages={}
 
  -- init floormap
  for _y=0,15 do
@@ -404,33 +230,12 @@ function _init()
    -- create avatar
    if _col == 15 then
     avatar=createactor({
-     t='avatar',
-     team='avatar',
      x=_x*8,
      y=_y*8,
-     spriteoffsetx=-1.5,
-     spriteoffsety=-4,
-     hitboxoffsets={-1.5,-4,1.5,0},
+     halfw=1.5,
+     halfh=2,
+     a=0,
      spd=0.5,
-     idling_anim={
-      frames={{0,8,3,4}},
-     },
-     moving_anim={
-      frames={
-       {3,8,3,4,duration=8},
-       {0,8,3,4,duration=8},
-      },
-     },
-     recovering_anim={
-       -- note: duration should be dynamically set
-       --       depending on type of recovery
-      frames={{0,8,3,4,duration=0}},
-     },
-     draw=drawfunctions.drawcharacter,
-     items={
-      mainhand=items[1],
-      offhand=items[2],
-     }
     })
     add(actors,avatar)
     _col=0 -- note: make tile ground
@@ -439,78 +244,19 @@ function _init()
    -- create skeleton enemy
    if _col == 6 then
     local enemy=createactor({
-     t='skeleton',
-     team='enemy',
+     isenemy=true,
      x=_x*8,
      y=_y*8,
-     spriteoffsetx=-1.5,
-     spriteoffsety=-4,
-     hitboxoffsets={-1.5,-4,1.5,0},
+     halfw=1.5,
+     halfh=2,
      spd=0.25,
-     idling_anim={
-      frames={{0,16,3,4}},
-     },
-     moving_anim={
-      frames={
-       {3,16,3,4,duration=16},
-       {0,16,3,4,duration=16},
-      },
-     },
-     recovering_anim={
-      frames={{0,16,3,4,duration=0}},
-     },
-     draw=drawfunctions.drawcharacter,
      ai={
-      targetx=nil,
-      targety=nil,
-      losmemoryduration=300,
-      losmemorycount=300,
+      update=aimodes.normal,
       moving=aibehaviours.movingtotarget,
       idling=aibehaviours.standingstill,
-      recovering=aibehaviours.justattacked,
-      usingskill=aibehaviours.attackfacing,
-      update=function(actor) -- todo: move out of skeleton?
-
-       local ai=actor.ai
-       local newstate='idling'
-
-       if actor.state == 'recovering' then
-        -- pass
-
-       -- prio 1 - attack if in range
-       elseif actor.ai.targetx and
-              dist(
-               actor.x,
-               actor.y,
-               actor.ai.targetx,
-               actor.ai.targety) < 5 then
-        actor.state='usingskill'
-
-       -- prio 2 - check for los to avatar
-       elseif haslos(actor.x,actor.y,avatar.x,avatar.y) then
-        ai.targetx=avatar.x
-        ai.targety=avatar.y
-        ai.losmemorycount=ai.losmemoryduration
-        actor.state='moving'
-
-       -- prio 3 - has target last seen pos
-       elseif ai.targetx != nil then
-        ai.losmemorycount-=1
-
-        -- forget target last seen pos
-        if ai.losmemorycount <= 0 then
-         ai.targetx=nil
-         ai.targety=nil
-         actor.state='idling'
-        end
-       end
-
-       -- perform
-       ai[actor.state](actor)
-
-      end,
      },
     })
+
     add(actors,enemy)
     _col=0 -- note: make tile ground
    end
@@ -519,7 +265,6 @@ function _init()
    floormap[_y][_x]=_col
   end
  end
-
 end
 
 function _update60()
@@ -534,80 +279,30 @@ function _update60()
  end
 
  -- consider input
- if btn(0) or
-    btn(1) or
-    btn(2) or
-    btn(3) then
-  dpadinput.active=true
-  for i=0,3 do
-   dpadinput[i]=btn(i)
-  end
+ local angle=btnmasktoangle[btn()]
+ if angle != nil then
+  avatar.a=angle
+  avatar.dx=normalize(cos(avatar.a))
+  avatar.dy=normalize(sin(avatar.a))
  else
-  dpadinput.active=false
- end
- local dx=0
- local dy=0
-
- if btn(0) then
-  dx+=-1
- elseif btn(1) then
-  dx+=1
- end
-
- if btn(2) then
-  dy+=-1
- elseif btn(3) then
-  dy+=1
- end
-
- -- consider avatar movement input
- if avatar.state == 'idling' or
-    avatar.state == 'moving' then
-  if dx == 0 and dy == 0 then
-   avatar.state='idling'
-  else
-   avatar.state='moving'
-  end
-  avatar.dx=dx
-  avatar.dy=dy
-
- elseif avatar.state == 'recovering' then
-
-  -- count down
-  avatar.state_counter-=1
-
-  -- go into idling when done
-  if avatar.state_counter <= 0 then
-   avatar.state='idling'
-  end
-
-  -- do not move
   avatar.dx=0
   avatar.dy=0
  end
 
- -- set facing
- if dpadinput[0] then
-  avatar.facingx=-1
- elseif dpadinput[1] then
-  avatar.facingx=1
- else
-  avatar.facingx=0
- end
- if dpadinput[2] then
-  avatar.facingy=-1
- elseif dpadinput[3] then
-  avatar.facingy=1
- else
-  avatar.facingy=0
- end
-
  -- consider attack input
- if btnp(4) then
-  aibehaviours.attackfacing(avatar)
+ if btnp(4) and
+    (avatar.state == 'idling' or
+     avatar.state == 'moving') then
+  avatar.state='attacking'
+  avatar.state_counter=8
+
+  -- todo: create attack object
  end
 
- -- enemies
+ -- update current state counter
+ updateavatarstate(avatar)
+
+ -- ai to make decisions
  for actor in all(actors) do
   if actor.ai != nil then
    actor.ai.update(actor)
@@ -616,103 +311,25 @@ function _update60()
 
  -- movement check against floormap
  for actor in all(actors) do
-  -- next pos with new x
-  local newaabb=copytable(actor.hitbox)
+
+  -- calc wanted movement
   local nextdx=actor.dx*actor.spd
-  newaabb.x1+=nextdx
-  newaabb.x2+=nextdx
-
-  -- is it inside wall?
-  if isinsidewall(newaabb,floormap) then
-   nextdx=0
-  end
-
-  -- reset x and set new y
-  newaabb=copytable(actor.hitbox)
   local nextdy=actor.dy*actor.spd
-  newaabb.y1+=nextdy
-  newaabb.y2+=nextdy
 
-  -- is it inside wall?
-  if isinsidewall(newaabb,floormap) then
-   nextdy=0
-  end
+  -- collide against floor and get possible movement
+  local _dx,_dy=floormapcollision(
+    floormap,
+    actor,
+    nextdx,
+    nextdy)
 
-  -- set actor new pos
-  actor.x+=nextdx
-  actor.y+=nextdy
-
-  -- update hitbox
-  updatehitbox(actor)
+  -- set actor pos based on possible movement
+  actor.x+=_dx
+  actor.y+=_dy
  end
 
- -- check actor hitboxes against others
- for actor in all(actors) do
-  for other in all(actors) do
-   if actor != other and
-      actor.removeme != true and
-      other.removeme != true and
-      actor.team != other.team and
-      isaabbscolliding(actor.hitbox,other.hitbox) then
+ -- collide against attacks
 
-    -- todo: better hp handling
-    actor.removeme=true
-
-    -- create message
-    local message={
-     x=other.x,
-     y=other.y-10,
-     text='hit',
-     col=8,
-     counter=50,
-    }
-    add(messages,message)
-   end
-  end
- end
-
- -- actor animation update
- for actor in all(actors) do
-
-  local frame,anim=getcurrentanimframe(actor)
-  if frame.duration != nil then
-   anim.counter+=1
-   if anim.counter >= frame.duration then
-    anim.counter=0
-    anim.currentframe+=1
-    if anim.currentframe > #anim.frames then
-     if anim.removemeondone == true then
-      actor.removeme=true
-     end
-     anim.currentframe=1
-    end
-   end
-  end
- end
-
- -- message update
- for message in all(messages) do
-
-  -- perform count down
-  message.counter-=1
-
-  -- float upwards
-  if message.counter % 10 == 0 then
-   message.y-=1
-  end
-
-  -- remove if countdown is finished
-  if message.counter < 0 then
-   del(messages,message)
-  end
- end
-
- -- remove actors
- for actor in all(actors) do
-  if actor.removeme then
-   del(actors,actor)
-  end
- end
 
 end
 
@@ -737,16 +354,21 @@ function _draw()
 
  -- draw actors
  for actor in all(actors) do
-  actor.draw(actor)
- end
+  rectfill(
+   actor.x-actor.halfw,
+   actor.y-actor.halfh,
+   actor.x+actor.halfw,
+   actor.y+actor.halfh,
+   10)
 
- -- draw messages
- for message in all(messages) do
-  print(
-   message.text,
-   message.x,
-   message.y,
-   message.col)
+  if isdebug then
+   if actor.ai and actor.ai.targetx then
+    haslos(actor.x,actor.y,actor.ai.targetx,actor.ai.targety)
+   end
+
+   pset(actor.x,actor.y,12)
+  end
+
  end
 end
 
@@ -760,18 +382,18 @@ __gfx__
 11011011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10010011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0f00f000000000000700000077777000007777000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-55555500000000000070000777777770077777700007000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-05005000000000000070000700000007700077770007700000000000000000000000000000000000000000000000000000000000000000000000000000000000
-50505000000000000077000000000000000007700007700000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000777000000000000000007000077700000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000007777000000000000000000007777700000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000777000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-06006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-66666600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-06006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-60606000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0f00f000000000000000000700000000777700000007777700000007777000000007000000000000000000000000000000000000000000000000000000000000
+55555500000000000000000070000000007770000077777777000077700000000070000000000000000000000000000000000000000000000000000000000000
+05005000000000000000000070000000000777000070000000700777000000000070000000000000000000000000000000000000000000000000000000000000
+5050500000000000000f000077000000f007700000000f000000007700f000000770000f000000700000f000000000000f000000000000f00000700000000000
+00000000000000000665566077000066556600000066555600000006655660000770665566000070066556600000006655660000000066556600700000000000
+00000000000000000665000777000066500000000000056600000000005660000777000566000077000056600000000005660000000066500007700000000000
+06006000000000000050507777000005050000000000505000000000050500000777705050000077770505000000000050500000000005050777700000000000
+66666600000000000000000000000000000000000000000000000000000000000000000000000007770000000000070000000700000000000777000000000000
+06006000000000000000000000000000000000000000000000000000000000000000000000000000700000000000077777777000000000000070000000000000
+60606000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007777700000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
