@@ -252,6 +252,10 @@ function updateavatarstate(avatar)
   avatar.dx=0
   avatar.dy=0
  end
+
+ if avatar.state != 'charging' then
+  avatar.charge=0
+ end
 end
 
 aimodes={
@@ -363,6 +367,7 @@ function _init()
      a=0,
      spd=0.5,
      hp=3,
+     charge=0,
     })
     add(actors,avatar)
 
@@ -447,6 +452,34 @@ function _update60()
   }))
  end
 
+ if btn(5) and
+    (avatar.state == 'idling' or
+     avatar.state == 'moving' or
+     avatar.state == 'charging') then
+  avatar.state='charging'
+  avatar.charge+=1
+ elseif (not btn(5)) and
+        avatar.state == 'charging' and
+        avatar.charge > 60 then
+  avatar.charge=0
+  avatar.state='attacking'
+  avatar.state_counter=1
+  add(attacks,createattack({
+   x=avatar.x+cos(avatar.a)*4,
+   y=avatar.y+sin(avatar.a)*4,
+   halfw=1,
+   halfh=1,
+   dx=cos(avatar.a)*2,
+   dy=sin(avatar.a)*2,
+   effect=function (actor)
+    actor.hp-=1
+
+    actor.state='recovering'
+    actor.state_counter=12
+   end,
+  }))
+ end
+
  -- update current state counter
  updateavatarstate(avatar)
 
@@ -523,8 +556,25 @@ function _update60()
 
  -- update attacks
  for attack in all(attacks) do
-  attack.state_counter-=1
-  if attack.state_counter <= 0 then
+  if attack.state_counter != nil then
+   attack.state_counter-=1
+   if attack.state_counter <= 0 then
+    attack.removeme=true
+   end
+  end
+
+  if attack.dx != nil then
+   attack.x+=attack.dx
+  end
+
+  if attack.dy != nil then
+   attack.y+=attack.dy
+  end
+
+  if attack.x > 128 or
+     attack.x < 0 or
+     attack.y > 128 or
+     attack.y < 0 then
    attack.removeme=true
   end
  end
@@ -574,6 +624,11 @@ function _draw()
    col=8
   elseif actor.state == 'attacking' then
    col=7
+  elseif actor.state == 'charging' then
+   col=14
+   if actor.charge > 60 then
+    col=7
+   end
   end
 
   rectfill(
@@ -602,7 +657,7 @@ function _draw()
    9)
  end
 
- print(avatar.hp,120,0,8)
+ print(avatar.hp .. ' hp',110,0,8)
 
  -- prints debug stats
  print(stat(1),0,0,7)
