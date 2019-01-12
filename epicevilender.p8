@@ -17,8 +17,6 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  printh(result,'debug',false)
 end
 
-
-
 function isaabbscolliding(aabb1,aabb2)
  return aabb1.x - aabb1.halfw < aabb2.x + aabb2.halfw and
         aabb1.x + aabb1.halfw > aabb2.x - aabb2.halfw and
@@ -32,14 +30,14 @@ wallaabb={
  halfw=4,
  halfh=4,
 }
-function isinsidewall(aabb,floormap)
- for _y=0,#floormap do
-  for _x=0,#floormap[_y] do
-   if floormap[_y][_x] == 1 then
+function isinsidewall(_floormap,aabb)
+ for _y=0,#_floormap do
+  for _x=0,#_floormap[_y] do
+   if _floormap[_y][_x] == 1 then
     wallaabb.x=_x*8+wallaabb.halfw
     wallaabb.y=_y*8+wallaabb.halfh
     if isaabbscolliding(aabb,wallaabb) then
-     return true
+     return wallaabb
     end
    end
   end
@@ -47,7 +45,7 @@ function isinsidewall(aabb,floormap)
  return false
 end
 
-function haslos(x0,y0,x1,y1) -- todo: refactor names to start at index 1
+function haslos(_floormap,x0,y0,x1,y1) -- todo: refactor names to start at index 1
  local result={}
  local dx=abs(x1-x0)
  local dy=abs(y1-y0)
@@ -71,7 +69,7 @@ function haslos(x0,y0,x1,y1) -- todo: refactor names to start at index 1
  while (n > 0) do
   n-=1
 
-  if floormap[flr(y/8)][flr(x/8)] == 1 then
+  if _floormap[flr(y/8)][flr(x/8)] == 1 then
    return false
   end
 
@@ -113,6 +111,92 @@ function copytable(t)
  return newt
 end
 
+newaabb={} -- note: used internally in collision funcs
+
+function floormapcollision(_floormap,aabb,_dx,_dy)
+ local dx,dy=_dx,_dy
+
+ -- set halfs
+ newaabb.halfw=aabb.halfw
+ newaabb.halfh=aabb.halfh
+
+ -- next pos with new x
+ newaabb.x=aabb.x+dx
+ newaabb.y=aabb.y
+
+ -- is it inside wall?
+ local wallaabb=isinsidewall(_floormap,newaabb)
+ if wallaabb then
+  local idealdistx=aabb.halfw+wallaabb.halfw
+  local curdistx=abs(aabb.x-wallaabb.x)
+  if _dx > 0 then
+   dx=(idealdistx-curdistx)*-1
+  elseif _dx < 0 then
+   dx=(idealdistx-curdistx)
+  end
+ end
+
+ -- reset x and set new y
+ newaabb.x=aabb.x
+ newaabb.y=aabb.y+dy
+
+ -- is it inside wall?
+ local wallaabb=isinsidewall(_floormap,newaabb)
+ if wallaabb then
+  local idealdisty=aabb.halfh+wallaabb.halfh
+  local curdisty=abs(aabb.y-wallaabb.y)
+  if _dy > 0 then
+   dy=(idealdisty-curdisty)*-1
+  elseif _dy < 0 then
+   dy=(idealdisty-curdisty)
+  end
+ end
+
+ return dx,dy
+end
+
+function collideaabbs(aabb,other,_dx,_dy)
+
+ -- set up result
+ local dx,dy=_dx,_dy
+
+ -- set aabb halfs
+ newaabb.halfw=aabb.halfw
+ newaabb.halfh=aabb.halfh
+
+ -- set next pos along x
+ newaabb.x=aabb.x+_dx
+ newaabb.y=aabb.y
+
+ -- is it colliding w other
+ if isaabbscolliding(newaabb,other) then
+  local idealdistx=aabb.halfw+other.halfw
+  local curdistx=abs(aabb.x-other.x)
+  if _dx > 0 then
+   dx=(idealdistx-curdistx)*-1
+  elseif dx < 0 then
+   dx=(idealdistx-curdistx)
+  end
+ end
+
+ -- set next pos along y
+ newaabb.x=aabb.x
+ newaabb.y=aabb.y+_dy
+
+ -- is it colliding w other
+ if isaabbscolliding(newaabb,other) then
+  local idealdisty=aabb.halfh+other.halfh
+  local curdisty=abs(aabb.y-other.y)
+  if _dy > 0 then
+   dy=(idealdisty-curdisty)*-1
+  elseif _dy < 0 then
+   dy=(idealdisty-curdisty)
+  end
+ end
+
+ return dx,dy
+end
+
 btnmasktoangle={
  [2]=0, -- right
  [6]=0.125, -- right/up
@@ -124,33 +208,10 @@ btnmasktoangle={
  [10]=0.875, -- down/right
 }
 
-function floormapcollision(_floormap,aabb,dx,dy)
- local _dx,_dy=dx,dy
-
- -- next pos with new x
- local newaabb=copytable(aabb)
- newaabb.x+=_dx
-
- -- is it inside wall?
- if isinsidewall(newaabb,_floormap) then
-  _dx=0
- end
-
- -- reset x and set new y
- newaabb=copytable(aabb)
- newaabb.y+=_dy
-
- -- is it inside wall?
- if isinsidewall(newaabb,_floormap) then
-  _dy=0
- end
-
- return _dx,_dy
-end
-
 floormap={} -- the current map
 avatar={} -- avatar actor handle
 actors={} -- actors
+attacks={} -- attack objects
 
 function createactor(params) -- note: mutates params
 
@@ -162,6 +223,17 @@ function createactor(params) -- note: mutates params
  params.dx=0
  params.dy=0
 
+ -- remove me
+ params.removeme=false
+
+ return params
+end
+
+function createattack(params)
+
+ -- remove me
+ params.removeme=false
+
  return params
 end
 
@@ -169,10 +241,16 @@ function updateavatarstate(avatar)
  if avatar.state_counter > 0 then
   avatar.state_counter-=1
   if avatar.state_counter <= 0 then
-   if avatar.state == 'attacking' then
+   if avatar.state == 'attacking' or
+      avatar.state == 'recovering' then
     avatar.state='idling'
    end
   end
+ end
+
+ if avatar.state == 'recovering' then
+  avatar.dx=0
+  avatar.dy=0
  end
 end
 
@@ -182,11 +260,48 @@ aimodes={
   local ai=actor.ai
   local newstate='idling'
 
-  -- prio 1 - check for los to avatar
-  if haslos(actor.x,actor.y,avatar.x,avatar.y) then
+  if actor.state == 'recovering'then
+   actor.state_counter-=1
+   if actor.state_counter <= 0 then
+    actor.state='idling'
+   end
+
+  elseif actor.state == 'attacking' then
+   actor.state_counter-=1
+   if actor.state_counter <= 0 then
+    local a=atan2(ai.targetx-actor.x,ai.targety-actor.y)
+
+    add(attacks,createattack({
+     isenemy=true,
+     x=actor.x+cos(a)*3,
+     y=actor.y+sin(a)*3,
+     halfw=2,
+     halfh=2,
+     state_counter=8,
+     effect=function (actor)
+
+      actor.dx=cos(a)*5
+      actor.dy=sin(a)*5
+
+      actor.hp-=1
+
+      actor.state='recovering'
+      actor.state_counter=24
+     end,
+    }))
+
+    actor.state='idling'
+   end
+
+  elseif haslos(floormap,actor.x,actor.y,avatar.x,avatar.y) then
    ai.targetx=avatar.x
    ai.targety=avatar.y
    actor.state='moving'
+
+   if dist(actor.x,actor.y,ai.targetx,ai.targety) < 7 then
+    actor.state='attacking'
+    actor.state_counter=flr(rnd(60))
+   end
 
   else
    ai.targetx=nil
@@ -212,6 +327,16 @@ aibehaviours={
   actor.dx=cos(a)*actor.spd
   actor.dy=sin(a)*actor.spd
  end,
+
+ recoveringfromhit=function(actor)
+  actor.dx=0
+  actor.dy=0
+ end,
+
+ normalattack=function(actor)
+  actor.dx=0
+  actor.dy=0
+ end,
 }
 
 
@@ -220,6 +345,7 @@ function _init()
  -- reset collections
  floormap={}
  actors={}
+ attacks={}
 
  -- init floormap
  for _y=0,15 do
@@ -236,8 +362,10 @@ function _init()
      halfh=2,
      a=0,
      spd=0.5,
+     hp=3,
     })
     add(actors,avatar)
+
     _col=0 -- note: make tile ground
    end
 
@@ -249,11 +377,14 @@ function _init()
      y=_y*8,
      halfw=1.5,
      halfh=2,
-     spd=0.25,
+     spd=0.4,
+     hp=3,
      ai={
       update=aimodes.normal,
       moving=aibehaviours.movingtotarget,
       idling=aibehaviours.standingstill,
+      recovering=aibehaviours.recoveringfromhit,
+      attacking=aibehaviours.normalattack,
      },
     })
 
@@ -266,6 +397,7 @@ function _init()
   end
  end
 end
+
 
 function _update60()
 
@@ -293,10 +425,26 @@ function _update60()
  if btnp(4) and
     (avatar.state == 'idling' or
      avatar.state == 'moving') then
+  local attackcount=8
   avatar.state='attacking'
-  avatar.state_counter=8
+  avatar.state_counter=attackcount
 
-  -- todo: create attack object
+  add(attacks,createattack({
+   x=avatar.x+cos(avatar.a)*4,
+   y=avatar.y+sin(avatar.a)*4,
+   halfw=2,
+   halfh=2,
+   state_counter=attackcount,
+   effect=function (actor)
+    actor.dx=cos(avatar.a)*5
+    actor.dy=sin(avatar.a)*5
+
+    actor.hp-=1
+
+    actor.state='recovering'
+    actor.state_counter=20
+   end,
+  }))
  end
 
  -- update current state counter
@@ -304,33 +452,96 @@ function _update60()
 
  -- ai to make decisions
  for actor in all(actors) do
-  if actor.ai != nil then
+  if actor.ai then
    actor.ai.update(actor)
+  end
+ end
+
+ -- update the next-position
+ for actor in all(actors) do
+
+  -- note: after this deltas should not change by input
+  actor.dx=actor.dx*actor.spd
+  actor.dy=actor.dy*actor.spd
+ end
+
+ -- collide against attacks
+ for attack in all(attacks) do
+  for actor in all(actors) do
+   if attack.removeme == false and
+      actor.removeme == false and
+      attack.isenemy != actor.isenemy and
+      isaabbscolliding(attack,actor) then
+
+    -- remove attack
+    -- note: if attack has several hits,
+    --       maybe just use one attack per hit?
+    attack.removeme=true
+
+    -- update actor after hit
+    attack.effect(actor)
+
+    if actor.hp <= 0 then
+     actor.removeme=true
+    end
+   end
+  end
+ end
+
+ -- movement check against other actors
+ for actor in all(actors) do
+  for other in all(actors) do
+   if other != actor then
+    local _dx,_dy=collideaabbs(
+      actor,
+      other,
+      actor.dx,
+      actor.dy)
+
+    actor.dx=_dx
+    actor.dy=_dy
+   end
   end
  end
 
  -- movement check against floormap
  for actor in all(actors) do
 
-  -- calc wanted movement
-  local nextdx=actor.dx*actor.spd
-  local nextdy=actor.dy*actor.spd
-
   -- collide against floor and get possible movement
   local _dx,_dy=floormapcollision(
     floormap,
     actor,
-    nextdx,
-    nextdy)
+    actor.dx,
+    actor.dy)
 
   -- set actor pos based on possible movement
   actor.x+=_dx
   actor.y+=_dy
+  actor.dx=0
+  actor.dy=0
  end
 
- -- collide against attacks
+ -- update attacks
+ for attack in all(attacks) do
+  attack.state_counter-=1
+  if attack.state_counter <= 0 then
+   attack.removeme=true
+  end
+ end
 
+ -- -- remove actors
+ for actor in all(actors) do
+  if actor.removeme then
+   del(actors,actor)
+  end
+ end
 
+ -- -- remove attacks
+ for attack in all(attacks) do
+  if attack.removeme then
+   del(attacks,attack)
+  end
+ end
 end
 
 
@@ -354,22 +565,48 @@ function _draw()
 
  -- draw actors
  for actor in all(actors) do
+  local col=6
+  if actor == avatar then
+   col=15
+  end
+
+  if actor.state == 'recovering' then
+   col=8
+  elseif actor.state == 'attacking' then
+   col=7
+  end
+
   rectfill(
    actor.x-actor.halfw,
    actor.y-actor.halfh,
    actor.x+actor.halfw,
    actor.y+actor.halfh,
-   10)
+   col)
 
   if isdebug then
    if actor.ai and actor.ai.targetx then
-    haslos(actor.x,actor.y,actor.ai.targetx,actor.ai.targety)
+    haslos(floormap,actor.x,actor.y,actor.ai.targetx,actor.ai.targety)
    end
 
    pset(actor.x,actor.y,12)
   end
-
  end
+
+ -- draw attacks
+ for attack in all(attacks) do
+  rectfill(
+   attack.x-attack.halfw,
+   attack.y-attack.halfh,
+   attack.x+attack.halfw,
+   attack.y+attack.halfh,
+   9)
+ end
+
+ print(avatar.hp,120,0,8)
+
+ -- prints debug stats
+ print(stat(1),0,0,7)
+ print(stat(7),0,6,7)
 end
 
 
@@ -440,17 +677,17 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 11111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-10000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-100000000f0011110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+10006006000600010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+100600600f0011110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000000000011110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000100000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-10060100060006010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+10000100000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000100000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000100000111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10010100000111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10010100000111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10010000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-10000060006000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+10000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 11111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
