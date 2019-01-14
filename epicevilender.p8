@@ -173,6 +173,7 @@ function collideaabbs(aabb,other,_dx,_dy)
 
  -- set up result
  local dx,dy=_dx,_dy
+ local hascollided=false
 
  -- set aabb halfs
  newaabb.halfw=aabb.halfw
@@ -191,6 +192,7 @@ function collideaabbs(aabb,other,_dx,_dy)
   elseif dx < 0 then
    dx=(idealdistx-curdistx)
   end
+  hascollided=true
  end
 
  -- set next pos along y
@@ -206,9 +208,10 @@ function collideaabbs(aabb,other,_dx,_dy)
   elseif _dy < 0 then
    dy=(idealdisty-curdisty)
   end
+  hascollided=true
  end
 
- return dx,dy
+ return dx,dy,hascollided
 end
 
 btnmasktoangle={
@@ -276,9 +279,9 @@ aimodes={
  normal=function(actor)
 
   local ai=actor.ai
-  local newstate='idling'
 
-  if actor.state == 'recovering'then
+  if actor.state == 'recovering' or
+     actor.state == 'waiting' then
    actor.state_counter-=1
    if actor.state_counter <= 0 then
     actor.state='idling'
@@ -404,6 +407,7 @@ function _init()
       idling=aibehaviours.standingstill,
       recovering=aibehaviours.recoveringfromhit,
       attacking=aibehaviours.normalattack,
+      waiting=aibehaviours.standingstill,
      },
     })
 
@@ -539,7 +543,7 @@ function _update60()
  for actor in all(actors) do
   for other in all(actors) do
    if other != actor then
-    local _dx,_dy=collideaabbs(
+    local _dx,_dy,hascollided=collideaabbs(
       actor,
       other,
       actor.dx,
@@ -547,6 +551,11 @@ function _update60()
 
     actor.dx=_dx
     actor.dy=_dy
+
+    if actor.ai and other.ai and hascollided then
+     actor.state='waiting'
+     actor.state_counter=120
+    end
    end
   end
  end
