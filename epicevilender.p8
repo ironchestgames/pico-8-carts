@@ -17,6 +17,21 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  printh(result,'debug',false)
 end
 
+debugb=function(n)
+ outputstr=''
+ local mask=0x0000.0001
+ for i=0,31 do
+  local bit=shr(band(shl(mask,i),n),i)
+  if(bit!=0) bit=1
+  outputstr=tostr(bit)..outputstr
+ end
+ debug(outputstr)
+end
+
+debugh=function(n)
+ debug(tostr(n,true))
+end
+
 function isaabbscolliding(aabb1,aabb2)
  return aabb1.x - aabb1.halfw < aabb2.x + aabb2.halfw and
         aabb1.x + aabb1.halfw > aabb2.x - aabb2.halfw and
@@ -215,14 +230,14 @@ function collideaabbs(aabb,other,_dx,_dy)
 end
 
 btnmasktoangle={
- [2]=0, -- right
- [6]=0.125, -- right/up
- [4]=0.25, -- up
- [5]=0.375, -- up/left
- [1]=0.5, -- left
- [9]=0.625, -- left/down
- [8]=0.75, -- down
- [10]=0.875, -- down/right
+ [0x0002]=0, -- right
+ [0x0006]=0.125, -- right/up
+ [0x0004]=0.25, -- up
+ [0x0005]=0.375, -- up/left
+ [0x0001]=0.5, -- left
+ [0x0009]=0.625, -- left/down
+ [0x0008]=0.75, -- down
+ [0x000a]=0.875, -- down/right
 }
 
 floormap={} -- the current map
@@ -272,6 +287,11 @@ function updateavatarstate(avatar)
 
  if avatar.state != 'charging' then
   avatar.charge=0
+ end
+
+ if avatar.state == 'attacking' then
+  avatar.dx=0
+  avatar.dy=0
  end
 end
 
@@ -421,6 +441,8 @@ function _init()
  end
 end
 
+btn4down=false
+btn4pressed=false
 
 function _update60()
 
@@ -433,8 +455,19 @@ function _update60()
   end
  end
 
+ -- massage input
+ btn4pressed=false
+ if btn(4) then
+  if btn4down != true then
+   btn4pressed=true
+  end
+  btn4down=true
+ else
+  btn4down=false
+ end
+
  -- consider input
- local angle=btnmasktoangle[btn()]
+ local angle=btnmasktoangle[band(btn(),0b1111)] -- note: filter out o/x buttons from dpad input
  if angle != nil then
   avatar.a=angle
   avatar.dx=normalize(cos(avatar.a))
@@ -445,25 +478,30 @@ function _update60()
  end
 
  -- consider attack input
- if btnp(4) and
+ if btn4pressed and
     (avatar.state == 'idling' or
      avatar.state == 'moving') then
-  local attackcount=8
+
+  -- attack duration
   avatar.state='attacking'
-  avatar.state_counter=attackcount
+  avatar.state_counter=16
 
   add(attacks,createattack({
    x=avatar.x+cos(avatar.a)*4,
    y=avatar.y+sin(avatar.a)*4,
    halfw=2,
    halfh=2,
-   state_counter=attackcount,
+   state_counter=1,
    effect=function (actor)
+
+    -- knockback effect
     actor.dx=cos(avatar.a)*5
     actor.dy=sin(avatar.a)*5
 
+    -- damage
     actor.hp-=1
 
+    -- recover
     actor.state='recovering'
     actor.state_counter=20
    end,
@@ -490,7 +528,7 @@ function _update60()
    dx=cos(avatar.a)*2,
    dy=sin(avatar.a)*2,
    effect=function (actor)
-    actor.hp-=1
+    actor.hp-=2
 
     actor.state='recovering'
     actor.state_counter=12
