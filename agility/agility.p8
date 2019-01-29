@@ -2024,8 +2024,10 @@ function instructionsupdate()
 
  if btnp(0) then
   currentpage=mid(currentpage-1,1,4)
+  sfx(9)
  elseif btnp(1) then
   currentpage=mid(currentpage+1,1,4)
+  sfx(9)
  end
 
 end
