@@ -487,13 +487,14 @@ function _init()
      y=_y*8,
      halfw=1.5,
      halfh=2,
+     runspd=0.5,
      spd=0.5,
      hp=3,
      ai={
-      isready=true,
       state='idling',
+      laststate='idling',
       state_counter=0,
-      move_counter=0,
+      ismovingoutofcollision=false,
       toocloseto={},
      },
     })
@@ -598,66 +599,94 @@ function _update60()
  end
  do
   local enemy=actors[ai.curenemyidx]
-  if enemy.ai and enemy.ai.isready then
+  if enemy.ai then
 
-   local collidedwithwall=enemy.ai.iscollidingwithwall
-   local isseeingavatar=haslos(floormap,enemy.x,enemy.y,avatar.x,avatar.y)
    local distancetoavatar=dist(enemy.x,enemy.y,avatar.x,avatar.y)
+
+   local ismovingoutofcollision=enemy.ai.ismovingoutofcollision
+
+   -- is colliding w other stuff
+   local collidedwithwall=enemy.ai.iscollidingwithwall
    local hastoocloseto=#enemy.ai.toocloseto > 0
-   local hasmovecounter=enemy.ai.move_counter > 0
+   -- todo: maybe move away from avatar if too close?
 
-   if hasmovecounter then
-    -- enemy.ai.state='moving'
+   -- has los to avatar
+   -- todo: make this has los to aggravator
+   local haslostoavatar=haslos(floormap,enemy.x,enemy.y,avatar.x,avatar.y)
 
-   -- get out of collision
+   -- within attack distance to avatar
+   -- todo: ...aggravator
+   local withinattackdistance=distancetoavatar <= 7
+
+   -- has target
+   local hastarget=enemy.ai.targetx!=nil
+
+   -- decision tree
+   if ismovingoutofcollision then
+    -- continue to move out of collision
+    -- debug('ismovingoutofcollision')
+
+    enemy.ai.state='moving'
+
+   elseif withinattackdistance and haslostoavatar then
+    -- attack
+    -- debug('withinattackdistance and haslostoavatar')
+
+    enemy.ai.state='attacking'
+    -- todo: swing timer
+
+   elseif collidedwithwall then
+    -- colliding w wall, move out of
+    -- debug('collidedwithwall')
+
+    enemy.ai.state='moving'
+    -- todo: get knowledge of what wall
+    enemy.ai.ismovingoutofcollision=true
+    enemy.ai.state_counter=60
+
    elseif hastoocloseto then
+    -- colliding w other, move out of
+    -- debug('hastoocloseto')
+
+    enemy.ai.state='moving'
     local collidedwith=enemy.ai.toocloseto[1]
     local a=atan2(
       collidedwith.x-enemy.x,
       collidedwith.y-enemy.y)+0.5 -- note: go the other way
     enemy.ai.targetx=enemy.x+cos(a)*10
     enemy.ai.targety=enemy.y+sin(a)*10
-    enemy.ai.move_counter=6
+    enemy.ai.ismovingoutofcollision=true
+    enemy.ai.state_counter=60
 
-   -- go after avatar
-   elseif isseeingavatar then
-    if distancetoavatar < 7 then
-     enemy.ai.state='attacking'
-     enemy.ai.state_counter=50
-     enemy.ai.isready=false
-    else
-     enemy.ai.state='moving'
-     enemy.ai.isready=true
-     enemy.ai.targetx=avatar.x
-     enemy.ai.targety=avatar.y
-    end
+   elseif haslostoavatar then
+    -- set avatar position as target, move there
+    -- debug('haslostoavatar')
 
-   else
-    -- continue to move to target pos
-    if enemy.ai.state == 'moving' and
-       not collidedwithwall then
-     enemy.ai.isready=true
+    enemy.ai.state='moving'
+    enemy.ai.targetx=avatar.x
+    enemy.ai.targety=avatar.y
+    enemy.spd=enemy.runspd
 
-     if dist(enemy.x,enemy.y,enemy.ai.targetx,enemy.ai.targety) < enemy.spd * 2 then
-      -- arrived
-      enemy.ai.state='idling'
-     end
+   elseif hastarget then
+    -- continue to move to target
+    -- debug('hastarget')
 
-    else
-     enemy.ai.state='roaming'
-     local a=rnd()
-     enemy.ai.targetx=enemy.x+cos(a)*10
-     enemy.ai.targety=enemy.y+sin(a)*10
-     enemy.ai.move_counter=60
-    end
+    enemy.ai.state='moving'
+
+   elseif not hastarget then
+    -- roam
+    -- debug('not hastarget')
+
+    enemy.ai.state='moving'
+    local a=rnd()
+    enemy.ai.targetx=enemy.x+cos(a)*10
+    enemy.ai.targety=enemy.y+sin(a)*10
+    enemy.spd=enemy.runspd*0.5
+
    end
-
-   -- flank avatar
-   -- roam
 
    -- reset collided props
    enemy.ai.iscollidingwithwall=false
-
   end
  end
 
@@ -665,60 +694,72 @@ function _update60()
  for enemy in all(actors) do
   if enemy.ai then
 
-   -- update state counters
-   if enemy.ai.move_counter > 0 then
-    enemy.ai.move_counter-=1
-   end
-
-   if enemy.ai.state_counter > 0 then
-    enemy.ai.state_counter-=1
-   end
-
    -- perform end of state action
-   if enemy.ai.state == 'attacking' and
-      enemy.ai.state_counter <= 0 then
+   if enemy.ai.state == 'idling' then
 
-    local a=atan2(
+    -- reset target etc
+    enemy.ai.targetx=nil
+    enemy.ai.targety=nil
+    enemy.ai.ismovingoutofcollision=false
+
+   elseif enemy.ai.state == 'attacking' then
+
+    if enemy.ai.laststate != 'attacking' then
+
+     enemy.ai.state_counter=50
+    end
+
+    enemy.ai.state_counter-=1
+    if enemy.ai.state_counter <= 0 then
+
+     local a=atan2(
       enemy.ai.targetx-enemy.x,
       enemy.ai.targety-enemy.y)
 
-    add(attacks,createattack({
-     isenemy=true,
-     x=enemy.x+cos(a)*3,
-     y=enemy.y+sin(a)*3,
-     halfw=2,
-     halfh=2,
-     state_counter=1,
-     isknockback=true,
-     knockbackangle=a,
-     damage=1,
-    }))
+     add(attacks,createattack({
+      isenemy=true,
+      x=enemy.x+cos(a)*3,
+      y=enemy.y+sin(a)*3,
+      halfw=2,
+      halfh=2,
+      state_counter=1,
+      isknockback=true,
+      knockbackangle=a,
+      damage=1,
+     }))
 
-    enemy.ai.isready=true
+     enemy.ai.state='idling'
+    end
+
+   elseif enemy.ai.state == 'recovering' then
+    -- todo
 
    elseif enemy.ai.state == 'moving' then
+
+    if enemy.ai.ismovingoutofcollision then
+     enemy.ai.state_counter-=1
+     if enemy.ai.state_counter <= 0 then
+      enemy.ai.ismovingoutofcollision=false
+     end
+    end
+
     enemy.a=atan2(
       enemy.ai.targetx-enemy.x,
       enemy.ai.targety-enemy.y)
     enemy.dx=cos(enemy.a)*enemy.spd
     enemy.dy=sin(enemy.a)*enemy.spd
 
-   elseif enemy.ai.state == 'roaming' then
-    enemy.a=atan2(
-      enemy.ai.targetx-enemy.x,
-      enemy.ai.targety-enemy.y)
-    enemy.dx=cos(enemy.a)*enemy.spd*0.25
-    enemy.dy=sin(enemy.a)*enemy.spd*0.25
-
-   elseif enemy.ai.state == 'recovering' and
-          enemy.ai.state_counter <= 0 then
-    enemy.ai.isready=true
-
-   elseif enemy.ai.state == 'roaming' then
-    enemy.dx=cos(enemy.a)*enemy.spd
-    enemy.dy=sin(enemy.a)*enemy.spd
+    if dist(
+         enemy.x,
+         enemy.y,
+         enemy.ai.targetx,
+         enemy.ai.targety) <= enemy.spd + 0.1 then
+     enemy.ai.state='idling'
+    end
 
    end
+
+   enemy.ai.laststate=enemy.ai.state
   end
  end
 
@@ -1033,7 +1074,7 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 11111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000000000000011000000000000001100000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000
-10006006000600011000600600060001100006000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000
+10006006000600011000600600060001100000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000
 106000600f001111106000600f001111106000000f00111100000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000000000011111000000000001111100000000000111100000000000000000000000000000000000000000000000000000000000000000000000000000000
 10060600000011111006060000001111100000000000111100000000000000000000000000000000000000000000000000000000000000000000000000000000
