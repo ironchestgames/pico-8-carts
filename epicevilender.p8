@@ -227,6 +227,9 @@ function collideaabbs(aabb,other,_dx,_dy)
   end
  end
 
+ -- todo: next pos along x and y together
+ --       to test when moving from any corner quadrant
+
  return dx,dy
 end
 
@@ -456,27 +459,22 @@ function _update60()
   local enemy=actors[curenemyidx]
   if enemy.ai then
 
+   -- todo: ai should have aggravator instead of
+   --       avatar hard-coded
+
+   -- aggression vars
    local distancetoavatar=dist(enemy.x,enemy.y,avatar.x,avatar.y)
-
-   local ismovingoutofcollision=enemy.ai.ismovingoutofcollision
-
-   -- is colliding w other stuff
-   local collidedwithwall=enemy.ai.wallcollisiondx != nil
-   local hastoocloseto=#enemy.ai.toocloseto > 0
-   -- todo: maybe move away from avatar if too close?
-
-   -- has los to avatar
-   -- todo: make this has los to aggravator
-   local haslostoavatar=haslos(floormap,enemy.x,enemy.y,avatar.x,avatar.y)
-
-   -- within attack distance to avatar
-   -- todo: ...aggravator
    local withinattackdistance=distancetoavatar <= 7
-
+   local haslostoavatar=haslos(floormap,enemy.x,enemy.y,avatar.x,avatar.y)
    local isswinging=enemy.ai.state == 'attacking' and enemy.ai.state_counter > 0
 
-   -- has target
+   -- movement vars
+   local ismovingoutofcollision=enemy.ai.ismovingoutofcollision
+   local collidedwithwall=enemy.ai.wallcollisiondx != nil
+   local hastoocloseto=#enemy.ai.toocloseto > 0
    local hastarget=enemy.ai.targetx!=nil
+   -- todo: maybe move away from avatar if too close?
+   --       or at least stop
 
    -- continue to move out of collision
    if ismovingoutofcollision then
