@@ -32,6 +32,10 @@ debugh=function(n)
  debug(tostr(n,true))
 end
 
+debugaistates=function(s)
+ debug(s)
+end
+
 function isaabbscolliding(aabb1,aabb2)
  return aabb1.x - aabb1.halfw < aabb2.x + aabb2.halfw and
         aabb1.x + aabb1.halfw > aabb2.x - aabb2.halfw and
@@ -144,7 +148,6 @@ newaabb={} -- note: used internally in collision funcs
 
 function floormapcollision(_floormap,aabb,_dx,_dy)
  local dx,dy=_dx,_dy
- local hascollided=false
 
  -- set halfs
  newaabb.halfw=aabb.halfw
@@ -164,7 +167,6 @@ function floormapcollision(_floormap,aabb,_dx,_dy)
   elseif _dx < 0 then
    dx=(idealdistx-curdistx)
   end
-  hascollided=true
  end
 
  -- reset x and set new y
@@ -181,17 +183,15 @@ function floormapcollision(_floormap,aabb,_dx,_dy)
   elseif _dy < 0 then
    dy=(idealdisty-curdisty)
   end
-  hascollided=true
  end
 
- return dx,dy,hascollided
+ return dx,dy
 end
 
 function collideaabbs(aabb,other,_dx,_dy)
 
  -- set up result
  local dx,dy=_dx,_dy
- local hascollided=false
 
  -- set aabb halfs
  newaabb.halfw=aabb.halfw
@@ -210,7 +210,6 @@ function collideaabbs(aabb,other,_dx,_dy)
   elseif dx < 0 then
    dx=(idealdistx-curdistx)
   end
-  hascollided=true
  end
 
  -- set next pos along y
@@ -226,10 +225,9 @@ function collideaabbs(aabb,other,_dx,_dy)
   elseif _dy < 0 then
    dy=(idealdisty-curdisty)
   end
-  hascollided=true
  end
 
- return dx,dy,hascollided
+ return dx,dy
 end
 
 btnmasktoangle={
@@ -248,6 +246,7 @@ avatar={} -- avatar actor handle
 actors={} -- actors
 attacks={} -- attack objects
 
+-- todo: this is only convenience dev function
 function createactor(params) -- note: mutates params
 
  -- state
@@ -264,6 +263,7 @@ function createactor(params) -- note: mutates params
  return params
 end
 
+-- todo: this is only convenience dev function
 function createattack(params)
 
  -- remove me
@@ -299,157 +299,12 @@ function updateavatarstate(avatar)
 end
 
 
--- from={to,{prereqs},{ontransition}}
-
--- function updatestate(actor)
---  debug(actor.state)
---  local currenttransitions=actor.ai[actor.state].transitions
---  local nexttransition=nil
---  for transition in all(currenttransitions) do
---   local allprereqs=true
---   for prereq in all(transition[2]) do
---    if prereq(actor) == false then
---     allprereqs=false
---     break
---    end
---   end
---   if allprereqs then
---    nexttransition=transition
---   end
---  end
-
---  if nexttransition then
---   actor.state=nexttransition[1]
---   for predicate in all(nexttransition[3]) do
---    predicate(actor)
---   end
---  end
--- end
-
--- onstatecounterzero=function(actor)
---  return actor.state_counter <= 0
--- end
-
--- haslostotarget=function(actor)
---  if haslos(floormap,actor.x,actor.y,avatar.x,avatar.y) then
-
---   -- note: these are evil side effects,
---   --       because of performance
---   actor.ai.targetx=avatar.x
---   actor.ai.targety=avatar.y
---   return true
---  end
---  return false
--- end
-
--- nothaslostotarget=function(actor)
---  return not haslostotarget(actor)
--- end
-
--- debugme=function(actor)
---  debug(actor.state)
--- end
-
--- aimodes={ -- these perform state transitions
---  normal=function(actor)
---   local ai=actor.ai
-
---   if actor.state == 'recovering' then
---    actor.state_counter-=1
---    if actor.state_counter <= 0 then
---     actor.state='idling'
---    end
-
---   elseif actor.state == 'waiting' then
---    actor.state_counter-=1
---    if actor.state_counter <= 0 then
---     actor.state='idling'
---    end
-
---   elseif actor.state == 'attacking' then
---    actor.state_counter-=1
---    if actor.state_counter <= 0 then
---     local a=atan2(ai.targetx-actor.x,ai.targety-actor.y)
-
---     add(attacks,createattack({
---      isenemy=true,
---      x=actor.x+cos(a)*3,
---      y=actor.y+sin(a)*3,
---      halfw=2,
---      halfh=2,
---      state_counter=1,
---      isknockback=true,
---      knockbackangle=a,
---      damage=1,
---     }))
-
---     actor.state='idling'
---    end
-
---   elseif actor.state == 'idling' then
---    actor.state='searching'
-
---   elseif actor.state == 'searching' then
---    if ai.targetx != nil then -- note: implies targety is set too
---     actor.state='moving'
---    end
-
---   elseif actor.state == 'moving' then
-  
---   else
---    ai.targetx=nil
---    ai.targety=nil
---    actor.state='idling'
---   end
-
---   -- update state
---   ai[actor.state](actor)
-
---  end,
--- }
-
--- aistates={
-
---  standingstill=function(actor)
---   actor.dx=0
---   actor.dy=0
---  end,
-
- -- searchingfortarget=function(actor)
- --  if haslos(floormap,actor.x,actor.y,avatar.x,avatar.y) then
- --   actor.ai.targetx=avatar.x
- --   actor.ai.targety=avatar.y
-
- --   -- if dist(actor.x,actor.y,ai.targetx,ai.targety) < 7 then
- --   --  actor.state='attacking'
- --   --  actor.state_counter=30
- --   -- end
- --  end
- -- end,
-
- -- movingtotarget=function(actor)
- --  local a=atan2(actor.ai.targetx-actor.x,actor.ai.targety-actor.y)
- --  actor.dx=cos(a)*actor.spd
- --  actor.dy=sin(a)*actor.spd
- -- end,
-
- -- recoveringfromhit=function(actor)
- --  actor.dx=0
- --  actor.dy=0
- -- end,
-
- -- normalattack=function(actor)
- --  actor.dx=0
- --  actor.dy=0
- -- end,
--- }
-
-ai={
- curenemyidx=1,
- turnaroundbb={}, -- note: erased when curenemyidx resets
-}
+curenemyidx=1
 
 function _init()
+
+ -- reset vars
+ curenemyidx=1
 
  -- reset collections
  floormap={}
@@ -593,12 +448,12 @@ function _update60()
  updateavatarstate(avatar)
 
  -- ai to make decisions
- ai.curenemyidx+=1
- if ai.curenemyidx > #actors then
-  ai.curenemyidx=1
+ curenemyidx+=1
+ if curenemyidx > #actors then
+  curenemyidx=1
  end
  do
-  local enemy=actors[ai.curenemyidx]
+  local enemy=actors[curenemyidx]
   if enemy.ai then
 
    local distancetoavatar=dist(enemy.x,enemy.y,avatar.x,avatar.y)
@@ -606,7 +461,7 @@ function _update60()
    local ismovingoutofcollision=enemy.ai.ismovingoutofcollision
 
    -- is colliding w other stuff
-   local collidedwithwall=enemy.ai.iscollidingwithwall
+   local collidedwithwall=enemy.ai.wallcollisiondx != nil
    local hastoocloseto=#enemy.ai.toocloseto > 0
    -- todo: maybe move away from avatar if too close?
 
@@ -618,35 +473,40 @@ function _update60()
    -- todo: ...aggravator
    local withinattackdistance=distancetoavatar <= 7
 
+   local isswinging=enemy.ai.state == 'attacking' and enemy.ai.state_counter > 0
+
    -- has target
    local hastarget=enemy.ai.targetx!=nil
 
-   -- decision tree
+   -- continue to move out of collision
    if ismovingoutofcollision then
-    -- continue to move out of collision
-    -- debug('ismovingoutofcollision')
+    debugaistates('ismovingoutofcollision')
 
     enemy.ai.state='moving'
 
-   elseif withinattackdistance and haslostoavatar then
-    -- attack
-    -- debug('withinattackdistance and haslostoavatar')
+   -- attack
+   elseif isswinging or withinattackdistance and haslostoavatar then
+    debugaistates('withinattackdistance and haslostoavatar')
 
     enemy.ai.state='attacking'
     -- todo: swing timer
 
+   -- colliding w wall, move out of
    elseif collidedwithwall then
-    -- colliding w wall, move out of
-    -- debug('collidedwithwall')
+    debugaistates('collidedwithwall')
 
     enemy.ai.state='moving'
-    -- todo: get knowledge of what wall
+    local a=atan2(
+      enemy.x+enemy.ai.wallcollisiondx-enemy.x,
+      enemy.y+enemy.ai.wallcollisiondy-enemy.y)
+    enemy.ai.targetx=enemy.x+cos(a)*10
+    enemy.ai.targety=enemy.y+sin(a)*10
     enemy.ai.ismovingoutofcollision=true
     enemy.ai.state_counter=60
 
+   -- colliding w other, move out of
    elseif hastoocloseto then
-    -- colliding w other, move out of
-    -- debug('hastoocloseto')
+    debugaistates('hastoocloseto')
 
     enemy.ai.state='moving'
     local collidedwith=enemy.ai.toocloseto[1]
@@ -658,24 +518,24 @@ function _update60()
     enemy.ai.ismovingoutofcollision=true
     enemy.ai.state_counter=60
 
+   -- set avatar position as target, move there
    elseif haslostoavatar then
-    -- set avatar position as target, move there
-    -- debug('haslostoavatar')
+    debugaistates('haslostoavatar')
 
     enemy.ai.state='moving'
     enemy.ai.targetx=avatar.x
     enemy.ai.targety=avatar.y
     enemy.spd=enemy.runspd
 
+   -- continue to move to target
    elseif hastarget then
-    -- continue to move to target
-    -- debug('hastarget')
+    debugaistates('hastarget')
 
     enemy.ai.state='moving'
 
+   -- roam
    elseif not hastarget then
-    -- roam
-    -- debug('not hastarget')
+    debugaistates('not hastarget')
 
     enemy.ai.state='moving'
     local a=rnd()
@@ -684,9 +544,6 @@ function _update60()
     enemy.spd=enemy.runspd*0.5
 
    end
-
-   -- reset collided props
-   enemy.ai.iscollidingwithwall=false
   end
  end
 
@@ -718,8 +575,8 @@ function _update60()
 
      add(attacks,createattack({
       isenemy=true,
-      x=enemy.x+cos(a)*3,
-      y=enemy.y+sin(a)*3,
+      x=enemy.x+cos(a)*4,
+      y=enemy.y+sin(a)*4,
       halfw=2,
       halfh=2,
       state_counter=1,
@@ -835,7 +692,7 @@ function _update60()
  -- avatar movement check against other actors
  for actor in all(actors) do
   if actor != avatar then
-   local _dx,_dy,hascollided=collideaabbs(
+   local _dx,_dy=collideaabbs(
      avatar,
      actor,
      avatar.dx,
@@ -850,14 +707,20 @@ function _update60()
  for actor in all(actors) do
 
   -- collide against floor and get possible movement
-  local _dx,_dy,hascollided=floormapcollision(
+  local _dx,_dy=floormapcollision(
     floormap,
     actor,
     actor.dx,
     actor.dy)
 
   if actor.ai then
-   actor.ai.iscollidingwithwall=hascollided
+   actor.ai.wallcollisiondx=nil
+   actor.ai.wallcollisiondy=nil
+   if _dx != actor.dx or
+      _dy != actor.dy then
+    actor.ai.wallcollisiondx=_dx
+    actor.ai.wallcollisiondy=_dy
+   end
   end
 
   -- set actor pos based on possible movement
@@ -1074,17 +937,17 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 11111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000000000000011000000000000001100000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000
-10006006000600011000600600060001100000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000
-106000600f001111106000600f001111106000000f00111100000000000000000000000000000000000000000000000000000000000000000000000000000000
+10000000000000011000600600060001100000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000
+106000000f001111106000600f001111106000000f00111100000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000000000011111000000000001111100000000000111100000000000000000000000000000000000000000000000000000000000000000000000000000000
-10060600000011111006060000001111100000000000111100000000000000000000000000000000000000000000000000000000000000000000000000000000
+10000000000011111006060000001111100000000000111100000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000000000000011000000000000001100000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000
-10060011006060011006001100606001100000110000000100000000000000000000000000000000000000000000000000000000000000000000000000000000
+10000011000000011006001100606001100000110000000100000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000011000000011000001100000001100000110000000100000000000000000000000000000000000000000000000000000000000000000000000000000000
-10600011000111111060001100011111100000110001111100000000000000000000000000000000000000000000000000000000000000000000000000000000
-10010600000111111001060000011111100100000001111100000000000000000000000000000000000000000000000000000000000000000000000000000000
-10010000060111111001000006011111100100000001111100000000000000000000000000000000000000000000000000000000000000000000000000000000
+10000011000111111060001100011111100000110001111100000000000000000000000000000000000000000000000000000000000000000000000000000000
+10010000000111111001060000011111100100000001111100000000000000000000000000000000000000000000000000000000000000000000000000000000
+10010000000111111001000006011111100100000001111100000000000000000000000000000000000000000000000000000000000000000000000000000000
 10011110000000011001111000000001100111100000000100000000000000000000000000000000000000000000000000000000000000000000000000000000
-10600000060600011060000006060001100000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000
+10000000000000011060000006060001100000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000
 10000000000000011000000000000001100000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000
 11111111111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000000000000000000000000000
