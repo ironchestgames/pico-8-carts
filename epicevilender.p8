@@ -278,12 +278,10 @@ end
 function updateavatarstate(avatar)
  if avatar.state_counter > 0 then
   avatar.state_counter-=1
-  if avatar.state_counter <= 0 then
-   if avatar.state == 'attacking' or
-      avatar.state == 'recovering' then
-    avatar.state='idling'
-   end
-  end
+ end
+
+ if avatar.state_counter <= 0 then
+  avatar.state='idling'
  end
 
  if avatar.state == 'recovering' then
@@ -291,15 +289,73 @@ function updateavatarstate(avatar)
   avatar.dy=0
  end
 
- if avatar.state != 'charging' then
-  avatar.charge=0
- end
-
  if avatar.state == 'attacking' then
   avatar.dx=0
   avatar.dy=0
  end
 end
+
+swordattackskill={
+ precastduration=0,
+ postcastduration=16,
+ counter=0,
+ hasinput=false,
+ update=function(skill,user)
+  if skill.counter > 0 then
+   skill.counter-=1
+  end
+  if skill.hasinput and skill.counter <= 0 then
+   add(attacks,createattack({
+    x=avatar.x+cos(avatar.a)*4,
+    y=avatar.y+sin(avatar.a)*4,
+    halfw=2,
+    halfh=2,
+    state_counter=1,
+    isknockback=true,
+    knockbackangle=avatar.a,
+    damage=1,
+   }))
+
+   -- reset skill
+   skill.hasinput=false
+
+   -- set user to recover
+   user.state='recovering'
+   user.state_counter=skill.postcastduration
+  end
+ end,
+}
+
+fireboltskill={
+ precastduration=60,
+ postcastduration=0,
+ counter=30,
+ hasinput=false,
+ update=function(skill,user)
+  if skill.counter > 0 then
+   skill.counter-=1
+  end
+  if skill.hasinput and skill.counter <= 0 then
+   add(attacks,createattack({
+    x=user.x+cos(user.a)*4,
+    y=user.y+sin(user.a)*4,
+    halfw=1,
+    halfh=1,
+    dx=cos(user.a)*2,
+    dy=sin(user.a)*2,
+    damage=2,
+    -- todo: add effect
+   }))
+
+   -- reset skill
+   skill.hasinput=false
+
+   -- set user to recover
+   user.state='recovering'
+   user.state_counter=skill.postcastduration
+  end
+ end,
+}
 
 
 curenemyidx=1
@@ -330,7 +386,8 @@ function _init()
      a=0,
      spd=0.5,
      hp=3,
-     charge=0,
+     skill1=swordattackskill,
+     skill2=fireboltskill,
     })
     add(actors,avatar)
 
@@ -367,9 +424,6 @@ function _init()
  end
 end
 
-btn4down=false
-btn4pressed=false
-
 function _update60()
 
  --note: devkit debug
@@ -379,17 +433,6 @@ function _update60()
    isdebug=not isdebug
    debug('isdebug',isdebug)
   end
- end
-
- -- massage input
- btn4pressed=false
- if btn(4) then
-  if btn4down != true then
-   btn4pressed=true
-  end
-  btn4down=true
- else
-  btn4down=false
  end
 
  -- consider input
@@ -403,49 +446,37 @@ function _update60()
   avatar.dy=0
  end
 
+ -- reset skills hasinput
+ if avatar.state == 'idling' or
+    avatar.state == 'moving' then
+  avatar.skill1.hasinput=false
+  avatar.skill2.hasinput=false
+ end
+
  -- consider attack input
- if btn4pressed and
+ if btn(4) and
     (avatar.state == 'idling' or
      avatar.state == 'moving') then
+  avatar.skill2.hasinput=true
+  avatar.skill2.counter=avatar.skill2.precastduration
 
-  -- attack duration
+  avatar.state_counter=avatar.skill2.counter
   avatar.state='attacking'
-  avatar.state_counter=16
-
-  add(attacks,createattack({
-   x=avatar.x+cos(avatar.a)*4,
-   y=avatar.y+sin(avatar.a)*4,
-   halfw=2,
-   halfh=2,
-   state_counter=1,
-   isknockback=true,
-   knockbackangle=avatar.a,
-   damage=1,
-  }))
  end
 
  if btn(5) and
     (avatar.state == 'idling' or
-     avatar.state == 'moving' or
-     avatar.state == 'charging') then
-  avatar.state='charging'
-  avatar.charge+=1
- elseif (not btn(5)) and
-        avatar.state == 'charging' and
-        avatar.charge > 60 then
-  avatar.charge=0
+     avatar.state == 'moving') then
+  avatar.skill1.hasinput=true
+  avatar.skill1.counter=avatar.skill1.precastduration
+
+  avatar.state_counter=avatar.skill1.counter
   avatar.state='attacking'
-  avatar.state_counter=1
-  add(attacks,createattack({
-   x=avatar.x+cos(avatar.a)*4,
-   y=avatar.y+sin(avatar.a)*4,
-   halfw=1,
-   halfh=1,
-   dx=cos(avatar.a)*2,
-   dy=sin(avatar.a)*2,
-   damage=2,
-  }))
  end
+
+ -- update skills
+ avatar.skill2.update(avatar.skill2,avatar)
+ avatar.skill1.update(avatar.skill1,avatar)
 
  -- update current state counter
  updateavatarstate(avatar)
@@ -825,11 +856,6 @@ function _draw()
    col=8
   elseif obj.state == 'attacking' then
    col=7
-  elseif obj.state == 'charging' then
-   col=14
-   if actor.charge > 60 then
-    col=7
-   end
   end
 
   rectfill(
@@ -859,6 +885,11 @@ function _draw()
  end
 
  print(avatar.hp .. ' hp',110,0,8)
+
+ print(avatar.state_counter, 70,0,10)
+ print(avatar.skill2.counter, 80,0,9)
+ print(avatar.skill1.counter, 90,0,9)
+
 
  -- prints debug stats
  -- if isdebug then
