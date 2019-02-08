@@ -297,7 +297,7 @@ end
 
 swordattackskill={
  precastduration=0,
- postcastduration=16,
+ postcastduration=28,
  counter=0,
  hasinput=false,
  update=function(skill,user)
@@ -327,7 +327,7 @@ swordattackskill={
 }
 
 fireboltskill={
- precastduration=60,
+ precastduration=40,
  postcastduration=0,
  counter=30,
  hasinput=false,
@@ -453,18 +453,8 @@ function _update60()
   avatar.skill2.hasinput=false
  end
 
- -- consider attack input
+ -- consider skill input
  if btn(4) and
-    (avatar.state == 'idling' or
-     avatar.state == 'moving') then
-  avatar.skill2.hasinput=true
-  avatar.skill2.counter=avatar.skill2.precastduration
-
-  avatar.state_counter=avatar.skill2.counter
-  avatar.state='attacking'
- end
-
- if btn(5) and
     (avatar.state == 'idling' or
      avatar.state == 'moving') then
   avatar.skill1.hasinput=true
@@ -474,12 +464,24 @@ function _update60()
   avatar.state='attacking'
  end
 
+ if btn(5) and
+    (avatar.state == 'idling' or
+     avatar.state == 'moving') then
+  avatar.skill2.hasinput=true
+  avatar.skill2.counter=avatar.skill2.precastduration
+
+  avatar.state_counter=avatar.skill2.counter
+  avatar.state='attacking'
+ end
+
  -- update skills
- avatar.skill2.update(avatar.skill2,avatar)
  avatar.skill1.update(avatar.skill1,avatar)
+ avatar.skill2.update(avatar.skill2,avatar)
 
  -- update current state counter
  updateavatarstate(avatar)
+
+ -- todo: check for avatar death
 
  -- ai to make decisions
  curenemyidx+=1
