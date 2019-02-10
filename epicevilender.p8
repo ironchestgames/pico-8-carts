@@ -282,6 +282,7 @@ function updateavatarstate(avatar)
 
  if avatar.state_counter <= 0 then
   avatar.state='idling'
+  avatar.recovertype=nil
  end
 
  if avatar.state == 'recovering' then
@@ -551,6 +552,9 @@ function _update60()
   local enemy=actors[curenemyidx]
   if enemy.ai then
 
+   -- resolving effect vars
+   local isresolvingeffect=enemy.ai.state=='recovering'
+
    -- todo: ai should have aggravator instead of
    --       avatar hard-coded
 
@@ -568,8 +572,14 @@ function _update60()
    -- todo: maybe move away from avatar if too close?
    --       or at least stop
 
+
+   if isresolvingeffect then
+    debugaistates('isresolvingeffect')
+
+    -- pass
+
    -- continue to move out of collision
-   if ismovingoutofcollision then
+   elseif ismovingoutofcollision then
     debugaistates('ismovingoutofcollision')
 
     enemy.ai.state='moving'
@@ -682,7 +692,11 @@ function _update60()
     end
 
    elseif enemy.ai.state == 'recovering' then
-    -- todo
+    enemy.ai.state_counter-=1
+    if enemy.ai.state_counter <= 0 then
+     enemy.ai.state='idling'
+     enemy.recovertype=nil
+    end
 
    elseif enemy.ai.state == 'moving' then
 
@@ -742,8 +756,15 @@ function _update60()
     actor.hp-=attack.damage
 
     -- go into recovering
-    actor.state='recovering'
-    actor.state_counter=20
+    if actor.ai then
+     actor.ai.state='recovering'
+     actor.ai.state_counter=30
+     actor.recovertype='damage'
+    else
+     actor.state='recovering'
+     actor.state_counter=30
+     actor.recovertype='damage'
+    end
 
     -- check if actor dead
     if actor.hp <= 0 then
@@ -971,6 +992,11 @@ function _draw()
   if actor.a != nil and actor.a >= 0.25 and actor.a <= 0.75 then
    flipx=true
   end
+  if actor.recovertype == 'damage' then
+   for i=1,15 do
+    pal(i,8,0)
+   end
+  end
   sspr(
     frame[1],
     frame[2],
@@ -999,6 +1025,11 @@ function _draw()
     frame[4],
     flipx)
    palt(1,false)
+  end
+
+  -- reset colors
+  for i=1,15 do
+   pal(i,i,0)
   end
 
   if isdebug then
