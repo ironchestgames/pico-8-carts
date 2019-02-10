@@ -275,28 +275,6 @@ function createattack(params)
  return params
 end
 
-function updateavatarstate(avatar)
- if avatar.state_counter > 0 then
-  avatar.state_counter-=1
- end
-
- if avatar.state_counter <= 0 then
-  avatar.state='idling'
-  avatar.recovertype=nil
- end
-
- if avatar.state == 'recovering' then
-  avatar.dx=0
-  avatar.dy=0
- end
-
- if avatar.state == 'attacking' then
-  avatar.dx=0
-  avatar.dy=0
- end
-
- debug('avatar state', avatar.state)
-end
 
 -- items
 sword={
@@ -309,97 +287,79 @@ sword={
  },
 }
 
+
 -- skills
 swordattackskill={
- precastduration=15,
- postcastduration=28,
- counter=0,
- hasinput=false,
- update=function(skill,user)
-  if skill.counter > 0 then
-   skill.counter-=1
-  end
-  if user.state == 'attacking' and skill.counter <= 0 then
-   if skill.hasinput == true then
-    local x=user.x+cos(user.a)*4
-    local y=user.y+sin(user.a)*4
+ preperformdur=15,
+ postperformdur=28,
+ perform=function(skill,user)
+  local x=user.x+cos(user.a)*4
+  local y=user.y+sin(user.a)*4
 
-    add(attacks,createattack({
-     x=x,
-     y=y,
-     halfw=2,
-     halfh=2,
-     state_counter=1,
-     isknockback=true,
-     knockbackangle=user.a,
-     damage=1,
-     targetcount=1000,
-    }))
+  add(attacks,createattack({
+   x=x,
+   y=y,
+   halfw=2,
+   halfh=2,
+   state_counter=1,
+   isknockback=true,
+   knockbackangle=user.a,
+   damage=1,
+   targetcount=1000,
+  }))
 
-    -- add vfx
-    angletofx={
-     [0]={0,20,4,7, -1,-5}, -- right
-     [0.125]={8,20,6,4, -3,-2}, -- right/up
-     [0.25]={20,20,9,3, -3,-1}, -- up
-     [0.375]={14,20,6,4, -2,-2}, -- up/left
-     [0.5]={4,20,4,7, -2,-5}, -- left
-     [0.625]={29,20,4,7, -3,-6}, -- left/down
-     [0.75]={20,23,9,3, -4,-2}, -- down
-     [0.875]={33,20,4,7, 0,-6}, -- down/right
-    }
+  -- add vfx
+  angletofx={
+   [0]={0,20,4,7, -1,-5}, -- right
+   [0.125]={8,20,6,4, -3,-2}, -- right/up
+   [0.25]={20,20,9,3, -3,-1}, -- up
+   [0.375]={14,20,6,4, -2,-2}, -- up/left
+   [0.5]={4,20,4,7, -2,-5}, -- left
+   [0.625]={29,20,4,7, -3,-6}, -- left/down
+   [0.75]={20,23,9,3, -4,-2}, -- down
+   [0.875]={33,20,4,7, 0,-6}, -- down/right
+  }
 
-    local vfx=angletofx[user.a]
-    vfx[5]=x+vfx[5]
-    vfx[6]=y+vfx[6]
-    vfx.counter=skill.postcastduration
+  local vfx=angletofx[user.a]
+  vfx[5]=x+vfx[5]
+  vfx[6]=y+vfx[6]
+  vfx.counter=skill.postperformdur
 
-    add(vfxs,vfx)
-
-    -- reset skill
-    skill.hasinput=false
-
-    -- set user to postcast
-    user.state_counter=skill.postcastduration
-
-    -- set next attacking frame
-    user.frames.currentframe=2
-    sword.frames.currentframe=2
-   end
-  end
+  add(vfxs,vfx)
  end,
 }
 
-fireboltskill={
- precastduration=40,
- postcastduration=0,
- counter=30,
- hasinput=false,
- update=function(skill,user)
-  if skill.counter > 0 then
-   skill.counter-=1
-  end
-  if skill.hasinput and skill.counter <= 0 then
-   add(attacks,createattack({
-    x=user.x+cos(user.a)*4,
-    y=user.y+sin(user.a)*4,
-    halfw=1,
-    halfh=1,
-    dx=cos(user.a)*2,
-    dy=sin(user.a)*2,
-    damage=2,
-    targetcount=1,
-    -- todo: add effect
-   }))
+-- fireboltskill={
+--  preperformdur=40,
+--  postperformdur=0,
+--  counter=30,
+--  hasinput=false,
+--  update=function(skill,user)
+--   if skill.counter > 0 then
+--    skill.counter-=1
+--   end
+--   if skill.hasinput and skill.counter <= 0 then
+--    add(attacks,createattack({
+--     x=user.x+cos(user.a)*4,
+--     y=user.y+sin(user.a)*4,
+--     halfw=1,
+--     halfh=1,
+--     dx=cos(user.a)*2,
+--     dy=sin(user.a)*2,
+--     damage=2,
+--     targetcount=1,
+--     -- todo: add effect
+--    }))
 
-   -- reset skill
-   skill.hasinput=false
+--    -- reset skill
+--    skill.hasinput=false
 
-   -- set user to recover
-   user.state='recovering'
-   user.state_counter=skill.postcastduration
-  end
- end,
-}
+--    -- set user to recover
+--    user.state='recovering'
+--    user.state_counter=skill.postperformdur
+--   end
+--  end,
+-- }
 
 
 curenemyidx=1
@@ -433,6 +393,7 @@ function _init()
      state='idling',
      skill1=swordattackskill,
      skill2=fireboltskill,
+     ispreperform=false,
      frames={
       currentframe=1,
       idling={{0,10,3,4, -1,-2}},
@@ -494,10 +455,11 @@ function _update60()
   end
  end
 
- -- consider input
+ -- consider dpad input
  local angle=btnmasktoangle[band(btn(),0b1111)] -- note: filter out o/x buttons from dpad input
  if angle != nil then
-  if avatar.state != 'recovering' then
+  if avatar.state != 'recovering' and
+     avatar.state != 'attacking' then
    avatar.a=angle
    avatar.dx=normalize(cos(avatar.a))
    avatar.dy=normalize(sin(avatar.a))
@@ -507,48 +469,85 @@ function _update60()
   avatar.dy=0
  end
 
- -- reset skills hasinput
- if avatar.state == 'idling' or
-    avatar.state == 'moving' then
-  avatar.skill1.hasinput=false
-  avatar.skill2.hasinput=false
- end
-
- -- consider skill input
+ -- consider skill button input
  if btn(4) and
     (avatar.state == 'idling' or
      avatar.state == 'moving') then
-  avatar.skill1.hasinput=true
-  avatar.skill1.counter=avatar.skill1.precastduration
 
-  avatar.state_counter=avatar.skill1.counter
   avatar.state='attacking'
+  avatar.ispreperform=true
+
+  avatar.state_counter=avatar.skill1.preperformdur
+
   avatar.frames.currentframe=1
   sword.frames.currentframe=1
  end
 
- if btn(5) and
-    (avatar.state == 'idling' or
-     avatar.state == 'moving') then
-  avatar.skill2.hasinput=true
-  avatar.skill2.counter=avatar.skill2.precastduration
+ -- if btn(5) and
+ --    (avatar.state == 'idling' or
+ --     avatar.state == 'moving') then
+ --  avatar.skill2.hasinput=true
+ --  avatar.skill2.counter=avatar.skill2.preperformdur
 
-  avatar.state_counter=avatar.skill2.counter
-  avatar.state='attacking'
+ --  avatar.state_counter=avatar.skill2.counter
+ --  avatar.state='attacking'
+ -- end
+
+ -- consider avatar current state
+ do
+  local actor=avatar
+  local skill=avatar.skill1
+
+  -- count down
+  if actor.state_counter > 0 then
+   actor.state_counter-=1
+  end
+
+  -- is recovering
+  if actor.state == 'recovering' then
+   actor.dx=0
+   actor.dy=0
+
+  -- is attacking
+  elseif actor.state == 'attacking' then
+   actor.dx=0
+   actor.dy=0
+
+   -- update skills
+   if actor.state_counter <= 0 then
+    if actor.ispreperform == true then
+     skill.perform(skill,actor)
+
+     -- set actor to postperform
+     actor.state_counter=skill.postperformdur
+     actor.ispreperform=false
+
+     -- set next attacking frame
+     actor.frames.currentframe=2
+     sword.frames.currentframe=2
+
+    else -- note: done performing
+     actor.state='idling'
+     actor.frames.currentframe=1
+     sword.frames.currentframe=1
+    end
+   end
+
+  -- is moving
+  elseif actor.dx != 0 or actor.dy != 0 then -- note: this feels like a hack...
+   actor.state='moving'
+   actor.state_counter=2
+
+  -- go to idling
+  elseif actor.state_counter <= 0 then
+   actor.state='idling'
+   actor.recovertype=nil
+  end
  end
 
- -- update skills
- avatar.skill1.update(avatar.skill1,avatar)
- avatar.skill2.update(avatar.skill2,avatar)
 
- -- update current state counter
- updateavatarstate(avatar)
+ -- debug('avatar state', avatar.state)
 
- -- note: this feels like a hack...
- if avatar.dx != 0 or avatar.dy != 0 then
-  avatar.state='moving'
-  avatar.state_counter=2
- end
 
  -- todo: check for avatar death
 
@@ -1062,11 +1061,15 @@ function _draw()
   sspr(vfx[1],vfx[2],vfx[3],vfx[4],vfx[5],vfx[6])
  end
 
+ -- dev stats
  print(avatar.hp .. ' hp',110,0,8)
 
- print(avatar.state_counter, 70,0,10)
- print(avatar.skill2.counter, 80,0,9)
- print(avatar.skill1.counter, 90,0,9)
+ if avatar.ispreperform then
+  color(10)
+ else
+  color(9)
+ end
+ print(avatar.state_counter, 70,0)
 
 
  -- prints debug stats
