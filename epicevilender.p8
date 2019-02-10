@@ -317,6 +317,7 @@ swordattackskill={
     isknockback=true,
     knockbackangle=user.a,
     damage=1,
+    targetcount=1000,
    }))
 
    -- add vfx
@@ -366,6 +367,7 @@ fireboltskill={
     dx=cos(user.a)*2,
     dy=sin(user.a)*2,
     damage=2,
+    targetcount=1,
     -- todo: add effect
    }))
 
@@ -659,6 +661,7 @@ function _update60()
       isknockback=true,
       knockbackangle=a,
       damage=1,
+      targetcount=1000,
      }))
 
      enemy.ai.state='idling'
@@ -713,9 +716,7 @@ function _update60()
       isaabbscolliding(attack,actor) then
 
     -- remove attack
-    -- note: if attack has several hits,
-    --       maybe just use one attack per hit?
-    attack.removeme=true
+    attack.targetcount-=1
 
     -- knockback effect
     if attack.isknockback then
@@ -810,7 +811,8 @@ function _update60()
  for attack in all(attacks) do
   if attack.state_counter != nil then
    attack.state_counter-=1
-   if attack.state_counter <= 0 then
+   if attack.state_counter <= 0 or
+      attack.targetcount <= 0 then
     attack.removeme=true
    end
   end
