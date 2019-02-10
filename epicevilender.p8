@@ -250,6 +250,8 @@ actors={} -- actors
 attacks={} -- attack objects
 vfxs={} -- visual effects
 
+dmgfxdur=20
+
 -- todo: this is only convenience dev function
 function createactor(params) -- note: mutates params
 
@@ -259,6 +261,9 @@ function createactor(params) -- note: mutates params
  -- movement
  params.dx=0
  params.dy=0
+
+ -- damage indicator
+ params.dmgfxcounter=0
 
  -- remove me
  params.removeme=false
@@ -302,7 +307,7 @@ swordattackskill={
    halfw=2,
    halfh=2,
    state_counter=1,
-   isknockback=true,
+   isphysical=true,
    knockbackangle=user.a,
    damage=1,
    targetcount=1000,
@@ -320,10 +325,11 @@ swordattackskill={
    [0.875]={33,20,4,7, 0,-6}, -- down/right
   }
 
-  local vfx=angletofx[user.a]
-  vfx[5]=x+vfx[5]
-  vfx[6]=y+vfx[6]
-  vfx.counter=skill.postperformdur
+  local frame=angletofx[user.a]
+  frame[5]=x+frame[5]
+  frame[6]=y+frame[6]
+  frame.counter=skill.postperformdur
+  local vfx={frame}
 
   add(vfxs,vfx)
  end,
@@ -508,6 +514,10 @@ function _update60()
    actor.dx=0
    actor.dy=0
 
+   if actor.state_counter <= 0 then
+    actor.state='idling'
+   end
+
   -- is attacking
   elseif actor.state == 'attacking' then
    actor.dx=0
@@ -541,7 +551,6 @@ function _update60()
   -- go to idling
   elseif actor.state_counter <= 0 then
    actor.state='idling'
-   actor.recovertype=nil
   end
  end
 
@@ -690,7 +699,7 @@ function _update60()
       halfw=2,
       halfh=2,
       state_counter=1,
-      isknockback=true,
+      isphysical=true,
       knockbackangle=a,
       damage=1,
       targetcount=1000,
@@ -703,7 +712,6 @@ function _update60()
     enemy.ai.state_counter-=1
     if enemy.ai.state_counter <= 0 then
      enemy.ai.state='idling'
-     enemy.recovertype=nil
     end
 
    elseif enemy.ai.state == 'moving' then
@@ -751,33 +759,49 @@ function _update60()
       attack.isenemy != actor.isenemy and
       isaabbscolliding(attack,actor) then
 
-    -- remove attack
+    -- count hit
     attack.targetcount-=1
 
-    -- knockback effect
-    if attack.isknockback then
-     actor.dx=cos(attack.knockbackangle)*5
-     actor.dy=sin(attack.knockbackangle)*5
-    end
-
-    -- damage
+    -- do damage
     actor.hp-=attack.damage
 
     -- go into recovering
     if actor.ai then
      actor.ai.state='recovering'
-     actor.ai.state_counter=30
-     actor.recovertype='damage'
+     actor.ai.state_counter=0
     else
      actor.state='recovering'
-     actor.state_counter=30
-     actor.recovertype='damage'
+     actor.state_counter=0
     end
 
     -- check if actor dead
     if actor.hp <= 0 then
      actor.removeme=true
+
+     -- todo: add death vfx here
     end
+
+    -- effects
+
+    -- physical knockback effect
+    if attack.isphysical then
+     actor.dx=cos(attack.knockbackangle)*5
+     actor.dy=sin(attack.knockbackangle)*5
+    end
+
+    -- vfx
+
+    -- start damage indication
+    actor.dmgfxcounter=dmgfxdur
+
+    -- hit flash
+    local x=actor.x+actor.dx/2
+    local y=actor.y+actor.dy/2
+    add(vfxs,{
+     {37,20,5,5,x-2.5,y-2.5,counter=4},
+     {42,20,5,5,x-2.5,y-2.5,counter=5},
+    })
+
    end
   end
  end
@@ -877,6 +901,13 @@ function _update60()
   end
  end
 
+ -- update damage indicator
+ for actor in all(actors) do
+  if actor.dmgfxcounter > 0 then
+   actor.dmgfxcounter-=1
+  end
+ end
+
  -- update actor animation frames
  for actor in all(actors) do
   local state=actor.state
@@ -900,8 +931,12 @@ function _update60()
 
  -- update vfx
  for vfx in all(vfxs) do
-  vfx.counter-=1
-  if vfx.counter <= 0 then
+  vfx[1].counter-=1
+  if vfx[1].counter <= 0 then
+   del(vfx,vfx[1])
+  end
+
+  if not(#vfx > 0) then
    vfx.removeme=true
   end
  end
@@ -1004,7 +1039,7 @@ function _draw()
   if actor.a != nil and actor.a >= 0.25 and actor.a <= 0.75 then
    flipx=true
   end
-  if actor.recovertype == 'damage' then
+  if actor.dmgfxcounter > 0 then
    for i=1,15 do
     pal(i,8,0)
    end
@@ -1058,7 +1093,8 @@ function _draw()
 
  -- draw vfx
  for vfx in all(vfxs) do
-  sspr(vfx[1],vfx[2],vfx[3],vfx[4],vfx[5],vfx[6])
+  local frame=vfx[1]
+  sspr(frame[1],frame[2],frame[3],frame[4],frame[5],frame[6])
  end
 
  -- dev stats
@@ -1101,11 +1137,11 @@ __gfx__
 66666600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 06006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 60606000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-07000070777700007777077777000070000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700007770077700777777770700000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700000777777000700000007700000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00777700000770077000700000007770000770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00777700000000000000777777770777777770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+07000070777700007777077777000070000700888007770000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700007770077700777777770700000078888877777000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700000777777000700000007700000078888877777000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00777700000770077000700000007770000778888877777000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00777700000000000000777777770777777770888007770000000000000000000000000000000000000000000000000000000000000000000000000000000000
 07777770000000000000077777000077777700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 77777777000000000000000000000007007000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
