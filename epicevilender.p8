@@ -33,7 +33,7 @@ debugh=function(n)
 end
 
 debugaistates=function(s)
- debug(s)
+ -- debug(s)
 end
 
 function isaabbscolliding(aabb1,aabb2)
@@ -294,6 +294,8 @@ function updateavatarstate(avatar)
   avatar.dx=0
   avatar.dy=0
  end
+
+ debug('avatar state', avatar.state)
 end
 
 -- items
@@ -302,8 +304,8 @@ sword={
   currentframe=1,
   idling={{9,9,5,5, -2,-3}},
   moving={{9,9,5,5, -2,-3}},
-  attacking={{14,9,5,5, -2,-3}},
-  recovering={{18,9,7,5, -3,-3}},
+  attacking={{14,9,5,5, -2,-3},{18,9,7,5, -3,-3}},
+  recovering={{9,9,5,5, -2,-3}},
  },
 }
 
@@ -317,47 +319,52 @@ swordattackskill={
   if skill.counter > 0 then
    skill.counter-=1
   end
-  if skill.hasinput and skill.counter <= 0 then
-   local x=user.x+cos(user.a)*4
-   local y=user.y+sin(user.a)*4
+  if user.state == 'attacking' and skill.counter <= 0 then
+   if skill.hasinput == true then
+    local x=user.x+cos(user.a)*4
+    local y=user.y+sin(user.a)*4
 
-   add(attacks,createattack({
-    x=x,
-    y=y,
-    halfw=2,
-    halfh=2,
-    state_counter=1,
-    isknockback=true,
-    knockbackangle=user.a,
-    damage=1,
-    targetcount=1000,
-   }))
+    add(attacks,createattack({
+     x=x,
+     y=y,
+     halfw=2,
+     halfh=2,
+     state_counter=1,
+     isknockback=true,
+     knockbackangle=user.a,
+     damage=1,
+     targetcount=1000,
+    }))
 
-   -- add vfx
-   angletofx={
-    [0]={0,20,4,7, -1,-5}, -- right
-    [0.125]={8,20,6,4, -3,-2}, -- right/up
-    [0.25]={20,20,9,3, -3,-1}, -- up
-    [0.375]={14,20,6,4, -2,-2}, -- up/left
-    [0.5]={4,20,4,7, -2,-5}, -- left
-    [0.625]={29,20,4,7, -3,-6}, -- left/down
-    [0.75]={20,23,9,3, -4,-2}, -- down
-    [0.875]={33,20,4,7, 0,-6}, -- down/right
-   }
+    -- add vfx
+    angletofx={
+     [0]={0,20,4,7, -1,-5}, -- right
+     [0.125]={8,20,6,4, -3,-2}, -- right/up
+     [0.25]={20,20,9,3, -3,-1}, -- up
+     [0.375]={14,20,6,4, -2,-2}, -- up/left
+     [0.5]={4,20,4,7, -2,-5}, -- left
+     [0.625]={29,20,4,7, -3,-6}, -- left/down
+     [0.75]={20,23,9,3, -4,-2}, -- down
+     [0.875]={33,20,4,7, 0,-6}, -- down/right
+    }
 
-   local vfx=angletofx[user.a]
-   vfx[5]=x+vfx[5]
-   vfx[6]=y+vfx[6]
-   vfx.counter=skill.postcastduration
+    local vfx=angletofx[user.a]
+    vfx[5]=x+vfx[5]
+    vfx[6]=y+vfx[6]
+    vfx.counter=skill.postcastduration
 
-   add(vfxs,vfx)
+    add(vfxs,vfx)
 
-   -- reset skill
-   skill.hasinput=false
+    -- reset skill
+    skill.hasinput=false
 
-   -- set user to recover
-   user.state='recovering'
-   user.state_counter=skill.postcastduration
+    -- set user to postcast
+    user.state_counter=skill.postcastduration
+
+    -- set next attacking frame
+    user.frames.currentframe=2
+    sword.frames.currentframe=2
+   end
   end
  end,
 }
@@ -430,7 +437,7 @@ function _init()
       currentframe=1,
       idling={{0,10,3,4, -1,-2}},
       moving={{0,10,3,4, -1,-2},{3,10,3,4, -1,-2}},
-      attacking={{6,10,3,4, -1,-2}},
+      attacking={{6,10,3,4, -1,-2},{0,10,3,4, -1,-2}},
       recovering={{0,10,3,4, -1,-2}},
      },
     })
@@ -516,6 +523,8 @@ function _update60()
 
   avatar.state_counter=avatar.skill1.counter
   avatar.state='attacking'
+  avatar.frames.currentframe=1
+  sword.frames.currentframe=1
  end
 
  if btn(5) and
@@ -876,11 +885,15 @@ function _update60()
    state=actor.ai.state
   end
   local stateframes=actor.frames[state]
-  local animspd=0.25
-  if stateframes.animspd then
-   animspd=stateframes.animspd
+
+  if state == 'moving' then
+   local animspd=0.25
+   if stateframes.animspd then
+    animspd=stateframes.animspd
+   end
+   actor.frames.currentframe+=animspd*actor.spd
   end
-  actor.frames.currentframe+=animspd*actor.spd
+
   if actor.frames.currentframe >= #stateframes+1 then
    actor.frames.currentframe=1
   end
@@ -1012,7 +1025,10 @@ function _draw()
   if actor == avatar then
    item=sword
    local stateframes=sword.frames[state]
-   local frame=stateframes[flr(item.frames.currentframe)]
+   local currentframe=min(
+     flr(item.frames.currentframe),
+     #stateframes)
+   local frame=stateframes[currentframe]
    palt(1,true)
    sspr(
     frame[1],
