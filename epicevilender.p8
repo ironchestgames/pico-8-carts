@@ -249,6 +249,7 @@ avatar={} -- avatar actor handle
 actors={} -- actors
 attacks={} -- attack objects
 vfxs={} -- visual effects
+pemitters={} -- particle emitters
 
 dmgfxdur=20
 
@@ -276,6 +277,20 @@ function createattack(params)
 
  -- remove me
  params.removeme=false
+
+ return params
+end
+
+function createpemitter(params)
+ 
+ -- start counter
+ params.counter=params.prate[1]
+
+ -- defaults
+ -- todo
+
+ -- particles
+ params.particles={}
 
  return params
 end
@@ -342,7 +357,7 @@ fireboltskill={
   local x=user.x+cos(user.a)*4
   local y=user.y+sin(user.a)*4
 
-  add(attacks,createattack({
+  local attack=createattack({
    x=x,
    y=y,
    halfw=1,
@@ -356,6 +371,16 @@ fireboltskill={
     currentframe=1,
     {47,20,3,3, -0.5,-0.5},
    }
+  })
+
+  add(attacks,attack)
+
+  add(pemitters,createpemitter({
+   follow=attack,
+   prate={0,1},
+   plife={3,5},
+   poffsets={-1,-1,1,1},
+   pcolors={14,8},
   }))
 
  end,
@@ -373,6 +398,7 @@ function _init()
  floormap={}
  actors={}
  attacks={}
+ pemitters={}
 
  -- init floormap
  for _y=0,15 do
@@ -943,6 +969,50 @@ function _update60()
   end
  end
 
+ -- update pemitters
+ for pemitter in all(pemitters) do
+  pemitter.counter-=1
+  if pemitter.counter <= 0 then
+   local x=pemitter.follow.x
+   local y=pemitter.follow.y
+   local poffsets=pemitter.poffsets
+
+   x+=poffsets[1]+rnd(poffsets[3]+abs(poffsets[1]))
+   y+=poffsets[2]+rnd(poffsets[4]+abs(poffsets[2]))
+
+   add(pemitter.particles,{
+    counter=
+      pemitter.plife[1]+rnd(pemitter.plife[2]),
+    x=x,
+    y=y,
+   })
+
+   pemitter.counter=
+     pemitter.prate[1]+rnd(pemitter.prate[2])
+  end
+
+  -- update this pemitters article
+  for particle in all(pemitter.particles) do
+   particle.counter-=1
+   particle.col=pemitter.pcolors[1]
+   if particle.counter <= pemitter.plife[1] then
+    particle.col=pemitter.pcolors[2]
+   end
+
+   if particle.counter <= 0 then
+    del(pemitter.particles,particle)
+   end
+  end
+
+ end
+
+ -- remove pemitters
+ for pemitter in all(pemitters) do
+  if pemitter.follow.removeme then
+   del(pemitters,pemitter)
+  end
+ end
+
  -- remove actors
  for actor in all(actors) do
   if actor.removeme then
@@ -1111,6 +1181,16 @@ function _draw()
  for vfx in all(vfxs) do
   local frame=vfx[1]
   sspr(frame[1],frame[2],frame[3],frame[4],frame[5],frame[6])
+ end
+
+ -- draw particles
+ for pemitter in all(pemitters) do
+  for particle in all(pemitter.particles) do
+   pset(
+     particle.x,
+     particle.y,
+     particle.col)
+  end
  end
 
  -- dev stats
