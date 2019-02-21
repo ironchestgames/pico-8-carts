@@ -335,37 +335,31 @@ swordattackskill={
  end,
 }
 
--- fireboltskill={
---  preperformdur=40,
---  postperformdur=0,
---  counter=30,
---  hasinput=false,
---  update=function(skill,user)
---   if skill.counter > 0 then
---    skill.counter-=1
---   end
---   if skill.hasinput and skill.counter <= 0 then
---    add(attacks,createattack({
---     x=user.x+cos(user.a)*4,
---     y=user.y+sin(user.a)*4,
---     halfw=1,
---     halfh=1,
---     dx=cos(user.a)*2,
---     dy=sin(user.a)*2,
---     damage=2,
---     targetcount=1,
---     -- todo: add effect
---    }))
+fireboltskill={
+ preperformdur=40,
+ postperformdur=0,
+ perform=function(skill,user)
+  local x=user.x+cos(user.a)*4
+  local y=user.y+sin(user.a)*4
 
---    -- reset skill
---    skill.hasinput=false
+  add(attacks,createattack({
+   x=x,
+   y=y,
+   halfw=1,
+   halfh=1,
+   state_counter=1000,
+   dx=cos(user.a)*1.2,
+   dy=sin(user.a)*1.2,
+   damage=2,
+   targetcount=1,
+   frames={
+    currentframe=1,
+    {47,20,3,3, -0.5,-0.5},
+   }
+  }))
 
---    -- set user to recover
---    user.state='recovering'
---    user.state_counter=skill.postperformdur
---   end
---  end,
--- }
+ end,
+}
 
 
 curenemyidx=1
@@ -399,6 +393,7 @@ function _init()
      state='idling',
      skill1=swordattackskill,
      skill2=fireboltskill,
+     currentskill=nil,
      ispreperform=false,
      frames={
       currentframe=1,
@@ -481,6 +476,7 @@ function _update60()
      avatar.state == 'moving') then
 
   avatar.state='attacking'
+  avatar.currentskill=avatar.skill1
   avatar.ispreperform=true
 
   avatar.state_counter=avatar.skill1.preperformdur
@@ -489,20 +485,23 @@ function _update60()
   sword.frames.currentframe=1
  end
 
- -- if btn(5) and
- --    (avatar.state == 'idling' or
- --     avatar.state == 'moving') then
- --  avatar.skill2.hasinput=true
- --  avatar.skill2.counter=avatar.skill2.preperformdur
+ if btn(5) and
+    (avatar.state == 'idling' or
+     avatar.state == 'moving') then
 
- --  avatar.state_counter=avatar.skill2.counter
- --  avatar.state='attacking'
- -- end
+  avatar.state='attacking'
+  avatar.currentskill=avatar.skill2
+  avatar.ispreperform=true
+
+  avatar.state_counter=avatar.skill2.preperformdur
+
+  avatar.frames.currentframe=1
+  sword.frames.currentframe=1
+ end
 
  -- consider avatar current state
  do
   local actor=avatar
-  local skill=avatar.skill1
 
   -- count down
   if actor.state_counter > 0 then
@@ -526,6 +525,8 @@ function _update60()
    -- update skills
    if actor.state_counter <= 0 then
     if actor.ispreperform == true then
+
+     local skill=avatar.currentskill
      skill.perform(skill,actor)
 
      -- set actor to postperform
@@ -551,6 +552,7 @@ function _update60()
   -- go to idling
   elseif actor.state_counter <= 0 then
    actor.state='idling'
+   avatar.currentskill=nil
   end
  end
 
@@ -986,9 +988,23 @@ function _draw()
   end
  end
 
- -- draw attacks, note: this is only for debug
- if isdebug then
-  for attack in all(attacks) do
+ -- draw attacks
+ for attack in all(attacks) do
+
+  if attack.frames then
+   local frame=attack.frames[attack.frames.currentframe]
+   sspr(
+    frame[1],
+    frame[2],
+    frame[3],
+    frame[4],
+    attack.x+frame[5],
+    attack.y+frame[6],
+    frame[3],
+    frame[4])
+  end
+
+  if isdebug then
    rectfill(
     attack.x-attack.halfw,
     attack.y-attack.halfh,
@@ -1137,8 +1153,8 @@ __gfx__
 66666600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 06006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 60606000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-07000070777700007777077777000070000700888007770000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700007770077700777777770700000078888877777000000000000000000000000000000000000000000000000000000000000000000000000000000000
+07000070777700007777077777000070000700888007770ee0000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700007770077700777777770700000078888877777ee0000000000000000000000000000000000000000000000000000000000000000000000000000000
 00700700000777777000700000007700000078888877777000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00777700000770077000700000007770000778888877777000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00777700000000000000777777770777777770888007770000000000000000000000000000000000000000000000000000000000000000000000000000000000
