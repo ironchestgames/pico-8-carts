@@ -745,12 +745,13 @@ function _update60()
       [0.625]={29,20,4,7, -3,-6}, -- left/down
       [0.75]={20,23,9,3, -4,-2}, -- down
       [0.875]={33,20,4,7, 0,-6}, -- down/right
+      [1]={0,20,4,7, -1,-5}, -- right (wrapped)
      }
 
      local x=enemy.x+cos(enemy.a)*4
      local y=enemy.y+sin(enemy.a)*4
 
-     local a=max(flr(enemy.a*8)/8,0.875)
+     local a=min(flr((enemy.a+0.0625)*8)/8,1)
 
      debug(enemy.a,a)
 
