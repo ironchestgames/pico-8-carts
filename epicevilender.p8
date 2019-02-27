@@ -287,7 +287,7 @@ function createpemitter(params)
  params.counter=params.prate[1]
 
  -- defaults
- -- todo
+ params.removeme=false
 
  -- particles
  params.particles={}
@@ -377,9 +377,12 @@ fireboltskill={
 
   add(pemitters,createpemitter({
    follow=attack,
+   life=1000,
    prate={0,1},
    plife={3,5},
    poffsets={-1,-1,1,1},
+   dx={0,0},
+   dy={0,0},
    -- pcolors={9,8},
    -- pcolors={8,2},
    pcolors={14,8},
@@ -525,6 +528,17 @@ function _update60()
 
   avatar.frames.currentframe=1
   sword.frames.currentframe=1
+
+  add(pemitters,createpemitter({
+   follow=avatar,
+   life=avatar.skill2.preperformdur,
+   prate={2,4},
+   plife={15,25},
+   poffsets={-2,0.5,2,0.5},
+   dx={0,0},
+   dy={-0.3,0},
+   pcolors={8,14},
+  }))
  end
 
  -- consider avatar current state
@@ -1006,25 +1020,39 @@ function _update60()
    local x=pemitter.follow.x
    local y=pemitter.follow.y
    local poffsets=pemitter.poffsets
+   local pdx=pemitter.dx
+   local pdy=pemitter.dy
 
    x+=poffsets[1]+rnd(poffsets[3]+abs(poffsets[1]))
    y+=poffsets[2]+rnd(poffsets[4]+abs(poffsets[2]))
+
+   local dx=pdx[1]+rnd(pdx[2]+abs(pdx[1]))
+   local dy=pdy[1]+rnd(pdy[2]+abs(pdy[1]))
 
    add(pemitter.particles,{
     counter=
       pemitter.plife[1]+rnd(pemitter.plife[2]),
     x=x,
     y=y,
+    dx=dx,
+    dy=dy,
    })
 
    pemitter.counter=
      pemitter.prate[1]+rnd(pemitter.prate[2])
   end
 
-  -- update this pemitters article
+  pemitter.life-=1
+  if pemitter.life <= 0 then
+   pemitter.removeme=true
+  end
+
+  -- update this pemitters particles
   for particle in all(pemitter.particles) do
    particle.counter-=1
    particle.col=pemitter.pcolors[1]
+   particle.x+=particle.dx
+   particle.y+=particle.dy
    if particle.counter <= pemitter.plife[1] then
     particle.col=pemitter.pcolors[2]
    end
@@ -1038,7 +1066,8 @@ function _update60()
 
  -- remove pemitters
  for pemitter in all(pemitters) do
-  if pemitter.follow.removeme then
+  if pemitter.removeme or
+     pemitter.follow.removeme then
    del(pemitters,pemitter)
   end
  end
