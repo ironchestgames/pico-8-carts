@@ -295,29 +295,6 @@ function createpemitter(params)
  return params
 end
 
-
--- items
-sword={
- frames={
-  currentframe=1,
-  idling={{9,9,5,5, -2,-3}},
-  moving={{9,9,5,5, -2,-3}},
-  attacking={{14,9,5,5, -2,-3},{18,9,7,5, -3,-3}},
-  recovering={{9,9,5,5, -2,-3}},
- },
-}
-
-bow={
- frames={
-  currentframe=1,
-  idling={{25,9,5,5, -2,-3}},
-  moving={{25,9,5,5, -2,-3}},
-  attacking={{30,9,5,5, -2,-3},{25,9,1,1, -2,-3}},
-  recovering={{25,9,5,5, -2,-3}},
- },
-}
-
-
 -- skills
 swordattackskill={
  preperformdur=15,
@@ -463,6 +440,35 @@ fireboltskill={
 }
 
 
+-- items
+sword={
+ skill=swordattackskill,
+ frames={
+  currentframe=1,
+  idling={{9,9,5,5, -2,-3}},
+  moving={{9,9,5,5, -2,-3}},
+  attacking={{14,9,5,5, -2,-3},{18,9,7,5, -3,-3}},
+  recovering={{9,9,5,5, -2,-3}},
+ },
+}
+
+bow={
+ skill=bowattackskill,
+ frames={
+  currentframe=1,
+  idling={{25,9,5,5, -2,-3}},
+  moving={{25,9,5,5, -2,-3}},
+  attacking={{30,9,5,5, -2,-3},{25,9,1,1, -2,-3}},
+  recovering={{25,9,5,5, -2,-3}},
+ },
+}
+
+fireboltbook={
+ skill=fireboltskill,
+}
+
+
+
 curenemyidx=1
 
 function _init()
@@ -493,9 +499,10 @@ function _init()
      spd=0.5,
      hp=3,
      state='idling',
-     -- skill1=swordattackskill,
-     skill1=bowattackskill,
-     skill2=fireboltskill,
+     primaryitem=bow,
+     secondaryitem=fireboltbook,
+     skill1=nil,
+     skill2=nil,
      currentskill=nil,
      ispreperform=false,
      frames={
@@ -559,6 +566,10 @@ function _update60()
   end
  end
 
+ -- update skills from items
+ avatar.skill1=avatar.primaryitem.skill
+ avatar.skill2=avatar.secondaryitem.skill
+
  -- consider dpad input
  local angle=btnmasktoangle[band(btn(),0b1111)] -- note: filter out o/x buttons from dpad input
  if angle != nil then
@@ -585,8 +596,7 @@ function _update60()
   avatar.state_counter=avatar.skill1.preperformdur
 
   avatar.frames.currentframe=1
-  sword.frames.currentframe=1
-  bow.frames.currentframe=1
+  avatar.primaryitem.frames.currentframe=1
  end
 
  if btn(5) and
@@ -600,8 +610,7 @@ function _update60()
   avatar.state_counter=avatar.skill2.preperformdur
 
   avatar.frames.currentframe=1
-  sword.frames.currentframe=1
-  bow.frames.currentframe=1
+  avatar.primaryitem.frames.currentframe=1
 
   add(pemitters,createpemitter({
    follow=avatar,
@@ -651,14 +660,12 @@ function _update60()
 
      -- set next attacking frame
      actor.frames.currentframe=2
-     sword.frames.currentframe=2
-     bow.frames.currentframe=2
+     avatar.primaryitem.frames.currentframe=2
 
     else -- note: done performing
      actor.state='idling'
      actor.frames.currentframe=1
-     sword.frames.currentframe=1
-     bow.frames.currentframe=1
+     avatar.primaryitem.frames.currentframe=1
     end
    end
 
@@ -1278,10 +1285,7 @@ function _draw()
 
   -- draw items
   if actor == avatar then
-   item=sword
-   if avatar.skill1 == bowattackskill then
-    item=bow
-   end
+   item=avatar.primaryitem
    local stateframes=item.frames[state]
    local currentframe=min(
      flr(item.frames.currentframe),
