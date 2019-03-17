@@ -338,7 +338,7 @@ swordattackskill={
 }
 
 bowattackskill={
- preperformdur=12,
+ preperformdur=26,
  postperformdur=6,
  perform=function(skill,user)
   local x=user.x+cos(user.a)*4
@@ -359,8 +359,8 @@ bowattackskill={
   local frame=angletoframe[user.a]
 
   local attack=createattack({
-   x=x-1,
-   y=y-1,
+   x=x-0.5,
+   y=y-0.5,
    halfw=1,
    halfh=1,
    state_counter=1000,
@@ -563,6 +563,12 @@ function _update60()
   if c == 'd' then
    isdebug=not isdebug
    debug('isdebug',isdebug)
+  end
+  if c == '1' then
+   avatar.primaryitem=sword
+  end
+  if c == '2' then
+   avatar.primaryitem=bow
   end
  end
 
