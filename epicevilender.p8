@@ -702,40 +702,30 @@ function _update60()
  end
 
  -- consider skill button input
- if btn(4) and
-    (avatar.state == 'idling' or
-     avatar.state == 'moving') then
-
-  avatar.state='attacking'
-  avatar.currentskill=avatar.skill1
-  avatar.ispreperform=true
-
-  avatar.state_counter=avatar.skill1.preperformdur
-
-  avatar.frames.currentframe=1
-  avatar.primaryitem.frames.currentframe=1
-
-  if avatar.currentskill.startpemitter then
-   avatar.currentskill.startpemitter(avatar,avatar.skill1.preperformdur)
-  end
+ local skillbuttondown=0
+ if btn(4) then
+  skillbuttondown=1
+ elseif btn(5) then
+  skillbuttondown=2
  end
 
- if btn(5) and
+ if skillbuttondown != 0 and
     (avatar.state == 'idling' or
      avatar.state == 'moving') then
 
+  local skill=avatar['skill'..skillbuttondown]
+
   avatar.state='attacking'
-  avatar.currentskill=avatar.skill2
+  avatar.currentskill=skill
   avatar.ispreperform=true
 
-  avatar.state_counter=avatar.skill2.preperformdur
+  avatar.state_counter=skill.preperformdur
 
   avatar.frames.currentframe=1
   avatar.primaryitem.frames.currentframe=1
 
-
   if avatar.currentskill.startpemitter then
-   avatar.currentskill.startpemitter(avatar,avatar.skill2.preperformdur)
+   avatar.currentskill.startpemitter(avatar,skill.preperformdur)
   end
  end
 
