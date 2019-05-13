@@ -401,6 +401,18 @@ bowattackskill={
 fireboltskill={
  preperformdur=40,
  postperformdur=0,
+ startpemitter=function(user,life)
+  add(pemitters,createpemitter({
+   follow=user,
+   life=life,
+   prate={2,4},
+   plife={15,25},
+   poffsets={-2,0.5,2,0.5},
+   dx={0,0},
+   dy={-0.3,0},
+   pcolors={8,14},
+  }))
+ end,
  perform=function(skill,user)
   local x=user.x+cos(user.a)*4
   local y=user.y+sin(user.a)*4
@@ -702,6 +714,10 @@ function _update60()
 
   avatar.frames.currentframe=1
   avatar.primaryitem.frames.currentframe=1
+
+  if avatar.currentskill.startpemitter then
+   avatar.currentskill.startpemitter(avatar,avatar.skill1.preperformdur)
+  end
  end
 
  if btn(5) and
@@ -717,16 +733,10 @@ function _update60()
   avatar.frames.currentframe=1
   avatar.primaryitem.frames.currentframe=1
 
-  add(pemitters,createpemitter({
-   follow=avatar,
-   life=avatar.skill2.preperformdur,
-   prate={2,4},
-   plife={15,25},
-   poffsets={-2,0.5,2,0.5},
-   dx={0,0},
-   dy={-0.3,0},
-   pcolors={8,14},
-  }))
+
+  if avatar.currentskill.startpemitter then
+   avatar.currentskill.startpemitter(avatar,avatar.skill2.preperformdur)
+  end
  end
 
  -- consider avatar current state
