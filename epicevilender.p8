@@ -1088,7 +1088,8 @@ function _update60()
  end
 
  -- collide avatar against door
- if isaabbscolliding(avatar,exitdoor) then
+ if exitdoor.isopen and
+    isaabbscolliding(avatar,exitdoor) then
   nextfloor()
   return
  end
