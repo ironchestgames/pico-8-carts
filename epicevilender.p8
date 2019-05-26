@@ -535,7 +535,7 @@ function _init()
       nexty <= 0 or
       nexty > 14 then
     angle+=getnewdeltaangle()
-   elseif stepcount % (steps / enemycount) == 0 then
+   elseif stepcount != 0 and stepcount % (steps / enemycount) == 0 then
     add(enemies,{
      x=curx,
      y=cury,
@@ -553,6 +553,8 @@ function _init()
   for enemy in all(enemies) do
    sset(enemy.x,enemy.y+64,enemy.typ)
   end
+  -- local enemy=enemies[1]
+  -- sset(enemy.x,enemy.y+64,enemy.typ)
 
   -- exitdoor
   sset(curx,cury+64,2)
@@ -837,6 +839,10 @@ function _update60()
    -- movement vars
    local ismovingoutofcollision=enemy.ai.ismovingoutofcollision
    local collidedwithwall=enemy.ai.wallcollisiondx != nil
+   local istooclosetoavatar=distancetoavatar <= 1
+   if enemy.attacktype == 'ranged' then
+    istooclosetoavatar=distancetoavatar <= 20
+   end
    local hastoocloseto=#enemy.ai.toocloseto > 0
    local hastarget=enemy.ai.targetx!=nil
    -- todo: maybe move away from avatar if too close?
@@ -854,6 +860,20 @@ function _update60()
 
     enemy.ai.state='moving'
 
+   -- too close to avatar, note: collidedwithwall not working here?
+   elseif istooclosetoavatar and (not isswinging) and (not collidedwithwall) then
+    debugaistates('istooclosetoavatar and not swinging')
+
+    enemy.ai.state='moving'
+    local a=atan2(
+      avatar.x-enemy.x,
+      avatar.y-enemy.y)+0.5 -- note: go the other way
+    enemy.ai.targetx=enemy.x+cos(a)*10
+    enemy.ai.targety=enemy.y+sin(a)*10
+    enemy.ai.ismovingoutofcollision=true
+    enemy.ai.state_counter=60
+    enemy.spd=enemy.runspd
+
    -- attack
    elseif isswinging or withinattackdistance and haslostoavatar then
     debugaistates('withinattackdistance and haslostoavatar')
@@ -870,7 +890,7 @@ function _update60()
     enemy.ai.state='moving'
     local a=atan2(
       enemy.x+enemy.ai.wallcollisiondx-enemy.x,
-      enemy.y+enemy.ai.wallcollisiondy-enemy.y)
+      enemy.y+enemy.ai.wallcollisiondy-enemy.y)+rnd(0.2)-0.1
     enemy.ai.targetx=enemy.x+cos(a)*10
     enemy.ai.targety=enemy.y+sin(a)*10
     enemy.ai.ismovingoutofcollision=true
@@ -1551,8 +1571,15 @@ function _draw()
  else
   color(9)
  end
- print(avatar.state_counter, 70,0)
+ print(avatar.state_counter,70,0)
 
+ local enemycount=0
+ for actor in all(actors) do
+  if actor.ai then
+   enemycount+=1
+  end
+ end
+ print(enemycount,50,0,6)
 
  -- prints debug stats
  -- if isdebug then
