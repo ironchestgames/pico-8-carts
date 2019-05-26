@@ -604,7 +604,6 @@ function _init()
    if _col == 5 then
     local enemy=createactor({
      isenemy=true,
-     attacktype='melee',
      isghost=true,
      x=_x*8+4,
      y=_y*8+4,
@@ -614,6 +613,10 @@ function _init()
      runspd=0.75,
      spd=0.75,
      hp=1,
+     attack={
+      typ='melee',
+      spd=30,
+     },
      ai={
       state='idling',
       laststate='idling',
@@ -638,7 +641,6 @@ function _init()
    if _col == 6 then
     local enemy=createactor({
      isenemy=true,
-     attacktype='melee',
      x=_x*8+4,
      y=_y*8+4,
      a=0,
@@ -647,6 +649,10 @@ function _init()
      runspd=0.5,
      spd=0.5,
      hp=3,
+     attack={
+      typ='melee',
+      spd=50,
+     },
      ai={
       state='idling',
       laststate='idling',
@@ -671,7 +677,6 @@ function _init()
    if _col == 7 then
     local enemy=createactor({
      isenemy=true,
-     attacktype='ranged',
      x=_x*8+4,
      y=_y*8+4,
      a=0,
@@ -680,6 +685,10 @@ function _init()
      runspd=0.5,
      spd=0.5,
      hp=2,
+     attack={
+      typ='ranged',
+      spd=70,
+     },
      ai={
       state='idling',
       laststate='idling',
@@ -865,7 +874,7 @@ function _update60()
    -- aggression vars
    local distancetoavatar=dist(enemy.x,enemy.y,avatar.x,avatar.y)
    local withinattackdistance=distancetoavatar <= 7
-   if enemy.attacktype == 'ranged' then
+   if enemy.attack.typ == 'ranged' then
     withinattackdistance=distancetoavatar <= 40
    end
    local haslostoavatar=haslos(floormap,enemy.x,enemy.y,avatar.x,avatar.y)
@@ -875,7 +884,7 @@ function _update60()
    local ismovingoutofcollision=enemy.ai.ismovingoutofcollision
    local collidedwithwall=enemy.ai.wallcollisiondx != nil
    local istooclosetoavatar=distancetoavatar <= 1
-   if enemy.attacktype == 'ranged' then
+   if enemy.attack.typ == 'ranged' then
     istooclosetoavatar=distancetoavatar <= 20
    end
    local hastoocloseto=#enemy.ai.toocloseto > 0
@@ -991,13 +1000,13 @@ function _update60()
 
     if enemy.ai.laststate != 'attacking' then
 
-     enemy.ai.state_counter=50
+     enemy.ai.state_counter=enemy.attack.spd
     end
 
     enemy.ai.state_counter-=1
     if enemy.ai.state_counter <= 0 then
 
-     if enemy.attacktype == 'melee' then
+     if enemy.attack.typ == 'melee' then
       local a=atan2(
        enemy.ai.targetx-enemy.x,
        enemy.ai.targety-enemy.y)
@@ -1045,7 +1054,7 @@ function _update60()
 
 
 
-     elseif enemy.attacktype == 'ranged' then
+     elseif enemy.attack.typ == 'ranged' then
 
       local a=atan2(
        enemy.ai.targetx-enemy.x,
