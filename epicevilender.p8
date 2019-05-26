@@ -637,8 +637,8 @@ function _init()
     local enemy=createactor({
      isenemy=true,
      attacktype='ranged',
-     x=_x*8,
-     y=_y*8,
+     x=_x*8+4,
+     y=_y*8+4,
      a=0,
      halfw=1.5,
      halfh=2,
