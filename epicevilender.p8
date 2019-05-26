@@ -697,6 +697,10 @@ function _update60()
   end
  end
 
+ if avatar.hp <= 0 then
+  return nil
+ end
+
  -- update skills from items
  avatar.skill1=avatar.primaryitem.skill
  avatar.skill2=avatar.secondaryitem.skill
@@ -1538,6 +1542,9 @@ function _draw()
 
  -- dev stats
  print(avatar.hp .. ' hp',110,0,8)
+ if avatar.hp <= 0 then
+  print('dead',60,60,8)
+ end
 
  if avatar.ispreperform then
   color(10)
