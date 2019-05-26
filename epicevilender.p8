@@ -521,6 +521,7 @@ function _init()
   local steps=500
   local stepcount=steps
   local enemycount=10
+  local enemytypes={6,7}
   local enemies={}
 
   while stepcount > 0 do
@@ -535,7 +536,11 @@ function _init()
       nexty > 14 then
     angle+=getnewdeltaangle()
    elseif stepcount % (steps / enemycount) == 0 then
-    add(enemies,{x=curx,y=cury})
+    add(enemies,{
+     x=curx,
+     y=cury,
+     typ=enemytypes[flr(rnd(#enemytypes)+1)],
+    })
    else
     curx=nextx
     cury=nexty
@@ -545,8 +550,8 @@ function _init()
   end
 
   -- enemies
-  for enemypos in all(enemies) do
-   sset(enemypos.x,enemypos.y+64,6)
+  for enemy in all(enemies) do
+   sset(enemy.x,enemy.y+64,enemy.typ)
   end
 
   -- exitdoor
