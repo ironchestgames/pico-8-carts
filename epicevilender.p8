@@ -483,12 +483,16 @@ fireboltbook={
 
 function nextfloor()
  dungeonlevel+=1
- _init()
+ dungeoninit()
 end
 
 curenemyidx=1
 
-function _init()
+function dungeoninit()
+
+ -- set callbacks
+ _update60=dungeonupdate
+ _draw=dungeondraw
 
  -- reset vars
  curenemyidx=1
@@ -744,7 +748,7 @@ function _init()
 end
 
 
-function _update60()
+function dungeonupdate()
 
  --note: devkit debug
  if stat(30)==true then
@@ -1452,7 +1456,7 @@ function _update60()
 end
 
 
-function _draw()
+function dungeondraw()
  cls()
 
  -- draw walls
@@ -1656,6 +1660,15 @@ function _draw()
  print(stat(7),0,6,7)
  -- end
 end
+
+
+
+
+function _init()
+ dungeoninit()
+end
+
+
 
 
 __gfx__
