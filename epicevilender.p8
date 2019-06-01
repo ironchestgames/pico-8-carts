@@ -247,7 +247,7 @@ btnmasktoangle={
 dungeonlevel=1 -- current dungeon depth
 floormap={} -- the current map
 exitdoor={} -- the exitdoor
-avatar={} -- avatar actor handle
+avatar=nil -- avatar actor handle
 actors={} -- actors
 attacks={} -- attack objects
 vfxs={} -- visual effects
@@ -574,29 +574,38 @@ function _init()
 
    -- create avatar
    if _col == 15 then
-    avatar=createactor({
-     x=_x*8+4,
-     y=_y*8+4,
-     halfw=1.5,
-     halfh=2,
-     a=0,
-     spd=0.5,
-     hp=3,
-     state='idling',
-     primaryitem=bow,
-     secondaryitem=fireboltbook,
-     skill1=nil,
-     skill2=nil,
-     currentskill=nil,
-     ispreperform=false,
-     frames={
-      currentframe=1,
-      idling={{0,10,3,4, -1,-2}},
-      moving={{0,10,3,4, -1,-2},{3,10,3,4, -1,-2}},
-      attacking={animspd=0,{6,10,3,4, -1,-2},{0,10,3,4, -1,-2}},
-      recovering={{0,10,3,4, -1,-2}},
-     },
-    })
+    if avatar == nil then
+     avatar=createactor({
+      x=_x*8+4,
+      y=_y*8+4,
+      halfw=1.5,
+      halfh=2,
+      a=0,
+      spd=0.5,
+      hp=3,
+      armor=1,
+      state='idling',
+      primaryitem=bow,
+      secondaryitem=fireboltbook,
+      skill1=nil,
+      skill2=nil,
+      currentskill=nil,
+      ispreperform=false,
+      frames={
+       currentframe=1,
+       idling={{0,10,3,4, -1,-2}},
+       moving={{0,10,3,4, -1,-2},{3,10,3,4, -1,-2}},
+       attacking={animspd=0,{6,10,3,4, -1,-2},{0,10,3,4, -1,-2}},
+       recovering={{0,10,3,4, -1,-2}},
+      },
+     })
+    else
+     avatar=createactor(avatar)
+     avatar.x=_x*8+4
+     avatar.y=_y*8+4
+     avatar.armor=1
+    end
+
     add(actors,avatar)
 
     _col=0 -- note: make tile ground
@@ -1171,7 +1180,15 @@ function _update60()
     attack.targetcount-=1
 
     -- do damage
-    actor.hp-=attack.damage
+    if actor.armor != nil and actor.armor > 0 then
+     actor.armor-=attack.damage
+     if actor.armor < 0 then
+      actor.hp+=actor.armor
+      actor.armor=0
+     end
+    else
+     actor.hp-=attack.damage
+    end
 
     -- go into recovering
     if actor.ai then
@@ -1605,6 +1622,7 @@ function _draw()
 
  -- dev stats
  print(avatar.hp .. ' hp',110,0,8)
+ print(avatar.armor .. ' a',90,0,6)
  if avatar.hp <= 0 then
   print('dead',60,60,8)
  end
