@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 16
+version 18
 __lua__
 -- epic evil ender (v1.0)
 -- by ironchest games
