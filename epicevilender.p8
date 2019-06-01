@@ -244,6 +244,7 @@ btnmasktoangle={
  [0x000a]=0.875, -- down/right
 }
 
+dungeonlevel=1 -- current dungeon depth
 floormap={} -- the current map
 exitdoor={} -- the exitdoor
 avatar={} -- avatar actor handle
@@ -481,6 +482,7 @@ fireboltbook={
 }
 
 function nextfloor()
+ dungeonlevel+=1
  _init()
 end
 
@@ -725,6 +727,7 @@ function _init()
   end
  end
 end
+
 
 function _update60()
 
@@ -1620,6 +1623,8 @@ function _draw()
   end
  end
  print(enemycount,50,0,6)
+
+ print(dungeonlevel,120,122,13)
 
  -- prints debug stats
  -- if isdebug then
