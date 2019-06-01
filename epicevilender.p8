@@ -517,6 +517,12 @@ function _init()
   local avatarx=flr(rnd(14))+1
   local avatary=flr(rnd(14))+1
 
+  if avatar != nil then
+   avatarx=mid(2,flr(avatar.x/8),14)
+   avatary=mid(2,flr(avatar.y/8),14)
+   debug(avatar.x,avatar.y,avatarx,avatary)
+  end
+
   local curx=avatarx
   local cury=avatary
   local angle=0
