@@ -300,6 +300,7 @@ end
 
 -- skills
 swordattackskill={
+ sprite=15,
  preperformdur=15,
  postperformdur=28,
  perform=function(skill,user)
@@ -341,6 +342,7 @@ swordattackskill={
 }
 
 bowattackskill={
+ sprite=14,
  preperformdur=26,
  postperformdur=6,
  perform=function(skill,user)
@@ -402,6 +404,7 @@ bowattackskill={
 }
 
 fireboltskill={
+ sprite=13,
  preperformdur=40,
  postperformdur=0,
  startpemitter=function(user,life)
@@ -1684,30 +1687,99 @@ end
 
 -- equip scene
 
-local curitem=1
-local items={}
+local inventorycur=1 -- todo: make curs dynamic
+local equippedcur=1
+local availableskillscur=1
+local sectioncur=1
+local inventory={}
+local equipped={}
+local availableskills={}
 
 function equipinit()
  _update60=equipupdate
  _draw=equipdraw
 
- items={
+end
+
+function equipupdate()
+
+ -- init inventory
+ inventory={
   sword,
   bow,
   fireboltbook,
  }
-end
 
-function equipupdate()
- if btnp(0) then
-  curitem=mid(1,curitem-1,#items)
- elseif btnp(1) then
-  curitem=mid(1,curitem+1,#items)
+ -- init equipped items
+ equipped={}
+ if avatar.primaryitem then
+  add(equipped,avatar.primaryitem)
  end
 
- if btnp(4) then
-  avatar.primaryitem=items[curitem]
-  dungeoninit()
+ if avatar.secondaryitem then
+  add(equipped,avatar.secondaryitem)
+ end
+
+ -- init available skills
+ availableskills={}
+ for item in all(equipped) do
+  if item.skill then
+   add(availableskills,item.skill)
+  end
+ end
+
+ -- changing sections
+ if btnp(2) then
+  sectioncur=mid(1,sectioncur-1,4)
+ elseif btnp(3) then
+  sectioncur=mid(1,sectioncur+1,4)
+ end
+
+ -- inventory
+ if sectioncur == 1 then
+  if btnp(0) then
+   inventorycur=mid(1,inventorycur-1,#inventory)
+  elseif btnp(1) then
+   inventorycur=mid(1,inventorycur+1,#inventory)
+  end
+
+  if btnp(4) or btnp(5) then
+   avatar.primaryitem=inventory[inventorycur]
+  end
+
+ -- equipped
+ elseif sectioncur == 2 then
+  if btnp(0) then
+   equippedcur=mid(1,equippedcur-1,#equipped)
+  elseif btnp(1) then
+   equippedcur=mid(1,equippedcur+1,#equipped)
+  end
+
+  if btnp(4) or btnp(5) then
+   avatar.primaryitem=nil
+  end
+
+ -- available skills
+ elseif sectioncur == 3 then
+  if btnp(0) then
+   availableskillscur=mid(1,availableskillscur-1,#availableskills)
+  elseif btnp(1) then
+   availableskillscur=mid(1,availableskillscur+1,#availableskills)
+  end
+
+  if btnp(4) then
+   avatar.primaryitem,avatar.secondaryitem=
+     avatar.secondaryitem,avatar.primaryitem
+  elseif btnp(5) then
+   avatar.primaryitem,avatar.secondaryitem=
+     avatar.secondaryitem,avatar.primaryitem
+  end
+
+ -- exit
+ elseif sectioncur == 4 then
+  if btnp(4) or btnp(5) then
+   dungeoninit()
+  end
  end
 
 end
@@ -1716,20 +1788,92 @@ function equipdraw()
 
  cls(0)
 
- -- draw selection
- rect(
-  8+12*(curitem-1),
-  8,
-  8+11+12*(curitem-1),
-  19,
-  10)
-
- -- draw items
+ -- draw inventory section
  local offsetx=0
- for item in all(items) do
-  spr(item.sprite,10+offsetx,10)
-  offsetx+=12
+ local y=17
+ local i=1
+ if sectioncur == 1 then
+  print('saddlebags',7,y-9,10)
+ else
+  print('saddlebags',7,y-9,4)
  end
+ for item in all(inventory) do
+  spr(item.sprite,9+offsetx,y)
+  if sectioncur == 1 and i == inventorycur then
+   rect(
+    9+offsetx-2,
+    y-2,
+    9+offsetx+9,
+    y+9,
+    10)
+  end
+
+  offsetx+=12
+  i+=1
+ end
+
+ -- draw equipped section
+ offsetx=0
+ y=52
+ i=1
+ if sectioncur == 2 then
+  print('equipped',7,y-9,10)
+ else
+  print('equipped',7,y-9,4)
+ end
+ for item in all(equipped) do
+  spr(item.sprite,9+offsetx,y)
+  if sectioncur == 2 and i == equippedcur then
+   rect(
+    9+offsetx-2,
+    y-2,
+    9+offsetx+9,
+    y+9,
+    10)
+  end
+
+  offsetx+=12
+  i+=1
+ end
+
+ -- draw availableskills section
+ offsetx=0
+ y=89
+ i=1
+ if sectioncur == 3 then
+  print('skills',7,y-9,10)
+ else
+  print('skills',7,y-9,4)
+ end
+ for skill in all(availableskills) do
+  spr(skill.sprite,9+offsetx,y)
+  if sectioncur == 3 and i == availableskillscur then
+   rect(
+    9+offsetx-2,
+    y-2,
+    9+offsetx+9,
+    y+9,
+    10)
+  end
+
+  if skill == avatar.primaryitem.skill then
+   print('\x8e',9+offsetx,y+12,12)
+  elseif skill == avatar.secondaryitem.skill then
+   print('\x97',9+offsetx,y+12,11)
+  end
+
+  offsetx+=12
+  i+=1
+ end
+
+ -- draw exit button
+ if sectioncur == 4 then
+  print('exit',57,117,10)
+ else
+  print('exit',57,117,4)
+ end
+
+
 end
 
 
