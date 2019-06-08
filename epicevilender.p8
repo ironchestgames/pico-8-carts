@@ -1804,17 +1804,6 @@ end
 
 function equipupdate()
 
- -- init inventory
- inventory={
-  leatherboots,
-  ironhelmet,
-  ringmail,
-  sword,
-  bow,
-  shield,
-  fireboltbook,
- }
-
  -- init equipped items
  avatar.startarmor=0
  avatar.spdfactor=1
@@ -1842,6 +1831,25 @@ function equipupdate()
   sectioncur=mid(1,sectioncur-1,4)
  elseif btnp(3) then
   sectioncur=mid(1,sectioncur+1,4)
+ end
+
+ -- init inventory
+ inventory={}
+
+ local allitems={
+  leatherboots,
+  ironhelmet,
+  ringmail,
+  sword,
+  bow,
+  shield,
+  fireboltbook,
+ }
+
+ for item in all(allitems) do
+  if avatar.items[item.class] != item then
+   add(inventory,item)
+  end
  end
 
  -- inventory
