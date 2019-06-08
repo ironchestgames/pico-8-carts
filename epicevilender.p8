@@ -460,6 +460,7 @@ fireboltskill={
 
 -- items
 sword={
+ name='steel sword',
  class='weapon',
  sprite=47,
  skill=swordattackskill,
@@ -473,6 +474,7 @@ sword={
 }
 
 bow={
+ name='cedar bow',
  class='weapon',
  twohand=true,
  sprite=46,
@@ -487,6 +489,7 @@ bow={
 }
 
 fireboltbook={
+ name='book of firebolt',
  class='book',
  sprite=45,
  skill=fireboltskill,
@@ -500,6 +503,7 @@ fireboltbook={
 }
 
 shield={
+ name='steel shield, +1 armor',
  class='offhand',
  sprite=44,
  armor=1,
@@ -513,6 +517,7 @@ shield={
 }
 
 ringmail={
+ name='ringmail, +1 armor',
  class='armor',
  sprite=43,
  armor=1,
@@ -526,6 +531,7 @@ ringmail={
 }
 
 ironhelmet={
+ name='iron helmet, +1 armor',
  class='helmet',
  sprite=42,
  armor=1,
@@ -539,9 +545,10 @@ ironhelmet={
 }
 
 leatherboots={
+ name='boots of haste, +20% speed',
  class='boots',
  sprite=41,
- spdfactor=0.3,
+ spdfactor=0.2,
  frames={
   currentframe=1,
   idling={{9,9,1,1, 0,0}},
@@ -1934,6 +1941,12 @@ function equipdraw()
     9+offsetx+9,
     y+9,
     10)
+
+   print(
+    item.name,
+    7,
+    y+12,
+    7)
   end
 
   offsetx+=12
