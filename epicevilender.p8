@@ -486,7 +486,7 @@ end
 
 -- items
 sword={
- name='steel sword',
+ name='steel sword, 1 dmg knockback',
  class='weapon',
  sprite=47,
  col=6,
@@ -501,7 +501,7 @@ sword={
 }
 
 bow={
- name='cedar bow',
+ name='cedar bow, 1 dmg',
  class='weapon',
  twohand=true,
  sprite=46,
