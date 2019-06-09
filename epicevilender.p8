@@ -250,6 +250,7 @@ dungeontheme=1 -- 1 tower, 2 cave
 floormap={} -- the current map
 exitdoor={} -- the exitdoor
 actors={} -- actors
+boss=nil -- current boss (if any)
 attacks={} -- attack objects
 vfxs={} -- visual effects
 pemitters={} -- particle emitters
@@ -640,6 +641,7 @@ function dungeoninit()
 
  -- reset vars
  curenemyidx=1
+ boss=nil
 
  -- reset collections
  floormap={}
@@ -708,8 +710,12 @@ function dungeoninit()
   for enemy in all(enemies) do
    sset(enemy.x,enemy.y+64,enemy.typ)
   end
-  -- local enemy=enemies[1]
-  -- sset(enemy.x,enemy.y+64,enemy.typ)
+
+  -- add boss on every 5 levels
+  if dungeonlevel % 5 == 0 then
+   local enemy=enemies[#enemies]
+   sset(enemy.x,enemy.y+64,8)
+  end
 
   -- exitdoor
   sset(curx,cury+64,2)
@@ -844,9 +850,161 @@ function dungeoninit()
 
     add(actors,enemy)
     _col=0 -- note: make tile ground
+   end
+
+   -- create skeleton king
+   if _col == 8 then
+    local enemy=createactor({
+     isenemy=true,
+     isbig=true,
+     x=_x*8+4,
+     y=_y*8+4,
+     a=0,
+     halfw=1.5,
+     halfh=3,
+     runspd=0.4,
+     spd=0.4,
+     hp=10,
+     attack={
+      typ='magic',
+      x=nil,
+      y=nil,
+     },
+     ai={
+      state='idling',
+      laststate='idling',
+      state_counter=0,
+      ismovingoutofcollision=false,
+      toocloseto={},
+     },
+     frames={
+      currentframe=1,
+      idling={{0,40,15,18, -7,-13}},
+      moving={animspd=0.24,{16,40,15,18, -7,-13},{32,40,15,18, -7,-13}},
+      attacking={animspd=0,{0,40,15,18, -7,-13},{48,40,20,18, -10,-13},{72,40,15,18, -7,-13}},
+      recovering={{0,40,15,18, -7,-13}},
+     },
+     performattack=function(boss)
+
+      if boss.attack.typ == 'melee' then
+       if boss.ai.laststate != 'attacking' then
+        boss.frames.currentframe=1
+        boss.ai.state_counter=90
+       else
+        boss.ai.state_counter-=1
+       end
+
+       if boss.ai.state_counter == 60 then
+        boss.frames.currentframe=2
+        add(attacks,createattack({
+         isenemy=true,
+         throughwalls=true,
+         x=boss.x+cos(boss.a)*2,
+         y=boss.y-3,
+         halfw=7,
+         halfh=8,
+         state_counter=2,
+         isphysical=true,
+         knockbackangle=boss.a,
+         damage=1,
+         targetcount=100,
+         col=7,
+        }))
+       end
+
+       if boss.ai.state_counter <= 0 then
+        boss.x-=cos(boss.a)*3
+        boss.attack.typ='magic'
+        boss.ai.state='idling'
+       end
+
+      elseif boss.attack.typ == 'magic' then
+       if boss.ai.laststate != 'attacking' then
+        boss.frames.currentframe=3
+        boss.ai.state_counter=110
+
+        local a=rnd()
+        local d=1
+        local x,y
+
+        repeat
+         a+=0.05
+         d+=0.02
+         x=flr(boss.x/8+cos(a)*2)
+         y=flr(boss.y/8+sin(a)*2)
+         x=mid(1,x,14)
+         y=mid(1,y,14)
+        until floormap[y] and floormap[y][x] == 0
+
+        boss.attack.x=x*8+4
+        boss.attack.y=y*8+4
+
+        add(pemitters,createpemitter({
+         follow={
+          x=boss.attack.x,
+          y=boss.attack.y,
+         },
+         life=110+30,
+         prate={1,2},
+         plife={10,15},
+         poffsets={-2,0.5,1,0.5},
+         dx={0,0},
+         dy={-0.3,0},
+         pcolors={11,3,1},
+        }))
+       else
+        boss.ai.state_counter-=1
+       end
+
+       if boss.ai.state_counter <= 0 then
+
+        local enemy=createactor({
+         isenemy=true,
+         x=boss.attack.x,
+         y=boss.attack.y,
+         a=0,
+         halfw=1.5,
+         halfh=2,
+         runspd=0.5,
+         spd=0.5,
+         hp=3,
+         attack={
+          typ='melee',
+          spd=50,
+         },
+         ai={
+          state='recovering',
+          laststate='recovering',
+          state_counter=50,
+          ismovingoutofcollision=false,
+          toocloseto={},
+         },
+         frames={
+          currentframe=1,
+          idling={{0,15,4,5, -2,-3}},
+          moving={animspd=0.18,{0,15,4,5, -2,-3},{4,15,4,5, -2,-3}},
+          attacking={{8,15,4,5, -2,-3}},
+          recovering={{0,15,4,5, -2,-3}},
+         },
+        })
+
+        add(actors,enemy)
+
+        boss.attack.typ='melee'
+        boss.ai.state='idling'
+       end
+
+      end
+     end,
+    })
+
+    add(actors,enemy)
+    boss=enemy
+    _col=0 -- note: make tile ground
+   end
 
    -- create exitdoor
-   elseif _col == 2 then
+   if _col == 2 then
     exitdoor={
      x=_x*8+4,
      y=_y*8+4,
@@ -1007,6 +1165,9 @@ function dungeonupdate()
    if enemy.attack.typ == 'ranged' then
     withinattackdistance=distancetoavatar <= 40
    end
+   if enemy.attack.typ == 'magic' then
+    withinattackdistance=distancetoavatar <= 60
+   end
    local haslostoavatar=haslos(floormap,enemy.x,enemy.y,avatar.x,avatar.y)
    local isswinging=enemy.ai.state == 'attacking' and enemy.ai.state_counter > 0
 
@@ -1047,7 +1208,8 @@ function dungeonupdate()
     enemy.spd=enemy.runspd
 
    -- attack
-   elseif isswinging or withinattackdistance and haslostoavatar then
+   elseif isswinging or withinattackdistance and
+         (haslostoavatar or enemy.attack.typ == 'magic') then
     debugaistates('withinattackdistance and haslostoavatar')
 
     enemy.ai.state='attacking'
@@ -1107,6 +1269,10 @@ function dungeonupdate()
     enemy.ai.targety=enemy.y+sin(a)*10
     enemy.spd=enemy.runspd*0.5
 
+    if enemy == boss then
+     enemy.attack.typ='magic'
+    end
+
    end
   end
  end
@@ -1128,108 +1294,113 @@ function dungeonupdate()
 
    elseif enemy.ai.state == 'attacking' then
 
-    if enemy.ai.laststate != 'attacking' then
+    if enemy == boss then
 
-     enemy.ai.state_counter=enemy.attack.spd
-    end
+     boss.performattack(boss)
 
-    enemy.ai.state_counter-=1
-    if enemy.ai.state_counter <= 0 then
+    else
 
-     if enemy.attack.typ == 'melee' then
-      local a=atan2(
-       enemy.ai.targetx-enemy.x,
-       enemy.ai.targety-enemy.y)
+     if enemy.ai.laststate != 'attacking' then
 
-      add(attacks,createattack({
-       isenemy=true,
-       x=enemy.x+cos(a)*4,
-       y=enemy.y+sin(a)*4,
-       halfw=2,
-       halfh=2,
-       state_counter=1,
-       isphysical=true,
-       knockbackangle=a,
-       damage=1,
-       targetcount=1000,
-       col=7,
-      }))
-
-      -- add vfx
-      angletofx={
-       [0]={0,20,4,7, -1,-5}, -- right
-       [0.125]={8,20,6,4, -3,-2}, -- right/up
-       [0.25]={20,20,9,3, -3,-1}, -- up
-       [0.375]={14,20,6,4, -2,-2}, -- up/left
-       [0.5]={4,20,4,7, -2,-5}, -- left
-       [0.625]={29,20,4,7, -3,-6}, -- left/down
-       [0.75]={20,23,9,3, -4,-2}, -- down
-       [0.875]={33,20,4,7, 0,-6}, -- down/right
-       [1]={0,20,4,7, -1,-5}, -- right (wrapped)
-      }
-
-      local x=enemy.x+cos(enemy.a)*4
-      local y=enemy.y+sin(enemy.a)*4
-
-      local a=min(flr((enemy.a+0.0625)*8)/8,1)
-
-      debug(enemy.a,a)
-
-      local frame=angletofx[a]
-      frame[5]=x+frame[5]
-      frame[6]=y+frame[6]
-      frame.counter=10
-      local vfx={frame,col=7}
-
-      add(vfxs,vfx)
-
-
-
-     elseif enemy.attack.typ == 'ranged' then
-
-      local a=atan2(
-       enemy.ai.targetx-enemy.x,
-       enemy.ai.targety-enemy.y)
-
-      a=min(flr((a+0.0625)*8)/8,1)
-
-      -- arrow frame
-      local angletoframe={
-       [0]={50,20,2,1, -1,-0.5}, -- right
-       [0.125]={52,20,2,2, -1,-1}, -- right/up
-       [0.25]={54,20,1,2, -0.5,-1}, -- up
-       [0.375]={55,20,2,2, -1,-1}, -- up/left
-       [0.5]={50,20,2,1, -1,-0.5}, -- left
-       [0.625]={52,20,2,2, -1,-1}, -- left/down
-       [0.75]={54,20,1,2, -0.5,-1}, -- down
-       [0.875]={55,20,2,2, -1,-1}, -- down/right
-       [1]={50,20,2,1, -1,-0.5}, -- right (wrapped)
-      }
-
-      local frame=angletoframe[a]
-
-      local attack=createattack({
-       isenemy=true,
-       x=enemy.x-0.5,
-       y=enemy.y-0.5,
-       halfw=1,
-       halfh=1,
-       state_counter=1000,
-       dx=cos(a)*1.6,
-       dy=sin(a)*1.6,
-       damage=1,
-       targetcount=1,
-       frames={
-        currentframe=1,
-        frame,
-       },
-       col=2,
-      })
-
-      add(attacks,attack)
+      enemy.ai.state_counter=enemy.attack.spd
      end
 
-     enemy.ai.state='idling'
+     enemy.ai.state_counter-=1
+     if enemy.ai.state_counter <= 0 then
+
+      if enemy.attack.typ == 'melee' then
+       local a=atan2(
+        enemy.ai.targetx-enemy.x,
+        enemy.ai.targety-enemy.y)
+
+       add(attacks,createattack({
+        isenemy=true,
+        x=enemy.x+cos(a)*4,
+        y=enemy.y+sin(a)*4,
+        halfw=2,
+        halfh=2,
+        state_counter=1,
+        isphysical=true,
+        knockbackangle=a,
+        damage=1,
+        targetcount=1000,
+        col=7,
+       }))
+
+       -- add vfx
+       angletofx={
+        [0]={0,20,4,7, -1,-5}, -- right
+        [0.125]={8,20,6,4, -3,-2}, -- right/up
+        [0.25]={20,20,9,3, -3,-1}, -- up
+        [0.375]={14,20,6,4, -2,-2}, -- up/left
+        [0.5]={4,20,4,7, -2,-5}, -- left
+        [0.625]={29,20,4,7, -3,-6}, -- left/down
+        [0.75]={20,23,9,3, -4,-2}, -- down
+        [0.875]={33,20,4,7, 0,-6}, -- down/right
+        [1]={0,20,4,7, -1,-5}, -- right (wrapped)
+       }
+
+       local x=enemy.x+cos(enemy.a)*4
+       local y=enemy.y+sin(enemy.a)*4
+
+       local a=min(flr((enemy.a+0.0625)*8)/8,1)
+
+       local frame=angletofx[a]
+       frame[5]=x+frame[5]
+       frame[6]=y+frame[6]
+       frame.counter=10
+       local vfx={frame,col=7}
+
+       add(vfxs,vfx)
+
+
+
+      elseif enemy.attack.typ == 'ranged' then
+
+       local a=atan2(
+        enemy.ai.targetx-enemy.x,
+        enemy.ai.targety-enemy.y)
+
+       a=min(flr((a+0.0625)*8)/8,1)
+
+       -- arrow frame
+       local angletoframe={
+        [0]={50,20,2,1, -1,-0.5}, -- right
+        [0.125]={52,20,2,2, -1,-1}, -- right/up
+        [0.25]={54,20,1,2, -0.5,-1}, -- up
+        [0.375]={55,20,2,2, -1,-1}, -- up/left
+        [0.5]={50,20,2,1, -1,-0.5}, -- left
+        [0.625]={52,20,2,2, -1,-1}, -- left/down
+        [0.75]={54,20,1,2, -0.5,-1}, -- down
+        [0.875]={55,20,2,2, -1,-1}, -- down/right
+        [1]={50,20,2,1, -1,-0.5}, -- right (wrapped)
+       }
+
+       local frame=angletoframe[a]
+
+       local attack=createattack({
+        isenemy=true,
+        x=enemy.x-0.5,
+        y=enemy.y-0.5,
+        halfw=1,
+        halfh=1,
+        state_counter=1000,
+        dx=cos(a)*1.6,
+        dy=sin(a)*1.6,
+        damage=1,
+        targetcount=1,
+        frames={
+         currentframe=1,
+         frame,
+        },
+        col=2,
+       })
+
+       add(attacks,attack)
+      end
+
+      enemy.ai.state='idling'
+     end
     end
 
    elseif enemy.ai.state == 'recovering' then
@@ -1334,7 +1505,7 @@ function dungeonupdate()
     -- effects
 
     -- physical knockback effect
-    if attack.isphysical then
+    if attack.isphysical and actor.isbig != true then
      actor.dx=cos(attack.knockbackangle)*5
      actor.dy=sin(attack.knockbackangle)*5
     end
@@ -1445,7 +1616,11 @@ function dungeonupdate()
   if attack.x > 128 or
      attack.x < 0 or
      attack.y > 128 or
-     attack.y < 0 or
+     attack.y < 0 then
+   attack.removeme=true
+  end
+
+  if attack.throughwalls != true and
      isinsidewall(floormap,attack) then
    attack.removeme=true
   end
@@ -2163,24 +2338,24 @@ __gfx__
 00000000000000000000770000000000000077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000070000000000000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000077777770000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000007777777777700000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000777777777777777000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000007777777777777777700000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000d7777777770007777700000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000d777770000000007770000000000000000000000000000000000000000000000000000000000000
+00000000f000000000000000f000000000000000f000000000d777000f0000000770000000000000f00000000000000000000000000000000000000000000000
+0000000ff00000000000000ff00000000000000ff0000000000d7400ff000000007700000000000ff00b00000000000000000000000000000000000000000000
+00000006600000000000000660000000000000066000000000004000660000000077000000000006600000000000000000000000000000000000000000000000
+00000006600000000000000660000000000000066000000000040600660000000007000000000006600600000000000000000000000000000000000000000000
+0000000600b000000000000600b000000000000600b0000000000060600000000007000000000006006000000000000000000000000000000000000000000000
+00000066600000000000006660000000000000666000000000000006660000000007000000000066660000000000000000000000000000000000000000000000
+00000606066000000000060606600000000006060660000000000000600000000007000000000606000000000000000000000000000000000000000000000000
+00406066600000000040606660000000004060666000000000000006660000000070000000406066600000000000000000000000000000000000000000000000
+00040006000000000004000600000000000400060000000000000000600000000070000000040006000000000000000000000000000000000000000000000000
+00d040606000000000d040606000000000d040606000000000000006060000000700000000d04060600000000000000000000000000000000000000000000000
+0d000060600000000d000060600000000d000060600000000000006000600007700000000d000060600000000000000000000000000000000000000000000000
+d000006060000000d000006000000000d000000060000000000000060006077000000000d0000060600000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
