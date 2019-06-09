@@ -576,11 +576,11 @@ ironhelmet={
 }
 
 leatherboots={
- name='boots of haste, +20% speed',
+ name='boots of haste, +10% speed',
  class='boots',
  sprite=41,
  col=4,
- spdfactor=0.2,
+ spdfactor=0.1,
  frames={
   currentframe=1,
   idling={{9,9,1,1, 0,0}},
