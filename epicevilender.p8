@@ -1901,6 +1901,8 @@ function equipupdate()
       avatar.items.weapon.twohand then
     avatar.items.weapon=nil
    end
+
+   inventorycur=mid(1,inventorycur,#inventory-1)
   end
 
  -- equipped
@@ -1955,15 +1957,18 @@ function equipdraw()
 
  cls(0)
 
+ local col=0
+
  -- draw inventory section
  local offsetx=0
  local y=17
  local i=1
  if sectioncur == 1 then
-  print('saddlebags',7,y-9,10)
+  col=10
  else
-  print('saddlebags',7,y-9,4)
+  col=4
  end
+ print('saddlebags',7,y-9,col)
  for item in all(inventory) do
   spr(item.sprite,9+offsetx,y)
   if sectioncur == 1 and i == inventorycur then
@@ -1990,10 +1995,11 @@ function equipdraw()
  y=52
  i=1
  if sectioncur == 2 then
-  print('equipped',7,y-9,10)
+  col=10
  else
-  print('equipped',7,y-9,4)
+  col=4
  end
+ print('equipped',7,y-9,col)
  for slot in all(equipslots) do
   local item=avatar.items[slot[1]]
   if item == nil then
@@ -2009,6 +2015,14 @@ function equipdraw()
     9+offsetx+9,
     y+9,
     10)
+
+   if item then
+    print(
+     item.name,
+     7,
+     y+12,
+     7)
+   end
   end
 
   offsetx+=12
@@ -2020,10 +2034,11 @@ function equipdraw()
  y=89
  i=1
  if sectioncur == 3 then
-  print('skills',7,y-9,10)
+  col=10
  else
-  print('skills',7,y-9,4)
+  col=4
  end
+ print('skills',7,y-9,col)
  for skill in all(availableskills) do
   spr(skill.sprite,9+offsetx,y)
   if sectioncur == 3 and i == availableskillscur then
@@ -2048,11 +2063,11 @@ function equipdraw()
 
  -- draw exit button
  if sectioncur == 4 then
-  print('exit',57,117,10)
+  col=10
  else
-  print('exit',57,117,4)
+  col=4
  end
-
+ print('exit',57,117,col)
 
 end
 
