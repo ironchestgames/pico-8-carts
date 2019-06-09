@@ -668,7 +668,6 @@ function dungeoninit()
   if avatar != nil then
    avatarx=mid(2,flr(avatar.x/8),14)
    avatary=mid(2,flr(avatar.y/8),14)
-   debug(avatar.x,avatar.y,avatarx,avatary)
   end
 
   local curx=avatarx
@@ -1584,7 +1583,7 @@ function dungeondraw()
    local mapval=floormap[_y][_x]
    if mapval != 0 then
 
-    if floormap[_y+1] and floormap[_y+1][_x] != 0 then
+    if _y == #floormap or floormap[_y+1] and floormap[_y+1][_x] != 0 then
      spr(themeoffset+1,_x*8,_y*8)
     else
      spr(themeoffset+0,_x*8,_y*8)
@@ -1803,35 +1802,31 @@ function dungeondraw()
   end
  end
 
- -- dev stats
- print(avatar.hp .. ' hp',110,0,8)
- print(avatar.armor .. '/' .. avatar.startarmor .. ' a',82,0,6)
+ print('level '..dungeonlevel,3,1,13)
+ print(avatar.armor..'/'..avatar.startarmor..' a',82,1,6)
+ print(avatar.hp..' hp',110,1,8)
  if avatar.hp <= 0 then
   print('dead',60,60,8)
  end
 
- if avatar.ispreperform then
-  color(10)
- else
-  color(9)
- end
- print(avatar.state_counter,70,0)
-
- local enemycount=0
- for actor in all(actors) do
-  if actor.ai then
-   enemycount+=1
-  end
- end
- print(enemycount,50,0,6)
-
- print(dungeonlevel,120,122,13)
-
  -- prints debug stats
- -- if isdebug then
- print(stat(1),0,0,7)
- print(stat(7),0,6,7)
- -- end
+ if isdebug then
+  local enemycount=0
+  for actor in all(actors) do
+   if actor.ai then
+    enemycount+=1
+   end
+  end
+  print(enemycount,60,123,8)
+  if avatar.ispreperform then
+   color(10)
+  else
+   color(9)
+  end
+  print(avatar.state_counter,80,123)
+  print(stat(1),20,123,7)
+  print(stat(7),0,123,7)
+ end
 end
 
 
