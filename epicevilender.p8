@@ -299,163 +299,189 @@ function createpemitter(params)
 end
 
 -- skills
-swordattackskill={
- sprite=31,
- preperformdur=15,
- postperformdur=28,
- perform=function(skill,user)
-  local x=user.x+cos(user.a)*4
-  local y=user.y+sin(user.a)*4
+swordattackskillfactory=function(
+  damage,
+  preperformdur,
+  postperformdur,
+  targetcount,
+  attackcol)
+ return {
+  sprite=31,
+  preperformdur=preperformdur,
+  postperformdur=postperformdur,
+  perform=function(skill,user)
+   local x=user.x+cos(user.a)*4
+   local y=user.y+sin(user.a)*4
 
-  add(attacks,createattack({
-   x=x,
-   y=y,
-   halfw=2,
-   halfh=2,
-   state_counter=1,
-   isphysical=true,
-   knockbackangle=user.a,
-   damage=1,
-   targetcount=1000,
-  }))
+   add(attacks,createattack({
+    x=x,
+    y=y,
+    halfw=2,
+    halfh=2,
+    state_counter=1,
+    isphysical=true,
+    knockbackangle=user.a,
+    damage=damage,
+    targetcount=targetcount,
+   }))
 
-  -- add vfx
-  angletofx={
-   [0]={0,20,4,7, -1,-5}, -- right
-   [0.125]={8,20,6,4, -3,-2}, -- right/up
-   [0.25]={20,20,9,3, -3,-1}, -- up
-   [0.375]={14,20,6,4, -2,-2}, -- up/left
-   [0.5]={4,20,4,7, -2,-5}, -- left
-   [0.625]={29,20,4,7, -3,-6}, -- left/down
-   [0.75]={20,23,9,3, -4,-2}, -- down
-   [0.875]={33,20,4,7, 0,-6}, -- down/right
-  }
-
-  local frame=angletofx[user.a]
-  frame[5]=x+frame[5]
-  frame[6]=y+frame[6]
-  frame.counter=skill.postperformdur
-  local vfx={frame}
-
-  add(vfxs,vfx)
- end,
-}
-
-bowattackskill={
- sprite=30,
- preperformdur=26,
- postperformdur=6,
- perform=function(skill,user)
-  local x=user.x+cos(user.a)*4
-  local y=user.y+sin(user.a)*4
-
-  -- arrow frame
-  local angletoframe={
-   [0]={50,20,2,1, -1,-0.5}, -- right
-   [0.125]={52,20,2,2, -1,-1}, -- right/up
-   [0.25]={54,20,1,2, -0.5,-1}, -- up
-   [0.375]={55,20,2,2, -1,-1}, -- up/left
-   [0.5]={50,20,2,1, -1,-0.5}, -- left
-   [0.625]={52,20,2,2, -1,-1}, -- left/down
-   [0.75]={54,20,1,2, -0.5,-1}, -- down
-   [0.875]={55,20,2,2, -1,-1}, -- down/right
-  }
-
-  local frame=angletoframe[user.a]
-
-  local attack=createattack({
-   x=x-0.5,
-   y=y-0.5,
-   halfw=1,
-   halfh=1,
-   state_counter=1000,
-   dx=cos(user.a)*1.6,
-   dy=sin(user.a)*1.6,
-   damage=1,
-   targetcount=1,
-   frames={
-    currentframe=1,
-    frame,
+   -- add vfx
+   angletofx={
+    [0]={0,20,4,7, -1,-5}, -- right
+    [0.125]={8,20,6,4, -3,-2}, -- right/up
+    [0.25]={20,20,9,3, -3,-1}, -- up
+    [0.375]={14,20,6,4, -2,-2}, -- up/left
+    [0.5]={4,20,4,7, -2,-5}, -- left
+    [0.625]={29,20,4,7, -3,-6}, -- left/down
+    [0.75]={20,23,9,3, -4,-2}, -- down
+    [0.875]={33,20,4,7, 0,-6}, -- down/right
    }
-  })
 
-  add(attacks,attack)
+   local frame=angletofx[user.a]
+   frame[5]=x+frame[5]
+   frame[6]=y+frame[6]
+   frame.counter=skill.postperformdur
+   local vfx={frame,col=attackcol}
 
-  -- add vfx
-  angletofx={
-   [0]={0,27,6,7, -3,-5}, -- right
-   [0.125]={17,32,7,7, -4,-3}, -- right/up
-   [0.25]={10,31,7,6, -3,-3}, -- up
-   [0.375]={34,32,7,7, -3,-3}, -- up/left
-   [0.5]={4,27,6,7, -2,-5}, -- left
-   [0.625]={22,27,7,7, -2,-5}, -- left/down
-   [0.75]={10,27,7,6, -3,-4}, -- down
-   [0.875]={29,27,7,7, -4,-4}, -- down/right
-  }
+   add(vfxs,vfx)
+  end,
+ }
+end
 
-  local frame=angletofx[user.a]
-  frame[5]=x+frame[5]
-  frame[6]=y+frame[6]
-  frame.counter=skill.postperformdur
-  local vfx={frame}
+bowattackskillfactory=function(
+  damage,
+  preperformdur,
+  postperformdur,
+  targetcount,
+  attackcol,
+  arrowcol)
+ return {
+  sprite=30,
+  preperformdur=preperformdur,
+  postperformdur=postperformdur,
+  perform=function(skill,user)
+   local x=user.x+cos(user.a)*4
+   local y=user.y+sin(user.a)*4
 
-  add(vfxs,vfx)
- end,
-}
-
-fireboltskill={
- sprite=29,
- preperformdur=40,
- postperformdur=0,
- startpemitter=function(user,life)
-  add(pemitters,createpemitter({
-   follow=user,
-   life=life,
-   prate={2,4},
-   plife={15,25},
-   poffsets={-2,0.5,2,0.5},
-   dx={0,0},
-   dy={-0.3,0},
-   pcolors={8,14},
-  }))
- end,
- perform=function(skill,user)
-  local x=user.x+cos(user.a)*4
-  local y=user.y+sin(user.a)*4
-
-  local attack=createattack({
-   x=x,
-   y=y,
-   halfw=1,
-   halfh=1,
-   state_counter=1000,
-   dx=cos(user.a)*1.2,
-   dy=sin(user.a)*1.2,
-   damage=2,
-   targetcount=1,
-   frames={
-    currentframe=1,
-    {47,20,3,3, -0.5,-0.5},
+   -- arrow frame
+   local angletoframe={
+    [0]={50,20,2,1, -1,-0.5}, -- right
+    [0.125]={52,20,2,2, -1,-1}, -- right/up
+    [0.25]={54,20,1,2, -0.5,-1}, -- up
+    [0.375]={55,20,2,2, -1,-1}, -- up/left
+    [0.5]={50,20,2,1, -1,-0.5}, -- left
+    [0.625]={52,20,2,2, -1,-1}, -- left/down
+    [0.75]={54,20,1,2, -0.5,-1}, -- down
+    [0.875]={55,20,2,2, -1,-1}, -- down/right
    }
-  })
 
-  add(attacks,attack)
+   local frame=angletoframe[user.a]
 
-  add(pemitters,createpemitter({
-   follow=attack,
-   life=1000,
-   prate={0,1},
-   plife={3,5},
-   poffsets={-1,-1,1,1},
-   dx={0,0},
-   dy={0,0},
-   -- pcolors={9,8},
-   -- pcolors={8,2},
-   pcolors={14,8},
-  }))
+   local attack=createattack({
+    x=x-0.5,
+    y=y-0.5,
+    halfw=1,
+    halfh=1,
+    state_counter=1000,
+    dx=cos(user.a)*1.6,
+    dy=sin(user.a)*1.6,
+    damage=damage,
+    targetcount=targetcount,
+    frames={
+     currentframe=1,
+     frame,
+    },
+    col=arrowcol,
+   })
 
- end,
-}
+   add(attacks,attack)
+
+   -- add vfx
+   angletofx={
+    [0]={0,27,6,7, -3,-5}, -- right
+    [0.125]={17,32,7,7, -4,-3}, -- right/up
+    [0.25]={10,31,7,6, -3,-3}, -- up
+    [0.375]={34,32,7,7, -3,-3}, -- up/left
+    [0.5]={4,27,6,7, -2,-5}, -- left
+    [0.625]={22,27,7,7, -2,-5}, -- left/down
+    [0.75]={10,27,7,6, -3,-4}, -- down
+    [0.875]={29,27,7,7, -4,-4}, -- down/right
+   }
+
+   local frame=angletofx[user.a]
+   frame[5]=x+frame[5]
+   frame[6]=y+frame[6]
+   frame.counter=skill.postperformdur
+   local vfx={frame,col=attackcol}
+
+   add(vfxs,vfx)
+  end,
+ }
+end
+
+boltskillfactory=function(
+  damage,
+  preperformdur,
+  postperformdur,
+  targetcount,
+  attackcol,
+  castingpemittercols,
+  boltpemittercols)
+ return {
+  sprite=29,
+  preperformdur=preperformdur,
+  postperformdur=postperformdur,
+  startpemitter=function(user,life)
+   add(pemitters,createpemitter({
+    follow=user,
+    life=life,
+    prate={2,4},
+    plife={15,25},
+    poffsets={-2,0.5,2,0.5},
+    dx={0,0},
+    dy={-0.3,0},
+    pcolors=castingpemittercols,
+   }))
+  end,
+  perform=function(skill,user)
+   local x=user.x+cos(user.a)*4
+   local y=user.y+sin(user.a)*4
+
+   local attack=createattack({
+    x=x,
+    y=y,
+    halfw=1,
+    halfh=1,
+    state_counter=1000,
+    dx=cos(user.a)*1.2,
+    dy=sin(user.a)*1.2,
+    damage=damage,
+    targetcount=targetcount,
+    frames={
+     currentframe=1,
+     {47,20,3,3, -0.5,-0.5},
+    },
+    col=attackcol,
+   })
+
+   add(attacks,attack)
+
+   add(pemitters,createpemitter({
+    follow=attack,
+    life=1000,
+    prate={0,1},
+    plife={3,5},
+    poffsets={-1,-1,1,1},
+    dx={0,0},
+    dy={0,0},
+    -- pcolors={9,8},
+    -- pcolors={8,2},
+    pcolors=boltpemittercols,
+   }))
+
+  end,
+ }
+end
 
 
 -- items
@@ -464,7 +490,7 @@ sword={
  class='weapon',
  sprite=47,
  col=6,
- skill=swordattackskill,
+ skill=swordattackskillfactory(1,15,28,1000,7),
  frames={
   currentframe=1,
   idling={{9,9,5,5, -2,-3}},
@@ -480,7 +506,7 @@ bow={
  twohand=true,
  sprite=46,
  col=4,
- skill=bowattackskill,
+ skill=bowattackskillfactory(1,26,6,1,7,3),
  frames={
   currentframe=1,
   idling={{25,9,5,5, -2,-3}},
@@ -494,7 +520,7 @@ fireboltbook={
  name='book of firebolt',
  class='book',
  sprite=45,
- skill=fireboltskill,
+ skill=boltskillfactory(2,40,0,1,14,{8,14},{14,8}),
  frames={
   currentframe=1,
   idling={{9,9,1,1, 0,0}},
@@ -1127,6 +1153,7 @@ function dungeonupdate()
        knockbackangle=a,
        damage=1,
        targetcount=1000,
+       col=7,
       }))
 
       -- add vfx
@@ -1153,7 +1180,7 @@ function dungeonupdate()
       frame[5]=x+frame[5]
       frame[6]=y+frame[6]
       frame.counter=10
-      local vfx={frame}
+      local vfx={frame,col=7}
 
       add(vfxs,vfx)
 
@@ -1196,7 +1223,8 @@ function dungeonupdate()
        frames={
         currentframe=1,
         frame,
-       }
+       },
+       col=2,
       })
 
       add(attacks,attack)
@@ -1596,6 +1624,9 @@ function dungeondraw()
 
   if attack.frames then
    local frame=attack.frames[attack.frames.currentframe]
+   if attack.col then
+    pal(2,attack.col,0)
+   end
    sspr(
     frame[1],
     frame[2],
@@ -1605,6 +1636,8 @@ function dungeondraw()
     attack.y+frame[6],
     frame[3],
     frame[4])
+
+   pal(2,2,0)
   end
 
   if isdebug then
@@ -1755,7 +1788,9 @@ function dungeondraw()
  -- draw vfx
  for vfx in all(vfxs) do
   local frame=vfx[1]
+  pal(7,vfx.col,0)
   sspr(frame[1],frame[2],frame[3],frame[4],frame[5],frame[6])
+  pal(7,7,0)
  end
 
  -- draw particles
@@ -2106,8 +2141,8 @@ __gfx__
 666d666d6600666dd0066206626662066620050505000000000000000000000000000000444420200066d500d556d55d06dd11d008ffff40000006400000066d
 0600060006000600000620062006200060200000000000000000000000000000000000004422202006d6d55050d55d0506d6d1d00222224000006040000067d0
 60600600606060600060600600606006060000000000000000000000000000000000000004440400d6d6d555d024920d06d6d1d0022822400006004000067d00
-07000070777700007777077777000070000700888007770ee044044400000000000000000a9909006766dddd00d55d000d1dd1d002288240006005000f67d000
-00700700007770077700777777770700000078888877777ee00040404000000000000000044440400006d0000056d5000d1111d0028e824006005000009d0000
+0700007077770000777707777700007000070088800777022022022200000000000000000a9909006766dddd00d55d000d1dd1d002288240006005000f67d000
+007007000077700777007777777707000000788888777772200020202000000000000000044440400006d0000056d5000d1111d0028e824006005000009d0000
 00700700000777777000700000007700000078888877777000000000000000000000000002444404d000000d00d55d0000d11d00028e82404444000002090000
 007777000007700770007000000077700007788888777770000000000000000000000000002222025000000500000000000dd000022222002000000090000000
 00777700000000000000777777770777777770888007770000000000000000000000000000000000000000000000000000000000000000000000000000000000
