@@ -496,8 +496,10 @@ boltskillfactory=function(
  }
 end
 
+antiframe={9,9,1,1, 0,0}
 
 -- items
+swordidleframe={9,9,5,5, -2,-3}
 sword={
  name='steel sword, 1 dmg knockback',
  class='weapon',
@@ -506,13 +508,14 @@ sword={
  skill=swordattackskillfactory(1,15,28,1000,7),
  frames={
   currentframe=1,
-  idling={{9,9,5,5, -2,-3}},
-  moving={{9,9,5,5, -2,-3}},
+  idling={swordidleframe},
+  moving={swordidleframe},
   attacking={{14,9,5,5, -2,-3},{18,9,7,5, -3,-3}},
-  recovering={{9,9,5,5, -2,-3}},
+  recovering={swordidleframe},
  },
 }
 
+bowidleframe={25,9,5,5, -2,-3}
 bow={
  name='cedar bow, 1 dmg',
  class='weapon',
@@ -522,10 +525,10 @@ bow={
  skill=bowattackskillfactory(1,26,6,1,7,3),
  frames={
   currentframe=1,
-  idling={{25,9,5,5, -2,-3}},
-  moving={{25,9,5,5, -2,-3}},
+  idling={bowidleframe},
+  moving={bowidleframe},
   attacking={{30,9,5,5, -2,-3},{25,9,1,1, -2,-3}},
-  recovering={{25,9,5,5, -2,-3}},
+  recovering={bowidleframe},
  },
 }
 
@@ -533,16 +536,17 @@ fireboltbook={
  name='book of firebolt',
  class='book',
  sprite=45,
- skill=boltskillfactory(2,40,0,1,14,{8,14},{14,8}),
+ skill=boltskillfactory(2,50,0,1,14,{8,14},{14,8}),
  frames={
   currentframe=1,
-  idling={{9,9,1,1, 0,0}},
-  moving={{9,9,1,1, 0,0}},
-  attacking={{9,9,1,1, 0,0},{9,9,1,1, 0,0}},
-  recovering={{9,9,1,1, 0,0}},
+  idling={antiframe},
+  moving={antiframe},
+  attacking={antiframe,antiframe},
+  recovering={antiframe},
  },
 }
 
+shieldframe={35,9,5,5, -2,-3}
 shield={
  name='steel shield, +1 armor',
  class='offhand',
@@ -551,10 +555,10 @@ shield={
  armor=1,
  frames={
   currentframe=1,
-  idling={{35,9,5,5, -2,-3}},
-  moving={{35,9,5,5, -2,-3}},
-  attacking={{35,9,5,5, -2,-3}},
-  recovering={{35,9,5,5, -2,-3}},
+  idling={shieldframe},
+  moving={shieldframe},
+  attacking={shieldframe},
+  recovering={shieldframe},
  },
 }
 
@@ -566,10 +570,10 @@ ringmail={
  armor=1,
  frames={
   currentframe=1,
-  idling={{9,9,1,1, 0,0}},
-  moving={{9,9,1,1, 0,0}},
-  attacking={{9,9,1,1, 0,0},{9,9,1,1, 0,0}},
-  recovering={{9,9,1,1, 0,0}},
+  idling={antiframe},
+  moving={antiframe},
+  attacking={antiframe,antiframe},
+  recovering={antiframe},
  },
 }
 
@@ -581,10 +585,10 @@ ironhelmet={
  armor=1,
  frames={
   currentframe=1,
-  idling={{9,9,1,1, 0,0}},
-  moving={{9,9,1,1, 0,0}},
-  attacking={{9,9,1,1, 0,0},{9,9,1,1, 0,0}},
-  recovering={{9,9,1,1, 0,0}},
+  idling={antiframe},
+  moving={antiframe},
+  attacking={antiframe,antiframe},
+  recovering={antiframe},
  },
 }
 
@@ -596,10 +600,10 @@ leatherboots={
  spdfactor=0.1,
  frames={
   currentframe=1,
-  idling={{9,9,1,1, 0,0}},
-  moving={{9,9,1,1, 0,0}},
-  attacking={{9,9,1,1, 0,0},{9,9,1,1, 0,0}},
-  recovering={{9,9,1,1, 0,0}},
+  idling={antiframe},
+  moving={antiframe},
+  attacking={antiframe,antiframe},
+  recovering={antiframe},
  },
 }
 
