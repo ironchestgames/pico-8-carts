@@ -255,6 +255,7 @@ dungeonlevel=1 -- current dungeon depth
 dungeonthemes={0,3}
 dungeontheme=1 -- 1 tower, 2 cave
 floormap={} -- the current map
+mapprops={} -- static mapprops
 exitdoor={} -- the exitdoor
 actors={} -- actors
 boss=nil -- current boss (if any)
@@ -642,19 +643,130 @@ avatar=createactor({
 })
 
 
-function nextfloor()
- dungeonlevel+=1
- dungeoninit()
+-- overworld scene
+function overworldinit()
+ _update60=overworldupdate
+ _draw=overworlddraw
+
+ mapinit(getbasemap())
 end
 
-curenemyidx=1
+function overworldupdate()
+ dungeonupdate()
+end
 
+function overworlddraw()
+ dungeondraw()
+end
+
+
+
+
+
+
+
+
+-- dungeon scene
 function dungeoninit()
 
  -- set callbacks
  _update60=dungeonupdate
  _draw=dungeondraw
 
+ dungeonlevel=1
+ mapinit(getbasemap())
+
+end
+
+function getbasemap()
+ local basemap={}
+
+ -- create basemap
+ local getnewdeltaangle=function()
+  local angles={-0.25,0.25}
+  return angles[flr(rnd(#angles)+1)]
+ end
+
+ for _y=0,15 do
+  basemap[_y]={}
+  for _x=0,16 do
+   basemap[_y][_x]=1
+  end
+ end
+
+ local avatarx=flr(rnd(14))+1
+ local avatary=flr(rnd(14))+1
+
+ if avatar != nil then
+  avatarx=mid(2,flr(avatar.x/8),14)
+  avatary=mid(2,flr(avatar.y/8),14)
+ end
+
+ local curx=avatarx
+ local cury=avatary
+ local angle=0
+ local steps=500
+ local stepcount=steps
+ local enemycount=10
+ local enemytypes={5,6,7}
+ local enemies={}
+
+ while stepcount > 0 do
+
+  local nextx=curx+cos(angle)
+  local nexty=cury+sin(angle)
+
+  if flr(rnd(3)) == 0 or
+     nextx <= 0 or
+     nextx > 14 or
+     nexty <= 0 or
+     nexty > 14 then
+   angle+=getnewdeltaangle()
+  elseif stepcount != 0 and stepcount % (steps / enemycount) == 0 then
+   add(enemies,{
+    x=curx,
+    y=cury,
+    typ=enemytypes[flr(rnd(#enemytypes)+1)],
+   })
+  else
+   curx=nextx
+   cury=nexty
+   basemap[cury][curx]=0
+  end
+  stepcount-=1
+ end
+
+ -- enemies
+ for enemy in all(enemies) do
+  basemap[enemy.y][enemy.x]=enemy.typ
+ end
+
+ -- add boss on every 5 levels
+ if dungeonlevel % 5 == 0 then
+  local enemy=enemies[#enemies]
+  basemap[enemy.y][enemy.x]=8
+ end
+
+ -- exitdoor
+ basemap[cury][curx]=2
+
+ -- avatar
+ basemap[avatary][avatarx]=15
+
+ return basemap
+end
+
+function nextfloor()
+ dungeonlevel+=1
+
+ mapinit(getbasemap())
+end
+
+curenemyidx=1
+
+function mapinit(basemap)
+
+ -- start map music
  playmusic(0)
 
  -- reset vars
@@ -663,86 +775,10 @@ function dungeoninit()
 
  -- reset collections
  floormap={}
+ mapprops=basemap.mapprops
  actors={}
  attacks={}
  pemitters={}
-
- local basemap={}
-
- -- create basemap
- do
-  local getnewdeltaangle=function()
-   local angles={-0.25,0.25}
-   return angles[flr(rnd(#angles)+1)]
-  end
-
-  for _y=0,15 do
-   basemap[_y]={}
-   for _x=0,16 do
-    basemap[_y][_x]=1
-   end
-  end
-
-  local avatarx=flr(rnd(14))+1
-  local avatary=flr(rnd(14))+1
-
-  if avatar != nil then
-   avatarx=mid(2,flr(avatar.x/8),14)
-   avatary=mid(2,flr(avatar.y/8),14)
-  end
-
-  local curx=avatarx
-  local cury=avatary
-  local angle=0
-  local steps=500
-  local stepcount=steps
-  local enemycount=10
-  local enemytypes={5,6,7}
-  local enemies={}
-
-  while stepcount > 0 do
-
-   local nextx=curx+cos(angle)
-   local nexty=cury+sin(angle)
-
-   if flr(rnd(3)) == 0 or
-      nextx <= 0 or
-      nextx > 14 or
-      nexty <= 0 or
-      nexty > 14 then
-    angle+=getnewdeltaangle()
-   elseif stepcount != 0 and stepcount % (steps / enemycount) == 0 then
-    add(enemies,{
-     x=curx,
-     y=cury,
-     typ=enemytypes[flr(rnd(#enemytypes)+1)],
-    })
-   else
-    curx=nextx
-    cury=nexty
-    basemap[cury][curx]=0
-   end
-   stepcount-=1
-  end
-
-  -- enemies
-  for enemy in all(enemies) do
-   basemap[enemy.y][enemy.x]=enemy.typ
-  end
-
-  -- add boss on every 5 levels
-  if dungeonlevel % 5 == 0 then
-   local enemy=enemies[#enemies]
-   basemap[enemy.y][enemy.x]=8
-  end
-
-  -- exitdoor
-  basemap[cury][curx]=2
-
-  -- avatar
-  basemap[avatary][avatarx]=15
-
- end
 
  -- init floormap and objects
  for _y=0,15 do
@@ -1037,6 +1073,10 @@ function dungeoninit()
      isopen=false,
     }
     _col=0
+   end
+
+   if mapprops and mapprops[_y][_x] != 0 then
+    _col=1
    end
 
    -- set floormap value
@@ -1795,7 +1835,9 @@ function dungeondraw()
    local mapval=floormap[_y][_x]
    if mapval != 0 then
 
-    if _y == #floormap or floormap[_y+1] and floormap[_y+1][_x] != 0 then
+    if mapprops and mapprops[_y][_x] != 0 then
+     spr(mapprops[_y][_x],_x*8,_y*8)
+    elseif _y == #floormap or floormap[_y+1] and floormap[_y+1][_x] != 0 then
      spr(themeoffset+1,_x*8,_y*8)
     else
      spr(themeoffset+0,_x*8,_y*8)
@@ -2342,7 +2384,7 @@ end
 
 
 function _init()
- equipinit()
+ overworldinit()
 end
 
 
