@@ -645,40 +645,41 @@ avatar=createactor({
 
 -- overworld scene
 function getoverworldmap()
- local basemap={}
+ local basemap,mapprops={},{}
 
  for _y=0,15 do
   basemap[_y]={}
+  mapprops[_y]={}
   for _x=0,16 do
-   basemap[_y][_x]=0
-  end
- end
 
- basemap.mapprops={}
- for _y=0,15 do
-  basemap.mapprops[_y]={}
-  for _x=0,16 do
-   basemap.mapprops[_y][_x]=0
+   local basemapy=basemap[_y]
+
+   basemapy[_x]=0
+   mapprops[_y][_x]=0
+
    local _col=sget(_x,96+_y)
 
    -- avatar
    if _col == 15 then
-    basemap[_y][_x]=15
+    basemapy[_x]=15
 
    -- wall
    elseif _col == 1 then
-    basemap[_y][_x]=1
+    basemapy[_x]=1
 
    -- enter dungeon
    elseif _col == 14 then
-    basemap[_y][_x]=2
+    basemapy[_x]=2
 
    -- mapprops
    elseif _col > 1 then
-    basemap.mapprops[_y][_x]=222+_col
+    mapprops[_y][_x]=222+_col
    end
+
   end
  end
+
+ basemap.mapprops=mapprops
 
  return basemap
 end
@@ -1896,10 +1897,10 @@ function dungeondraw()
 
     -- if isdebug then
     --  rect(
-    --    _x8,
-    --    _y8,
-    --    _x8+wallaabb.halfw*2,
-    --    _y8+wallaabb.halfw*2,
+    --    x8,
+    --    y8,
+    --    x8+wallaabb.halfw*2,
+    --    y8+wallaabb.halfw*2,
     --    5)
     -- end
    end
