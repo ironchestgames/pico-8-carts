@@ -256,7 +256,7 @@ dungeonthemes={0,3}
 dungeontheme=1 -- 1 tower, 2 cave
 floormap={} -- the current map
 mapprops={} -- static mapprops
-exitdoor={} -- the exitdoor
+exits={} -- the exits
 actors={} -- actors
 boss=nil -- current boss (if any)
 attacks={} -- attack objects
@@ -777,7 +777,7 @@ function getbasemap()
   basemap[enemy.y][enemy.x]=8
  end
 
- -- exitdoor
+ -- exit
  basemap[cury][curx]=2
 
  -- avatar
@@ -805,6 +805,7 @@ function mapinit(basemap)
 
  -- reset collections
  floormap={}
+ exits={}
  mapprops=basemap.mapprops
  actors={}
  attacks={}
@@ -1093,15 +1094,16 @@ function mapinit(basemap)
     _col=0 -- note: make tile ground
    end
 
-   -- create exitdoor
+   -- create exit
    if _col == 2 then
-    exitdoor={
+    add(exits,{
      x=_x*8+4,
      y=_y*8+4,
      halfw=4,
      halfh=4,
      isopen=false,
-    }
+     func=nextfloor,
+    })
     _col=0
    end
 
@@ -1534,11 +1536,14 @@ function dungeonupdate()
   end
  end
 
- -- update exitdoor
- if enemycount == 0 and exitdoor.isopen == false then
-  floormap[(exitdoor.y-4)/8][(exitdoor.x-4)/8]=0
-  exitdoor.isopen=true
-  sfx(0)
+ -- update first exit
+ do
+  local _exit=exits[1]
+  if enemycount == 0 and _exit and _exit.isopen == false then
+   floormap[(_exit.y-4)/8][(_exit.x-4)/8]=0
+   _exit.isopen=true
+   sfx(0)
+  end
  end
 
  -- update the next-position
@@ -1554,11 +1559,13 @@ function dungeonupdate()
   -- note: after this deltas should not change by input
  end
 
- -- collide avatar against door
- if exitdoor.isopen and
-    isaabbscolliding(avatar,exitdoor) then
-  nextfloor()
-  return
+ -- collide avatar against exits
+ for _exit in all(exits) do
+  if _exit.isopen and
+     isaabbscolliding(avatar,_exit) then
+   _exit.func()
+   return
+  end
  end
 
  -- collide against attacks
@@ -1865,40 +1872,44 @@ function dungeondraw()
    local mapval=floormap[_y][_x]
    if mapval != 0 then
 
+    local x8,y8=_x*8,_y*8
+
     if mapprops and mapprops[_y][_x] != 0 then
-     spr(mapprops[_y][_x],_x*8,_y*8)
+     spr(mapprops[_y][_x],x8,y8)
     elseif _y == #floormap or floormap[_y+1] and floormap[_y+1][_x] != 0 then
-     spr(themeoffset+1,_x*8,_y*8)
+     spr(themeoffset+1,x8,y8)
     else
-     spr(themeoffset+0,_x*8,_y*8)
+     spr(themeoffset+0,x8,y8)
     end
 
-    if isdebug then
-     rect(
-       _x*8,
-       _y*8,
-       _x*8+wallaabb.halfw*2,
-       _y*8+wallaabb.halfw*2,
-       5)
-    end
+    -- if isdebug then
+    --  rect(
+    --    _x8,
+    --    _y8,
+    --    _x8+wallaabb.halfw*2,
+    --    _y8+wallaabb.halfw*2,
+    --    5)
+    -- end
    end
   end
  end
 
- -- draw exitdoor
- if exitdoor.isopen then
-  spr(
-   themeoffset+2,
-   exitdoor.x-exitdoor.halfw,
-   exitdoor.y-exitdoor.halfh)
+ -- draw exits
+ for _exit in all(exits) do
+  if _exit.isopen then
+   spr(
+    themeoffset+2,
+    _exit.x-_exit.halfw,
+    _exit.y-_exit.halfh)
 
-  if isdebug then
-   rectfill(
-    exitdoor.x-exitdoor.halfw,
-    exitdoor.y-exitdoor.halfh,
-    exitdoor.x+exitdoor.halfw,
-    exitdoor.y+exitdoor.halfh,
-    9)
+   if isdebug then
+    rectfill(
+     _exit.x-_exit.halfw,
+     _exit.y-_exit.halfh,
+     _exit.x+_exit.halfw,
+     _exit.y+_exit.halfh,
+     9)
+   end
   end
  end
 
