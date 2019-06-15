@@ -17,20 +17,20 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  printh(result,'debug',false)
 end
 
-debugb=function(n)
- outputstr=''
- local mask=0x0000.0001
- for i=0,31 do
-  local bit=shr(band(shl(mask,i),n),i)
-  if(bit!=0) bit=1
-  outputstr=tostr(bit)..outputstr
- end
- debug(outputstr)
-end
+-- debugb=function(n)
+--  outputstr=''
+--  local mask=0x0000.0001
+--  for i=0,31 do
+--   local bit=shr(band(shl(mask,i),n),i)
+--   if(bit!=0) bit=1
+--   outputstr=tostr(bit)..outputstr
+--  end
+--  debug(outputstr)
+-- end
 
-debugh=function(n)
- debug(tostr(n,true))
-end
+-- debugh=function(n)
+--  debug(tostr(n,true))
+-- end
 
 debugaistates=function(s)
  -- debug(s)
@@ -136,13 +136,13 @@ function normalize(n)
  return 0
 end
 
-function copytable(t)
- local newt={}
- for key,value in pairs(t) do
-  newt[key]=value
- end
- return newt
-end
+-- function copytable(t)
+--  local newt={}
+--  for key,value in pairs(t) do
+--   newt[key]=value
+--  end
+--  return newt
+-- end
 
 curmusic=nil
 function playmusic(pattern)
@@ -677,7 +677,6 @@ function overworldinit()
  _update60=overworldupdate
  _draw=overworlddraw
 
- -- mapinit(getbasemap())
  mapinit(getoverworldmap())
 end
 
@@ -712,11 +711,6 @@ function getbasemap()
  local basemap={}
 
  -- create basemap
- local getnewdeltaangle=function()
-  local angles={-0.25,0.25}
-  return angles[flr(rnd(#angles)+1)]
- end
-
  for _y=0,15 do
   basemap[_y]={}
   for _x=0,16 do
@@ -751,7 +745,8 @@ function getbasemap()
      nextx > 14 or
      nexty <= 0 or
      nexty > 14 then
-   angle+=getnewdeltaangle()
+   local angles={-0.25,0.25}
+   angle+=angles[flr(rnd(#angles)+1)]
   elseif stepcount != 0 and stepcount % (steps / enemycount) == 0 then
    add(enemies,{
     x=curx,
@@ -1934,14 +1929,14 @@ function dungeondraw()
    pal(2,2,0)
   end
 
-  if isdebug then
-   rectfill(
-    attack.x-attack.halfw,
-    attack.y-attack.halfh,
-    attack.x+attack.halfw,
-    attack.y+attack.halfh,
-    9)
-  end
+  -- if isdebug then
+  --  rectfill(
+  --   attack.x-attack.halfw,
+  --   attack.y-attack.halfh,
+  --   attack.x+attack.halfw,
+  --   attack.y+attack.halfh,
+  --   9)
+  -- end
  end
 
  -- todo: sort on y and z
@@ -1952,27 +1947,27 @@ function dungeondraw()
  -- draw actors
  for actor in all(actors) do
 
-  if isdebug then
-   local col=13
+  -- if isdebug then
+  --  local col=13
 
-   local obj=actor
-   if actor.ai then
-    obj=actor.ai
-   end
+  --  local obj=actor
+  --  if actor.ai then
+  --   obj=actor.ai
+  --  end
 
-   if obj.state == 'recovering' then
-    col=8
-   elseif obj.state == 'attacking' then
-    col=9
-   end
+  --  if obj.state == 'recovering' then
+  --   col=8
+  --  elseif obj.state == 'attacking' then
+  --   col=9
+  --  end
 
-   rectfill(
-    actor.x-actor.halfw,
-    actor.y-actor.halfh,
-    actor.x+actor.halfw,
-    actor.y+actor.halfh,
-    col)
-  end
+  --  rectfill(
+  --   actor.x-actor.halfw,
+  --   actor.y-actor.halfh,
+  --   actor.x+actor.halfw,
+  --   actor.y+actor.halfh,
+  --   col)
+  -- end
 
   -- draw actor frame
   local state=actor.state
@@ -2070,13 +2065,13 @@ function dungeondraw()
    pal(i,i,0)
   end
 
-  if isdebug then
-   if actor.ai and actor.ai.targetx then
-    haslos(floormap,actor.x,actor.y,actor.ai.targetx,actor.ai.targety)
-   end
+  -- if isdebug then
+  --  if actor.ai and actor.ai.targetx then
+  --   haslos(floormap,actor.x,actor.y,actor.ai.targetx,actor.ai.targety)
+  --  end
 
-   pset(actor.x,actor.y,12)
-  end
+  --  pset(actor.x,actor.y,12)
+  -- end
  end
 
  -- draw vfx
@@ -2105,23 +2100,23 @@ function dungeondraw()
  end
 
  -- prints debug stats
- if isdebug then
-  local enemycount=0
-  for actor in all(actors) do
-   if actor.ai then
-    enemycount+=1
-   end
-  end
-  print(enemycount,60,123,8)
-  if avatar.ispreperform then
-   color(10)
-  else
-   color(9)
-  end
-  print(avatar.state_counter,80,123)
-  print(stat(1),20,123,7)
-  print(stat(7),0,123,7)
- end
+ -- if isdebug then
+ --  local enemycount=0
+ --  for actor in all(actors) do
+ --   if actor.ai then
+ --    enemycount+=1
+ --   end
+ --  end
+ --  print(enemycount,60,123,8)
+ --  if avatar.ispreperform then
+ --   color(10)
+ --  else
+ --   color(9)
+ --  end
+ --  print(avatar.state_counter,80,123)
+ --  print(stat(1),20,123,7)
+ --  print(stat(7),0,123,7)
+ -- end
 end
 
 
@@ -2425,6 +2420,7 @@ end
 
 
 function _init()
+ -- equipinit()
  overworldinit()
 end
 
