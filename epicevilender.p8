@@ -307,6 +307,35 @@ function createpemitter(params)
  return params
 end
 
+function burningeffect(actor)
+ if actor.effect.counter == nil then
+  actor.effect.counter=0
+  add(pemitters,createpemitter({
+   follow=actor,
+   life=120,
+   prate={2,4},
+   plife={15,25},
+   poffsets={-2,0.5,2,0.5},
+   dx={0,0},
+   dy={-0.3,0},
+   pcolors={8,14},
+  }))
+ end
+
+ actor.effect.counter-=1
+
+ if actor.effect.counter <= 0 then
+  actor.effect.counter=3
+
+  actor.a=rnd()
+  actor.spd=1.25
+ end
+
+ actor.dx=cos(actor.a)*actor.spd
+ actor.dy=sin(actor.a)*actor.spd
+
+end
+
 -- skills
 swordattackskillfactory=function(
   damage,
@@ -436,6 +465,7 @@ boltskillfactory=function(
   damage,
   preperformdur,
   postperformdur,
+  recovertime,
   targetcount,
   attackcol,
   castingpemittercols,
@@ -470,6 +500,8 @@ boltskillfactory=function(
     dx=cos(user.a)*1.2,
     dy=sin(user.a)*1.2,
     damage=damage,
+    typ='fire',
+    recovertime=recovertime,
     targetcount=targetcount,
     frames={
      currentframe=1,
@@ -537,7 +569,7 @@ fireboltbook={
  name='book of firebolt',
  class='book',
  sprite=45,
- skill=boltskillfactory(2,50,0,1,14,{8,14},{14,8}),
+ skill=boltskillfactory(1,50,0,120,1,14,{8,14},{14,8}),
  frames={
   currentframe=1,
   idling={antiframe},
@@ -1294,7 +1326,9 @@ function dungeonupdate()
    if isresolvingeffect then
     debugaistates('isresolvingeffect')
 
-    -- pass
+    if enemy.effect then
+     enemy.effect.func(enemy)
+    end
 
    -- continue to move out of collision
    elseif ismovingoutofcollision then
@@ -1518,6 +1552,7 @@ function dungeonupdate()
     enemy.ai.state_counter-=1
     if enemy.ai.state_counter <= 0 then
      enemy.ai.state='idling'
+     enemy.effect=nil
     end
 
    elseif enemy.ai.state == 'moving' then
@@ -1608,7 +1643,10 @@ function dungeonupdate()
     -- go into recovering
     if actor.ai then
      actor.ai.state='recovering'
-     actor.ai.state_counter=0
+     actor.ai.state_counter=attack.recovertime
+     if actor.ai.state_counter == nil then
+      actor.ai.state_counter=0
+     end
     else
      actor.state='recovering'
      actor.state_counter=0
@@ -1627,6 +1665,9 @@ function dungeonupdate()
     if attack.isphysical and actor.isbig != true then
      actor.dx=cos(attack.knockbackangle)*5
      actor.dy=sin(attack.knockbackangle)*5
+
+    elseif attack.typ == 'fire' then
+     actor.effect={func=burningeffect}
     end
 
     -- vfx
@@ -2440,8 +2481,8 @@ end
 
 
 function _init()
- -- equipinit()
- overworldinit()
+ equipinit()
+ -- overworldinit()
 end
 
 
