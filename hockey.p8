@@ -53,19 +53,17 @@ function sortbyy(a)
 end
 
 function distance(x1,y1,x2,y2)
- return sqrt((x2-x1)^2+(y2-y1)^2)
+ local dx=(x2-x1)*0.1
+ local dy=(y2-y1)*0.1
+ return sqrt(dx*dx+dy*dy)*10
 end
 
 function distanceobjs(physobj1,physobj2)
- local d=distance(
+ return distance(
    physobj1.x,
    physobj1.y,
    physobj2.x,
    physobj2.y)
- if d<=0 then
-  debug(tick,'d',d)
- end
- return d
 end
 
 function isinside(x,y,x1,y1,x2,y2)
