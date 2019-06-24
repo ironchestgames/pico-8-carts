@@ -149,7 +149,14 @@ function movephys(physobj,statics)
     -- deflect
     newa=anglecollisiontocircpos+a1+0.5
 
-    -- todo: bounce
+    -- only bounce if angle delta is more than threshold
+    local ad=newa-physobj.a
+    ad=(ad+0.5)%1-0.5
+    ad*=sgn(ad)
+    debug('ad',ad)
+    if ad > 0.1338 then
+     hasbounced=true
+    end
 
    end
 
