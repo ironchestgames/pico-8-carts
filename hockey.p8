@@ -1,9 +1,9 @@
 pico-8 cartridge // http://www.pico-8.com
-version 16
+version 18
 __lua__
 
+poke(24365,1) -- note: enable devkit
 isdebug=false
--- isdebug=true
 
 printh('debug started','debug',true)
 function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
@@ -454,6 +454,15 @@ end
 tick=0
 
 function _update60()
+ --note: devkit debug
+ if stat(30)==true then
+  local c=stat(31)
+  if c == 'd' then
+   isdebug=not isdebug
+   debug('isdebug',isdebug)
+  end
+ end
+
  tick+=1
 
  local xcomp,ycomp=getnormveccomps(p1player)
