@@ -99,48 +99,65 @@ function movephys(physobj,statics)
  local newa=physobj.a
  local xcomp,ycomp=getnormveccomps(physobj)
  local hasbounced=false
+ local iscornercollision=false
 
  -- corner bounce
- local corner=nil
+ for corner in all(corners) do
+  local offsetx,offsety=0,0
 
- for c in all(corners) do
+  -- collision point should be closest corner of the physobj
+  if corner == corners[1] then
+   offsetx=0
+   offsety=0
+  elseif corner == corners[2] then
+   offsetx=0
+   offsety=physobj.h
+  elseif corner == corners[3] then
+   offsetx=physobj.w
+   offsety=0
+  elseif corner == corners[4] then
+   offsetx=physobj.w
+   offsety=physobj.h
+  end
+
+  local _newx=newx+offsetx
+  local _newy=newy+offsety
+
   if isinside(
-      newx,
-      newy,
-      c[1],
-      c[2],
-      c[3],
-      c[4]) then
-   corner=c
-   break
+      _newx,
+      _newy,
+      corner[1],
+      corner[2],
+      corner[3],
+      corner[4]) then
+   local circx=corner[5]
+   local circy=corner[6]
+   local dx=_newx-circx
+   local dy=_newy-circy
+   if distance(circx,circy,_newx,_newy) > cornerr then
+
+    -- where on the circ the collision occurred
+    local anglecollisiontocircpos=atan2(dx,dy)
+
+    -- move out of collision
+    newx=cos(anglecollisiontocircpos)*cornerr+circx-offsetx
+    newy=sin(anglecollisiontocircpos)*cornerr+circy-offsety
+
+    -- angle diff from where the collision occurred
+    local a1=anglecollisiontocircpos-physobj.a
+
+    -- deflect
+    newa=anglecollisiontocircpos+a1+0.5
+
+    -- todo: bounce
+
+   end
+
+   iscornercollision=true
   end
  end
 
- if corner then
-  local circx=corner[5]
-  local circy=corner[6]
-  local dx=newx-circx
-  local dy=newy-circy
-  if distance(circx,circy,newx,newy) > cornerr then
-
-   -- where on the circ the collision occurred
-   local anglecollisiontocircpos=atan2(dx,dy)
-
-   -- move out of collision
-   newx=cos(anglecollisiontocircpos)*cornerr+circx
-   newy=sin(anglecollisiontocircpos)*cornerr+circy
-
-   -- angle diff from where the collision occurred
-   local a1=anglecollisiontocircpos-physobj.a
-
-   -- deflect
-   newa=anglecollisiontocircpos+a1+0.5
-
-   -- todo: bounce
-
-  end
-
- else
+ if not iscornercollision then
 
   for static in all(statics) do
    local x1=static.x
