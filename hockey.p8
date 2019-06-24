@@ -96,44 +96,90 @@ function movephys(physobj,statics)
  physobj.oldy=physobj.y
  local newx=physobj.x+cos(physobj.a)*physobj.spd
  local newy=physobj.y+sin(physobj.a)*physobj.spd
+ local newa=physobj.a
  local xcomp,ycomp=getnormveccomps(physobj)
  local hasbounced=false
 
- for static in all(statics) do
-  local x1=static.x
-  local y1=static.y
-  local x2=static.x+static.w
-  local y2=static.y+static.h
+ -- corner bounce
+ local corner=nil
 
-  if isinside(newx,physobj.y,x1,y1,x2,y2) or
-     isinside(newx+physobj.w,physobj.y,x1,y1,x2,y2) or
-     isinside(newx,physobj.y+physobj.h,x1,y1,x2,y2) or
-     isinside(newx+physobj.w,physobj.y+physobj.h,x1,y1,x2,y2) then
-   newx=physobj.x
-   if physobj.isbouncy then
-    xcomp=-xcomp
-    hasbounced=true
-   else
-    xcomp=0
+ for c in all(corners) do
+  if isinside(
+      newx,
+      newy,
+      c[1],
+      c[2],
+      c[3],
+      c[4]) then
+   corner=c
+   break
+  end
+ end
+
+ if corner then
+  local circx=corner[5]
+  local circy=corner[6]
+  local dx=newx-circx
+  local dy=newy-circy
+  if distance(circx,circy,newx,newy) > cornerr then
+
+   -- where on the circ the collision occurred
+   local anglecollisiontocircpos=atan2(dx,dy)
+
+   -- move out of collision
+   newx=cos(anglecollisiontocircpos)*cornerr+circx
+   newy=sin(anglecollisiontocircpos)*cornerr+circy
+
+   -- angle diff from where the collision occurred
+   local a1=anglecollisiontocircpos-physobj.a
+
+   -- deflect
+   newa=anglecollisiontocircpos+a1+0.5
+
+   -- todo: bounce
+
+  end
+
+ else
+
+  for static in all(statics) do
+   local x1=static.x
+   local y1=static.y
+   local x2=static.x+static.w
+   local y2=static.y+static.h
+
+   if isinside(newx,physobj.y,x1,y1,x2,y2) or
+      isinside(newx+physobj.w,physobj.y,x1,y1,x2,y2) or
+      isinside(newx,physobj.y+physobj.h,x1,y1,x2,y2) or
+      isinside(newx+physobj.w,physobj.y+physobj.h,x1,y1,x2,y2) then
+    newx=physobj.x
+    if physobj.isbouncy then
+     xcomp=-xcomp
+     hasbounced=true
+    else
+     xcomp=0
+    end
+   end
+   if isinside(physobj.x,newy,x1,y1,x2,y2) or
+      isinside(physobj.x+physobj.w,newy,x1,y1,x2,y2) or
+      isinside(physobj.x,newy+physobj.h,x1,y1,x2,y2) or
+      isinside(physobj.x+physobj.w,newy+physobj.h,x1,y1,x2,y2) then
+    newy=physobj.y
+    if physobj.isbouncy then
+     ycomp=-ycomp
+     hasbounced=true
+    else
+     ycomp=0
+    end
    end
   end
-  if isinside(physobj.x,newy,x1,y1,x2,y2) or
-     isinside(physobj.x+physobj.w,newy,x1,y1,x2,y2) or
-     isinside(physobj.x,newy+physobj.h,x1,y1,x2,y2) or
-     isinside(physobj.x+physobj.w,newy+physobj.h,x1,y1,x2,y2) then
-   newy=physobj.y
-   if physobj.isbouncy then
-    ycomp=-ycomp
-    hasbounced=true
-   else
-    ycomp=0
-   end
-  end
+
+  newa=atan2(xcomp,ycomp)
  end
 
  physobj.x=newx
  physobj.y=newy
- physobj.a=atan2(xcomp,ycomp)
+ physobj.a=newa
  if hasbounced==true then
   physobj.spd*=0.6
  end
@@ -241,6 +287,14 @@ rinkgoaly=(rinky2-rinky1)/2+rinky1
 rinkgoalr=12
 goalw=8
 goalh=15
+
+cornerr=16
+corners={ -- todo: fix 2,3,4, maybe need player/puck tables?
+ {0,0,rinkx1+cornerr,rinky1+cornerr, rinkx1+cornerr,rinky1+cornerr},
+ {0,rinky2-cornerr,rinkx1+cornerr,128, rinkx1+cornerr,rinky2-cornerr},
+ {rinkx2-cornerr,0,256,rinky1+cornerr, rinkx2-cornerr,rinky1+cornerr},
+ {rinkx2-cornerr,rinky2-cornerr,256,256 ,rinkx2-cornerr,rinky2-cornerr},
+}
 
 goal1x1=rinkx1+rinkgoaloffx-7
 goal1x2=rinkx1+rinkgoaloffx
@@ -804,6 +858,11 @@ function _draw()
    circ(player.stick.x,player.stick.y,player.stick.r,11)
    rect(player.x,player.y,player.x+player.w,player.y+player.h,12)
    print(player.ai.tactic, player.x-3, player.y-12, 2)
+  end
+
+  for c in all(corners) do
+   rect(c[1],c[2],c[3],c[4],11)
+   circ(c[5],c[6],cornerr,10)
   end
  end
 
