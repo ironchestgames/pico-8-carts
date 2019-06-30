@@ -255,7 +255,6 @@ dungeonlevel=1 -- current dungeon depth
 dungeonthemes={0,3,6}
 dungeontheme=1 -- 1 magical forest, 2 cave, 3 catacombs
 floormap={} -- the current map
-mapprops={} -- static mapprops
 door=nil -- the exit door to next floor
 actors={} -- actors
 boss=nil -- current boss (if any)
@@ -641,8 +640,8 @@ leatherboots={
 }
 
 avatar=createactor({
- x=0,
- y=0,
+ x=64,
+ y=12,
  halfw=1.5,
  halfh=2,
  a=0,
@@ -696,17 +695,26 @@ function getbasemap()
  -- create basemap
  for _y=0,15 do
   basemap[_y]={}
-  for _x=0,16 do
+  for _x=0,15 do
    basemap[_y][_x]=1
   end
  end
 
- local avatarx=flr(rnd(14))+1
- local avatary=flr(rnd(14))+1
 
- if avatar != nil then
-  avatarx=mid(2,flr(avatar.x/8),14)
-  avatary=mid(2,flr(avatar.y/8),14)
+ local avatarx=flr(avatar.x/8)
+ local avatary=flr(avatar.y/8)
+ if dungeontheme == 1 and door then
+  local doorx=flr(door.x/8)
+  local doory=flr(door.y/8)
+  if doorx == 0 then
+   avatarx=14
+  elseif doorx == 15 then
+   avatarx=1
+  elseif doory == 0 then
+   avatary=14
+  elseif doory == 15 then
+   avatary=1
+  end
  end
 
  local curx=avatarx
@@ -756,6 +764,16 @@ function getbasemap()
  end
 
  -- door
+ if dungeontheme == 1 then
+  while curx > 0 and
+     curx < 15 and
+     cury > 0 and
+     cury < 15 do
+   basemap[cury][curx]=0
+   curx+=cos(angle)
+   cury+=sin(angle)
+  end
+ end
  basemap[cury][curx]=2
 
  -- avatar
@@ -786,7 +804,6 @@ function mapinit(basemap)
 
  -- reset collections
  floormap={}
- mapprops=basemap.mapprops
  actors={}
  attacks={}
  pemitters={}
@@ -794,7 +811,7 @@ function mapinit(basemap)
  -- init floormap and objects
  for _y=0,15 do
   floormap[_y]={}
-  for _x=0,16 do
+  for _x=0,15 do
    local _col=basemap[_y][_x]
 
    -- create avatar
@@ -1083,11 +1100,11 @@ function mapinit(basemap)
      halfh=4,
      isopen=false
     }
-    _col=0
-   end
 
-   if mapprops and mapprops[_y][_x] != 0 then
-    _col=1
+    _col=0
+    if dungeontheme == 1 then
+     _col=1
+    end
    end
 
    -- set floormap value
@@ -1857,9 +1874,7 @@ function dungeondraw()
 
     local x8,y8=_x*8,_y*8
 
-    if mapprops and mapprops[_y][_x] != 0 then
-     spr(mapprops[_y][_x],x8,y8)
-    elseif _y == #floormap or floormap[_y+1] and floormap[_y+1][_x] != 0 then
+    if _y == #floormap or floormap[_y+1] and floormap[_y+1][_x] != 0 then
      spr(themeoffset+1,x8,y8)
     else
      spr(themeoffset+0,x8,y8)
