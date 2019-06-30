@@ -252,8 +252,8 @@ btnmasktoangle={
 }
 
 dungeonlevel=1 -- current dungeon depth
-dungeonthemes={0,3,6}
 dungeontheme=1 -- 1 magical forest, 2 cave, 3 catacombs
+nexttheme=1
 floormap={} -- the current map
 door=nil -- the exit door to next floor
 actors={} -- actors
@@ -701,6 +701,7 @@ function dungeoninit()
 
  dungeonlevel=1
  dungeontheme=1
+ nexttheme=1
  mapinit(getbasemap())
 
 end
@@ -773,6 +774,10 @@ function getbasemap()
   basemap[enemy.y][enemy.x]=enemy.typ
  end
 
+ if dungeonlevel % 5 == 4 then
+  nexttheme+=1
+ end
+
  -- add boss on every 5 levels
  if dungeonlevel % 5 == 0 then
   local enemy=enemies[#enemies]
@@ -780,7 +785,7 @@ function getbasemap()
  end
 
  -- door
- if dungeontheme == 1 then
+ if nexttheme == 1 then
   if abs(angle%1) == 0.25 then
    angle=0.75
   end
@@ -802,9 +807,7 @@ function getbasemap()
 end
 
 function nextfloor()
- if dungeonlevel == 0 then
-  dungeontheme=1
- end
+ dungeontheme=nexttheme
  dungeonlevel+=1
 
  mapinit(getbasemap())
@@ -1907,7 +1910,7 @@ function dungeondraw()
  cls(0)
 
  -- get theme offset
- local themeoffset=dungeonthemes[dungeontheme]
+ local themeoffset=(dungeontheme-1)*3
 
  -- draw walls
  for _y=0,#floormap do
@@ -1937,8 +1940,12 @@ function dungeondraw()
 
  -- draw door
  if door.isopen then
+  local offset=0
+  if dungeontheme != nexttheme then
+   offset=3
+  end
   spr(
-   themeoffset+2,
+   themeoffset+2+offset,
    door.x-door.halfw,
    door.y-door.halfh)
 
