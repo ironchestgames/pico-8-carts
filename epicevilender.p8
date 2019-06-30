@@ -261,6 +261,7 @@ boss=nil -- current boss (if any)
 attacks={} -- attack objects
 vfxs={} -- visual effects
 pemitters={} -- particle emitters
+isshowinventorytext=false
 
 dmgfxdur=20
 
@@ -652,7 +653,7 @@ avatar=createactor({
  armor=0,
  state='idling',
  items={
-  weapon=nil,
+  weapon=sword,
   offhand=nil,
   armor=nil,
   boots=nil,
@@ -660,7 +661,7 @@ avatar=createactor({
   book=nil,
   amulet=nil,
  },
- skill1=nil,
+ skill1=sword.skill,
  skill2=nil,
  currentskill=nil,
  ispreperform=false,
@@ -673,7 +674,22 @@ avatar=createactor({
  },
 })
 
-
+mule=createactor({
+ x=64,
+ y=12,
+ isghost=true,
+ halfw=4,
+ halfh=2.5,
+ a=0,
+ spdfactor=1,
+ spd=0.25,
+ armor=0,
+ state='idling',
+ frames={
+  currentframe=1,
+  idling={{40,8,8,5, -4,-2.5}},
+ },
+})
 
 
 -- dungeon scene
@@ -806,6 +822,7 @@ function mapinit(basemap)
  curenemyidx=1
  boss=nil
  gametick=0
+ isshowinventorytext=false
 
  -- reset collections
  floormap={}
@@ -827,6 +844,9 @@ function mapinit(basemap)
     avatar.armor=avatar.startarmor
 
     add(actors,avatar)
+
+    mule.x=avatar.x
+    mule.y=avatar.y
 
     _col=0 -- note: make tile ground
    end
@@ -1159,6 +1179,11 @@ function dungeonupdate()
   skillbuttondown=1
  elseif btn(5) then
   skillbuttondown=2
+ end
+
+ if isshowinventorytext and btnp(4) then
+  equipinit()
+  return
  end
 
  if skillbuttondown != 0 and
@@ -1549,6 +1574,7 @@ function dungeonupdate()
  if enemycount == 0 and not door.isopen then
   floormap[(door.y-4)/8][(door.x-4)/8]=0
   door.isopen=true
+  add(actors,mule)
   sfx(0)
  end
 
@@ -1565,6 +1591,12 @@ function dungeonupdate()
   -- note: after this deltas should not change by input
  end
 
+ -- collide avatar agains mule
+ isshowinventorytext=false
+ if door.isopen and isaabbscolliding(avatar,mule) then
+  isshowinventorytext=true
+ end
+
  -- collide avatar against door
  if door.isopen and
     isaabbscolliding(avatar,door) then
@@ -1578,6 +1610,7 @@ function dungeonupdate()
    if attack.removeme == false and
       actor.removeme == false and
       attack.isenemy != actor.isenemy and
+      actor != mule and
       isaabbscolliding(attack,actor) then
 
     -- count hit
@@ -2103,6 +2136,11 @@ function dungeondraw()
   end
  end
 
+ -- draw inventory text
+ if isshowinventorytext then
+  print('\x8e inventory',mule.x,mule.y,10)
+ end
+
  if dungeonlevel > 0 then
   print('level '..dungeonlevel,3,1,13)
  end
@@ -2294,7 +2332,9 @@ function equipupdate()
  -- exit
  elseif sectioncur == 4 then
   if btnp(4) or btnp(5) then
-   dungeoninit()
+   playmusic(1)
+   _draw=dungeondraw
+   _update60=dungeonupdate
   end
  end
 
@@ -2431,7 +2471,7 @@ end
 
 
 function _init()
- equipinit()
+ dungeoninit()
 end
 
 
@@ -2446,11 +2486,11 @@ __gfx__
 ddd11011ddd110110000000011010110000000111050050100000000111111115515500155550550550005500055550005555550055555000500500000550000
 dd111011dd1110110000000010110101111111000111111011011011111111115515515155555055550005500055550000555500055555005555000005050000
 00100100001001000000000010101101100001110000000010010011111111111111111105555055050005000000000000055000055555005000000050005000
-0000000000000000000000000000000000000000000000000000000000000000011111100000000000000000000000000000000011111111111111dd111111dd
-000000000111111166111111111161111111111100000000000000000000000011111111000000000000000000000000000000001111111111111dd111111ddd
-0f00f00f41111611111111111111161116111111000000000000000000000000111111110000000000000000000000000000000011dd1dd11111d1d11111ddd1
-44444444011116111111111661111611116661110000000000000000000000001111111100000000000000000000000000000000d111dddd111d11d1d11ddd11
-0400400401111111111111111111611116166111000000000000000000000000011111100000000000000000000000000000000011d1dddd11d11d111dddd111
+0000000000000000000000000000000000000000000005400000000000000000011111100000000000000000000000000000000011111111111111dd111111dd
+000000000111111166111111111161111111111100225444000000000000000011111111000000000000000000000000000000001111111111111dd111111ddd
+0f00f00f41111611111111111111161116111111054444000000000000000000111111110000000000000000000000000000000011dd1dd11111d1d11111ddd1
+44444444011116111111111661111611116661115040040000000000000000001111111100000000000000000000000000000000d111dddd111d11d1d11ddd11
+0400400401111111111111111111611116166111005005000000000000000000011111100000000000000000000000000000000011d1dddd11d11d111dddd111
 2020202021111111111111111111111111111111000000000000000000000000000000000000000000000000000000000000000011111dd11d11d11111dd1111
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011111111dddd11d11d1d1111
 000000000dd00000000020002000000002005050500000000000000000000000000000000000000000000000000000000000000011111111d111111dd111d111
