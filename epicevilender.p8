@@ -4,17 +4,18 @@ __lua__
 -- epic evil ender (v1.0)
 -- by ironchest games
 
-poke(24365,1) -- note: enable devkit
-isdebug=false
+-- poke(24365,1) -- note: enable devkit
+-- isdebug=false
 
 printh('debug started','debug',true)
-function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
- local ss={_s2,_s3,_s4,_s5,_s6,_s7,_s8}
- local result=tostr(_s1)
- for s in all(ss) do
-  result=result..', '..tostr(s)
- end
- printh(result,'debug',false)
+function debug(_s1,_s2,_s3,_s4,_s5)
+ printh(
+  tostr(_s1)..', '..
+  tostr(_s2)..', '..
+  tostr(_s3)..', '..
+  tostr(_s4)..', '..
+  tostr(_s5)
+  ,'debug',false)
 end
 
 -- debugb=function(n)
@@ -32,9 +33,9 @@ end
 --  debug(tostr(n,true))
 -- end
 
-debugaistates=function(s)
+-- debugaistates=function(s)
  -- debug(s)
-end
+-- end
 
 function isaabbscolliding(aabb1,aabb2)
  return aabb1.x - aabb1.halfw < aabb2.x + aabb2.halfw and
@@ -49,7 +50,7 @@ wallaabb={
  halfw=4,
  halfh=4,
 }
-function isinsidewall(_floormap,aabb)
+function isinsidewall(aabb)
  local x1=aabb.x-aabb.halfw
  local y1=aabb.y-aabb.halfh
  local x2=aabb.x+aabb.halfw
@@ -69,7 +70,7 @@ function isinsidewall(_floormap,aabb)
   wallaabb.y=mapy*8+wallaabb.halfh
 
   -- note: hitboxes should not be larger than 8x8
-  if _floormap[mapy][mapx] == 1 and
+  if floormap[mapy][mapx] == 1 and
      isaabbscolliding(aabb,wallaabb) then
    return wallaabb
   end
@@ -78,22 +79,14 @@ function isinsidewall(_floormap,aabb)
  return false
 end
 
-function haslos(_floormap,x0,y0,x1,y1) -- todo: refactor names to start at index 1
- local result={}
- local dx=abs(x1-x0)
- local dy=abs(y1-y0)
- local x=x0
- local y=y0
+function haslos(_x1,_y1,_x2,_y2)
+ local dx=abs(_x2-_x1)
+ local dy=abs(_y2-_y1)
+ local x=_x1
+ local y=_y1
  local n=1+dx+dy
- local x_inc=-1
- if x1 > x0 then
-  x_inc=1
- end
-
- local y_inc=-1
- if y1 > y0 then
-  y_inc=1
- end
+ local x_inc=sgn(_x2-_x1)
+ local y_inc=sgn(_y2-_y1)
 
  local error=dx-dy
  dx*=2
@@ -102,13 +95,13 @@ function haslos(_floormap,x0,y0,x1,y1) -- todo: refactor names to start at index
  while (n > 0) do
   n-=1
 
-  if _floormap[flr(y/8)][flr(x/8)] == 1 then
+  if floormap[flr(y/8)][flr(x/8)] == 1 then
    return false
   end
 
-  if isdebug == true then
-   pset(x,y,3)
-  end
+  -- if isdebug == true then
+  --  pset(x,y,3)
+  -- end
 
   if error > 0 then
    x+=x_inc
@@ -128,12 +121,10 @@ function dist(x1,y1,x2,y2)
 end
 
 function normalize(n)
- if n > 0 then
-  return 1
- elseif n < 0 then
-  return -1
+ if n == 0 then
+  return 0
  end
- return 0
+ return sgn(n)
 end
 
 -- function copytable(t)
@@ -153,7 +144,7 @@ end
 
 newaabb={} -- note: used internally in collision funcs
 
-function floormapcollision(_floormap,aabb,_dx,_dy)
+function floormapcollision(aabb,_dx,_dy)
  local dx,dy=_dx,_dy
 
  -- set halfs
@@ -165,15 +156,9 @@ function floormapcollision(_floormap,aabb,_dx,_dy)
  newaabb.y=aabb.y
 
  -- is it inside wall?
- local wallaabb=isinsidewall(_floormap,newaabb)
+ local wallaabb=isinsidewall(newaabb)
  if wallaabb then
-  local idealdistx=aabb.halfw+wallaabb.halfw
-  local curdistx=abs(aabb.x-wallaabb.x)
-  if _dx > 0 then
-   dx=(idealdistx-curdistx)*-1
-  elseif _dx < 0 then
-   dx=(idealdistx-curdistx)
-  end
+  dx=(aabb.halfw+wallaabb.halfw-abs(aabb.x-wallaabb.x))*-sgn(_dx)
  end
 
  -- reset x and set new y
@@ -181,15 +166,9 @@ function floormapcollision(_floormap,aabb,_dx,_dy)
  newaabb.y=aabb.y+dy
 
  -- is it inside wall?
- local wallaabb=isinsidewall(_floormap,newaabb)
+ local wallaabb=isinsidewall(newaabb)
  if wallaabb then
-  local idealdisty=aabb.halfh+wallaabb.halfh
-  local curdisty=abs(aabb.y-wallaabb.y)
-  if _dy > 0 then
-   dy=(idealdisty-curdisty)*-1
-  elseif _dy < 0 then
-   dy=(idealdisty-curdisty)
-  end
+  dy=(aabb.halfh+wallaabb.halfh-abs(aabb.y-wallaabb.y))*-sgn(_dy)
  end
 
  return dx,dy
@@ -210,13 +189,7 @@ function collideaabbs(aabb,other,_dx,_dy)
 
  -- is it colliding w other
  if isaabbscolliding(newaabb,other) then
-  local idealdistx=aabb.halfw+other.halfw
-  local curdistx=abs(aabb.x-other.x)
-  if _dx > 0 then
-   dx=(idealdistx-curdistx)*-1
-  elseif dx < 0 then
-   dx=(idealdistx-curdistx)
-  end
+  dx=(aabb.halfw+other.halfw-abs(aabb.x-other.x))*-sgn(_dx)
  end
 
  -- set next pos along y
@@ -225,13 +198,7 @@ function collideaabbs(aabb,other,_dx,_dy)
 
  -- is it colliding w other
  if isaabbscolliding(newaabb,other) then
-  local idealdisty=aabb.halfh+other.halfh
-  local curdisty=abs(aabb.y-other.y)
-  if _dy > 0 then
-   dy=(idealdisty-curdisty)*-1
-  elseif _dy < 0 then
-   dy=(idealdisty-curdisty)
-  end
+  dy=(aabb.halfh+other.halfh-abs(aabb.y-other.y))*-sgn(_dy)
  end
 
  -- todo: next pos along x and y together
@@ -255,13 +222,13 @@ dungeonlevel=1 -- current dungeon depth
 dungeontheme=1 -- 1 magical forest, 2 cave, 3 catacombs
 nexttheme=1
 floormap={} -- the current map
-door=nil -- the exit door to next floor
+-- door=nil -- the exit door to next floor
 actors={} -- actors
-boss=nil -- current boss (if any)
+-- boss=nil -- current boss (if any)
 attacks={} -- attack objects
 vfxs={} -- visual effects
 pemitters={} -- particle emitters
-isshowinventorytext=false
+-- isshowinventorytext=false
 
 dmgfxdur=20
 
@@ -277,9 +244,6 @@ function createactor(params) -- note: mutates params
 
  -- damage indicator
  params.dmgfxcounter=0
-
- -- remove me
- params.removeme=false
 
  return params
 end
@@ -320,33 +284,10 @@ function newavatar()
  })
 end
 
--- todo: this is only convenience dev function
-function createattack(params)
-
- -- remove me
- params.removeme=false
-
- return params
-end
-
-function createpemitter(params)
- 
- -- start counter
- params.counter=params.prate[1]
-
- -- defaults
- params.removeme=false
-
- -- particles
- params.particles={}
-
- return params
-end
-
 function burningeffect(actor)
  if actor.effect.counter == nil then
   actor.effect.counter=0
-  add(pemitters,createpemitter({
+  add(pemitters,{
    follow=actor,
    life=120,
    prate={2,4},
@@ -355,7 +296,7 @@ function burningeffect(actor)
    dx={0,0},
    dy={-0.3,0},
    pcolors={8,14},
-  }))
+  })
  end
 
  actor.effect.counter-=1
@@ -387,7 +328,7 @@ swordattackskillfactory=function(
    local x=user.x+cos(user.a)*4
    local y=user.y+sin(user.a)*4
 
-   add(attacks,createattack({
+   add(attacks,{
     x=x,
     y=y,
     halfw=2,
@@ -397,7 +338,7 @@ swordattackskillfactory=function(
     knockbackangle=user.a,
     damage=damage,
     targetcount=targetcount,
-   }))
+   })
 
    -- add vfx
    angletofx={
@@ -415,9 +356,8 @@ swordattackskillfactory=function(
    frame[5]=x+frame[5]
    frame[6]=y+frame[6]
    frame.counter=skill.postperformdur
-   local vfx={frame,col=attackcol}
 
-   add(vfxs,vfx)
+   add(vfxs,{frame,col=attackcol})
 
    sfx(4)
   end,
@@ -453,7 +393,7 @@ bowattackskillfactory=function(
 
    local frame=angletoframe[user.a]
 
-   local attack=createattack({
+   add(attacks,{
     x=x-0.5,
     y=y-0.5,
     halfw=1,
@@ -469,8 +409,6 @@ bowattackskillfactory=function(
     },
     col=arrowcol,
    })
-
-   add(attacks,attack)
 
    -- add vfx
    angletofx={
@@ -488,9 +426,8 @@ bowattackskillfactory=function(
    frame[5]=x+frame[5]
    frame[6]=y+frame[6]
    frame.counter=skill.postperformdur
-   local vfx={frame,col=attackcol}
 
-   add(vfxs,vfx)
+   add(vfxs,{frame,col=attackcol})
 
    sfx(5)
   end,
@@ -511,7 +448,7 @@ boltskillfactory=function(
   preperformdur=preperformdur,
   postperformdur=postperformdur,
   startpemitter=function(user,life)
-   add(pemitters,createpemitter({
+   add(pemitters,{
     follow=user,
     life=life,
     prate={2,4},
@@ -520,14 +457,14 @@ boltskillfactory=function(
     dx={0,0},
     dy={-0.3,0},
     pcolors=castingpemittercols,
-   }))
+   })
    sfx(9)
   end,
   perform=function(skill,user)
    local x=user.x+cos(user.a)*4
    local y=user.y+sin(user.a)*4
 
-   local attack=createattack({
+   local attack={
     x=x,
     y=y,
     halfw=1,
@@ -544,11 +481,11 @@ boltskillfactory=function(
      {47,20,3,3, -0.5,-0.5},
     },
     col=attackcol,
-   })
+   }
 
    add(attacks,attack)
 
-   add(pemitters,createpemitter({
+   add(pemitters,{
     follow=attack,
     life=1000,
     prate={0,1},
@@ -559,7 +496,7 @@ boltskillfactory=function(
     -- pcolors={9,8},
     -- pcolors={8,2},
     pcolors=boltpemittercols,
-   }))
+   })
    sfx(32)
   end,
  }
@@ -683,17 +620,15 @@ mule=createactor({
  halfw=4,
  halfh=2.5,
  a=0,
- spdfactor=1,
+ -- spdfactor=1,
  spd=0.25,
- armor=0,
+ -- armor=0,
  state='idling',
  frames={
   currentframe=1,
   idling={{40,8,8,5, -4,-2.5}},
  },
 })
-
-avatar=nil
 
 -- dungeon scene
 function dungeoninit()
@@ -706,11 +641,23 @@ function dungeoninit()
  dungeonlevel=1
  dungeontheme=1
  nexttheme=1
- mapinit(getbasemap())
+ mapinit()
 
 end
 
-function getbasemap()
+function nextfloor()
+ dungeontheme=nexttheme
+ dungeonlevel+=1
+
+ mapinit()
+end
+
+curenemyidx=1
+gametick=0
+-- deathts=nil
+
+function mapinit()
+
  local basemap={}
 
  -- create basemap
@@ -807,28 +754,16 @@ function getbasemap()
  -- avatar
  basemap[avatary][avatarx]=15
 
- return basemap
-end
+ -- basemap done
 
-function nextfloor()
- dungeontheme=nexttheme
- dungeonlevel+=1
 
- mapinit(getbasemap())
-end
-
-curenemyidx=1
-gametick=0
-deathts=nil
-
-function mapinit(basemap)
 
  -- start map music
  playmusic(0)
 
  -- reset vars
  curenemyidx=1
- boss=nil
+ -- boss=nil
  gametick=0
  isshowinventorytext=false
 
@@ -1012,7 +947,7 @@ function mapinit(basemap)
 
        if boss.ai.state_counter == 60 then
         boss.frames.currentframe=2
-        add(attacks,createattack({
+        add(attacks,{
          isenemy=true,
          throughwalls=true,
          x=boss.x+cos(boss.a)*2,
@@ -1025,7 +960,7 @@ function mapinit(basemap)
          damage=1,
          targetcount=100,
          col=7,
-        }))
+        })
 
         sfx(4)
        end
@@ -1057,7 +992,7 @@ function mapinit(basemap)
         boss.attack.x=x*8+4
         boss.attack.y=y*8+4
 
-        add(pemitters,createpemitter({
+        add(pemitters,{
          follow={
           x=boss.attack.x,
           y=boss.attack.y,
@@ -1069,7 +1004,7 @@ function mapinit(basemap)
          dx={0,0},
          dy={-0.3,0},
          pcolors={11,3,1},
-        }))
+        })
 
         sfx(9)
 
@@ -1131,7 +1066,6 @@ function mapinit(basemap)
      y=_y*8+4,
      halfw=4,
      halfh=4,
-     isopen=false
     }
 
     _col=0
@@ -1149,13 +1083,13 @@ end
 function dungeonupdate()
 
  --note: devkit debug
- if stat(30)==true then
-  c=stat(31)
-  if c == 'd' then
-   isdebug=not isdebug
-   debug('isdebug',isdebug)
-  end
- end
+ -- if stat(30)==true then
+ --  c=stat(31)
+ --  if c == 'd' then
+ --   isdebug=not isdebug
+ --   debug('isdebug',isdebug)
+ --  end
+ -- end
 
  gametick+=1
 
@@ -1170,12 +1104,12 @@ function dungeonupdate()
    vfxs={}
    dungeoninit()
   end
-  return nil
+  return
  end
 
  -- consider dpad input
  local angle=btnmasktoangle[band(btn(),0b1111)] -- note: filter out o/x buttons from dpad input
- if angle != nil then
+ if angle then
   if avatar.state != 'recovering' and
      avatar.state != 'attacking' then
    avatar.a=angle
@@ -1206,7 +1140,7 @@ function dungeonupdate()
 
   local skill=avatar['skill'..skillbuttondown]
 
-  if skill != nil then
+  if skill then
    avatar.state='attacking'
    avatar.currentskill=skill
    avatar.ispreperform=true
@@ -1247,7 +1181,7 @@ function dungeonupdate()
 
    -- update skills
    if actor.state_counter <= 0 then
-    if actor.ispreperform == true then
+    if actor.ispreperform then
 
      local skill=avatar.currentskill
      skill.perform(skill,actor)
@@ -1309,7 +1243,7 @@ function dungeonupdate()
    if enemy.attack.typ == 'magic' then
     withinattackdistance=distancetoavatar <= 60
    end
-   local haslostoavatar=haslos(floormap,enemy.x,enemy.y,avatar.x,avatar.y)
+   local haslostoavatar=haslos(enemy.x,enemy.y,avatar.x,avatar.y)
    local isswinging=enemy.ai.state == 'attacking' and enemy.ai.state_counter > 0
 
    -- movement vars
@@ -1324,7 +1258,7 @@ function dungeonupdate()
 
 
    if isresolvingeffect then
-    debugaistates('isresolvingeffect')
+    -- debugaistates('isresolvingeffect')
 
     if enemy.effect then
      enemy.effect.func(enemy)
@@ -1332,13 +1266,13 @@ function dungeonupdate()
 
    -- continue to move out of collision
    elseif ismovingoutofcollision then
-    debugaistates('ismovingoutofcollision')
+    -- debugaistates('ismovingoutofcollision')
 
     enemy.ai.state='moving'
 
    -- too close to avatar, note: collidedwithwall not working here?
    elseif istooclosetoavatar and (not isswinging) and (not collidedwithwall) then
-    debugaistates('istooclosetoavatar and not swinging')
+    -- debugaistates('istooclosetoavatar and not swinging')
 
     enemy.ai.state='moving'
     local a=atan2(
@@ -1353,7 +1287,7 @@ function dungeonupdate()
    -- attack
    elseif isswinging or withinattackdistance and
          (haslostoavatar or enemy.attack.typ == 'magic') then
-    debugaistates('withinattackdistance and haslostoavatar')
+    -- debugaistates('withinattackdistance and haslostoavatar')
 
     enemy.ai.state='attacking'
     enemy.ai.targetx=avatar.x
@@ -1362,7 +1296,7 @@ function dungeonupdate()
 
    -- colliding w wall, move out of
    elseif collidedwithwall then
-    debugaistates('collidedwithwall')
+    -- debugaistates('collidedwithwall')
 
     enemy.ai.state='moving'
     local a=atan2(
@@ -1375,7 +1309,7 @@ function dungeonupdate()
 
    -- colliding w other, move out of
    elseif hastoocloseto then
-    debugaistates('hastoocloseto')
+    -- debugaistates('hastoocloseto')
 
     enemy.ai.state='moving'
     local collidedwith=enemy.ai.toocloseto[1]
@@ -1389,7 +1323,7 @@ function dungeonupdate()
 
    -- set avatar position as target, move there
    elseif haslostoavatar then
-    debugaistates('haslostoavatar')
+    -- debugaistates('haslostoavatar')
 
     enemy.ai.state='moving'
     enemy.ai.targetx=avatar.x
@@ -1398,13 +1332,13 @@ function dungeonupdate()
 
    -- continue to move to target
    elseif hastarget then
-    debugaistates('hastarget')
+    -- debugaistates('hastarget')
 
     enemy.ai.state='moving'
 
    -- roam
    elseif not hastarget then
-    debugaistates('not hastarget')
+    -- debugaistates('not hastarget')
 
     enemy.ai.state='moving'
     local a=rnd()
@@ -1456,7 +1390,7 @@ function dungeonupdate()
         enemy.ai.targetx-enemy.x,
         enemy.ai.targety-enemy.y)
 
-       add(attacks,createattack({
+       add(attacks,{
         isenemy=true,
         x=enemy.x+cos(a)*4,
         y=enemy.y+sin(a)*4,
@@ -1468,7 +1402,7 @@ function dungeonupdate()
         damage=1,
         targetcount=1000,
         col=7,
-       }))
+       })
 
        -- add vfx
        angletofx={
@@ -1521,7 +1455,7 @@ function dungeonupdate()
 
        local frame=angletoframe[a]
 
-       local attack=createattack({
+       add(attacks,{
         isenemy=true,
         x=enemy.x-0.5,
         y=enemy.y-0.5,
@@ -1538,8 +1472,6 @@ function dungeonupdate()
         },
         col=2,
        })
-
-       add(attacks,attack)
 
        sfx(5)
       end
@@ -1621,8 +1553,8 @@ function dungeonupdate()
  -- collide against attacks
  for attack in all(attacks) do
   for actor in all(actors) do
-   if attack.removeme == false and
-      actor.removeme == false and
+   if (not attack.removeme) and
+      (not actor.removeme) and
       attack.isenemy != actor.isenemy and
       actor != mule and
       isaabbscolliding(attack,actor) then
@@ -1633,7 +1565,7 @@ function dungeonupdate()
     local hitsfx=6
 
     -- do damage
-    if actor.armor != nil and actor.armor > 0 then
+    if actor.armor and actor.armor > 0 then
      actor.armor-=attack.damage
      if actor.armor < 0 then
       actor.hp+=actor.armor
@@ -1647,7 +1579,7 @@ function dungeonupdate()
     if actor.ai then
      actor.ai.state='recovering'
      actor.ai.state_counter=attack.recovertime
-     if actor.ai.state_counter == nil then
+     if not actor.ai.state_counter then
       actor.ai.state_counter=0
      end
     else
@@ -1665,7 +1597,7 @@ function dungeonupdate()
     -- effects
 
     -- physical knockback effect
-    if attack.isphysical and actor.isbig != true then
+    if attack.isphysical and not actor.isbig then
      actor.dx=cos(attack.knockbackangle)*5
      actor.dy=sin(attack.knockbackangle)*5
 
@@ -1738,7 +1670,6 @@ function dungeonupdate()
 
   -- collide against floor and get possible movement
   local _dx,_dy=floormapcollision(
-    floormap,
     actor,
     actor.dx,
     actor.dy)
@@ -1762,7 +1693,7 @@ function dungeonupdate()
 
  -- update attacks
  for attack in all(attacks) do
-  if attack.state_counter != nil then
+  if attack.state_counter then
    attack.state_counter-=1
    if attack.state_counter <= 0 or
       attack.targetcount <= 0 then
@@ -1770,11 +1701,11 @@ function dungeonupdate()
    end
   end
 
-  if attack.dx != nil then
+  if attack.dx then
    attack.x+=attack.dx
   end
 
-  if attack.dy != nil then
+  if attack.dy then
    attack.y+=attack.dy
   end
 
@@ -1785,8 +1716,8 @@ function dungeonupdate()
    attack.removeme=true
   end
 
-  if attack.throughwalls != true and
-     isinsidewall(floormap,attack) then
+  if not attack.throughwalls and
+     isinsidewall(attack) then
    attack.removeme=true
   end
  end
@@ -1831,6 +1762,12 @@ function dungeonupdate()
 
  -- update pemitters
  for pemitter in all(pemitters) do
+  if not pemitter.counter then
+   pemitter.counter=pemitter.prate[1]
+  end
+  if not pemitter.particles then
+   pemitter.particles={}
+  end
   pemitter.counter-=1
   if pemitter.counter <= 0 then
    local x=pemitter.follow.x
@@ -1961,14 +1898,14 @@ function dungeondraw()
    door.x-door.halfw,
    door.y-door.halfh)
 
-  if isdebug then
-   rectfill(
-    door.x-door.halfw,
-    door.y-door.halfh,
-    door.x+door.halfw,
-    door.y+door.halfh,
-    9)
-  end
+  -- if isdebug then
+  --  rectfill(
+  --   door.x-door.halfw,
+  --   door.y-door.halfh,
+  --   door.x+door.halfw,
+  --   door.y+door.halfh,
+  --   9)
+  -- end
  end
 
  -- draw attacks
@@ -2040,7 +1977,7 @@ function dungeondraw()
   local stateframes=actor.frames[state]
   local frame=stateframes[flr(actor.frames.currentframe)]
   local flipx=false
-  if actor.a != nil and actor.a >= 0.25 and actor.a <= 0.75 then
+  if actor.a and actor.a >= 0.25 and actor.a <= 0.75 then
    flipx=true
   end
 
@@ -2318,7 +2255,7 @@ function equipupdate()
   if btnp(4) or btnp(5) then
    local selectedclass=equipslots[equippedcur][1]
    local selecteditem=avatar.items[selectedclass]
-   if selecteditem != nil then
+   if selecteditem then
     avatar.items[selecteditem.class]=nil
     avatar.skill1=nil
     avatar.skill2=nil
@@ -2416,7 +2353,7 @@ function equipdraw()
  print('equipped',4,y-9,col)
  for slot in all(equipslots) do
   local item=avatar.items[slot[1]]
-  if item == nil then
+  if not item then
    spr(slot[2],6+offsetx,y)
   else
    spr(item.sprite,6+offsetx,y)
