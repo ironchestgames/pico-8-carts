@@ -18,25 +18,6 @@ function debug(_s1,_s2,_s3,_s4,_s5)
   ,'debug',false)
 end
 
--- debugb=function(n)
---  outputstr=''
---  local mask=0x0000.0001
---  for i=0,31 do
---   local bit=shr(band(shl(mask,i),n),i)
---   if(bit!=0) bit=1
---   outputstr=tostr(bit)..outputstr
---  end
---  debug(outputstr)
--- end
-
--- debugh=function(n)
---  debug(tostr(n,true))
--- end
-
--- debugaistates=function(s)
- -- debug(s)
--- end
-
 function isaabbscolliding(aabb1,aabb2)
  return aabb1.x - aabb1.halfw < aabb2.x + aabb2.halfw and
         aabb1.x + aabb1.halfw > aabb2.x - aabb2.halfw and
@@ -99,10 +80,6 @@ function haslos(_x1,_y1,_x2,_y2)
    return false
   end
 
-  -- if isdebug == true then
-  --  pset(x,y,3)
-  -- end
-
   if error > 0 then
    x+=x_inc
    error-=dy
@@ -127,15 +104,6 @@ function normalize(n)
  return sgn(n)
 end
 
--- function copytable(t)
---  local newt={}
---  for key,value in pairs(t) do
---   newt[key]=value
---  end
---  return newt
--- end
-
-curmusic=nil
 function playmusic(pattern)
  if pattern != curmusic then
   music(pattern,0,3)
@@ -147,7 +115,6 @@ newaabb={} -- note: used internally in collision funcs
 function floormapcollision(aabb,_dx,_dy)
  local dx,dy=_dx,_dy
 
- -- set halfs
  newaabb.halfw=aabb.halfw
  newaabb.halfh=aabb.halfh
 
@@ -175,8 +142,6 @@ function floormapcollision(aabb,_dx,_dy)
 end
 
 function collideaabbs(aabb,other,_dx,_dy)
-
- -- set up result
  local dx,dy=_dx,_dy
 
  -- set aabb halfs
@@ -218,31 +183,28 @@ btnmasktoangle={
  [0x000a]=0.875, -- down/right
 }
 
-dungeonlevel=1 -- current dungeon depth
+dungeonlevel=1
 dungeontheme=1 -- 1 magical forest, 2 cave, 3 catacombs
 nexttheme=1
-floormap={} -- the current map
--- door=nil -- the exit door to next floor
-actors={} -- actors
--- boss=nil -- current boss (if any)
-attacks={} -- attack objects
-vfxs={} -- visual effects
-pemitters={} -- particle emitters
--- isshowinventorytext=false
+floormap={}
+actors={}
+attacks={}
+vfxs={}
+pemitters={}
+
+-- unset vars
+-- door=nil
+-- boss=nil
+-- isshowinventorytext=nil
+-- deathts=nil
 
 dmgfxdur=20
 
 -- todo: this is only convenience dev function
-function createactor(params) -- note: mutates params
-
- -- state
+function createactor(params)
  params.state_counter=0
-
- -- movement
  params.dx=0
  params.dy=0
-
- -- damage indicator
  params.dmgfxcounter=0
 
  return params
@@ -620,9 +582,7 @@ mule=createactor({
  halfw=4,
  halfh=2.5,
  a=0,
- -- spdfactor=1,
  spd=0.25,
- -- armor=0,
  state='idling',
  frames={
   currentframe=1,
@@ -630,10 +590,8 @@ mule=createactor({
  },
 })
 
--- dungeon scene
-function dungeoninit()
 
- -- set callbacks
+function dungeoninit()
  _update60=dungeonupdate
  _draw=dungeondraw
 
@@ -642,25 +600,21 @@ function dungeoninit()
  dungeontheme=1
  nexttheme=1
  mapinit()
-
 end
 
 function nextfloor()
  dungeontheme=nexttheme
  dungeonlevel+=1
-
  mapinit()
 end
 
 curenemyidx=1
 gametick=0
--- deathts=nil
 
 function mapinit()
 
  local basemap={}
 
- -- create basemap
  for _y=0,15 do
   basemap[_y]={}
   for _x=0,15 do
@@ -668,12 +622,10 @@ function mapinit()
   end
  end
 
+ local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
 
- local avatarx=flr(avatar.x/8)
- local avatary=flr(avatar.y/8)
  if dungeontheme == 1 and door then
-  local doorx=flr(door.x/8)
-  local doory=flr(door.y/8)
+  local doorx,doory=flr(door.x/8),flr(door.y/8)
   if doorx == 0 then
    avatarx=14
   elseif doorx == 15 then
@@ -685,8 +637,7 @@ function mapinit()
   end
  end
 
- local curx=avatarx
- local cury=avatary
+ local curx,cury=avatarx,avatary
  local angle=0
  local steps=500
  local stepcount=steps
@@ -696,8 +647,7 @@ function mapinit()
 
  while stepcount > 0 do
 
-  local nextx=curx+cos(angle)
-  local nexty=cury+sin(angle)
+  local nextx,nexty=curx+cos(angle),cury+sin(angle)
 
   if flr(rnd(3)) == 0 or
      nextx <= 0 or
@@ -720,7 +670,6 @@ function mapinit()
   stepcount-=1
  end
 
- -- enemies
  for enemy in all(enemies) do
   basemap[enemy.y][enemy.x]=enemy.typ
  end
@@ -729,7 +678,6 @@ function mapinit()
   nexttheme+=1
  end
 
- -- add boss on every 5 levels
  if dungeonlevel % 5 == 0 then
   local enemy=enemies[#enemies]
   basemap[enemy.y][enemy.x]=8
@@ -751,29 +699,20 @@ function mapinit()
  end
  basemap[cury][curx]=2
 
- -- avatar
  basemap[avatary][avatarx]=15
 
- -- basemap done
 
 
-
- -- start map music
  playmusic(0)
 
- -- reset vars
+ -- reset
  curenemyidx=1
- -- boss=nil
  gametick=0
- isshowinventorytext=false
-
- -- reset collections
  floormap={}
  actors={}
  attacks={}
  pemitters={}
 
- -- init floormap and objects
  for _y=0,15 do
   floormap[_y]={}
   for _x=0,15 do
@@ -791,7 +730,7 @@ function mapinit()
     mule.x=avatar.x
     mule.y=avatar.y
 
-    _col=0 -- note: make tile ground
+    _col=0
    end
 
    -- create bat enemy
@@ -828,7 +767,7 @@ function mapinit()
     })
 
     add(actors,enemy)
-    _col=0 -- note: make tile ground
+    _col=0
    end
 
    -- create sword skeleton enemy
@@ -864,7 +803,7 @@ function mapinit()
     })
 
     add(actors,enemy)
-    _col=0 -- note: make tile ground
+    _col=0
    end
 
    -- create bow skeleton enemy
@@ -900,7 +839,7 @@ function mapinit()
     })
 
     add(actors,enemy)
-    _col=0 -- note: make tile ground
+    _col=0
    end
 
    -- create skeleton king
@@ -1056,7 +995,7 @@ function mapinit()
 
     add(actors,enemy)
     boss=enemy
-    _col=0 -- note: make tile ground
+    _col=0
    end
 
    -- create door
@@ -1107,7 +1046,6 @@ function dungeonupdate()
   return
  end
 
- -- consider dpad input
  local angle=btnmasktoangle[band(btn(),0b1111)] -- note: filter out o/x buttons from dpad input
  if angle then
   if avatar.state != 'recovering' and
@@ -1160,12 +1098,10 @@ function dungeonupdate()
  do
   local actor=avatar
 
-  -- count down
   if actor.state_counter > 0 then
    actor.state_counter-=1
   end
 
-  -- is recovering
   if actor.state == 'recovering' then
    actor.dx=0
    actor.dy=0
@@ -1174,7 +1110,6 @@ function dungeonupdate()
     actor.state='idling'
    end
 
-  -- is attacking
   elseif actor.state == 'attacking' then
    actor.dx=0
    actor.dy=0
@@ -1202,7 +1137,7 @@ function dungeonupdate()
    end
 
   -- is moving
-  elseif actor.dx != 0 or actor.dy != 0 then -- note: this feels like a hack...
+  elseif actor.dx != 0 or actor.dy != 0 then
    actor.state='moving'
    actor.state_counter=2
 
@@ -1213,11 +1148,6 @@ function dungeonupdate()
   end
  end
 
-
- -- debug('avatar state', avatar.state)
-
-
- -- todo: check for avatar death
 
  -- ai to make decisions
  curenemyidx+=1
@@ -1258,7 +1188,6 @@ function dungeonupdate()
 
 
    if isresolvingeffect then
-    -- debugaistates('isresolvingeffect')
 
     if enemy.effect then
      enemy.effect.func(enemy)
@@ -1266,13 +1195,11 @@ function dungeonupdate()
 
    -- continue to move out of collision
    elseif ismovingoutofcollision then
-    -- debugaistates('ismovingoutofcollision')
 
     enemy.ai.state='moving'
 
    -- too close to avatar, note: collidedwithwall not working here?
    elseif istooclosetoavatar and (not isswinging) and (not collidedwithwall) then
-    -- debugaistates('istooclosetoavatar and not swinging')
 
     enemy.ai.state='moving'
     local a=atan2(
@@ -1287,7 +1214,6 @@ function dungeonupdate()
    -- attack
    elseif isswinging or withinattackdistance and
          (haslostoavatar or enemy.attack.typ == 'magic') then
-    -- debugaistates('withinattackdistance and haslostoavatar')
 
     enemy.ai.state='attacking'
     enemy.ai.targetx=avatar.x
@@ -1296,7 +1222,6 @@ function dungeonupdate()
 
    -- colliding w wall, move out of
    elseif collidedwithwall then
-    -- debugaistates('collidedwithwall')
 
     enemy.ai.state='moving'
     local a=atan2(
@@ -1309,7 +1234,6 @@ function dungeonupdate()
 
    -- colliding w other, move out of
    elseif hastoocloseto then
-    -- debugaistates('hastoocloseto')
 
     enemy.ai.state='moving'
     local collidedwith=enemy.ai.toocloseto[1]
@@ -1323,7 +1247,6 @@ function dungeonupdate()
 
    -- set avatar position as target, move there
    elseif haslostoavatar then
-    -- debugaistates('haslostoavatar')
 
     enemy.ai.state='moving'
     enemy.ai.targetx=avatar.x
@@ -1332,13 +1255,11 @@ function dungeonupdate()
 
    -- continue to move to target
    elseif hastarget then
-    -- debugaistates('hastarget')
 
     enemy.ai.state='moving'
 
    -- roam
    elseif not hastarget then
-    -- debugaistates('not hastarget')
 
     enemy.ai.state='moving'
     local a=rnd()
@@ -1404,7 +1325,6 @@ function dungeonupdate()
         col=7,
        })
 
-       -- add vfx
        angletofx={
         [0]={0,20,4,7, -1,-5}, -- right
         [0.125]={8,20,6,4, -3,-2}, -- right/up
@@ -1440,7 +1360,6 @@ function dungeonupdate()
 
        a=min(flr((a+0.0625)*8)/8,1)
 
-       -- arrow frame
        local angletoframe={
         [0]={50,20,2,1, -1,-0.5}, -- right
         [0.125]={52,20,2,2, -1,-1}, -- right/up
@@ -1559,7 +1478,6 @@ function dungeonupdate()
       actor != mule and
       isaabbscolliding(attack,actor) then
 
-    -- count hit
     attack.targetcount-=1
 
     local hitsfx=6
@@ -1639,7 +1557,7 @@ function dungeonupdate()
    if enemy != other and
       enemy != avatar and
       other != avatar and
-      enemy.ai and -- todo: also check for other.ai?
+      enemy.ai and
       dist(
         enemy.x,
         enemy.y,
@@ -1667,8 +1585,6 @@ function dungeonupdate()
 
  -- movement check against floormap
  for actor in all(actors) do
-
-  -- collide against floor and get possible movement
   local _dx,_dy=floormapcollision(
     actor,
     actor.dx,
@@ -1684,7 +1600,6 @@ function dungeonupdate()
    end
   end
 
-  -- set actor pos based on possible movement
   actor.x+=_dx
   actor.y+=_dy
   actor.dx=0
@@ -1874,15 +1789,6 @@ function dungeondraw()
     else
      spr(themeoffset+0,x8,y8)
     end
-
-    -- if isdebug then
-    --  rect(
-    --    x8,
-    --    y8,
-    --    x8+wallaabb.halfw*2,
-    --    y8+wallaabb.halfw*2,
-    --    5)
-    -- end
    end
   end
  end
@@ -1897,15 +1803,6 @@ function dungeondraw()
    themeoffset+2+offset,
    door.x-door.halfw,
    door.y-door.halfh)
-
-  -- if isdebug then
-  --  rectfill(
-  --   door.x-door.halfw,
-  --   door.y-door.halfh,
-  --   door.x+door.halfw,
-  --   door.y+door.halfh,
-  --   9)
-  -- end
  end
 
  -- draw attacks
@@ -1928,15 +1825,6 @@ function dungeondraw()
 
    pal(2,2,0)
   end
-
-  -- if isdebug then
-  --  rectfill(
-  --   attack.x-attack.halfw,
-  --   attack.y-attack.halfh,
-  --   attack.x+attack.halfw,
-  --   attack.y+attack.halfh,
-  --   9)
-  -- end
  end
 
  -- todo: sort on y and z
@@ -1946,28 +1834,6 @@ function dungeondraw()
 
  -- draw actors
  for actor in all(actors) do
-
-  -- if isdebug then
-  --  local col=13
-
-  --  local obj=actor
-  --  if actor.ai then
-  --   obj=actor.ai
-  --  end
-
-  --  if obj.state == 'recovering' then
-  --   col=8
-  --  elseif obj.state == 'attacking' then
-  --   col=9
-  --  end
-
-  --  rectfill(
-  --   actor.x-actor.halfw,
-  --   actor.y-actor.halfh,
-  --   actor.x+actor.halfw,
-  --   actor.y+actor.halfh,
-  --   col)
-  -- end
 
   -- draw actor frame
   local state=actor.state
@@ -2065,13 +1931,6 @@ function dungeondraw()
    pal(i,i,0)
   end
 
-  -- if isdebug then
-  --  if actor.ai and actor.ai.targetx then
-  --   haslos(floormap,actor.x,actor.y,actor.ai.targetx,actor.ai.targety)
-  --  end
-
-  --  pset(actor.x,actor.y,12)
-  -- end
  end
 
  -- draw vfx
@@ -2109,24 +1968,6 @@ function dungeondraw()
   end
  end
 
- -- prints debug stats
- -- if isdebug then
- --  local enemycount=0
- --  for actor in all(actors) do
- --   if actor.ai then
- --    enemycount+=1
- --   end
- --  end
- --  print(enemycount,60,123,8)
- --  if avatar.ispreperform then
- --   color(10)
- --  else
- --   color(9)
- --  end
- --  print(avatar.state_counter,80,123)
- --  print(stat(1),20,123,7)
- --  print(stat(7),0,123,7)
- -- end
 end
 
 
@@ -2134,7 +1975,7 @@ end
 
 -- equip scene
 
-local inventorycur=1 -- todo: make curs dynamic
+local inventorycur=1
 local equippedcur=1
 local availableskillscur=1
 local sectioncur=1
@@ -2427,12 +2268,9 @@ end
 
 
 
-
-
 function _init()
  dungeoninit()
 end
-
 
 
 
