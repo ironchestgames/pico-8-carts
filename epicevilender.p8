@@ -253,10 +253,10 @@ btnmasktoangle={
 
 dungeonlevel=1 -- current dungeon depth
 dungeonthemes={0,3,6}
-dungeontheme=1 -- 1 tower, 2 cave, overworld
+dungeontheme=1 -- 1 magical forest, 2 cave, 3 catacombs
 floormap={} -- the current map
 mapprops={} -- static mapprops
-exits={} -- the exits
+door=nil -- the exit door to next floor
 actors={} -- actors
 boss=nil -- current boss (if any)
 attacks={} -- attack objects
@@ -675,70 +675,6 @@ avatar=createactor({
 })
 
 
--- overworld scene
-function getoverworldmap()
- local basemap,mapprops={},{}
-
- for _y=0,15 do
-  basemap[_y]={}
-  mapprops[_y]={}
-  for _x=0,16 do
-
-   local basemapy=basemap[_y]
-
-   basemapy[_x]=0
-   mapprops[_y][_x]=0
-
-   local _col=sget(_x,96+_y)
-
-   -- avatar
-   if _col == 15 then
-    basemapy[_x]=15
-
-   -- wall
-   elseif _col == 1 then
-    basemapy[_x]=1
-
-   -- enter dungeon
-   elseif _col == 14 then
-    basemapy[_x]=2
-
-   -- mapprops
-   elseif _col > 1 then
-    mapprops[_y][_x]=222+_col
-   end
-
-  end
- end
-
- basemap.mapprops=mapprops
-
- return basemap
-end
-
-function overworldinit()
- _update60=overworldupdate
- _draw=overworlddraw
-
- dungeonlevel=0
- dungeontheme=3
-
- mapinit(getoverworldmap())
-end
-
-function overworldupdate()
- dungeonupdate()
-end
-
-function overworlddraw()
- dungeondraw()
-end
-
-
-
-
-
-
 
 
 -- dungeon scene
@@ -819,7 +755,7 @@ function getbasemap()
   basemap[enemy.y][enemy.x]=8
  end
 
- -- exit
+ -- door
  basemap[cury][curx]=2
 
  -- avatar
@@ -850,7 +786,6 @@ function mapinit(basemap)
 
  -- reset collections
  floormap={}
- exits={}
  mapprops=basemap.mapprops
  actors={}
  attacks={}
@@ -1139,16 +1074,15 @@ function mapinit(basemap)
     _col=0 -- note: make tile ground
    end
 
-   -- create exit
+   -- create door
    if _col == 2 then
-    add(exits,{
+    door={
      x=_x*8+4,
      y=_y*8+4,
      halfw=4,
      halfh=4,
-     isopen=false,
-     func=nextfloor,
-    })
+     isopen=false
+    }
     _col=0
    end
 
@@ -1584,14 +1518,11 @@ function dungeonupdate()
   end
  end
 
- -- update first exit
- do
-  local _exit=exits[1]
-  if enemycount == 0 and _exit and _exit.isopen == false then
-   floormap[(_exit.y-4)/8][(_exit.x-4)/8]=0
-   _exit.isopen=true
-   sfx(0)
-  end
+ -- update door
+ if enemycount == 0 and not door.isopen then
+  floormap[(door.y-4)/8][(door.x-4)/8]=0
+  door.isopen=true
+  sfx(0)
  end
 
  -- update the next-position
@@ -1607,13 +1538,11 @@ function dungeonupdate()
   -- note: after this deltas should not change by input
  end
 
- -- collide avatar against exits
- for _exit in all(exits) do
-  if _exit.isopen and
-     isaabbscolliding(avatar,_exit) then
-   _exit.func()
-   return
-  end
+ -- collide avatar against door
+ if door.isopen and
+    isaabbscolliding(avatar,door) then
+  nextfloor()
+  return
  end
 
  -- collide against attacks
@@ -1948,22 +1877,20 @@ function dungeondraw()
   end
  end
 
- -- draw exits
- for _exit in all(exits) do
-  if _exit.isopen then
-   spr(
-    themeoffset+2,
-    _exit.x-_exit.halfw,
-    _exit.y-_exit.halfh)
+ -- draw door
+ if door.isopen then
+  spr(
+   themeoffset+2,
+   door.x-door.halfw,
+   door.y-door.halfh)
 
-   if isdebug then
-    rectfill(
-     _exit.x-_exit.halfw,
-     _exit.y-_exit.halfh,
-     _exit.x+_exit.halfw,
-     _exit.y+_exit.halfh,
-     9)
-   end
+  if isdebug then
+   rectfill(
+    door.x-door.halfw,
+    door.y-door.halfh,
+    door.x+door.halfw,
+    door.y+door.halfh,
+    9)
   end
  end
 
@@ -2478,25 +2405,22 @@ end
 
 
 
-
-
 function _init()
  equipinit()
- -- overworldinit()
 end
 
 
 
 
 __gfx__
-11111111111111110000005501111000011110000000000000000d0000000d005555555500000000055555000550055005555550005555500000005500000055
-11111111111111110005515511111111111111110050050000d00d0000d00d005500005555505500555555505555555505555550050000000000055000000555
-00000000111111115515515511000011110000110055550000d0d11000d0d1105000000555505500555555505055550505555550055555000000505000005550
-0110111111111111551551550011110000111100005005000ddd01100ddd01105000000555505500500500505055550505555550055555000005005050055500
-0100111011111111551551111101011011111111015555100dd101100dd101105000000555505500550005500055550005555550055555000050050005555000
-000000001111111155111111110101100000001110500501ddd11011ddd110115000555555550550550005500055550005555550055555000500500000550000
-110110111111111111111111101101011111110001111110dd111011dd1110115000000555555055550005500055550000555500055555005555000005050000
-10010011111111110000000010101101100001110000000000100100001001005055555505555055050005000000000000055000055555005000000050005000
+00000d0000000d000000000001111000011110000000000011111111111111111111111100000000055555000550055005555550005555500000005500000055
+00d00d0000d00d000000200011111111111111110050050011111111111111110000000155505500555555505555555505555550050000000000055000000555
+00d0d11000d0d1100022200011000011110000110055550000000000111111115501100155505500555555505055550505555550055555000000505000005550
+0ddd01100ddd01100000222000111100001111000050050001101111111111115500001155505500500500505055550505555550055555000005005050055500
+0dd101100dd101100002200011010110111111110155551001001110111111115515500155505500550005500055550005555550055555000050050005555000
+ddd11011ddd110110000200011010110000000111050050100000000111111115515500155550550550005500055550005555550055555000500500000550000
+dd111011dd1110110000200010110101111111000111111011011011111111115515515155555055550005500055550000555500055555005555000005050000
+00100100001001000000200010101101100001110000000010010011111111111111111105555055050005000000000000055000055555005000000050005000
 0000000000000000000000000000000000000000000000000000000000000000011111100000000000000000000000000000000011111111111111dd111111dd
 000000000111111166111111111161111111111100000000000000000000000011111111000000000000000000000000000000001111111111111dd111111ddd
 0f00f00f41111611111111111111161116111111000000000000000000000000111111110000000000000000000000000000000011dd1dd11111d1d11111ddd1
