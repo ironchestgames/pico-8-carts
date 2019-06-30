@@ -284,6 +284,42 @@ function createactor(params) -- note: mutates params
  return params
 end
 
+function newavatar()
+ return createactor({
+  x=64,
+  y=12,
+  halfw=1.5,
+  halfh=2,
+  a=0,
+  spdfactor=1,
+  spd=0.5,
+  hp=3,
+  startarmor=0,
+  armor=0,
+  state='idling',
+  items={
+   weapon=sword,
+   offhand=nil,
+   armor=nil,
+   boots=nil,
+   helmet=nil,
+   book=nil,
+   amulet=nil,
+  },
+  skill1=sword.skill,
+  skill2=nil,
+  currentskill=nil,
+  ispreperform=false,
+  frames={
+   currentframe=1,
+   idling={{0,10,3,4, -1,-2}},
+   moving={{0,10,3,4, -1,-2},{3,10,3,4, -1,-2}},
+   attacking={animspd=0,{6,10,3,4, -1,-2},{0,10,3,4, -1,-2}},
+   recovering={{0,10,3,4, -1,-2}},
+  },
+ })
+end
+
 -- todo: this is only convenience dev function
 function createattack(params)
 
@@ -640,40 +676,6 @@ leatherboots={
  },
 }
 
-avatar=createactor({
- x=64,
- y=12,
- halfw=1.5,
- halfh=2,
- a=0,
- spdfactor=1,
- spd=0.5,
- hp=3,
- startarmor=0,
- armor=0,
- state='idling',
- items={
-  weapon=sword,
-  offhand=nil,
-  armor=nil,
-  boots=nil,
-  helmet=nil,
-  book=nil,
-  amulet=nil,
- },
- skill1=sword.skill,
- skill2=nil,
- currentskill=nil,
- ispreperform=false,
- frames={
-  currentframe=1,
-  idling={{0,10,3,4, -1,-2}},
-  moving={{0,10,3,4, -1,-2},{3,10,3,4, -1,-2}},
-  attacking={animspd=0,{6,10,3,4, -1,-2},{0,10,3,4, -1,-2}},
-  recovering={{0,10,3,4, -1,-2}},
- },
-})
-
 mule=createactor({
  x=64,
  y=12,
@@ -691,6 +693,7 @@ mule=createactor({
  },
 })
 
+avatar=nil
 
 -- dungeon scene
 function dungeoninit()
@@ -699,6 +702,7 @@ function dungeoninit()
  _update60=dungeonupdate
  _draw=dungeondraw
 
+ avatar=newavatar()
  dungeonlevel=1
  dungeontheme=1
  nexttheme=1
@@ -815,6 +819,7 @@ end
 
 curenemyidx=1
 gametick=0
+deathts=nil
 
 function mapinit(basemap)
 
@@ -1159,6 +1164,12 @@ function dungeonupdate()
  end
 
  if avatar.hp <= 0 then
+  if gametick-deathts > 150 and btnp(4) then
+   attacks={}
+   pemitters={}
+   vfxs={}
+   dungeoninit()
+  end
   return nil
  end
 
@@ -1901,6 +1912,7 @@ function dungeonupdate()
  -- play death sound
  if avatar.hp <= 0 then
   playmusic(-1)
+  deathts=gametick
   sfx(2)
  end
 end
@@ -2154,7 +2166,10 @@ function dungeondraw()
  print(avatar.armor..'/'..avatar.startarmor..' a',82,1,6)
  print(avatar.hp..' hp',110,1,8)
  if avatar.hp <= 0 then
-  print('dead',60,60,8)
+  print('a deadly blow',40,60,8)
+  if gametick-deathts > 150 then
+   print('press \x8e to continue',26,68,8)
+  end
  end
 
  -- prints debug stats
