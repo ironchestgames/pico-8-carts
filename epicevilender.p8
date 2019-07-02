@@ -195,6 +195,7 @@ pemitters={}
 -- unset vars
 -- door=nil
 -- boss=nil
+-- chest=nil
 -- isshowinventorytext=nil
 -- deathts=nil
 
@@ -232,6 +233,7 @@ function newavatar()
    book=nil,
    amulet=nil,
   },
+  inventory={sword},
   skill1=sword.skill,
   skill2=nil,
   currentskill=nil,
@@ -575,6 +577,16 @@ leatherboots={
  },
 }
 
+allitems={
+ sword,
+ bow,
+ fireboltbook,
+ ringmail,
+ shield,
+ ironhelmet,
+ leatherboots,
+}
+
 mule=createactor({
  x=64,
  y=12,
@@ -674,11 +686,11 @@ function mapinit()
   basemap[enemy.y][enemy.x]=enemy.typ
  end
 
- if dungeonlevel % 5 == 4 then
+ if dungeonlevel % 3 == 2 then
   nexttheme+=1
  end
 
- if dungeonlevel % 5 == 0 then
+ if dungeonlevel % 3 == 0 then
   local enemy=enemies[#enemies]
   basemap[enemy.y][enemy.x]=8
  end
@@ -708,6 +720,7 @@ function mapinit()
  -- reset
  curenemyidx=1
  gametick=0
+ chest=nil
  floormap={}
  actors={}
  attacks={}
@@ -1443,6 +1456,11 @@ function dungeonupdate()
   sfx(0)
  end
 
+ -- update chest
+ if chest and enemycount == 0 then
+  chest.isshowing=true
+ end
+
  -- update the next-position
  for actor in all(actors) do
 
@@ -1467,6 +1485,16 @@ function dungeonupdate()
     isaabbscolliding(avatar,door) then
   nextfloor()
   return
+ end
+
+ -- collide avatar against chest
+ if chest and chest.isopen == 0 and chest.isshowing and
+    isaabbscolliding(avatar,chest) then
+  chest.isopen=1
+  local item=allitems[flr(rnd(#allitems))+1]
+  del(allitems,item)
+  add(avatar.inventory,item)
+  sfx(20)
  end
 
  -- collide against attacks
@@ -1509,6 +1537,19 @@ function dungeonupdate()
     if actor.hp <= 0 then
      actor.removeme=true
      hitsfx=3
+
+     -- add chest
+     if actor == boss then
+      chest={
+       x=boss.x,
+       y=boss.y,
+       halfw=4,
+       halfh=4,
+       isopen=0,
+       isshowing=false,
+      }
+     end
+
      -- todo: add death vfx here
     end
 
@@ -1805,6 +1846,14 @@ function dungeondraw()
    door.y-door.halfh)
  end
 
+ -- draw chest
+ if chest and chest.isshowing then
+  spr(
+    22+chest.isopen,
+    chest.x-chest.halfw,
+    chest.y-chest.halfh)
+ end
+
  -- draw attacks
  for attack in all(attacks) do
 
@@ -1979,7 +2028,6 @@ local inventorycur=1
 local equippedcur=1
 local availableskillscur=1
 local sectioncur=1
-local inventory={}
 local equipped={}
 local availableskills={}
 local equipslots={
@@ -2032,53 +2080,47 @@ function equipupdate()
  end
 
  -- init inventory
- inventory={}
-
- local allitems={
-  leatherboots,
-  ironhelmet,
-  ringmail,
-  sword,
-  bow,
-  shield,
-  fireboltbook,
- }
-
- for item in all(allitems) do
-  if avatar.items[item.class] != item then
-   add(inventory,item)
+ for item in all(avatar.inventory) do
+  if avatar.items[item.class] == item then
+   del(avatar.inventory,item)
   end
  end
 
  -- inventory
  if sectioncur == 1 then
   if btnp(0) then
-   inventorycur=mid(1,inventorycur-1,#inventory)
+   inventorycur=mid(1,inventorycur-1,#avatar.inventory)
    sfx(7)
   elseif btnp(1) then
-   inventorycur=mid(1,inventorycur+1,#inventory)
+   inventorycur=mid(1,inventorycur+1,#avatar.inventory)
    sfx(7)
   end
 
-  if btnp(4) or btnp(5) then
-   local selecteditem=inventory[inventorycur]
+  if #avatar.inventory > 0 and (btnp(4) or btnp(5)) then
+   local selecteditem=avatar.inventory[inventorycur]
 
    avatar.skill1=nil
    avatar.skill2=nil
 
+   if avatar.items[selecteditem.class] then
+    add(avatar.inventory,avatar.items[selecteditem.class])
+   end
+
    avatar.items[selecteditem.class]=selecteditem
 
    if selecteditem.twohand then
+    add(avatar.inventory,avatar.items.offhand)
     avatar.items.offhand=nil
    end
 
    if selecteditem.class == 'offhand' and
       avatar.items.weapon and
       avatar.items.weapon.twohand then
+    add(avatar.inventory,avatar.items.weapon)
     avatar.items.weapon=nil
    end
 
-   inventorycur=mid(1,inventorycur,#inventory-1)
+   inventorycur=mid(1,inventorycur,#avatar.inventory-1)
 
    sfx(8)
   end
@@ -2098,6 +2140,7 @@ function equipupdate()
    local selecteditem=avatar.items[selectedclass]
    if selecteditem then
     avatar.items[selecteditem.class]=nil
+    add(avatar.inventory,selecteditem)
     avatar.skill1=nil
     avatar.skill2=nil
    end
@@ -2161,7 +2204,7 @@ function equipdraw()
   col=4
  end
  print('saddlebags',4,y-9,col)
- for item in all(inventory) do
+ for item in all(avatar.inventory) do
   spr(item.sprite,6+offsetx,y)
   if sectioncur == 1 and i == inventorycur then
    rect(
@@ -2286,11 +2329,11 @@ dd111011dd1110110000000000100010111111110111111011011011111111115515515155555055
 0000000000000000000000000000000000000000000005400000000000000000011111100000000000000000000000000000000011111111111111dd111111dd
 000000000111111166111111111161111111111100225444000000000000000011111111000000000000000000000000000000001111111111111dd111111ddd
 0f00f00f41111611111111111111161116111111054444000000000000000000111111110000000000000000000000000000000011dd1dd11111d1d11111ddd1
-44444444011116111111111661111611116661115040040000000000000000001111111100000000000000000000000000000000d111dddd111d11d1d11ddd11
-0400400401111111111111111111611116166111005005000000000000000000011111100000000000000000000000000000000011d1dddd11d11d111dddd111
-2020202021111111111111111111111111111111000000000000000000000000000000000000000000000000000000000000000011111dd11d11d11111dd1111
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011111111dddd11d11d1d1111
-000000000dd00000000020002000000002005050500000000000000000000000000000000000000000000000000000000000000011111111d111111dd111d111
+44444444011116111111111661111611116661115040040000000000024224201111111100000000000000000000000000000000d111dddd111d11d1d11ddd11
+0400400401111111111111111111611116166111005005000242242001111110011111100000000000000000000000000000000011d1dddd11d11d111dddd111
+2020202021111111111111111111111111111111000000000229922002299220000000000000000000000000000000000000000011111dd11d11d11111dd1111
+0000000000000000000000000000000000000000000000000244442002444420000000000000000000000000000000000000000011111111dddd11d11d1d1111
+000000000dd00000000020002000000002005050500000000222222002222220000000000000000000000000000000000000000011111111d111111dd111d111
 060d060d0660060000060206020620006020555555000000000000000000000000000000000000000006d00005600d500666ddd0008888800000004200000066
 666d666d6600666dd0066206626662066620050505000000000000000000000000000000444420200066d500d556d55d06dd11d008ffff40000006400000066d
 0600060006000600000620062006200060200000000000000000000000000000000000004422202006d6d55050d55d0506d6d1d00222224000006040000067d0
@@ -2354,7 +2397,7 @@ __sfx__
 010b00001a7421a7401a7301a735000000000000000007001c7421c7321c7301c7301c73500000000000000019750197501974219742197421974219732197401973500700000000000000000000000000000000
 011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+010a00001d1522115024150291502d150001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
