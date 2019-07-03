@@ -910,7 +910,7 @@ function mapinit()
          isphysical=true,
          knockbackangle=boss.a,
          damage=1,
-         targetcount=100,
+         targetcount=1,
          col=7,
         })
 
@@ -2015,6 +2015,12 @@ function dungeondraw()
   if gametick-deathts > 150 then
    print('press \x8e to continue',26,68,8)
   end
+ end
+
+ -- draw boss hp
+ if boss and boss.hp > 0 then
+  local halfw=boss.hp*6/2
+  rectfill(64-halfw,122,64+halfw,125,8)
  end
 
 end
