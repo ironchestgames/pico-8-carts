@@ -742,7 +742,8 @@ function mapinit()
      hp=1,
      attack={
       typ='melee',
-      spd=30,
+      preperformdur=30,
+      postperformdur=0,
      },
      ai={
       state='idling',
@@ -750,6 +751,7 @@ function mapinit()
       state_counter=0,
       ismovingoutofcollision=false,
       toocloseto={},
+      ispreperform=true,
      },
      frames={
       currentframe=1,
@@ -778,7 +780,8 @@ function mapinit()
      hp=3,
      attack={
       typ='melee',
-      spd=50,
+      preperformdur=40,
+      postperformdur=10,
      },
      ai={
       state='idling',
@@ -786,12 +789,13 @@ function mapinit()
       state_counter=0,
       ismovingoutofcollision=false,
       toocloseto={},
+      ispreperform=true,
      },
      frames={
       currentframe=1,
       idling={{0,15,4,5, -2,-3}},
       moving={animspd=0.18,{0,15,4,5, -2,-3},{4,15,4,5, -2,-3}},
-      attacking={{8,15,4,5, -2,-3}},--,{11,15,5,5, -2,-3}},
+      attacking={animspd=0,{8,15,4,5, -2,-3},{11,15,6,5, -3,-3}},
       recovering={{0,15,4,5, -2,-3}},
      },
     })
@@ -814,7 +818,8 @@ function mapinit()
      hp=2,
      attack={
       typ='ranged',
-      spd=70,
+      preperformdur=60,
+      postperformdur=4,
      },
      ai={
       state='idling',
@@ -822,12 +827,13 @@ function mapinit()
       state_counter=0,
       ismovingoutofcollision=false,
       toocloseto={},
+      ispreperform=true,
      },
      frames={
       currentframe=1,
       idling={{18,15,4,5, -2,-3}},
       moving={animspd=0.18,{18,15,4,5, -2,-3},{22,15,4,5, -2,-3}},
-      attacking={{26,15,4,5, -2,-3}},--,{11,15,5,5, -2,-3}},
+      attacking={animspd=0,{26,15,4,5, -2,-3},{31,15,4,5, -2,-3}},
       recovering={{18,15,4,5, -2,-3}},
      },
     })
@@ -1165,7 +1171,7 @@ function dungeonupdate()
     withinattackdistance=distancetoavatar <= 60
    end
    local haslostoavatar=haslos(enemy.x,enemy.y,avatar.x,avatar.y)
-   local isswinging=enemy.ai.state == 'attacking' and enemy.ai.state_counter > 0
+   local isswinging=enemy.ai.state == 'attacking'
 
    -- movement vars
    local ismovingoutofcollision=enemy.ai.ismovingoutofcollision
@@ -1263,6 +1269,10 @@ function dungeonupdate()
     end
 
    end
+
+   if enemy.attack.typ == 'ranged' then
+    debug(enemy.ai.state, enemy.ai.state_counter)
+   end
   end
  end
 
@@ -1290,12 +1300,13 @@ function dungeonupdate()
     else
 
      if enemy.ai.laststate != 'attacking' then
-
-      enemy.ai.state_counter=enemy.attack.spd
+      enemy.ai.ispreperform=true
+      enemy.frames.currentframe=1
+      enemy.ai.state_counter=enemy.attack.preperformdur
      end
 
      enemy.ai.state_counter-=1
-     if enemy.ai.state_counter <= 0 then
+     if enemy.ai.ispreperform and enemy.ai.state_counter <= 0 then
 
       if enemy.attack.typ == 'melee' then
        local a=atan2(
@@ -1363,8 +1374,6 @@ function dungeonupdate()
         [1]={50,20,2,1, -1,-0.5}, -- right (wrapped)
        }
 
-       local frame=angletoframe[a]
-
        add(attacks,{
         isenemy=true,
         x=enemy.x-0.5,
@@ -1378,7 +1387,7 @@ function dungeonupdate()
         targetcount=1,
         frames={
          currentframe=1,
-         frame,
+         angletoframe[a],
         },
         col=2,
        })
@@ -1386,6 +1395,11 @@ function dungeonupdate()
        sfx(5)
       end
 
+      enemy.ai.ispreperform=false
+      enemy.ai.state_counter=enemy.attack.postperformdur
+      enemy.frames.currentframe=2
+
+     elseif enemy.ai.state_counter <= 0 then
       enemy.ai.state='idling'
      end
     end
