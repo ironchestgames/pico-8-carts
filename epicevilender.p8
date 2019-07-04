@@ -185,6 +185,8 @@ btnmasktoangle={
 
 -- todo: this is only convenience dev function
 function createactor(params)
+ params.state='idling'
+ params.state_counter=0
  params.dx=0
  params.dy=0
  params.dmgfxcounter=0
@@ -539,7 +541,6 @@ mule=createactor({
  halfh=2.5,
  a=0,
  spd=0.25,
- state='idling',
  frames={
   currentframe=1,
   idling={{40,8,8,5, -4,-2.5}},
@@ -562,8 +563,6 @@ function dungeoninit()
   hp=3,
   startarmor=0,
   armor=0,
-  state='idling',
-  state_counter=0,
   items={
    weapon=sword,
    offhand=nil,
@@ -577,7 +576,6 @@ function dungeoninit()
   skill1=sword.skill,
   skill2=nil,
   currentskill=nil,
-  ispreperform=false,
   frames={
    currentframe=1,
    idling={{0,10,3,4, -1,-2}},
@@ -745,12 +743,8 @@ function mapinit()
       preperformdur=30,
       postperformdur=0,
      },
-     state='idling',
-     state_counter=0,
-     laststate='idling',
      ismovingoutofcollision=false,
      toocloseto={},
-     ispreperform=true,
      frames={
       currentframe=1,
       idling={{36,15,3,3, -1.5,-1.5}},
@@ -781,12 +775,8 @@ function mapinit()
       preperformdur=40,
       postperformdur=10,
      },
-     state='idling',
-     state_counter=0,
-     laststate='idling',
      ismovingoutofcollision=false,
      toocloseto={},
-     ispreperform=true,
      frames={
       currentframe=1,
       idling={{0,15,4,5, -2,-3}},
@@ -817,12 +807,8 @@ function mapinit()
       preperformdur=60,
       postperformdur=4,
      },
-     state='idling',
-     state_counter=0,
-     laststate='idling',
      ismovingoutofcollision=false,
      toocloseto={},
-     ispreperform=true,
      frames={
       currentframe=1,
       idling={{18,15,4,5, -2,-3}},
@@ -854,9 +840,6 @@ function mapinit()
       x=nil,
       y=nil,
      },
-     state='idling',
-     state_counter=0,
-     laststate='idling',
      ismovingoutofcollision=false,
      toocloseto={},
      frames={
@@ -960,12 +943,8 @@ function mapinit()
           preperformdur=40,
           postperformdur=10,
          },
-         state='recovering',
-         laststate='recovering',
-         state_counter=50,
          ismovingoutofcollision=false,
          toocloseto={},
-         ispreperform=false,
          frames={
           currentframe=1,
           idling={{0,15,4,5, -2,-3}},
@@ -974,6 +953,11 @@ function mapinit()
           recovering={{0,15,4,5, -2,-3}},
          },
         })
+
+        -- summoning sickness
+        enemy.state='recovering'
+        enemy.laststate='recovering'
+        enemy.state_counter=50
 
         add(actors,enemy)
 
