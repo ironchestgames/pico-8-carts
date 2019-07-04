@@ -554,7 +554,7 @@ function dungeoninit()
 
  avatar=createactor({
   x=64,
-  y=12,
+  y=56,
   halfw=1.5,
   halfh=2,
   a=0,
@@ -1980,7 +1980,7 @@ function dungeondraw()
 
  -- draw inventory text
  if isshowinventorytext then
-  print('\x8e inventory',mule.x,mule.y,10)
+  print('\x8e inventory',mule.x-26,mule.y-8,10)
  end
 
  if dungeonlevel > 0 then
@@ -2011,7 +2011,7 @@ end
 local inventorycur=1
 local equippedcur=1
 local availableskillscur=1
-local sectioncur=1
+local sectioncur=4
 local equipped={}
 local availableskills={}
 local equipslots={
