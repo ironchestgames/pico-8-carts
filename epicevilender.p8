@@ -183,24 +183,6 @@ btnmasktoangle={
  [0x000a]=0.875, -- down/right
 }
 
-dungeonlevel=1
-dungeontheme=1 -- 1 magical forest, 2 cave, 3 catacombs
-nexttheme=1
-floormap={}
-actors={}
-attacks={}
-vfxs={}
-pemitters={}
-
--- unset vars
--- door=nil
--- boss=nil
--- chest=nil
--- isshowinventorytext=nil
--- deathts=nil
-
-dmgfxdur=20
-
 -- todo: this is only convenience dev function
 function createactor(params)
  params.state_counter=0
@@ -209,43 +191,6 @@ function createactor(params)
  params.dmgfxcounter=0
 
  return params
-end
-
-function newavatar()
- return createactor({
-  x=64,
-  y=12,
-  halfw=1.5,
-  halfh=2,
-  a=0,
-  spdfactor=1,
-  spd=0.5,
-  hp=3,
-  startarmor=0,
-  armor=0,
-  state='idling',
-  items={
-   weapon=sword,
-   offhand=nil,
-   armor=nil,
-   boots=nil,
-   helmet=nil,
-   book=nil,
-   amulet=nil,
-  },
-  inventory={sword},
-  skill1=sword.skill,
-  skill2=nil,
-  currentskill=nil,
-  ispreperform=false,
-  frames={
-   currentframe=1,
-   idling={{0,10,3,4, -1,-2}},
-   moving={{0,10,3,4, -1,-2},{3,10,3,4, -1,-2}},
-   attacking={animspd=0,{6,10,3,4, -1,-2},{0,10,3,4, -1,-2}},
-   recovering={{0,10,3,4, -1,-2}},
-  },
- })
 end
 
 function burningeffect(actor)
@@ -607,9 +552,42 @@ function dungeoninit()
  _update60=dungeonupdate
  _draw=dungeondraw
 
- avatar=newavatar()
+ avatar=createactor({
+  x=64,
+  y=12,
+  halfw=1.5,
+  halfh=2,
+  a=0,
+  spdfactor=1,
+  spd=0.5,
+  hp=3,
+  startarmor=0,
+  armor=0,
+  state='idling',
+  items={
+   weapon=sword,
+   offhand=nil,
+   armor=nil,
+   boots=nil,
+   helmet=nil,
+   book=nil,
+   amulet=nil,
+  },
+  inventory={sword},
+  skill1=sword.skill,
+  skill2=nil,
+  currentskill=nil,
+  ispreperform=false,
+  frames={
+   currentframe=1,
+   idling={{0,10,3,4, -1,-2}},
+   moving={{0,10,3,4, -1,-2},{3,10,3,4, -1,-2}},
+   attacking={animspd=0,{6,10,3,4, -1,-2},{0,10,3,4, -1,-2}},
+   recovering={{0,10,3,4, -1,-2}},
+  },
+ })
  dungeonlevel=1
- dungeontheme=1
+ dungeontheme=1 -- 1 magical forest, 2 cave, 3 catacombs
  nexttheme=1
  mapinit()
 end
@@ -721,10 +699,13 @@ function mapinit()
  curenemyidx=1
  gametick=0
  chest=nil
+ door=nil
+ boss=nil
  floormap={}
  actors={}
  attacks={}
  pemitters={}
+ vfxs={}
 
  for _y=0,15 do
   floormap[_y]={}
@@ -1051,9 +1032,6 @@ function dungeonupdate()
 
  if avatar.hp <= 0 then
   if gametick-deathts > 150 and btnp(4) then
-   attacks={}
-   pemitters={}
-   vfxs={}
    dungeoninit()
   end
   return
@@ -1569,7 +1547,7 @@ function dungeonupdate()
     sfx(hitsfx)
 
     -- start damage indication
-    actor.dmgfxcounter=dmgfxdur
+    actor.dmgfxcounter=20
 
     -- hit flash
     local x=actor.x+actor.dx/2
