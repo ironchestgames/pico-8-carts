@@ -185,7 +185,6 @@ btnmasktoangle={
 
 -- todo: this is only convenience dev function
 function createactor(params)
- params.state_counter=0
  params.dx=0
  params.dy=0
  params.dmgfxcounter=0
@@ -564,6 +563,7 @@ function dungeoninit()
   startarmor=0,
   armor=0,
   state='idling',
+  state_counter=0,
   items={
    weapon=sword,
    offhand=nil,
@@ -745,14 +745,12 @@ function mapinit()
       preperformdur=30,
       postperformdur=0,
      },
-     ai={
-      state='idling',
-      laststate='idling',
-      state_counter=0,
-      ismovingoutofcollision=false,
-      toocloseto={},
-      ispreperform=true,
-     },
+     state='idling',
+     state_counter=0,
+     laststate='idling',
+     ismovingoutofcollision=false,
+     toocloseto={},
+     ispreperform=true,
      frames={
       currentframe=1,
       idling={{36,15,3,3, -1.5,-1.5}},
@@ -783,14 +781,12 @@ function mapinit()
       preperformdur=40,
       postperformdur=10,
      },
-     ai={
-      state='idling',
-      laststate='idling',
-      state_counter=0,
-      ismovingoutofcollision=false,
-      toocloseto={},
-      ispreperform=true,
-     },
+     state='idling',
+     state_counter=0,
+     laststate='idling',
+     ismovingoutofcollision=false,
+     toocloseto={},
+     ispreperform=true,
      frames={
       currentframe=1,
       idling={{0,15,4,5, -2,-3}},
@@ -821,14 +817,12 @@ function mapinit()
       preperformdur=60,
       postperformdur=4,
      },
-     ai={
-      state='idling',
-      laststate='idling',
-      state_counter=0,
-      ismovingoutofcollision=false,
-      toocloseto={},
-      ispreperform=true,
-     },
+     state='idling',
+     state_counter=0,
+     laststate='idling',
+     ismovingoutofcollision=false,
+     toocloseto={},
+     ispreperform=true,
      frames={
       currentframe=1,
       idling={{18,15,4,5, -2,-3}},
@@ -860,13 +854,11 @@ function mapinit()
       x=nil,
       y=nil,
      },
-     ai={
-      state='idling',
-      laststate='idling',
-      state_counter=0,
-      ismovingoutofcollision=false,
-      toocloseto={},
-     },
+     state='idling',
+     state_counter=0,
+     laststate='idling',
+     ismovingoutofcollision=false,
+     toocloseto={},
      frames={
       currentframe=1,
       idling={{0,40,15,18, -7,-13}},
@@ -877,14 +869,14 @@ function mapinit()
      performattack=function(boss)
 
       if boss.attack.typ == 'melee' then
-       if boss.ai.laststate != 'attacking' then
+       if boss.laststate != 'attacking' then
         boss.frames.currentframe=1
-        boss.ai.state_counter=90
+        boss.state_counter=90
        else
-        boss.ai.state_counter-=1
+        boss.state_counter-=1
        end
 
-       if boss.ai.state_counter == 60 then
+       if boss.state_counter == 60 then
         boss.frames.currentframe=2
         add(attacks,{
          isenemy=true,
@@ -904,16 +896,16 @@ function mapinit()
         sfx(4)
        end
 
-       if boss.ai.state_counter <= 0 then
+       if boss.state_counter <= 0 then
         boss.x-=cos(boss.a)*3
         boss.attack.typ='magic'
-        boss.ai.state='idling'
+        boss.state='idling'
        end
 
       elseif boss.attack.typ == 'magic' then
-       if boss.ai.laststate != 'attacking' then
+       if boss.laststate != 'attacking' then
         boss.frames.currentframe=3
-        boss.ai.state_counter=110
+        boss.state_counter=110
 
         local a=rnd()
         local d=1
@@ -948,10 +940,10 @@ function mapinit()
         sfx(9)
 
        else
-        boss.ai.state_counter-=1
+        boss.state_counter-=1
        end
 
-       if boss.ai.state_counter <= 0 then
+       if boss.state_counter <= 0 then
 
         local enemy=createactor({
          isenemy=true,
@@ -965,20 +957,20 @@ function mapinit()
          hp=3,
          attack={
           typ='melee',
-          spd=50,
+          preperformdur=40,
+          postperformdur=10,
          },
-         ai={
-          state='recovering',
-          laststate='recovering',
-          state_counter=50,
-          ismovingoutofcollision=false,
-          toocloseto={},
-         },
+         state='recovering',
+         laststate='recovering',
+         state_counter=50,
+         ismovingoutofcollision=false,
+         toocloseto={},
+         ispreperform=false,
          frames={
           currentframe=1,
           idling={{0,15,4,5, -2,-3}},
           moving={animspd=0.18,{0,15,4,5, -2,-3},{4,15,4,5, -2,-3}},
-          attacking={{8,15,4,5, -2,-3}},
+          attacking={animspd=0,{8,15,4,5, -2,-3},{11,15,6,5, -3,-3}},
           recovering={{0,15,4,5, -2,-3}},
          },
         })
@@ -986,7 +978,7 @@ function mapinit()
         add(actors,enemy)
 
         boss.attack.typ='melee'
-        boss.ai.state='idling'
+        boss.state='idling'
        end
 
       end
@@ -1153,10 +1145,10 @@ function dungeonupdate()
  end
  do
   local enemy=actors[curenemyidx]
-  if avatar.hp > 0 and enemy and enemy.ai then
+  if avatar.hp > 0 and enemy and enemy.isenemy then
 
    -- resolving effect vars
-   local isresolvingeffect=enemy.ai.state=='recovering'
+   local isresolvingeffect=enemy.state=='recovering'
 
    -- todo: ai should have aggravator instead of
    --       avatar hard-coded
@@ -1171,17 +1163,17 @@ function dungeonupdate()
     withinattackdistance=distancetoavatar <= 60
    end
    local haslostoavatar=haslos(enemy.x,enemy.y,avatar.x,avatar.y)
-   local isswinging=enemy.ai.state == 'attacking'
+   local isswinging=enemy.state == 'attacking'
 
    -- movement vars
-   local ismovingoutofcollision=enemy.ai.ismovingoutofcollision
-   local collidedwithwall=enemy.ai.wallcollisiondx != nil
+   local ismovingoutofcollision=enemy.ismovingoutofcollision
+   local collidedwithwall=enemy.wallcollisiondx != nil
    local istooclosetoavatar=distancetoavatar <= 1
    if enemy.attack.typ == 'ranged' then
     istooclosetoavatar=distancetoavatar <= 20
    end
-   local hastoocloseto=#enemy.ai.toocloseto > 0
-   local hastarget=enemy.ai.targetx!=nil
+   local hastoocloseto=#enemy.toocloseto > 0
+   local hastarget=enemy.targetx!=nil
 
 
    if isresolvingeffect then
@@ -1193,75 +1185,75 @@ function dungeonupdate()
    -- continue to move out of collision
    elseif ismovingoutofcollision then
 
-    enemy.ai.state='moving'
+    enemy.state='moving'
 
    -- too close to avatar, note: collidedwithwall not working here?
    elseif istooclosetoavatar and (not isswinging) and (not collidedwithwall) then
 
-    enemy.ai.state='moving'
+    enemy.state='moving'
     local a=atan2(
       avatar.x-enemy.x,
       avatar.y-enemy.y)+0.5 -- note: go the other way
-    enemy.ai.targetx=enemy.x+cos(a)*10
-    enemy.ai.targety=enemy.y+sin(a)*10
-    enemy.ai.ismovingoutofcollision=true
-    enemy.ai.state_counter=60
+    enemy.targetx=enemy.x+cos(a)*10
+    enemy.targety=enemy.y+sin(a)*10
+    enemy.ismovingoutofcollision=true
+    enemy.state_counter=60
     enemy.spd=enemy.runspd
 
    -- attack
    elseif isswinging or withinattackdistance and
          (haslostoavatar or enemy.attack.typ == 'magic') then
 
-    enemy.ai.state='attacking'
-    enemy.ai.targetx=avatar.x
-    enemy.ai.targety=avatar.y
+    enemy.state='attacking'
+    enemy.targetx=avatar.x
+    enemy.targety=avatar.y
     -- todo: swing timer
 
    -- colliding w wall, move out of
    elseif collidedwithwall then
 
-    enemy.ai.state='moving'
+    enemy.state='moving'
     local a=atan2(
-      enemy.x+enemy.ai.wallcollisiondx-enemy.x,
-      enemy.y+enemy.ai.wallcollisiondy-enemy.y)+rnd(0.2)-0.1
-    enemy.ai.targetx=enemy.x+cos(a)*10
-    enemy.ai.targety=enemy.y+sin(a)*10
-    enemy.ai.ismovingoutofcollision=true
-    enemy.ai.state_counter=60
+      enemy.x+enemy.wallcollisiondx-enemy.x,
+      enemy.y+enemy.wallcollisiondy-enemy.y)+rnd(0.2)-0.1
+    enemy.targetx=enemy.x+cos(a)*10
+    enemy.targety=enemy.y+sin(a)*10
+    enemy.ismovingoutofcollision=true
+    enemy.state_counter=60
 
    -- colliding w other, move out of
    elseif hastoocloseto then
 
-    enemy.ai.state='moving'
-    local collidedwith=enemy.ai.toocloseto[1]
+    enemy.state='moving'
+    local collidedwith=enemy.toocloseto[1]
     local a=atan2(
       collidedwith.x-enemy.x,
       collidedwith.y-enemy.y)+0.5 -- note: go the other way
-    enemy.ai.targetx=enemy.x+cos(a)*10
-    enemy.ai.targety=enemy.y+sin(a)*10
-    enemy.ai.ismovingoutofcollision=true
-    enemy.ai.state_counter=60
+    enemy.targetx=enemy.x+cos(a)*10
+    enemy.targety=enemy.y+sin(a)*10
+    enemy.ismovingoutofcollision=true
+    enemy.state_counter=60
 
    -- set avatar position as target, move there
    elseif haslostoavatar then
 
-    enemy.ai.state='moving'
-    enemy.ai.targetx=avatar.x
-    enemy.ai.targety=avatar.y
+    enemy.state='moving'
+    enemy.targetx=avatar.x
+    enemy.targety=avatar.y
     enemy.spd=enemy.runspd
 
    -- continue to move to target
    elseif hastarget then
 
-    enemy.ai.state='moving'
+    enemy.state='moving'
 
    -- roam
    elseif not hastarget then
 
-    enemy.ai.state='moving'
+    enemy.state='moving'
     local a=rnd()
-    enemy.ai.targetx=enemy.x+cos(a)*10
-    enemy.ai.targety=enemy.y+sin(a)*10
+    enemy.targetx=enemy.x+cos(a)*10
+    enemy.targety=enemy.y+sin(a)*10
     enemy.spd=enemy.runspd*0.5
 
     if enemy == boss then
@@ -1271,7 +1263,7 @@ function dungeonupdate()
    end
 
    if enemy.attack.typ == 'ranged' then
-    debug(enemy.ai.state, enemy.ai.state_counter)
+    debug(enemy.state, enemy.state_counter)
    end
   end
  end
@@ -1279,19 +1271,19 @@ function dungeonupdate()
  -- update enemies
  local enemycount=0
  for enemy in all(actors) do
-  if enemy.ai then
+  if enemy.isenemy then
 
    enemycount+=1
 
    -- perform end of state action
-   if enemy.ai.state == 'idling' then
+   if enemy.state == 'idling' then
 
     -- reset target etc
-    enemy.ai.targetx=nil
-    enemy.ai.targety=nil
-    enemy.ai.ismovingoutofcollision=false
+    enemy.targetx=nil
+    enemy.targety=nil
+    enemy.ismovingoutofcollision=false
 
-   elseif enemy.ai.state == 'attacking' then
+   elseif enemy.state == 'attacking' then
 
     if enemy == boss then
 
@@ -1299,19 +1291,19 @@ function dungeonupdate()
 
     else
 
-     if enemy.ai.laststate != 'attacking' then
-      enemy.ai.ispreperform=true
+     if enemy.laststate != 'attacking' then
+      enemy.ispreperform=true
       enemy.frames.currentframe=1
-      enemy.ai.state_counter=enemy.attack.preperformdur
+      enemy.state_counter=enemy.attack.preperformdur
      end
 
-     enemy.ai.state_counter-=1
-     if enemy.ai.ispreperform and enemy.ai.state_counter <= 0 then
+     enemy.state_counter-=1
+     if enemy.ispreperform and enemy.state_counter <= 0 then
 
       if enemy.attack.typ == 'melee' then
        local a=atan2(
-        enemy.ai.targetx-enemy.x,
-        enemy.ai.targety-enemy.y)
+        enemy.targetx-enemy.x,
+        enemy.targety-enemy.y)
 
        add(attacks,{
         isenemy=true,
@@ -1357,8 +1349,8 @@ function dungeonupdate()
       elseif enemy.attack.typ == 'ranged' then
 
        local a=atan2(
-        enemy.ai.targetx-enemy.x,
-        enemy.ai.targety-enemy.y)
+        enemy.targetx-enemy.x,
+        enemy.targety-enemy.y)
 
        a=min(flr((a+0.0625)*8)/8,1)
 
@@ -1395,48 +1387,48 @@ function dungeonupdate()
        sfx(5)
       end
 
-      enemy.ai.ispreperform=false
-      enemy.ai.state_counter=enemy.attack.postperformdur
+      enemy.ispreperform=false
+      enemy.state_counter=enemy.attack.postperformdur
       enemy.frames.currentframe=2
 
-     elseif enemy.ai.state_counter <= 0 then
-      enemy.ai.state='idling'
+     elseif enemy.state_counter <= 0 then
+      enemy.state='idling'
      end
     end
 
-   elseif enemy.ai.state == 'recovering' then
-    enemy.ai.state_counter-=1
-    if enemy.ai.state_counter <= 0 then
-     enemy.ai.state='idling'
+   elseif enemy.state == 'recovering' then
+    enemy.state_counter-=1
+    if enemy.state_counter <= 0 then
+     enemy.state='idling'
      enemy.effect=nil
     end
 
-   elseif enemy.ai.state == 'moving' then
+   elseif enemy.state == 'moving' then
 
-    if enemy.ai.ismovingoutofcollision then
-     enemy.ai.state_counter-=1
-     if enemy.ai.state_counter <= 0 then
-      enemy.ai.ismovingoutofcollision=false
+    if enemy.ismovingoutofcollision then
+     enemy.state_counter-=1
+     if enemy.state_counter <= 0 then
+      enemy.ismovingoutofcollision=false
      end
     end
 
     enemy.a=atan2(
-      enemy.ai.targetx-enemy.x,
-      enemy.ai.targety-enemy.y)
+      enemy.targetx-enemy.x,
+      enemy.targety-enemy.y)
     enemy.dx=cos(enemy.a)*enemy.spd
     enemy.dy=sin(enemy.a)*enemy.spd
 
     if dist(
          enemy.x,
          enemy.y,
-         enemy.ai.targetx,
-         enemy.ai.targety) <= enemy.spd + 0.1 then
-     enemy.ai.state='idling'
+         enemy.targetx,
+         enemy.targety) <= enemy.spd + 0.1 then
+     enemy.state='idling'
     end
 
    end
 
-   enemy.ai.laststate=enemy.ai.state
+   enemy.laststate=enemy.state
   end
  end
 
@@ -1514,11 +1506,11 @@ function dungeonupdate()
     end
 
     -- go into recovering
-    if actor.ai then
-     actor.ai.state='recovering'
-     actor.ai.state_counter=attack.recovertime
-     if not actor.ai.state_counter then
-      actor.ai.state_counter=0
+    if actor then
+     actor.state='recovering'
+     actor.state_counter=attack.recovertime
+     if not actor.state_counter then
+      actor.state_counter=0
      end
     else
      actor.state='recovering'
@@ -1577,8 +1569,8 @@ function dungeonupdate()
 
  -- reset toocloseto
  for actor in all(actors) do
-  if actor.ai then
-   actor.ai.toocloseto={}
+  if actor.isenemy then
+   actor.toocloseto={}
   end
  end
 
@@ -1590,14 +1582,14 @@ function dungeonupdate()
    if enemy != other and
       enemy != avatar and
       other != avatar and
-      enemy.ai and
+      enemy.isenemy and
       dist(
         enemy.x,
         enemy.y,
         other.x,
         other.y) < enemy.halfh + other.halfh then
-    add(enemy.ai.toocloseto,other)
-    add(other.ai.toocloseto,enemy)
+    add(enemy.toocloseto,other)
+    add(other.toocloseto,enemy)
    end
   end
  end
@@ -1623,13 +1615,13 @@ function dungeonupdate()
     actor.dx,
     actor.dy)
 
-  if actor.ai then
-   actor.ai.wallcollisiondx=nil
-   actor.ai.wallcollisiondy=nil
+  if actor.isenemy then
+   actor.wallcollisiondx=nil
+   actor.wallcollisiondy=nil
    if _dx != actor.dx or
       _dy != actor.dy then
-    actor.ai.wallcollisiondx=_dx
-    actor.ai.wallcollisiondy=_dy
+    actor.wallcollisiondx=_dx
+    actor.wallcollisiondy=_dy
    end
   end
 
@@ -1680,8 +1672,8 @@ function dungeonupdate()
  -- update actor animation frames
  for actor in all(actors) do
   local state=actor.state
-  if actor.ai then
-   state=actor.ai.state
+  if actor.isenemy then
+   state=actor.state
   end
   local stateframes=actor.frames[state]
 
@@ -1878,8 +1870,8 @@ function dungeondraw()
 
   -- draw actor frame
   local state=actor.state
-  if actor.ai then
-   state=actor.ai.state
+  if actor.isenemy then
+   state=actor.state
   end
   local stateframes=actor.frames[state]
   local frame=stateframes[flr(actor.frames.currentframe)]
