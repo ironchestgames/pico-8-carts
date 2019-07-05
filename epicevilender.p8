@@ -1432,7 +1432,6 @@ function dungeonupdate()
  if door.isopen and
     isaabbscolliding(avatar,door) then
   nextfloor()
-  return
  end
 
  -- collide avatar against chest
