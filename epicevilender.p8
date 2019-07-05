@@ -1084,7 +1084,6 @@ function dungeonupdate()
 
     else -- note: done performing
      actor.state='idling'
-     actor.frames.currentframe=1
      avatar.items.weapon.frames.currentframe=1
     end
    end
@@ -1469,14 +1468,10 @@ function dungeonupdate()
     end
 
     -- go into recovering
-    if actor then
-     actor.state='recovering'
+    actor.state='recovering'
+    if attack.recovertime then
      actor.state_counter=attack.recovertime
-     if not actor.state_counter then
-      actor.state_counter=0
-     end
     else
-     actor.state='recovering'
      actor.state_counter=0
     end
 
@@ -1493,7 +1488,6 @@ function dungeonupdate()
        halfw=4,
        halfh=4,
        isopen=0,
-       isshowing=false,
       }
      end
 
@@ -1829,8 +1823,7 @@ function dungeondraw()
 
   -- draw actor frame
   local state=actor.state
-  local stateframes=actor.frames[state]
-  local frame=stateframes[flr(actor.frames.currentframe)]
+  local frame=actor.frames[state][flr(actor.frames.currentframe)]
   local flipx=false
   if actor.a and actor.a >= 0.25 and actor.a <= 0.75 then
    flipx=true
