@@ -184,7 +184,7 @@ btnmasktoangle={
 }
 
 -- todo: this is only convenience dev function
-function createactor(params)
+function actorfactory(params)
  params.state='idling'
  params.state_counter=0
  params.dx=0
@@ -192,6 +192,34 @@ function createactor(params)
  params.dmgfxcounter=0
 
  return params
+end
+
+function newmeleeskeleton(x,y)
+ return actorfactory({
+  isenemy=true,
+  x=x,
+  y=y,
+  a=0,
+  halfw=1.5,
+  halfh=2,
+  runspd=0.5,
+  spd=0.5,
+  hp=3,
+  attack={
+   typ='melee',
+   preperformdur=40,
+   postperformdur=10,
+  },
+  ismovingoutofcollision=false,
+  toocloseto={},
+  frames={
+   currentframe=1,
+   idling={{0,15,4,5, -2,-3}},
+   moving={animspd=0.18,{0,15,4,5, -2,-3},{4,15,4,5, -2,-3}},
+   attacking={animspd=0,{8,15,4,5, -2,-3},{11,15,6,5, -3,-3}},
+   recovering={{0,15,4,5, -2,-3}},
+  },
+ })
 end
 
 function burningeffect(actor)
@@ -533,7 +561,7 @@ allitems={
  leatherboots,
 }
 
-mule=createactor({
+mule=actorfactory({
  x=64,
  y=12,
  isghost=true,
@@ -552,7 +580,7 @@ function dungeoninit()
  _update60=dungeonupdate
  _draw=dungeondraw
 
- avatar=createactor({
+ avatar=actorfactory({
   x=64,
   y=56,
   halfw=1.5,
@@ -712,7 +740,7 @@ function mapinit()
 
    -- create avatar
    if _col == 15 then
-    avatar=createactor(avatar)
+    avatar=actorfactory(avatar)
     avatar.x=_x*8+4
     avatar.y=_y*8+4
     avatar.armor=avatar.startarmor
@@ -727,7 +755,7 @@ function mapinit()
 
    -- create bat enemy
    if _col == 5 then
-    local enemy=createactor({
+    local enemy=actorfactory({
      isenemy=true,
      isghost=true,
      x=_x*8+4,
@@ -760,31 +788,7 @@ function mapinit()
 
    -- create sword skeleton enemy
    if _col == 6 then
-    local enemy=createactor({
-     isenemy=true,
-     x=_x*8+4,
-     y=_y*8+4,
-     a=0,
-     halfw=1.5,
-     halfh=2,
-     runspd=0.5,
-     spd=0.5,
-     hp=3,
-     attack={
-      typ='melee',
-      preperformdur=40,
-      postperformdur=10,
-     },
-     ismovingoutofcollision=false,
-     toocloseto={},
-     frames={
-      currentframe=1,
-      idling={{0,15,4,5, -2,-3}},
-      moving={animspd=0.18,{0,15,4,5, -2,-3},{4,15,4,5, -2,-3}},
-      attacking={animspd=0,{8,15,4,5, -2,-3},{11,15,6,5, -3,-3}},
-      recovering={{0,15,4,5, -2,-3}},
-     },
-    })
+    local enemy=newmeleeskeleton(_x*8+4,_y*8+4)
 
     add(actors,enemy)
     _col=0
@@ -792,7 +796,7 @@ function mapinit()
 
    -- create bow skeleton enemy
    if _col == 7 then
-    local enemy=createactor({
+    local enemy=actorfactory({
      isenemy=true,
      x=_x*8+4,
      y=_y*8+4,
@@ -824,7 +828,7 @@ function mapinit()
 
    -- create skeleton king
    if _col == 8 then
-    local enemy=createactor({
+    local enemy=actorfactory({
      isenemy=true,
      isbig=true,
      x=_x*8+4,
@@ -928,31 +932,7 @@ function mapinit()
 
        if boss.state_counter <= 0 then
 
-        local enemy=createactor({
-         isenemy=true,
-         x=boss.attack.x,
-         y=boss.attack.y,
-         a=0,
-         halfw=1.5,
-         halfh=2,
-         runspd=0.5,
-         spd=0.5,
-         hp=3,
-         attack={
-          typ='melee',
-          preperformdur=40,
-          postperformdur=10,
-         },
-         ismovingoutofcollision=false,
-         toocloseto={},
-         frames={
-          currentframe=1,
-          idling={{0,15,4,5, -2,-3}},
-          moving={animspd=0.18,{0,15,4,5, -2,-3},{4,15,4,5, -2,-3}},
-          attacking={animspd=0,{8,15,4,5, -2,-3},{11,15,6,5, -3,-3}},
-          recovering={{0,15,4,5, -2,-3}},
-         },
-        })
+        local enemy=newmeleeskeleton(boss.attack.x,boss.attack.y)
 
         -- summoning sickness
         enemy.state='recovering'
@@ -1655,11 +1635,7 @@ function dungeonupdate()
 
  -- update actor animation frames
  for actor in all(actors) do
-  local state=actor.state
-  if actor.isenemy then
-   state=actor.state
-  end
-  local stateframes=actor.frames[state]
+  local stateframes=actor.frames[actor.state]
 
   local animspd=0.25 -- note: default
   if stateframes.animspd then
@@ -1854,9 +1830,6 @@ function dungeondraw()
 
   -- draw actor frame
   local state=actor.state
-  if actor.isenemy then
-   state=actor.state
-  end
   local stateframes=actor.frames[state]
   local frame=stateframes[flr(actor.frames.currentframe)]
   local flipx=false
