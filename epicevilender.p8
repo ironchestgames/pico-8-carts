@@ -18,6 +18,14 @@ function debug(_s1,_s2,_s3,_s4,_s5)
   ,'debug',false)
 end
 
+function clone(t)
+ local result={}
+ for key,value in pairs(t) do
+  result[key]=value
+ end
+ return result
+end
+
 function isaabbscolliding(aabb1,aabb2)
  return aabb1.x - aabb1.halfw < aabb2.x + aabb2.halfw and
         aabb1.x + aabb1.halfw > aabb2.x - aabb2.halfw and
@@ -183,6 +191,42 @@ btnmasktoangle={
  [0x000a]=0.875, -- down/right
 }
 
+meleevfxframes={
+ [0]={0,20,4,7, -1,-5}, -- right
+ [0.125]={8,20,6,4, -3,-2}, -- right/up
+ [0.25]={20,20,9,3, -3,-1}, -- up
+ [0.375]={14,20,6,4, -2,-2}, -- up/left
+ [0.5]={4,20,4,7, -2,-5}, -- left
+ [0.625]={29,20,4,7, -3,-6}, -- left/down
+ [0.75]={20,23,9,3, -4,-2}, -- down
+ [0.875]={33,20,4,7, 0,-6}, -- down/right
+ [1]={0,20,4,7, -1,-5}, -- right (wrapped)
+}
+
+bowvfxframes={
+ [0]={0,27,6,7, -3,-5}, -- right
+ [0.125]={17,32,7,7, -4,-3}, -- right/up
+ [0.25]={10,31,7,6, -3,-3}, -- up
+ [0.375]={34,32,7,7, -3,-3}, -- up/left
+ [0.5]={4,27,6,7, -2,-5}, -- left
+ [0.625]={22,27,7,7, -2,-5}, -- left/down
+ [0.75]={10,27,7,6, -3,-4}, -- down
+ [0.875]={29,27,7,7, -4,-4}, -- down/right
+ [1]={0,27,6,7, -3,-5}, -- right (wrapped)
+}
+
+arrowframes={
+ [0]={50,20,2,1, -1,-0.5}, -- right
+ [0.125]={52,20,2,2, -1,-1}, -- right/up
+ [0.25]={54,20,1,2, -0.5,-1}, -- up
+ [0.375]={55,20,2,2, -1,-1}, -- up/left
+ [0.5]={50,20,2,1, -1,-0.5}, -- left
+ [0.625]={52,20,2,2, -1,-1}, -- left/down
+ [0.75]={54,20,1,2, -0.5,-1}, -- down
+ [0.875]={55,20,2,2, -1,-1}, -- down/right
+ [1]={50,20,2,1, -1,-0.5}, -- right (wrapped)
+}
+
 -- todo: this is only convenience dev function
 function actorfactory(params)
  params.state='idling'
@@ -192,6 +236,68 @@ function actorfactory(params)
  params.dmgfxcounter=0
 
  return params
+end
+
+function performenemymelee(enemy)
+ local a=atan2(
+  enemy.targetx-enemy.x,
+  enemy.targety-enemy.y)
+
+ add(attacks,{
+  isenemy=true,
+  x=enemy.x+cos(a)*4,
+  y=enemy.y+sin(a)*4,
+  halfw=2,
+  halfh=2,
+  state_counter=1,
+  isphysical=true,
+  knockbackangle=a,
+  damage=1,
+  targetcount=1000,
+  col=7,
+ })
+
+ local x=enemy.x+cos(enemy.a)*4
+ local y=enemy.y+sin(enemy.a)*4
+ local a=min(flr((enemy.a+0.0625)*8)/8,1)
+
+ local frame=clone(meleevfxframes[a])
+ frame[5]=x+frame[5]
+ frame[6]=y+frame[6]
+ frame.counter=10
+ local vfx={frame,col=7}
+
+ add(vfxs,vfx)
+
+ sfx(4)
+end
+
+function performenemybow(enemy)
+ local a=atan2(
+  enemy.targetx-enemy.x,
+  enemy.targety-enemy.y)
+
+ a=min(flr((a+0.0625)*8)/8,1)
+
+ add(attacks,{
+  isenemy=true,
+  x=enemy.x-0.5,
+  y=enemy.y-0.5,
+  halfw=1,
+  halfh=1,
+  state_counter=1000,
+  dx=cos(a)*1.6,
+  dy=sin(a)*1.6,
+  damage=1,
+  targetcount=1,
+  frames={
+   currentframe=1,
+   clone(arrowframes[a]),
+  },
+  col=2,
+ })
+
+ sfx(5)
 end
 
 function newmeleeskeleton(x,y)
@@ -210,6 +316,7 @@ function newmeleeskeleton(x,y)
    preperformdur=40,
    postperformdur=10,
   },
+  performattack=performenemymelee,
   toocloseto={},
   frames={
    currentframe=1,
@@ -277,19 +384,7 @@ swordattackskillfactory=function(
     targetcount=targetcount,
    })
 
-   -- add vfx
-   angletofx={
-    [0]={0,20,4,7, -1,-5}, -- right
-    [0.125]={8,20,6,4, -3,-2}, -- right/up
-    [0.25]={20,20,9,3, -3,-1}, -- up
-    [0.375]={14,20,6,4, -2,-2}, -- up/left
-    [0.5]={4,20,4,7, -2,-5}, -- left
-    [0.625]={29,20,4,7, -3,-6}, -- left/down
-    [0.75]={20,23,9,3, -4,-2}, -- down
-    [0.875]={33,20,4,7, 0,-6}, -- down/right
-   }
-
-   local frame=angletofx[user.a]
+   local frame=clone(meleevfxframes[user.a])
    frame[5]=x+frame[5]
    frame[6]=y+frame[6]
    frame.counter=skill.postperformdur
@@ -316,20 +411,6 @@ bowattackskillfactory=function(
    local x=user.x+cos(user.a)*4
    local y=user.y+sin(user.a)*4
 
-   -- arrow frame
-   local angletoframe={
-    [0]={50,20,2,1, -1,-0.5}, -- right
-    [0.125]={52,20,2,2, -1,-1}, -- right/up
-    [0.25]={54,20,1,2, -0.5,-1}, -- up
-    [0.375]={55,20,2,2, -1,-1}, -- up/left
-    [0.5]={50,20,2,1, -1,-0.5}, -- left
-    [0.625]={52,20,2,2, -1,-1}, -- left/down
-    [0.75]={54,20,1,2, -0.5,-1}, -- down
-    [0.875]={55,20,2,2, -1,-1}, -- down/right
-   }
-
-   local frame=angletoframe[user.a]
-
    add(attacks,{
     x=x-0.5,
     y=y-0.5,
@@ -342,24 +423,12 @@ bowattackskillfactory=function(
     targetcount=targetcount,
     frames={
      currentframe=1,
-     frame,
+     clone(arrowframes[user.a]),
     },
     col=arrowcol,
    })
 
-   -- add vfx
-   angletofx={
-    [0]={0,27,6,7, -3,-5}, -- right
-    [0.125]={17,32,7,7, -4,-3}, -- right/up
-    [0.25]={10,31,7,6, -3,-3}, -- up
-    [0.375]={34,32,7,7, -3,-3}, -- up/left
-    [0.5]={4,27,6,7, -2,-5}, -- left
-    [0.625]={22,27,7,7, -2,-5}, -- left/down
-    [0.75]={10,27,7,6, -3,-4}, -- down
-    [0.875]={29,27,7,7, -4,-4}, -- down/right
-   }
-
-   local frame=angletofx[user.a]
+   local frame=clone(bowvfxframes[user.a])
    frame[5]=x+frame[5]
    frame[6]=y+frame[6]
    frame.counter=skill.postperformdur
@@ -770,6 +839,7 @@ function mapinit()
       preperformdur=30,
       postperformdur=0,
      },
+     performattack=performenemymelee,
      toocloseto={},
      frames={
       currentframe=1,
@@ -809,6 +879,7 @@ function mapinit()
       preperformdur=60,
       postperformdur=4,
      },
+     performattack=performenemybow,
      toocloseto={},
      frames={
       currentframe=1,
@@ -1220,10 +1291,6 @@ function dungeonupdate()
     end
 
    end
-
-   if enemy.attack.typ == 'ranged' then
-    debug(enemy.state, enemy.state_counter)
-   end
   end
  end
 
@@ -1257,95 +1324,9 @@ function dungeonupdate()
      end
 
      enemy.state_counter-=1
+
      if enemy.ispreperform and enemy.state_counter <= 0 then
-
-      if enemy.attack.typ == 'melee' then
-       local a=atan2(
-        enemy.targetx-enemy.x,
-        enemy.targety-enemy.y)
-
-       add(attacks,{
-        isenemy=true,
-        x=enemy.x+cos(a)*4,
-        y=enemy.y+sin(a)*4,
-        halfw=2,
-        halfh=2,
-        state_counter=1,
-        isphysical=true,
-        knockbackangle=a,
-        damage=1,
-        targetcount=1000,
-        col=7,
-       })
-
-       angletofx={
-        [0]={0,20,4,7, -1,-5}, -- right
-        [0.125]={8,20,6,4, -3,-2}, -- right/up
-        [0.25]={20,20,9,3, -3,-1}, -- up
-        [0.375]={14,20,6,4, -2,-2}, -- up/left
-        [0.5]={4,20,4,7, -2,-5}, -- left
-        [0.625]={29,20,4,7, -3,-6}, -- left/down
-        [0.75]={20,23,9,3, -4,-2}, -- down
-        [0.875]={33,20,4,7, 0,-6}, -- down/right
-        [1]={0,20,4,7, -1,-5}, -- right (wrapped)
-       }
-
-       local x=enemy.x+cos(enemy.a)*4
-       local y=enemy.y+sin(enemy.a)*4
-
-       local a=min(flr((enemy.a+0.0625)*8)/8,1)
-
-       local frame=angletofx[a]
-       frame[5]=x+frame[5]
-       frame[6]=y+frame[6]
-       frame.counter=10
-       local vfx={frame,col=7}
-
-       add(vfxs,vfx)
-
-       sfx(4)
-
-      elseif enemy.attack.typ == 'ranged' then
-
-       local a=atan2(
-        enemy.targetx-enemy.x,
-        enemy.targety-enemy.y)
-
-       a=min(flr((a+0.0625)*8)/8,1)
-
-       local angletoframe={
-        [0]={50,20,2,1, -1,-0.5}, -- right
-        [0.125]={52,20,2,2, -1,-1}, -- right/up
-        [0.25]={54,20,1,2, -0.5,-1}, -- up
-        [0.375]={55,20,2,2, -1,-1}, -- up/left
-        [0.5]={50,20,2,1, -1,-0.5}, -- left
-        [0.625]={52,20,2,2, -1,-1}, -- left/down
-        [0.75]={54,20,1,2, -0.5,-1}, -- down
-        [0.875]={55,20,2,2, -1,-1}, -- down/right
-        [1]={50,20,2,1, -1,-0.5}, -- right (wrapped)
-       }
-
-       add(attacks,{
-        isenemy=true,
-        x=enemy.x-0.5,
-        y=enemy.y-0.5,
-        halfw=1,
-        halfh=1,
-        state_counter=1000,
-        dx=cos(a)*1.6,
-        dy=sin(a)*1.6,
-        damage=1,
-        targetcount=1,
-        frames={
-         currentframe=1,
-         angletoframe[a],
-        },
-        col=2,
-       })
-
-       sfx(5)
-      end
-
+      enemy.performattack(enemy)
       enemy.ispreperform=false
       enemy.state_counter=enemy.attack.postperformdur
       enemy.frames.currentframe=2
