@@ -227,6 +227,10 @@ arrowframes={
  [1]={50,20,2,1, -1,-0.5}, -- right (wrapped)
 }
 
+function getvfxframeindex(angle)
+ return min(flr((angle+0.0625)*8)/8,1)
+end
+
 -- todo: this is only convenience dev function
 function actorfactory(params)
  params.state='idling'
@@ -259,9 +263,8 @@ function performenemymelee(enemy)
 
  local x=enemy.x+cos(enemy.a)*4
  local y=enemy.y+sin(enemy.a)*4
- local a=min(flr((enemy.a+0.0625)*8)/8,1)
 
- local frame=clone(meleevfxframes[a])
+ local frame=clone(meleevfxframes[getvfxframeindex(enemy.a)])
  frame[5]=x+frame[5]
  frame[6]=y+frame[6]
  frame.counter=10
@@ -273,11 +276,9 @@ function performenemymelee(enemy)
 end
 
 function performenemybow(enemy)
- local a=atan2(
+ local a=getvfxframeindex(atan2(
   enemy.targetx-enemy.x,
-  enemy.targety-enemy.y)
-
- a=min(flr((a+0.0625)*8)/8,1)
+  enemy.targety-enemy.y))
 
  add(attacks,{
   isenemy=true,
