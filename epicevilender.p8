@@ -238,6 +238,7 @@ function actorfactory(params)
  params.dx=0
  params.dy=0
  params.dmgfxcounter=0
+ params.toocloseto={}
 
  return params
 end
@@ -312,13 +313,10 @@ function newmeleeskeleton(x,y)
   runspd=0.5,
   spd=0.5,
   hp=3,
-  attack={
-   preperformdur=40,
-   postperformdur=10,
-   range=7,
-  },
+  attack_preperformdur=40,
+  attack_postperformdur=10,
+  attack_range=7,
   performattack=performenemymelee,
-  toocloseto={},
   frames={
    currentframe=1,
    idling={{0,15,4,5, -2,-3}},
@@ -835,13 +833,10 @@ function mapinit()
      runspd=0.75,
      spd=0.75,
      hp=1,
-     attack={
-      preperformdur=30,
-      postperformdur=0,
-      range=7,
-     },
+     attack_preperformdur=30,
+     attack_postperformdur=0,
+     attack_range=7,
      performattack=performenemymelee,
-     toocloseto={},
      frames={
       currentframe=1,
       idling={{36,15,3,3, -1.5,-1.5}},
@@ -875,14 +870,11 @@ function mapinit()
      runspd=0.5,
      spd=0.5,
      hp=2,
-     attack={
-      preperformdur=60,
-      postperformdur=4,
-      range=40,
-     },
+     attack_preperformdur=60,
+     attack_postperformdur=4,
+     attack_range=40,
      performattack=performenemybow,
      comfydist=20,
-     toocloseto={},
      frames={
       currentframe=1,
       idling={{18,15,4,5, -2,-3}},
@@ -909,13 +901,8 @@ function mapinit()
      runspd=0.4,
      spd=0.4,
      hp=10,
-     attack={
-      typ='magic',
-      range=60,
-      x=nil,
-      y=nil,
-     },
-     toocloseto={},
+     attack_type='magic',
+     attack_range=60,
      frames={
       currentframe=1,
       idling={{0,40,15,18, -7,-13}},
@@ -925,7 +912,7 @@ function mapinit()
      },
      performattack=function(boss)
 
-      if boss.attack.typ == 'melee' then
+      if boss.attack_type == 'melee' then
        if boss.laststate != 'attacking' then
         boss.frames.currentframe=1
         boss.state_counter=90
@@ -955,12 +942,12 @@ function mapinit()
 
        if boss.state_counter <= 0 then
         boss.x-=cos(boss.a)*3
-        boss.attack.typ='magic'
-        boss.attack.range=60
+        boss.attack_type='magic'
+        boss.attack_range=60
         boss.state='idling'
        end
 
-      elseif boss.attack.typ == 'magic' then
+      elseif boss.attack_type == 'magic' then
        if boss.laststate != 'attacking' then
         boss.frames.currentframe=3
         boss.state_counter=110
@@ -978,13 +965,13 @@ function mapinit()
          y=mid(1,y,14)
         until floormap[y] and floormap[y][x] == 0
 
-        boss.attack.x=x*8+4
-        boss.attack.y=y*8+4
+        boss.attack_x=x*8+4
+        boss.attack_y=y*8+4
 
         add(pemitters,{
          follow={
-          x=boss.attack.x,
-          y=boss.attack.y,
+          x=boss.attack_x,
+          y=boss.attack_y,
          },
          life=110+30,
          prate={1,2},
@@ -1003,7 +990,7 @@ function mapinit()
 
        if boss.state_counter <= 0 then
 
-        local enemy=newmeleeskeleton(boss.attack.x,boss.attack.y)
+        local enemy=newmeleeskeleton(boss.attack_x,boss.attack_y)
 
         -- summoning sickness
         enemy.state='recovering'
@@ -1012,8 +999,8 @@ function mapinit()
 
         add(actors,enemy)
 
-        boss.attack.typ='melee'
-        boss.attack.range=7
+        boss.attack_type='melee'
+        boss.attack_range=7
         boss.state='idling'
        end
 
@@ -1190,7 +1177,7 @@ function dungeonupdate()
 
    -- aggression vars
    local distancetoavatar=dist(enemy.x,enemy.y,avatar.x,avatar.y)
-   local withinattackdistance=distancetoavatar <= enemy.attack.range
+   local withinattackdistance=distancetoavatar <= enemy.attack_range
    local haslostoavatar=haslos(enemy.x,enemy.y,avatar.x,avatar.y)
    local isswinging=enemy.state == 'attacking'
 
@@ -1231,7 +1218,7 @@ function dungeonupdate()
 
    -- attack
    elseif isswinging or withinattackdistance and
-         (haslostoavatar or enemy.attack.typ == 'magic') then
+         (haslostoavatar or enemy.attack_type == 'magic') then
 
     enemy.state='attacking'
     enemy.targetx=avatar.x
@@ -1286,7 +1273,7 @@ function dungeonupdate()
     enemy.spd=enemy.runspd*0.5
 
     if enemy == boss then
-     enemy.attack.typ='magic'
+     enemy.attack_type='magic'
     end
 
    end
@@ -1319,7 +1306,7 @@ function dungeonupdate()
      if enemy.laststate != 'attacking' then
       enemy.ispreperform=true
       enemy.frames.currentframe=1
-      enemy.state_counter=enemy.attack.preperformdur
+      enemy.state_counter=enemy.attack_preperformdur
      end
 
      enemy.state_counter-=1
@@ -1327,7 +1314,7 @@ function dungeonupdate()
      if enemy.ispreperform and enemy.state_counter <= 0 then
       enemy.performattack(enemy)
       enemy.ispreperform=false
-      enemy.state_counter=enemy.attack.postperformdur
+      enemy.state_counter=enemy.attack_postperformdur
       enemy.frames.currentframe=2
 
      elseif enemy.state_counter <= 0 then
@@ -1502,9 +1489,7 @@ function dungeonupdate()
 
  -- reset toocloseto
  for actor in all(actors) do
-  if actor.isenemy then
-   actor.toocloseto={}
-  end
+  actor.toocloseto={}
  end
 
  -- enemies movement check against others
