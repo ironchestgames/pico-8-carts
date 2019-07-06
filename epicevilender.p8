@@ -302,6 +302,9 @@ function performenemybow(enemy)
  sfx(5)
 end
 
+
+-- enemy factories
+
 function newmeleeskeleton(x,y)
  return actorfactory({
   isenemy=true,
@@ -326,6 +329,181 @@ function newmeleeskeleton(x,y)
   },
  })
 end
+
+function newbatenemy(x,y)
+ return actorfactory({
+  isenemy=true,
+  isghost=true,
+  x=x,
+  y=y,
+  a=0,
+  halfw=1.5,
+  halfh=2,
+  runspd=0.75,
+  spd=0.75,
+  hp=1,
+  attack_preperformdur=30,
+  attack_postperformdur=0,
+  attack_range=7,
+  performattack=performenemymelee,
+  frames={
+   currentframe=1,
+   idling={{36,15,3,3, -1.5,-1.5}},
+   moving={animspd=0.21,{36,15,3,3, -1.5,-1.5},{39,15,3,3, -1.5,-1.5}},
+   attacking={animspd=0.32,{36,15,3,3, -1.5,-1.5},{39,15,3,3, -1.5,-1.5}},
+   recovering={{36,15,3,3, -1.5,-1.5}},
+  },
+ })
+end
+
+function newbowskeleton(x,y)
+ return actorfactory({
+  isenemy=true,
+  x=x,
+  y=y,
+  a=0,
+  halfw=1.5,
+  halfh=2,
+  runspd=0.5,
+  spd=0.5,
+  hp=2,
+  attack_preperformdur=60,
+  attack_postperformdur=4,
+  attack_range=40,
+  performattack=performenemybow,
+  comfydist=20,
+  frames={
+   currentframe=1,
+   idling={{18,15,4,5, -2,-3}},
+   moving={animspd=0.18,{18,15,4,5, -2,-3},{22,15,4,5, -2,-3}},
+   attacking={animspd=0,{26,15,4,5, -2,-3},{31,15,4,5, -2,-3}},
+   recovering={{18,15,4,5, -2,-3}},
+  },
+ })
+end
+
+function newskeletonking(x,y)
+ return actorfactory({
+  isenemy=true,
+  isbig=true,
+  x=x,
+  y=y,
+  a=0,
+  halfw=1.5,
+  halfh=3,
+  runspd=0.4,
+  spd=0.4,
+  hp=10,
+  attack_type='magic',
+  attack_range=60,
+  frames={
+   currentframe=1,
+   idling={{0,40,15,18, -7,-13}},
+   moving={animspd=0.24,{16,40,15,18, -7,-13},{32,40,15,18, -7,-13}},
+   attacking={animspd=0,{0,40,15,18, -7,-13},{48,40,20,18, -10,-13},{72,40,15,18, -7,-13}},
+   recovering={{0,40,15,18, -7,-13}},
+  },
+  performattack=function(boss)
+
+   if boss.attack_type == 'melee' then
+    if boss.laststate != 'attacking' then
+     boss.frames.currentframe=1
+     boss.state_counter=90
+    else
+     boss.state_counter-=1
+    end
+
+    if boss.state_counter == 60 then
+     boss.frames.currentframe=2
+     add(attacks,{
+      isenemy=true,
+      throughwalls=true,
+      x=boss.x+cos(boss.a)*2,
+      y=boss.y-3,
+      halfw=7,
+      halfh=8,
+      state_counter=2,
+      isphysical=true,
+      knockbackangle=boss.a,
+      damage=1,
+      targetcount=1,
+      col=7,
+     })
+
+     sfx(4)
+    end
+
+    if boss.state_counter <= 0 then
+     boss.x-=cos(boss.a)*3
+     boss.attack_type='magic'
+     boss.attack_range=60
+     boss.state='idling'
+    end
+
+   elseif boss.attack_type == 'magic' then
+    if boss.laststate != 'attacking' then
+     boss.frames.currentframe=3
+     boss.state_counter=110
+
+     local a=rnd()
+     local d=1
+     local x,y
+
+     repeat
+      a+=0.05
+      d+=0.02
+      x=flr(boss.x/8+cos(a)*2)
+      y=flr(boss.y/8+sin(a)*2)
+      x=mid(1,x,14)
+      y=mid(1,y,14)
+     until floormap[y] and floormap[y][x] == 0
+
+     boss.attack_x=x*8+4
+     boss.attack_y=y*8+4
+
+     add(pemitters,{
+      follow={
+       x=boss.attack_x,
+       y=boss.attack_y,
+      },
+      life=110+30,
+      prate={1,2},
+      plife={10,15},
+      poffsets={-2,0.5,1,0.5},
+      dx={0,0},
+      dy={-0.3,0},
+      pcolors={11,3,1},
+     })
+
+     sfx(9)
+
+    else
+     boss.state_counter-=1
+    end
+
+    if boss.state_counter <= 0 then
+
+     local enemy=newmeleeskeleton(boss.attack_x,boss.attack_y)
+
+     -- summoning sickness
+     enemy.state='recovering'
+     enemy.laststate='recovering'
+     enemy.state_counter=50
+
+     add(actors,enemy)
+
+     boss.attack_type='melee'
+     boss.attack_range=7
+     boss.state='idling'
+    end
+
+   end
+  end,
+ })
+end
+
+
+-- effects
 
 function burningeffect(actor)
  if actor.effect.counter == nil then
@@ -804,12 +982,13 @@ function mapinit()
   floormap[_y]={}
   for _x=0,15 do
    local _col=basemap[_y][_x]
+   local ax,ay=_x*8+4,_y*8+4
 
    -- create avatar
    if _col == 15 then
     avatar=actorfactory(avatar)
-    avatar.x=_x*8+4
-    avatar.y=_y*8+4
+    avatar.x=ax
+    avatar.y=ay
     avatar.armor=avatar.startarmor
 
     add(actors,avatar)
@@ -822,29 +1001,7 @@ function mapinit()
 
    -- create bat enemy
    if _col == 5 then
-    local enemy=actorfactory({
-     isenemy=true,
-     isghost=true,
-     x=_x*8+4,
-     y=_y*8+4,
-     a=0,
-     halfw=1.5,
-     halfh=2,
-     runspd=0.75,
-     spd=0.75,
-     hp=1,
-     attack_preperformdur=30,
-     attack_postperformdur=0,
-     attack_range=7,
-     performattack=performenemymelee,
-     frames={
-      currentframe=1,
-      idling={{36,15,3,3, -1.5,-1.5}},
-      moving={animspd=0.21,{36,15,3,3, -1.5,-1.5},{39,15,3,3, -1.5,-1.5}},
-      attacking={animspd=0.32,{36,15,3,3, -1.5,-1.5},{39,15,3,3, -1.5,-1.5}},
-      recovering={{36,15,3,3, -1.5,-1.5}},
-     },
-    })
+    local enemy=newbatenemy(ax,ay)
 
     add(actors,enemy)
     _col=0
@@ -852,7 +1009,7 @@ function mapinit()
 
    -- create sword skeleton enemy
    if _col == 6 then
-    local enemy=newmeleeskeleton(_x*8+4,_y*8+4)
+    local enemy=newmeleeskeleton(ax,ay)
 
     add(actors,enemy)
     _col=0
@@ -860,29 +1017,7 @@ function mapinit()
 
    -- create bow skeleton enemy
    if _col == 7 then
-    local enemy=actorfactory({
-     isenemy=true,
-     x=_x*8+4,
-     y=_y*8+4,
-     a=0,
-     halfw=1.5,
-     halfh=2,
-     runspd=0.5,
-     spd=0.5,
-     hp=2,
-     attack_preperformdur=60,
-     attack_postperformdur=4,
-     attack_range=40,
-     performattack=performenemybow,
-     comfydist=20,
-     frames={
-      currentframe=1,
-      idling={{18,15,4,5, -2,-3}},
-      moving={animspd=0.18,{18,15,4,5, -2,-3},{22,15,4,5, -2,-3}},
-      attacking={animspd=0,{26,15,4,5, -2,-3},{31,15,4,5, -2,-3}},
-      recovering={{18,15,4,5, -2,-3}},
-     },
-    })
+    local enemy=newbowskeleton(ax,ay)
 
     add(actors,enemy)
     _col=0
@@ -890,123 +1025,7 @@ function mapinit()
 
    -- create skeleton king
    if _col == 8 then
-    local enemy=actorfactory({
-     isenemy=true,
-     isbig=true,
-     x=_x*8+4,
-     y=_y*8+4,
-     a=0,
-     halfw=1.5,
-     halfh=3,
-     runspd=0.4,
-     spd=0.4,
-     hp=10,
-     attack_type='magic',
-     attack_range=60,
-     frames={
-      currentframe=1,
-      idling={{0,40,15,18, -7,-13}},
-      moving={animspd=0.24,{16,40,15,18, -7,-13},{32,40,15,18, -7,-13}},
-      attacking={animspd=0,{0,40,15,18, -7,-13},{48,40,20,18, -10,-13},{72,40,15,18, -7,-13}},
-      recovering={{0,40,15,18, -7,-13}},
-     },
-     performattack=function(boss)
-
-      if boss.attack_type == 'melee' then
-       if boss.laststate != 'attacking' then
-        boss.frames.currentframe=1
-        boss.state_counter=90
-       else
-        boss.state_counter-=1
-       end
-
-       if boss.state_counter == 60 then
-        boss.frames.currentframe=2
-        add(attacks,{
-         isenemy=true,
-         throughwalls=true,
-         x=boss.x+cos(boss.a)*2,
-         y=boss.y-3,
-         halfw=7,
-         halfh=8,
-         state_counter=2,
-         isphysical=true,
-         knockbackangle=boss.a,
-         damage=1,
-         targetcount=1,
-         col=7,
-        })
-
-        sfx(4)
-       end
-
-       if boss.state_counter <= 0 then
-        boss.x-=cos(boss.a)*3
-        boss.attack_type='magic'
-        boss.attack_range=60
-        boss.state='idling'
-       end
-
-      elseif boss.attack_type == 'magic' then
-       if boss.laststate != 'attacking' then
-        boss.frames.currentframe=3
-        boss.state_counter=110
-
-        local a=rnd()
-        local d=1
-        local x,y
-
-        repeat
-         a+=0.05
-         d+=0.02
-         x=flr(boss.x/8+cos(a)*2)
-         y=flr(boss.y/8+sin(a)*2)
-         x=mid(1,x,14)
-         y=mid(1,y,14)
-        until floormap[y] and floormap[y][x] == 0
-
-        boss.attack_x=x*8+4
-        boss.attack_y=y*8+4
-
-        add(pemitters,{
-         follow={
-          x=boss.attack_x,
-          y=boss.attack_y,
-         },
-         life=110+30,
-         prate={1,2},
-         plife={10,15},
-         poffsets={-2,0.5,1,0.5},
-         dx={0,0},
-         dy={-0.3,0},
-         pcolors={11,3,1},
-        })
-
-        sfx(9)
-
-       else
-        boss.state_counter-=1
-       end
-
-       if boss.state_counter <= 0 then
-
-        local enemy=newmeleeskeleton(boss.attack_x,boss.attack_y)
-
-        -- summoning sickness
-        enemy.state='recovering'
-        enemy.laststate='recovering'
-        enemy.state_counter=50
-
-        add(actors,enemy)
-
-        boss.attack_type='melee'
-        boss.attack_range=7
-        boss.state='idling'
-       end
-
-      end
-     end,
-    })
+    local enemy=newskeletonking(ax,ay)
 
     add(actors,enemy)
     boss=enemy
@@ -1016,8 +1035,8 @@ function mapinit()
    -- create door
    if _col == 2 then
     door={
-     x=_x*8+4,
-     y=_y*8+4,
+     x=ax,
+     y=ay,
      halfw=4,
      halfh=4,
     }
