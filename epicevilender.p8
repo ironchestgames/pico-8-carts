@@ -383,7 +383,7 @@ function newbowskeleton(x,y)
 end
 
 function newskeletonking(x,y)
- return actorfactory({
+ boss=actorfactory({
   isenemy=true,
   isbig=true,
   x=x,
@@ -500,6 +500,7 @@ function newskeletonking(x,y)
    end
   end,
  })
+ return boss
 end
 
 
@@ -820,6 +821,36 @@ mule=actorfactory({
  },
 })
 
+dungeonthemes={
+ { -- forest
+  spr1=240,
+  enemytypes={
+   newbatenemy,
+   newmeleeskeleton,
+   newbowskeleton,
+   newskeletonking,
+  }
+ },
+ { -- cave
+  spr1=243,
+  enemytypes={
+   newbatenemy,
+   newmeleeskeleton,
+   newbowskeleton,
+   newskeletonking,
+  }
+ },
+ { --  catacombs
+  spr1=246,
+  enemytypes={
+   newbatenemy,
+   newmeleeskeleton,
+   newbowskeleton,
+   newskeletonking,
+  }
+ },
+}
+
 
 function dungeoninit()
  _update60=dungeonupdate
@@ -858,7 +889,7 @@ function dungeoninit()
   },
  })
  dungeonlevel=1
- dungeontheme=1 -- 1 magical forest, 2 cave, 3 catacombs
+ dungeontheme=1
  nexttheme=1
  mapinit()
 end
@@ -999,36 +1030,10 @@ function mapinit()
     _col=0
    end
 
-   -- create bat enemy
-   if _col == 5 then
-    local enemy=newbatenemy(ax,ay)
-
-    add(actors,enemy)
-    _col=0
-   end
-
-   -- create sword skeleton enemy
-   if _col == 6 then
-    local enemy=newmeleeskeleton(ax,ay)
-
-    add(actors,enemy)
-    _col=0
-   end
-
-   -- create bow skeleton enemy
-   if _col == 7 then
-    local enemy=newbowskeleton(ax,ay)
-
-    add(actors,enemy)
-    _col=0
-   end
-
-   -- create skeleton king
-   if _col == 8 then
-    local enemy=newskeletonking(ax,ay)
-
-    add(actors,enemy)
-    boss=enemy
+   -- create enemy
+   if _col >= 5 and _col <= 8 then
+    add(actors,
+      dungeonthemes[dungeontheme].enemytypes[_col-4](ax,ay))
     _col=0
    end
 
@@ -1731,8 +1736,8 @@ end
 function dungeondraw()
  cls(0)
 
- -- get theme offset
- local themeoffset=(dungeontheme-1)*3+240
+ -- get theme start sprite
+ local spr1=dungeonthemes[dungeontheme].spr1
 
  -- draw walls
  for _y=0,#floormap do
@@ -1743,9 +1748,9 @@ function dungeondraw()
     local x8,y8=_x*8,_y*8
 
     if _y == #floormap or floormap[_y+1] and floormap[_y+1][_x] != 0 then
-     spr(themeoffset+1,x8,y8)
+     spr(spr1+1,x8,y8)
     else
-     spr(themeoffset+0,x8,y8)
+     spr(spr1,x8,y8)
     end
    end
   end
@@ -1753,12 +1758,11 @@ function dungeondraw()
 
  -- draw door
  if door.isopen then
-  local offset=0
   if dungeontheme != nexttheme then
-   offset=3
+   spr1=dungeonthemes[nexttheme].spr1
   end
   spr(
-   themeoffset+2+offset,
+   spr1+2,
    door.x-door.halfw,
    door.y-door.halfh)
  end
