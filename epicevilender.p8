@@ -313,9 +313,9 @@ function newmeleeskeleton(x,y)
   spd=0.5,
   hp=3,
   attack={
-   typ='melee',
    preperformdur=40,
    postperformdur=10,
+   range=7,
   },
   performattack=performenemymelee,
   toocloseto={},
@@ -836,9 +836,9 @@ function mapinit()
      spd=0.75,
      hp=1,
      attack={
-      typ='melee',
       preperformdur=30,
       postperformdur=0,
+      range=7,
      },
      performattack=performenemymelee,
      toocloseto={},
@@ -876,11 +876,12 @@ function mapinit()
      spd=0.5,
      hp=2,
      attack={
-      typ='ranged',
       preperformdur=60,
       postperformdur=4,
+      range=40,
      },
      performattack=performenemybow,
+     comfydist=20,
      toocloseto={},
      frames={
       currentframe=1,
@@ -910,6 +911,7 @@ function mapinit()
      hp=10,
      attack={
       typ='magic',
+      range=60,
       x=nil,
       y=nil,
      },
@@ -954,6 +956,7 @@ function mapinit()
        if boss.state_counter <= 0 then
         boss.x-=cos(boss.a)*3
         boss.attack.typ='magic'
+        boss.attack.range=60
         boss.state='idling'
        end
 
@@ -1010,6 +1013,7 @@ function mapinit()
         add(actors,enemy)
 
         boss.attack.typ='melee'
+        boss.attack.range=7
         boss.state='idling'
        end
 
@@ -1176,7 +1180,7 @@ function dungeonupdate()
  end
  do
   local enemy=actors[curenemyidx]
-  if avatar.hp > 0 and enemy and enemy.isenemy then
+  if enemy and enemy.isenemy then
 
    -- resolving effect vars
    local isresolvingeffect=enemy.state=='recovering'
@@ -1186,13 +1190,7 @@ function dungeonupdate()
 
    -- aggression vars
    local distancetoavatar=dist(enemy.x,enemy.y,avatar.x,avatar.y)
-   local withinattackdistance=distancetoavatar <= 7
-   if enemy.attack.typ == 'ranged' then
-    withinattackdistance=distancetoavatar <= 40
-   end
-   if enemy.attack.typ == 'magic' then
-    withinattackdistance=distancetoavatar <= 60
-   end
+   local withinattackdistance=distancetoavatar <= enemy.attack.range
    local haslostoavatar=haslos(enemy.x,enemy.y,avatar.x,avatar.y)
    local isswinging=enemy.state == 'attacking'
 
@@ -1200,8 +1198,8 @@ function dungeonupdate()
    local ismovingoutofcollision=enemy.ismovingoutofcollision
    local collidedwithwall=enemy.wallcollisiondx != nil
    local istooclosetoavatar=distancetoavatar <= 1
-   if enemy.attack.typ == 'ranged' then
-    istooclosetoavatar=distancetoavatar <= 20
+   if enemy.comfydist then
+    istooclosetoavatar=distancetoavatar <= enemy.comfydist
    end
    local hastoocloseto=#enemy.toocloseto > 0
    local hastarget=enemy.targetx!=nil
@@ -1308,7 +1306,7 @@ function dungeonupdate()
     -- reset target etc
     enemy.targetx=nil
     enemy.targety=nil
-    enemy.ismovingoutofcollision=false
+    enemy.ismovingoutofcollision=nil
 
    elseif enemy.state == 'attacking' then
 
@@ -1349,7 +1347,7 @@ function dungeonupdate()
     if enemy.ismovingoutofcollision then
      enemy.state_counter-=1
      if enemy.state_counter <= 0 then
-      enemy.ismovingoutofcollision=false
+      enemy.ismovingoutofcollision=nil
      end
     end
 
