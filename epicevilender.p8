@@ -1020,8 +1020,6 @@ function mapinit()
 
 
 
- music(dungeonthemes[dungeontheme].musicstart,0,3)
-
  -- reset
  curenemyidx=1
  gametick=0
@@ -1081,6 +1079,10 @@ function mapinit()
    floormap[_y][_x]=_col
   end
  end
+
+ -- start theme music
+ music(dungeonthemes[dungeontheme].musicstart,0,0b0011)
+
 end
 
 function dungeonupdate()
@@ -1995,12 +1997,13 @@ local equipslots={
 function equipinit()
  _update60=equipupdate
  _draw=equipdraw
+ poke(0x5f43,0b0011) -- note: undocumented lopass
 end
 
 function equipupdate()
 
  -- mute melody channel
- sfx(18,0)
+ -- sfx(18,0)
 
  -- init equipped items
  avatar.startarmor=0
@@ -2131,6 +2134,7 @@ function equipupdate()
   if btnp(4) or btnp(5) then
    _draw=dungeondraw
    _update60=dungeonupdate
+   poke(0x5f43,0)
   end
  end
 
