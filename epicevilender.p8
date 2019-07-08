@@ -263,7 +263,8 @@ function performenemymelee(enemy)
  frame[5]=x+frame[5]
  frame[6]=y+frame[6]
  frame.counter=10
- local vfx={frame,col=7}
+ frame.col=7
+ local vfx={frame}
 
  add(vfxs,vfx)
 
@@ -572,8 +573,9 @@ swordattackskillfactory=function(
    frame[5]=x+frame[5]
    frame[6]=y+frame[6]
    frame.counter=skill.postperformdur
+   frame.col=attackcol
 
-   add(vfxs,{frame,col=attackcol})
+   add(vfxs,{frame})
 
    sfx(4)
   end,
@@ -616,8 +618,9 @@ bowattackskillfactory=function(
    frame[5]=x+frame[5]
    frame[6]=y+frame[6]
    frame.counter=skill.postperformdur
+   frame.col=attackcol
 
-   add(vfxs,{frame,col=attackcol})
+   add(vfxs,{frame})
 
    sfx(5)
   end,
@@ -684,8 +687,6 @@ boltskillfactory=function(
     poffsets={-1,-1,1,1},
     dx={0,0},
     dy={0,0},
-    -- pcolors={9,8},
-    -- pcolors={8,2},
     pcolors=boltpemittercols,
    })
    sfx(32)
@@ -902,7 +903,7 @@ function dungeoninit()
   },
   inventory={sword},
   skill1=sword.skill,
-  skill2=fireboltbook.skill,
+  skill2=iceboltbook.skill,
   currentskill=nil,
   frames={
    currentframe=1,
@@ -1509,6 +1510,8 @@ function dungeonupdate()
 
     -- effects
 
+    actor.dmgfxcolor=8 -- note: red is default color
+
     -- physical knockback effect
     if attack.isphysical and not actor.isbig then
      actor.dx=cos(attack.knockbackangle)*5
@@ -1519,6 +1522,8 @@ function dungeonupdate()
 
     elseif attack.typ == 'ice' then
      actor.effect={func=freezeeffect}
+
+     actor.dmgfxcolor=12
     end
 
     sfx(hitsfx)
@@ -1532,8 +1537,8 @@ function dungeonupdate()
     local x=actor.x+actor.dx/2
     local y=actor.y+actor.dy/2
     add(vfxs,{
-     {37,20,5,5,x-2.5,y-2.5,counter=4},
-     {42,20,5,5,x-2.5,y-2.5,counter=5},
+     {42,20,5,5,x-2.5,y-2.5,counter=4,col=actor.dmgfxcolor},
+     {42,20,5,5,x-2.5,y-2.5,counter=5,col=7},
     })
    end
   end
@@ -1857,7 +1862,7 @@ function dungeondraw()
   -- draw damage overlay color
   if actor.dmgfxcounter > 0 then
    for i=1,15 do
-    pal(i,8,0)
+    pal(i,actor.dmgfxcolor,0)
    end
   end
 
@@ -1926,7 +1931,7 @@ function dungeondraw()
  -- draw vfx
  for vfx in all(vfxs) do
   local frame=vfx[1]
-  pal(7,vfx.col,0)
+  pal(7,frame.col,0)
   sspr(frame[1],frame[2],frame[3],frame[4],frame[5],frame[6])
   pal(7,7,0)
  end
