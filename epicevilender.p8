@@ -266,7 +266,7 @@ function performenemymelee(enemy)
   halfw=2,
   halfh=2,
   state_counter=1,
-  isphysical=true,
+  typ='phys',
   knockbackangle=a,
   damage=1,
   targetcount=1000,
@@ -435,7 +435,7 @@ function newskeletonking(x,y)
       halfw=7,
       halfh=8,
       state_counter=2,
-      isphysical=true,
+      typ='phys',
       knockbackangle=boss.a,
       damage=1,
       targetcount=1,
@@ -586,7 +586,7 @@ swordattackskillfactory=function(
     halfw=2,
     halfh=2,
     state_counter=1,
-    isphysical=true,
+    typ='phys',
     knockbackangle=user.a,
     damage=damage,
     targetcount=targetcount,
@@ -1564,8 +1564,7 @@ function dungeonupdate()
 
     actor.dmgfxcolor=8 -- note: red is default color
 
-    -- physical knockback effect
-    if attack.isphysical and not actor.isbig then
+    if attack.typ == 'phys' and not actor.isbig then
      actor.dx=cos(attack.knockbackangle)*5
      actor.dy=sin(attack.knockbackangle)*5
 
@@ -1577,7 +1576,6 @@ function dungeonupdate()
 
     elseif attack.typ == 'ice' then
      actor.effect={func=freezeeffect}
-
      actor.dmgfxcolor=12
     end
 
