@@ -341,21 +341,19 @@ function newmeleeskeleton(x,y)
   attack_postperformdur=10,
   attack_range=7,
   performattack=performenemymelee,
-  frames={
-   currentframe=1,
-   idling={parseflat'0,15,4,5,-2,-3,'},
-   moving={
-    animspd=0.18,
-    parseflat'0,15,4,5,-2,-3,',
-    parseflat'4,15,4,5,-2,-3,'
-   },
-   attacking={
-    animspd=0,
-    parseflat'8,15,4,5,-2,-3,',
-    parseflat'11,15,6,5,-3,-3,',
-   },
-   recovering={parseflat'0,15,4,5,-2,-3,'},
+  currentframe=1,
+  idling={parseflat'0,15,4,5,-2,-3,'},
+  moving={
+   animspd=0.18,
+   parseflat'0,15,4,5,-2,-3,',
+   parseflat'4,15,4,5,-2,-3,'
   },
+  attacking={
+   animspd=0,
+   parseflat'8,15,4,5,-2,-3,',
+   parseflat'11,15,6,5,-3,-3,',
+  },
+  recovering={parseflat'0,15,4,5,-2,-3,'},
  })
 end
 
@@ -375,21 +373,19 @@ function newbatenemy(x,y)
   attack_postperformdur=0,
   attack_range=7,
   performattack=performenemymelee,
-  frames={
-   currentframe=1,
-   idling={parseflat'36,15,3,3,-1.5,-1.5,'},
-   moving={
-    animspd=0.21,
-    parseflat'36,15,3,3,-1.5,-1.5,',
-    parseflat'39,15,3,3,-1.5,-1.5,'
-   },
-   attacking={
-    animspd=0.32,
-    parseflat'36,15,3,3,-1.5,-1.5,',
-    parseflat'39,15,3,3,-1.5,-1.5,'
-   },
-   recovering={parseflat'36,15,3,3,-1.5,-1.5,'},
+  currentframe=1,
+  idling={parseflat'36,15,3,3,-1.5,-1.5,'},
+  moving={
+   animspd=0.21,
+   parseflat'36,15,3,3,-1.5,-1.5,',
+   parseflat'39,15,3,3,-1.5,-1.5,'
   },
+  attacking={
+   animspd=0.32,
+   parseflat'36,15,3,3,-1.5,-1.5,',
+   parseflat'39,15,3,3,-1.5,-1.5,'
+  },
+  recovering={parseflat'36,15,3,3,-1.5,-1.5,'},
  })
 end
 
@@ -409,21 +405,19 @@ function newbowskeleton(x,y)
   attack_range=40,
   performattack=performenemybow,
   comfydist=20,
-  frames={
-   currentframe=1,
-   idling={parseflat'18,15,4,5,-2,-3,'},
-   moving={
-    animspd=0.18,
-    parseflat'18,15,4,5,-2,-3,',
-    parseflat'22,15,4,5,-2,-3,'
-   },
-   attacking={
-    animspd=0,
-    parseflat'26,15,4,5,-2,-3,',
-    parseflat'31,15,4,5,-2,-3,'
-   },
-   recovering={parseflat'18,15,4,5,-2,-3,'},
+  currentframe=1,
+  idling={parseflat'18,15,4,5,-2,-3,'},
+  moving={
+   animspd=0.18,
+   parseflat'18,15,4,5,-2,-3,',
+   parseflat'22,15,4,5,-2,-3,'
   },
+  attacking={
+   animspd=0,
+   parseflat'26,15,4,5,-2,-3,',
+   parseflat'31,15,4,5,-2,-3,'
+  },
+  recovering={parseflat'18,15,4,5,-2,-3,'},
  })
 end
 
@@ -441,34 +435,32 @@ function newskeletonking(x,y)
   hp=10,
   attack_type='magic',
   attack_range=60,
-  frames={
-   currentframe=1,
-   idling={parseflat'0,40,15,18,-7,-13,'},
-   moving={
-    animspd=0.24,
-    parseflat'16,40,15,18,-7,-13,',
-    parseflat'32,40,15,18,-7,-13,'
-   },
-   attacking={
-    animspd=0,
-    parseflat'0,40,15,18,-7,-13,',
-    parseflat'48,40,20,18,-10,-13,',
-    parseflat'72,40,15,18,-7,-13,'
-   },
-   recovering={parseflat'0,40,15,18,-7,-13,'},
+  currentframe=1,
+  idling={parseflat'0,40,15,18,-7,-13,'},
+  moving={
+   animspd=0.24,
+   parseflat'16,40,15,18,-7,-13,',
+   parseflat'32,40,15,18,-7,-13,'
   },
+  attacking={
+   animspd=0,
+   parseflat'0,40,15,18,-7,-13,',
+   parseflat'48,40,20,18,-10,-13,',
+   parseflat'72,40,15,18,-7,-13,'
+  },
+  recovering={parseflat'0,40,15,18,-7,-13,'},
   performattack=function(boss)
 
    if boss.attack_type == 'melee' then
     if boss.laststate != 'attacking' then
-     boss.frames.currentframe=1
+     boss.currentframe=1
      boss.state_counter=90
     else
      boss.state_counter-=1
     end
 
     if boss.state_counter == 60 then
-     boss.frames.currentframe=2
+     boss.currentframe=2
      add(attacks,{
       isenemy=true,
       throughwalls=true,
@@ -495,7 +487,7 @@ function newskeletonking(x,y)
 
    elseif boss.attack_type == 'magic' then
     if boss.laststate != 'attacking' then
-     boss.frames.currentframe=3
+     boss.currentframe=3
      boss.state_counter=110
 
      boss.attack_x,boss.attack_y=findemptyfloor(boss.x,boss.y)
@@ -786,16 +778,14 @@ sword={
  sprite=47,
  col=6,
  skill=swordattackskillfactory(1,15,28,1000,7),
- frames={
-  currentframe=1,
-  idling={parseflat'9,9,5,5,-2,-3,'},
-  moving={parseflat'9,9,5,5,-2,-3,'},
-  attacking={
-   parseflat'14,9,5,5,-2,-3,',
-   parseflat'18,9,7,5,-3,-3,'
-  },
-  recovering={parseflat'9,9,5,5,-2,-3,'},
+ currentframe=1,
+ idling={parseflat'9,9,5,5,-2,-3,'},
+ moving={parseflat'9,9,5,5,-2,-3,'},
+ attacking={
+  parseflat'14,9,5,5,-2,-3,',
+  parseflat'18,9,7,5,-3,-3,'
  },
+ recovering={parseflat'9,9,5,5,-2,-3,'},
 }
 
 bow={
@@ -805,16 +795,14 @@ bow={
  sprite=46,
  col=4,
  skill=bowattackskillfactory(1,26,6,1,7,3),
- frames={
-  currentframe=1,
-  idling={parseflat'25,9,5,5,-2,-3,'},
-  moving={parseflat'25,9,5,5,-2,-3,'},
-  attacking={
-   parseflat'30,9,5,5,-2,-3,',
-   parseflat'25,9,1,1,-2,-3,',
-  },
-  recovering={parseflat'25,9,5,5,-2,-3,'},
+ currentframe=1,
+ idling={parseflat'25,9,5,5,-2,-3,'},
+ moving={parseflat'25,9,5,5,-2,-3,'},
+ attacking={
+  parseflat'30,9,5,5,-2,-3,',
+  parseflat'25,9,1,1,-2,-3,',
  },
+ recovering={parseflat'25,9,5,5,-2,-3,'},
 }
 
 fireboltbook={
@@ -822,13 +810,11 @@ fireboltbook={
  class='book',
  sprite=45,
  skill=boltskillfactory(1,50,0,120,1,'fire',14,parseflat'8,14,',parseflat'14,8,'),
- frames={
-  currentframe=1,
-  idling={antiframe},
-  moving={antiframe},
-  attacking={antiframe,antiframe},
-  recovering={antiframe},
- },
+ currentframe=1,
+ idling={antiframe},
+ moving={antiframe},
+ attacking={antiframe,antiframe},
+ recovering={antiframe},
 }
 
 iceboltbook={
@@ -836,13 +822,11 @@ iceboltbook={
  class='book',
  sprite=63,
  skill=boltskillfactory(0,40,0,150,1,'ice',7,parseflat'12,12,',parseflat'12,12,'),
- frames={
-  currentframe=1,
-  idling={antiframe},
-  moving={antiframe},
-  attacking={antiframe,antiframe},
-  recovering={antiframe},
- },
+ currentframe=1,
+ idling={antiframe},
+ moving={antiframe},
+ attacking={antiframe,antiframe},
+ recovering={antiframe},
 }
 
 shieldframe=parseflat'35,9,5,5,-2,-3,'
@@ -852,13 +836,11 @@ shield={
  sprite=44,
  col=13,
  armor=1,
- frames={
-  currentframe=1,
-  idling={shieldframe},
-  moving={shieldframe},
-  attacking={shieldframe},
-  recovering={shieldframe},
- },
+ currentframe=1,
+ idling={shieldframe},
+ moving={shieldframe},
+ attacking={shieldframe},
+ recovering={shieldframe},
 }
 
 ringmail={
@@ -867,13 +849,11 @@ ringmail={
  sprite=43,
  col=5,
  armor=1,
- frames={
-  currentframe=1,
-  idling={antiframe},
-  moving={antiframe},
-  attacking={antiframe,antiframe},
-  recovering={antiframe},
- },
+ currentframe=1,
+ idling={antiframe},
+ moving={antiframe},
+ attacking={antiframe,antiframe},
+ recovering={antiframe},
 }
 
 cloakidling=parseflat'0,6,3,4,-1,-2,'
@@ -887,13 +867,11 @@ cloakofphasing={
  col2=1,
  armor=0,
  skill={onhit=phasing},
- frames={
-  currentframe=1,
-  idling={cloakidling},
-  moving={cloakidling},
-  attacking={cloakidling},
-  recovering={cloakidling},
- },
+ currentframe=1,
+ idling={cloakidling},
+ moving={cloakidling},
+ attacking={cloakidling},
+ recovering={cloakidling},
 }
 
 ironhelmet={
@@ -902,13 +880,11 @@ ironhelmet={
  sprite=42,
  col=13,
  armor=1,
- frames={
-  currentframe=1,
-  idling={antiframe},
-  moving={antiframe},
-  attacking={antiframe,antiframe},
-  recovering={antiframe},
- },
+ currentframe=1,
+ idling={antiframe},
+ moving={antiframe},
+ attacking={antiframe,antiframe},
+ recovering={antiframe},
 }
 
 leatherboots={
@@ -917,13 +893,11 @@ leatherboots={
  sprite=41,
  col=4,
  spdfactor=0.1,
- frames={
-  currentframe=1,
-  idling={antiframe},
-  moving={antiframe},
-  attacking={antiframe,antiframe},
-  recovering={antiframe},
- },
+ currentframe=1,
+ idling={antiframe},
+ moving={antiframe},
+ attacking={antiframe,antiframe},
+ recovering={antiframe},
 }
 
 allitems={
@@ -946,10 +920,8 @@ mule=actorfactory({
  halfh=2.5,
  a=0,
  spd=0.25,
- frames={
-  currentframe=1,
-  idling={parseflat'40,8,8,5,-4,-2.5,'},
- },
+ currentframe=1,
+ idling={parseflat'40,8,8,5,-4,-2.5,'},
 })
 
 dungeonthemes={
@@ -1016,20 +988,18 @@ function dungeoninit()
   skill2=nil,
   currentskill=nil,
   passiveskills={},
-  frames={
-   currentframe=1,
-   idling={parseflat'0,10,3,4,-1,-2,'},
-   moving={
-    parseflat'0,10,3,4,-1,-2,',
-    parseflat'3,10,3,4,-1,-2,'
-   },
-   attacking={
-    animspd=0,
-    parseflat'6,10,3,4,-1,-2,',
-    parseflat'0,10,3,4,-1,-2,'
-   },
-   recovering={parseflat'0,10,3,4,-1,-2,'},
+  currentframe=1,
+  idling={parseflat'0,10,3,4,-1,-2,'},
+  moving={
+   parseflat'0,10,3,4,-1,-2,',
+   parseflat'3,10,3,4,-1,-2,'
   },
+  attacking={
+   animspd=0,
+   parseflat'6,10,3,4,-1,-2,',
+   parseflat'0,10,3,4,-1,-2,'
+  },
+  recovering={parseflat'0,10,3,4,-1,-2,'},
  })
 
  dungeonlevel=1
@@ -1278,8 +1248,8 @@ function dungeonupdate()
 
    avatar.state_counter=skill.preperformdur
 
-   avatar.frames.currentframe=1
-   avatar.items.weapon.frames.currentframe=1
+   avatar.currentframe=1
+   avatar.items.weapon.currentframe=1
 
    if avatar.currentskill.startpemitter then
     avatar.currentskill.startpemitter(avatar,skill.preperformdur)
@@ -1325,12 +1295,12 @@ function dungeonupdate()
       avatar.ispreperform=false
 
       -- set next attacking frame
-      avatar.frames.currentframe=2
-      avatar.items.weapon.frames.currentframe=2
+      avatar.currentframe=2
+      avatar.items.weapon.currentframe=2
 
      else -- note: done performing
       avatar.state='idling'
-      avatar.items.weapon.frames.currentframe=1
+      avatar.items.weapon.currentframe=1
      end
     end
 
@@ -1339,7 +1309,7 @@ function dungeonupdate()
 
     if actor.laststate != 'attacking' then
      actor.ispreperform=true
-     actor.frames.currentframe=1
+     actor.currentframe=1
      actor.state_counter=actor.attack_preperformdur
     end
 
@@ -1347,7 +1317,7 @@ function dungeonupdate()
      actor.performattack(actor)
      actor.ispreperform=false
      actor.state_counter=actor.attack_postperformdur
-     actor.frames.currentframe=2
+     actor.currentframe=2
 
     elseif actor.state_counter <= 0 then
      actor.state='idling'
@@ -1771,16 +1741,16 @@ function dungeonupdate()
 
  -- update actor animation frames
  for actor in all(actors) do
-  local stateframes=actor.frames[actor.state]
+  local stateframes=actor[actor.state]
 
   local animspd=0.25 -- note: default
   if stateframes.animspd then
    animspd=stateframes.animspd
   end
-  actor.frames.currentframe+=animspd*actor.spd
+  actor.currentframe+=animspd*actor.spd
 
-  if actor.frames.currentframe >= #stateframes+1 then
-   actor.frames.currentframe=1
+  if actor.currentframe >= #stateframes+1 then
+   actor.currentframe=1
   end
  end
 
@@ -1963,7 +1933,7 @@ function dungeondraw()
 
   -- draw actor frame
   local state,flipx=actor.state,false
-  local frame=actor.frames[state][flr(actor.frames.currentframe)]
+  local frame=actor[state][flr(actor.currentframe)]
   if actor.a and actor.a >= 0.25 and actor.a <= 0.75 then
    flipx=true
   end
@@ -2003,9 +1973,9 @@ function dungeondraw()
   if actor == avatar and
      avatar.items.weapon then
    item=avatar.items.weapon
-   local stateframes=item.frames[state]
+   local stateframes=item[state]
    local frame=stateframes[min(
-     flr(item.frames.currentframe),
+     flr(item.currentframe),
      #stateframes)]
    pal(6,item.col,0)
    sspr(
@@ -2024,9 +1994,9 @@ function dungeondraw()
   if actor == avatar and
      avatar.items.offhand then
    item=avatar.items.offhand
-   local stateframes=item.frames[state]
+   local stateframes=item[state]
    local frame=stateframes[min(
-     flr(item.frames.currentframe),
+     flr(item.currentframe),
      #stateframes)]
    pal(6,item.col,0)
    sspr(
@@ -2046,9 +2016,9 @@ function dungeondraw()
      avatar.items.armor and
      avatar.items.armor.iscloak then
    item=avatar.items.armor
-   local stateframes=item.frames[state]
+   local stateframes=item[state]
    local frame=stateframes[min(
-     flr(item.frames.currentframe),
+     flr(item.currentframe),
      #stateframes)]
    pal(1,item.col,0)
    pal(3,item.col2,0)
