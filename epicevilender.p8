@@ -1177,6 +1177,8 @@ function dungeonupdate()
    avatar.a=angle
    avatar.dx=normalize(cos(avatar.a))
    avatar.dy=normalize(sin(avatar.a))
+   avatar.state='moving'
+   avatar.state_counter=2
   end
  else
   avatar.dx=0
@@ -1218,57 +1220,116 @@ function dungeonupdate()
   end
  end
 
- -- consider avatar current state
- do
-  local actor=avatar
+ -- update actors
+ local enemycount=0
+ for actor in all(actors) do
+  if actor.isenemy then
+   enemycount+=1
+  end
 
   if actor.state_counter > 0 then
    actor.state_counter-=1
   end
 
-  if actor.state == 'recovering' then
-   actor.dx=0
-   actor.dy=0
+  -- handle states
+  if actor.state == 'idling' then
 
-   if actor.state_counter <= 0 then
-    actor.state='idling'
-   end
+   -- reset enemy specifics
+   actor.targetx=nil
+   actor.targety=nil
+   actor.ismovingoutofcollision=nil
 
   elseif actor.state == 'attacking' then
-   actor.dx=0
-   actor.dy=0
 
-   -- update skills
-   if actor.state_counter <= 0 then
-    if actor.ispreperform then
+   if actor == boss then
 
-     local skill=avatar.currentskill
-     skill.perform(skill,actor)
+    boss.performattack(boss)
 
-     -- set actor to postperform
-     actor.state_counter=skill.postperformdur
+   elseif actor == avatar then
+
+    -- update skills
+    if avatar.state_counter <= 0 then
+     if avatar.ispreperform then
+
+      local skill=avatar.currentskill
+      skill.perform(skill,avatar)
+
+      -- set avatar to postperform
+      avatar.state_counter=skill.postperformdur
+      avatar.ispreperform=false
+
+      -- set next attacking frame
+      avatar.frames.currentframe=2
+      avatar.items.weapon.frames.currentframe=2
+
+     else -- note: done performing
+      avatar.state='idling'
+      avatar.items.weapon.frames.currentframe=1
+     end
+    end
+
+
+   else -- all other enemies
+
+    if actor.laststate != 'attacking' then
+     actor.ispreperform=true
+     actor.frames.currentframe=1
+     actor.state_counter=actor.attack_preperformdur
+    end
+
+    if actor.ispreperform and actor.state_counter <= 0 then
+     actor.performattack(actor)
      actor.ispreperform=false
-
-     -- set next attacking frame
+     actor.state_counter=actor.attack_postperformdur
      actor.frames.currentframe=2
-     avatar.items.weapon.frames.currentframe=2
 
-    else -- note: done performing
+    elseif actor.state_counter <= 0 then
      actor.state='idling'
-     avatar.items.weapon.frames.currentframe=1
     end
    end
 
-  -- is moving
-  elseif actor.dx != 0 or actor.dy != 0 then
-   actor.state='moving'
-   actor.state_counter=2
+  elseif actor.state == 'recovering' then
 
-  -- go to idling
-  elseif actor.state_counter <= 0 then
-   actor.state='idling'
-   avatar.currentskill=nil
+   if actor.effect then
+    actor.effect.func(actor)
+   end
+
+   if actor.state_counter <= 0 then
+    actor.state='idling'
+    actor.effect=nil
+   end
+
+  elseif actor.state == 'moving' and
+         actor.isenemy then
+
+   if actor.state_counter <= 0 then
+    actor.ismovingoutofcollision=nil
+   end
+
+   actor.a=atan2(
+     actor.targetx-actor.x,
+     actor.targety-actor.y)
+
+   if dist(
+       actor.x,
+       actor.y,
+       actor.targetx,
+       actor.targety) <= actor.spd + 0.1 then
+    actor.state='idling'
+   end
+
+   actor.dx=cos(actor.a)*actor.spd
+   actor.dy=sin(actor.a)*actor.spd
+
   end
+
+  if actor == avatar and
+     actor.state_counter <= 0 then
+   actor.state='idling'
+   actor.currentskill=nil
+  end
+
+  actor.laststate=actor.state
  end
 
 
@@ -1316,11 +1377,11 @@ function dungeonupdate()
    elseif istooclosetoavatar and (not isswinging) and (not collidedwithwall) then
 
     enemy.state='moving'
-    local a=atan2(
+    enemy.a=atan2(
       avatar.x-enemy.x,
       avatar.y-enemy.y)+0.5 -- note: go the other way
-    enemy.targetx=enemy.x+cos(a)*10
-    enemy.targety=enemy.y+sin(a)*10
+    enemy.targetx=enemy.x+cos(enemy.a)*10
+    enemy.targety=enemy.y+sin(enemy.a)*10
     enemy.ismovingoutofcollision=true
     enemy.state_counter=60
     enemy.spd=enemy.runspd
@@ -1338,11 +1399,11 @@ function dungeonupdate()
    elseif collidedwithwall then
 
     enemy.state='moving'
-    local a=atan2(
+    enemy.a=atan2(
       enemy.x+enemy.wallcollisiondx-enemy.x,
       enemy.y+enemy.wallcollisiondy-enemy.y)+rnd(0.2)-0.1
-    enemy.targetx=enemy.x+cos(a)*10
-    enemy.targety=enemy.y+sin(a)*10
+    enemy.targetx=enemy.x+cos(enemy.a)*10
+    enemy.targety=enemy.y+sin(enemy.a)*10
     enemy.ismovingoutofcollision=true
     enemy.state_counter=60
 
@@ -1351,11 +1412,11 @@ function dungeonupdate()
 
     enemy.state='moving'
     local collidedwith=enemy.toocloseto[1]
-    local a=atan2(
+    enemy.a=atan2(
       collidedwith.x-enemy.x,
       collidedwith.y-enemy.y)+0.5 -- note: go the other way
-    enemy.targetx=enemy.x+cos(a)*10
-    enemy.targety=enemy.y+sin(a)*10
+    enemy.targetx=enemy.x+cos(enemy.a)*10
+    enemy.targety=enemy.y+sin(enemy.a)*10
     enemy.ismovingoutofcollision=true
     enemy.state_counter=60
 
@@ -1365,6 +1426,9 @@ function dungeonupdate()
     enemy.state='moving'
     enemy.targetx=avatar.x
     enemy.targety=avatar.y
+    enemy.a=atan2(
+      enemy.targetx-enemy.x,
+      enemy.targety-enemy.y)
     enemy.spd=enemy.runspd
 
    -- continue to move to target
@@ -1376,9 +1440,9 @@ function dungeonupdate()
    elseif not hastarget then
 
     enemy.state='moving'
-    local a=rnd()
-    enemy.targetx=enemy.x+cos(a)*10
-    enemy.targety=enemy.y+sin(a)*10
+    enemy.a=rnd()
+    enemy.targetx=enemy.x+cos(enemy.a)*10
+    enemy.targety=enemy.y+sin(enemy.a)*10
     enemy.spd=enemy.runspd*0.5
 
     if enemy == boss then
@@ -1387,89 +1451,6 @@ function dungeonupdate()
     end
 
    end
-  end
- end
-
- -- update enemies
- local enemycount=0
- for enemy in all(actors) do
-  if enemy.isenemy then
-
-   enemycount+=1
-
-   -- perform end of state action
-   if enemy.state == 'idling' then
-
-    -- reset target etc
-    enemy.targetx=nil
-    enemy.targety=nil
-    enemy.ismovingoutofcollision=nil
-
-   elseif enemy.state == 'attacking' then
-
-    if enemy == boss then
-
-     boss.performattack(boss)
-
-    else
-
-     if enemy.laststate != 'attacking' then
-      enemy.ispreperform=true
-      enemy.frames.currentframe=1
-      enemy.state_counter=enemy.attack_preperformdur
-     end
-
-     enemy.state_counter-=1
-
-     if enemy.ispreperform and enemy.state_counter <= 0 then
-      enemy.performattack(enemy)
-      enemy.ispreperform=false
-      enemy.state_counter=enemy.attack_postperformdur
-      enemy.frames.currentframe=2
-
-     elseif enemy.state_counter <= 0 then
-      enemy.state='idling'
-     end
-    end
-
-   elseif enemy.state == 'recovering' then
-    enemy.state_counter-=1
-
-    if enemy.effect then
-     enemy.effect.func(enemy)
-    end
-
-    if enemy.state_counter <= 0 then
-     enemy.state='idling'
-     enemy.effect=nil
-    end
-
-   elseif enemy.state == 'moving' then
-
-    if enemy.ismovingoutofcollision then
-     enemy.state_counter-=1
-     if enemy.state_counter <= 0 then
-      enemy.ismovingoutofcollision=nil
-     end
-    end
-
-    enemy.a=atan2(
-      enemy.targetx-enemy.x,
-      enemy.targety-enemy.y)
-    enemy.dx=cos(enemy.a)*enemy.spd
-    enemy.dy=sin(enemy.a)*enemy.spd
-
-    if dist(
-         enemy.x,
-         enemy.y,
-         enemy.targetx,
-         enemy.targety) <= enemy.spd + 0.1 then
-     enemy.state='idling'
-    end
-
-   end
-
-   enemy.laststate=enemy.state
   end
  end
 
