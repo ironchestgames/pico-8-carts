@@ -912,18 +912,6 @@ allitems={
  leatherboots,
 }
 
-mule=actorfactory({
- x=64,
- y=12,
- isghost=true,
- halfw=4,
- halfh=2.5,
- a=0,
- spd=0.25,
- currentframe=1,
- idling={parseflat'40,8,8,5,-4,-2.5,'},
-})
-
 dungeonthemes={
  { -- forest
   spr1=240,
@@ -1112,19 +1100,19 @@ function mapinit()
  -- reset
  curenemyidx,
  gametick,
- chest,
- door,
+ isdoorspawned,
  boss,
  floormap,
  actors,
  attacks,
  pemitters,
- vfxs=
+ vfxs,
+ interactables=
    1,
    0,
    nil,
    nil,
-   nil,
+   {},
    {},
    {},
    {},
@@ -1147,7 +1135,20 @@ function mapinit()
 
     add(actors,avatar)
 
-    mule.x,mule.y=avatar.x,avatar.y
+    -- add mule
+    add(interactables,{
+     x=avatar.x,
+     y=avatar.y,
+     halfw=4,
+     halfh=2.5,
+     sprite=2,
+     text='\x8e inventory',
+     enter=function ()
+      if btnp(4) then
+       equipinit()
+      end
+     end,
+    })
 
     _col=0
    end
@@ -1161,12 +1162,18 @@ function mapinit()
 
    -- create door
    if _col == 2 then
+
     door={
      x=ax,
      y=ay,
      halfw=4,
      halfh=4,
+     sprite=dungeonthemes[nexttheme].spr1+2,
+     text='',
+     enter=nextfloor,
     }
+
+    add(interactables,door)
 
     _col=0
     if dungeontheme == 1 then
@@ -1228,11 +1235,6 @@ function dungeonupdate()
   skillbuttondown=1
  elseif btn(5) then
   skillbuttondown=2
- end
-
- if isshowinventorytext and btnp(4) then
-  equipinit()
-  return
  end
 
  if skillbuttondown != 0 and
@@ -1490,19 +1492,6 @@ function dungeonupdate()
   end
  end
 
- -- update door
- if enemycount == 0 and not door.isopen then
-  floormap[(door.y-4)/8][(door.x-4)/8]=0
-  door.isopen=true
-  add(actors,mule)
-  sfx(0)
- end
-
- -- update chest
- if chest and enemycount == 0 then
-  chest.isshowing=true
- end
-
  -- update the next-position
  for actor in all(actors) do
 
@@ -1516,26 +1505,22 @@ function dungeonupdate()
   -- note: after this deltas should not change by input
  end
 
- -- collide avatar agains mule
- isshowinventorytext=false
- if door.isopen and isaabbscolliding(avatar,mule) then
-  isshowinventorytext=true
+ -- check level cleared
+ if enemycount <= 0 and not isdoorspawned then
+  isdoorspawned=true
+  floormap[(door.y-4)/8][(door.x-4)/8]=0
+  sfx(19)
  end
 
- -- collide avatar against door
- if door.isopen and
-    isaabbscolliding(avatar,door) then
-  nextfloor()
- end
-
- -- collide avatar against chest
- if chest and chest.isopen == 0 and chest.isshowing and
-    isaabbscolliding(avatar,chest) then
-  chest.isopen=1
-  local item=allitems[flr(rnd(#allitems))+1]
-  del(allitems,item)
-  add(avatar.inventory,item)
-  sfx(20)
+ -- collide against interactables
+ currentinteractable=nil
+ if isdoorspawned then
+  for i in all(interactables) do
+   if isaabbscolliding(avatar,i) then
+    i.enter(i)
+    currentinteractable=i
+   end
+  end
  end
 
  -- collide against attacks
@@ -1544,7 +1529,6 @@ function dungeonupdate()
    if (not attack.removeme) and
       (not actor.removeme) and
       attack.isenemy != actor.isenemy and
-      actor != mule and
       isaabbscolliding(attack,actor) then
 
     attack.targetcount-=1
@@ -1584,13 +1568,25 @@ function dungeonupdate()
 
      -- add chest
      if actor == boss then
-      chest={
+      add(interactables,{
        x=boss.x,
        y=boss.y,
        halfw=4,
        halfh=4,
-       isopen=0,
-      }
+       sprite=22,
+       text='\x8e open',
+       enter=function(i)
+        if btnp(4) and not i.isopen then
+         i.isopen=true
+         i.text='empty'
+         i.sprite=23
+         local item=allitems[flr(rnd(#allitems))+1]
+         del(allitems,item)
+         add(avatar.inventory,item)
+         sfx(20)
+        end
+       end,
+      })
      end
 
      -- todo: add death vfx here
@@ -1882,23 +1878,14 @@ function dungeondraw()
   end
  end
 
- -- draw door
- if door.isopen then
-  if dungeontheme != nexttheme then
-   spr1=dungeonthemes[nexttheme].spr1
+ -- draw interactables
+ if isdoorspawned then
+  for i in all(interactables) do
+   spr(
+    i.sprite,
+    i.x-i.halfw,
+    i.y-i.halfh)
   end
-  spr(
-   spr1+2,
-   door.x-door.halfw,
-   door.y-door.halfh)
- end
-
- -- draw chest
- if chest and chest.isshowing then
-  spr(
-    22+chest.isopen,
-    chest.x-chest.halfw,
-    chest.y-chest.halfh)
  end
 
  -- draw attacks
@@ -2069,11 +2056,19 @@ function dungeondraw()
   end
  end
 
- -- draw inventory text
- if isshowinventorytext then
-  print('\x8e inventory',mule.x-26,mule.y-8,10)
+ -- draw interactable text
+ if currentinteractable then
+  print(
+   currentinteractable.text,
+   mid(
+     0,
+     currentinteractable.x-#currentinteractable.text*2,
+     124-#currentinteractable.text*4),
+   max(8,currentinteractable.y-8),
+   10)
  end
 
+ -- draw gui
  if dungeonlevel > 0 then
   print('level '..dungeonlevel,3,1,13)
  end
@@ -2394,18 +2389,18 @@ end
 
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000555550000000000055555000550055005555550005555500000005500000055
-00000000000000000000000000000000000000000000000000000000000000005000005055505500555555505555555505555550050000000000055000000555
-00000000000000000000000000000000000000000000000000000000000000005000005055505500555555505055550505555550055555000000505000005550
-00000000000000000000000000000000000000000000000000000000000000000550050055505500500500505055550505555550055555000005005050055500
-00000000000000000000000000000000000000000000000000000000000000000005500055505500550005500055550005555550055555000050050005555000
-00000000000000000000000000000000000000000000000000000000000000000055550055550550550005500055550005555550055555000500500000550000
+00000000000000000000054000000000000000000000000000000000000000005000005055505500555555505555555505555550050000000000055000000555
+00000000000000000022544400000000000000000000000000000000000000005000005055505500555555505055550505555550055555000000505000005550
+00000000000000000544440000000000000000000000000000000000000000000550050055505500500500505055550505555550055555000005005050055500
+00000000000000005040040000000000000000000000000000000000000000000005500055505500550005500055550005555550055555000050050005555000
+00000000000000000050050000000000000000000000000000000000000000000055550055550550550005500055550005555550055555000500500000550000
 0f000000000000000000000000000000000000000000000000000000000000000055550055555055550005500055550000555500055555005555000005050000
 11100000000000000000000000000000000000000000000000000000000000000005500005555055050005000000000000055000055555005000000050005000
-1310000000000000000000000000000000000000000005400000000000000000011111100000000000000000000000000000000011111111111111dd111111dd
-131000000000000066000000000060000000000000225444000000000000000011111111000000000000000000000000000000001111111111111dd111111ddd
-0f00f00f40000600000000000000060006000000054444000000000000000000111111110000000000000000000000000000000011dd1dd11111d1d11111ddd1
-44444444000006000000000660000600006660005040040000000000024224201111111100000000000000000000000000000000d111dddd111d11d1d11ddd11
-0400400400000000000000000000600006066000005005000242242001111110011111100000000000000000000000000000000011d1dddd11d11d111dddd111
+1310000000000000000000000000000000000000000000000000000000000000011111100000000000000000000000000000000011111111111111dd111111dd
+131000000000000066000000000060000000000000000000000000000000000011111111000000000000000000000000000000001111111111111dd111111ddd
+0f00f00f40000600000000000000060006000000000000000000000000000000111111110000000000000000000000000000000011dd1dd11111d1d11111ddd1
+44444444000006000000000660000600006660000000000000000000024224201111111100000000000000000000000000000000d111dddd111d11d1d11ddd11
+0400400400000000000000000000600006066000000000000242242001111110011111100000000000000000000000000000000011d1dddd11d11d111dddd111
 2020202020000000000000000000000000000000000060000229922002299220000000000000000000000000000000000000000011111dd11d11d11111dd1111
 0000000000000000000000000000000000000000007000000244442002444420000000000000000000000000000000000000000011111111dddd11d11d1d1111
 000000000dd00000000020002000000002005050506000000222222002222220000000000000000000000000000000000000000011111111d111111dd111d111
