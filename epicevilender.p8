@@ -40,21 +40,19 @@ wallaabb={
  halfh=4,
 }
 function isinsidewall(aabb)
- local x1=aabb.x-aabb.halfw
- local y1=aabb.y-aabb.halfh
- local x2=aabb.x+aabb.halfw
- local y2=aabb.y+aabb.halfh
+ local x1,y1,x2,y2=
+   aabb.x-aabb.halfw,
+   aabb.y-aabb.halfh,
+   aabb.x+aabb.halfw,
+   aabb.y+aabb.halfh
 
- local points={
-  {x1,y1},
-  {x2,y1},
-  {x2,y2},
-  {x1,y2},
- }
-
- for point in all(points) do
-  local mapx=flr(point[1]/8)
-  local mapy=flr(point[2]/8)
+ for point in all({
+    {x1,y1},
+    {x2,y1},
+    {x2,y2},
+    {x1,y2},
+   }) do
+  local mapx,mapy=flr(point[1]/8),flr(point[2]/8)
   wallaabb.x=mapx*8+wallaabb.halfw
   wallaabb.y=mapy*8+wallaabb.halfh
 
@@ -69,15 +67,15 @@ function isinsidewall(aabb)
 end
 
 function haslos(_x1,_y1,_x2,_y2)
- local dx=abs(_x2-_x1)
- local dy=abs(_y2-_y1)
- local x=_x1
- local y=_y1
- local n=1+dx+dy
- local x_inc=sgn(_x2-_x1)
- local y_inc=sgn(_y2-_y1)
+ local dx,dy,x,y,x_inc,y_inc=
+   abs(_x2-_x1),
+   abs(_y2-_y1),
+   _x1,
+   _y1,
+   sgn(_x2-_x1),
+   sgn(_y2-_y1)
 
- local error=dx-dy
+ local n,error=1+dx+dy,dx-dy
  dx*=2
  dy*=2
 
@@ -100,8 +98,7 @@ function haslos(_x1,_y1,_x2,_y2)
 end
 
 function dist(x1,y1,x2,y2)
- local dx=x2-x1
- local dy=y2-y1
+ local dx,dy=x2-x1,y2-y1
  return sqrt(dx*dx+dy*dy)
 end
 
@@ -175,17 +172,14 @@ function collideaabbs(aabb,other,_dx,_dy)
 end
 
 function findemptyfloor(origx,origy)
- local a=rnd()
- local d=1
- local x,y
+ local a,d=rnd(),1
 
  repeat
   a+=0.05
   d+=0.02
-  x=flr(origx/8+cos(a)*2)
-  y=flr(origy/8+sin(a)*2)
-  x=mid(1,x,14)
-  y=mid(1,y,14)
+  x,y=
+    mid(1,flr(origx/8+cos(a)*2),14),
+    mid(1,flr(origy/8+sin(a)*2),14)
  until floormap[y] and floormap[y][x] == 0
 
  return x*8+4,y*8+4
@@ -270,20 +264,19 @@ function performenemymelee(enemy)
   knockbackangle=a,
   damage=1,
   targetcount=1000,
-  col=7,
  })
 
- local x=enemy.x+cos(enemy.a)*4
- local y=enemy.y+sin(enemy.a)*4
+ local x,y=
+   enemy.x+cos(enemy.a)*4,
+   enemy.y+sin(enemy.a)*4
 
  local frame=clone(meleevfxframes[getvfxframeindex(enemy.a)])
  frame[5]=x+frame[5]
  frame[6]=y+frame[6]
  frame.counter=10
  frame.col=7
- local vfx={frame}
 
- add(vfxs,vfx)
+ add(vfxs,{frame})
 
  sfx(4)
 end
@@ -439,7 +432,6 @@ function newskeletonking(x,y)
       knockbackangle=boss.a,
       damage=1,
       targetcount=1,
-      col=7,
      })
 
      sfx(4)
@@ -548,9 +540,11 @@ end
 function stunningeffect(actor)
  if actor.effect.counter == nil or
     actor.effect.counter <= 0 then
-  local t=5
-  local x=actor.x-1.5
-  local y=actor.y-actor.halfh*2-1
+  local t,x,y=
+    5,
+    actor.x-1.5,
+    actor.y-actor.halfh*2-1
+
   actor.effect.counter=t*3
   add(vfxs,{
    {42,13,3,2, x,y, counter=t,col=7},
@@ -561,8 +555,7 @@ function stunningeffect(actor)
 
  actor.effect.counter-=1
 
- actor.dx=0
- actor.dy=0
+ actor.dx,actor.dy=0,0
 end
 
 -- skills
@@ -577,8 +570,9 @@ swordattackskillfactory=function(
   preperformdur=preperformdur,
   postperformdur=postperformdur,
   perform=function(skill,user)
-   local x=user.x+cos(user.a)*4
-   local y=user.y+sin(user.a)*4
+   local x,y=
+     user.x+cos(user.a)*4,
+     user.y+sin(user.a)*4
 
    add(attacks,{
     x=x,
@@ -617,8 +611,9 @@ bowattackskillfactory=function(
   preperformdur=preperformdur,
   postperformdur=postperformdur,
   perform=function(skill,user)
-   local x=user.x+cos(user.a)*4
-   local y=user.y+sin(user.a)*4
+   local x,y=
+     user.x+cos(user.a)*4,
+     user.y+sin(user.a)*4
 
    add(attacks,{
     x=x-0.5,
@@ -678,8 +673,9 @@ boltskillfactory=function(
    sfx(9)
   end,
   perform=function(skill,user)
-   local x=user.x+cos(user.a)*4
-   local y=user.y+sin(user.a)*4
+   local x,y=
+     user.x+cos(user.a)*4,
+     user.y+sin(user.a)*4
 
    local attack={
     x=x,
@@ -938,8 +934,9 @@ dungeonthemes={
 
 
 function dungeoninit()
- _update60=dungeonupdate
- _draw=dungeondraw
+ _update60,_draw=
+   dungeonupdate,
+   dungeondraw
 
  avatar=actorfactory({
   x=64,
@@ -974,6 +971,7 @@ function dungeoninit()
    recovering={{0,10,3,4, -1,-2}},
   },
  })
+
  dungeonlevel=1
  dungeontheme=1
  nexttheme=1
@@ -1082,34 +1080,44 @@ function mapinit()
 
 
  -- reset
- curenemyidx=1
- gametick=0
- chest=nil
- door=nil
- boss=nil
- floormap={}
- actors={}
- attacks={}
- pemitters={}
- vfxs={}
+ curenemyidx,
+ gametick,
+ chest,
+ door,
+ boss,
+ floormap,
+ actors,
+ attacks,
+ pemitters,
+ vfxs=
+   1,
+   0,
+   nil,
+   nil,
+   nil,
+   {},
+   {},
+   {},
+   {},
+   {}
 
  for _y=0,15 do
   floormap[_y]={}
   for _x=0,15 do
-   local _col=basemap[_y][_x]
-   local ax,ay=_x*8+4,_y*8+4
+   local _col,ax,ay=
+     basemap[_y][_x],
+     _x*8+4,
+     _y*8+4
 
    -- create avatar
    if _col == 15 then
     avatar=actorfactory(avatar)
-    avatar.x=ax
-    avatar.y=ay
+    avatar.x,avatar.y=ax,ay
     avatar.armor=avatar.startarmor
 
     add(actors,avatar)
 
-    mule.x=avatar.x
-    mule.y=avatar.y
+    mule.x,mule.y=avatar.x,avatar.y
 
     _col=0
    end
@@ -1181,8 +1189,7 @@ function dungeonupdate()
    avatar.state_counter=2
   end
  else
-  avatar.dx=0
-  avatar.dy=0
+  avatar.dx,avatar.dy=0,0
  end
 
  -- consider skill button input
@@ -1235,8 +1242,7 @@ function dungeonupdate()
   if actor.state == 'idling' then
 
    -- reset enemy specifics
-   actor.targetx=nil
-   actor.targety=nil
+   actor.targetx,actor.targety=nil,nil
    actor.ismovingoutofcollision=nil
 
   elseif actor.state == 'attacking' then
@@ -1587,8 +1593,9 @@ function dungeonupdate()
     actor.dmgfxcounter=20
 
     -- hit flash
-    local x=actor.x+actor.dx/2
-    local y=actor.y+actor.dy/2
+    local x,y=
+      actor.x+actor.dx/2,
+      actor.y+actor.dy/2
     add(vfxs,{
      {42,20,5,5,x-2.5,y-2.5,counter=4,col=actor.dmgfxcolor},
      {42,20,5,5,x-2.5,y-2.5,counter=5,col=7},
@@ -1638,8 +1645,7 @@ function dungeonupdate()
      avatar.dx,
      avatar.dy)
 
-   avatar.dx=_dx
-   avatar.dy=_dy
+   avatar.dx,avatar.dy=_dx,_dy
   end
  end
 
@@ -1662,8 +1668,7 @@ function dungeonupdate()
 
   actor.x+=_dx
   actor.y+=_dy
-  actor.dx=0
-  actor.dy=0
+  actor.dx,actor.dy=0,0
  end
 
  -- update attacks
@@ -1741,17 +1746,19 @@ function dungeonupdate()
   end
   pemitter.counter-=1
   if pemitter.counter <= 0 then
-   local x=pemitter.follow.x
-   local y=pemitter.follow.y
-   local poffsets=pemitter.poffsets
-   local pdx=pemitter.dx
-   local pdy=pemitter.dy
+   local x,y,poffsets,pdx,pdy=
+     pemitter.follow.x,
+     pemitter.follow.y,
+     pemitter.poffsets,
+     pemitter.dx,
+     pemitter.dy
 
    x+=poffsets[1]+rnd(poffsets[3]+abs(poffsets[1]))
    y+=poffsets[2]+rnd(poffsets[4]+abs(poffsets[2]))
 
-   local dx=pdx[1]+rnd(pdx[2]+abs(pdx[1]))
-   local dy=pdy[1]+rnd(pdy[2]+abs(pdy[1]))
+   local dx,dy=
+     pdx[1]+rnd(pdx[2]+abs(pdx[1])),
+     pdy[1]+rnd(pdy[2]+abs(pdy[1]))
 
    add(pemitter.particles,{
     counter=
@@ -1835,15 +1842,11 @@ function dungeondraw()
  -- draw walls
  for _y=0,#floormap do
   for _x=0,#floormap[_y] do
-   local mapval=floormap[_y][_x]
-   if mapval != 0 then
-
-    local x8,y8=_x*8,_y*8
-
+   if floormap[_y][_x] != 0 then
     if _y == #floormap or floormap[_y+1] and floormap[_y+1][_x] != 0 then
-     spr(spr1+1,x8,y8)
+     spr(spr1+1,_x*8,_y*8)
     else
-     spr(spr1,x8,y8)
+     spr(spr1,_x*8,_y*8)
     end
    end
   end
@@ -1899,9 +1902,8 @@ function dungeondraw()
  for actor in all(actors) do
 
   -- draw actor frame
-  local state=actor.state
+  local state,flipx=actor.state,false
   local frame=actor.frames[state][flr(actor.frames.currentframe)]
-  local flipx=false
   if actor.a and actor.a >= 0.25 and actor.a <= 0.75 then
    flipx=true
   end
@@ -1942,21 +1944,20 @@ function dungeondraw()
      avatar.items.weapon then
    item=avatar.items.weapon
    local stateframes=item.frames[state]
-   local currentframe=min(
+   local frame=stateframes[min(
      flr(item.frames.currentframe),
-     #stateframes)
-   local frame=stateframes[currentframe]
+     #stateframes)]
    pal(6,item.col,0)
    sspr(
-    frame[1],
-    frame[2],
-    frame[3],
-    frame[4],
-    actor.x+frame[5],
-    actor.y+frame[6],
-    frame[3],
-    frame[4],
-    flipx)
+     frame[1],
+     frame[2],
+     frame[3],
+     frame[4],
+     actor.x+frame[5],
+     actor.y+frame[6],
+     frame[3],
+     frame[4],
+     flipx)
   end
 
   -- draw offhand
@@ -1964,21 +1965,20 @@ function dungeondraw()
      avatar.items.offhand then
    item=avatar.items.offhand
    local stateframes=item.frames[state]
-   local currentframe=min(
+   local frame=stateframes[min(
      flr(item.frames.currentframe),
-     #stateframes)
-   local frame=stateframes[currentframe]
+     #stateframes)]
    pal(6,item.col,0)
    sspr(
-    frame[1],
-    frame[2],
-    frame[3],
-    frame[4],
-    actor.x+frame[5],
-    actor.y+frame[6],
-    frame[3],
-    frame[4],
-    flipx)
+     frame[1],
+     frame[2],
+     frame[3],
+     frame[4],
+     actor.x+frame[5],
+     actor.y+frame[6],
+     frame[3],
+     frame[4],
+     flipx)
   end
 
   -- draw cloak
@@ -1987,22 +1987,21 @@ function dungeondraw()
      avatar.items.armor.iscloak then
    item=avatar.items.armor
    local stateframes=item.frames[state]
-   local currentframe=min(
+   local frame=stateframes[min(
      flr(item.frames.currentframe),
-     #stateframes)
-   local frame=stateframes[currentframe]
+     #stateframes)]
    pal(1,item.col,0)
    pal(3,item.col2,0)
    sspr(
-    frame[1],
-    frame[2],
-    frame[3],
-    frame[4],
-    actor.x+frame[5],
-    actor.y+frame[6],
-    frame[3],
-    frame[4],
-    flipx)
+     frame[1],
+     frame[2],
+     frame[3],
+     frame[4],
+     actor.x+frame[5],
+     actor.y+frame[6],
+     frame[3],
+     frame[4],
+     flipx)
   end
 
   -- reset colors
@@ -2019,7 +2018,13 @@ function dungeondraw()
    frame.draw(frame)
   else
    pal(7,frame.col,0)
-   sspr(frame[1],frame[2],frame[3],frame[4],frame[5],frame[6])
+   sspr(
+     frame[1],
+     frame[2],
+     frame[3],
+     frame[4],
+     frame[5],
+     frame[6])
    pal(7,7,0)
   end
  end
@@ -2064,21 +2069,28 @@ end
 
 -- equip scene
 
-local inventorycur=1
-local equippedcur=1
-local availableskillscur=1
-local sectioncur=4
-local equipped={}
-local availableskills={}
-local equipslots={
- {'helmet',10},
- {'armor',11},
- {'amulet',8},
- {'boots',9},
- {'book',13},
- {'offhand',12},
- {'weapon',15},
-}
+inventorycur,
+equippedcur,
+availableskillscur,
+sectioncur,
+equipped,
+availableskills,
+equipslots=
+  1,
+  1,
+  1,
+  4,
+  {},
+  {},
+  {
+   {'helmet',10},
+   {'armor',11},
+   {'amulet',8},
+   {'boots',9},
+   {'book',13},
+   {'offhand',12},
+   {'weapon',15},
+  }
 
 function equipinit()
  _update60=equipupdate
@@ -2142,8 +2154,7 @@ function equipupdate()
   if #avatar.inventory > 0 and (btnp(4) or btnp(5)) then
    local selecteditem=avatar.inventory[inventorycur]
 
-   avatar.skill1=nil
-   avatar.skill2=nil
+   avatar.skill1,avatar.skill2=nil,nil
 
    if avatar.items[selecteditem.class] then
     add(avatar.inventory,avatar.items[selecteditem.class])
@@ -2184,8 +2195,7 @@ function equipupdate()
    if selecteditem then
     avatar.items[selecteditem.class]=nil
     add(avatar.inventory,selecteditem)
-    avatar.skill1=nil
-    avatar.skill2=nil
+    avatar.skill1,avatar.skill2=nil,nil
    end
    sfx(8)
   end
@@ -2235,12 +2245,8 @@ function equipdraw()
  rectfill(0,124,128,128,1)
  fillp()
 
- local col=0
-
  -- draw inventory section
- local offsetx=0
- local y=17
- local i=1
+ local offsetx,y,i,col=0,17,1,0
  if sectioncur == 1 then
   col=10
  else
@@ -2269,9 +2275,7 @@ function equipdraw()
  end
 
  -- draw equipped section
- offsetx=0
- y=52
- i=1
+ offsetx,y,i=0,52,1
  if sectioncur == 2 then
   col=10
  else
@@ -2308,9 +2312,7 @@ function equipdraw()
  end
 
  -- draw availableskills section
- offsetx=0
- y=88
- i=1
+ offsetx,y,i=0,88,1
  if sectioncur == 3 then
   col=10
  else
