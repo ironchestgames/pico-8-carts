@@ -26,6 +26,22 @@ function clone(t)
  return result
 end
 
+-- note: last character in s needs to be ','
+function parseflat(s)
+ local result,part={},''
+ while #s > 0 do
+  local d=sub(s,1,1)
+  if d != ',' then
+   part=part..d
+  else
+   add(result,tonum(part))
+   part=''
+  end
+  s=sub(s,2)
+ end
+ return result
+end
+
 function isaabbscolliding(aabb1,aabb2)
  return aabb1.x - aabb1.halfw < aabb2.x + aabb2.halfw and
         aabb1.x + aabb1.halfw > aabb2.x - aabb2.halfw and
@@ -197,39 +213,39 @@ btnmasktoangle={
 }
 
 meleevfxframes={
- [0]={0,20,4,7, -1,-5}, -- right
- [0.125]={8,20,6,4, -3,-2}, -- right/up
- [0.25]={20,20,9,3, -3,-1}, -- up
- [0.375]={14,20,6,4, -2,-2}, -- up/left
- [0.5]={4,20,4,7, -2,-5}, -- left
- [0.625]={29,20,4,7, -3,-6}, -- left/down
- [0.75]={20,23,9,3, -4,-2}, -- down
- [0.875]={33,20,4,7, 0,-6}, -- down/right
- [1]={0,20,4,7, -1,-5}, -- right (wrapped)
+ [0]=parseflat'0,20,4,7,-1,-5,', -- right
+ [0.125]=parseflat'8,20,6,4,-3,-2,', -- right/up
+ [0.25]=parseflat'20,20,9,3,-3,-1,', -- up
+ [0.375]=parseflat'14,20,6,4,-2,-2,', -- up/left
+ [0.5]=parseflat'4,20,4,7,-2,-5,', -- left
+ [0.625]=parseflat'29,20,4,7,-3,-6,', -- left/down
+ [0.75]=parseflat'20,23,9,3,-4,-2,', -- down
+ [0.875]=parseflat'33,20,4,7,0,-6,', -- down/right
+ [1]=parseflat'0,20,4,7,-1,-5,', -- right (wrapped)
 }
 
 bowvfxframes={
- [0]={0,27,6,7, -3,-5}, -- right
- [0.125]={17,32,7,7, -4,-3}, -- right/up
- [0.25]={10,31,7,6, -3,-3}, -- up
- [0.375]={34,32,7,7, -3,-3}, -- up/left
- [0.5]={4,27,6,7, -2,-5}, -- left
- [0.625]={22,27,7,7, -2,-5}, -- left/down
- [0.75]={10,27,7,6, -3,-4}, -- down
- [0.875]={29,27,7,7, -4,-4}, -- down/right
- [1]={0,27,6,7, -3,-5}, -- right (wrapped)
+ [0]=parseflat'0,27,6,7,-3,-5,', -- right
+ [0.125]=parseflat'17,32,7,7,-4,-3,', -- right/up
+ [0.25]=parseflat'10,31,7,6,-3,-3,', -- up
+ [0.375]=parseflat'34,32,7,7,-3,-3,', -- up/left
+ [0.5]=parseflat'4,27,6,7, -2,-5,', -- left
+ [0.625]=parseflat'22,27,7,7,-2,-5,', -- left/down
+ [0.75]=parseflat'10,27,7,6,-3,-4,', -- down
+ [0.875]=parseflat'29,27,7,7,-4,-4,', -- down/right
+ [1]=parseflat'0,27,6,7,-3,-5,', -- right (wrapped)
 }
 
 arrowframes={
- [0]={50,20,2,1, -1,-0.5}, -- right
- [0.125]={52,20,2,2, -1,-1}, -- right/up
- [0.25]={54,20,1,2, -0.5,-1}, -- up
- [0.375]={55,20,2,2, -1,-1}, -- up/left
- [0.5]={50,20,2,1, -1,-0.5}, -- left
- [0.625]={52,20,2,2, -1,-1}, -- left/down
- [0.75]={54,20,1,2, -0.5,-1}, -- down
- [0.875]={55,20,2,2, -1,-1}, -- down/right
- [1]={50,20,2,1, -1,-0.5}, -- right (wrapped)
+ [0]=parseflat'50,20,2,1,-1,-0.5,', -- right
+ [0.125]=parseflat'52,20,2,2,-1,-1,', -- right/up
+ [0.25]=parseflat'54,20,1,2,-0.5,-1,', -- up
+ [0.375]=parseflat'55,20,2,2,-1,-1,', -- up/left
+ [0.5]=parseflat'50,20,2,1,-1,-0.5,', -- left
+ [0.625]=parseflat'52,20,2,2,-1,-1,', -- left/down
+ [0.75]=parseflat'54,20,1,2,-0.5,-1,', -- down
+ [0.875]=parseflat'55,20,2,2,-1,-1,', -- down/right
+ [1]=parseflat'50,20,2,1,-1,-0.5,', -- right (wrapped)
 }
 
 function getvfxframeindex(angle)
@@ -327,10 +343,18 @@ function newmeleeskeleton(x,y)
   performattack=performenemymelee,
   frames={
    currentframe=1,
-   idling={{0,15,4,5, -2,-3}},
-   moving={animspd=0.18,{0,15,4,5, -2,-3},{4,15,4,5, -2,-3}},
-   attacking={animspd=0,{8,15,4,5, -2,-3},{11,15,6,5, -3,-3}},
-   recovering={{0,15,4,5, -2,-3}},
+   idling={parseflat'0,15,4,5,-2,-3,'},
+   moving={
+    animspd=0.18,
+    parseflat'0,15,4,5,-2,-3,',
+    parseflat'4,15,4,5,-2,-3,'
+   },
+   attacking={
+    animspd=0,
+    parseflat'8,15,4,5,-2,-3,',
+    parseflat'11,15,6,5,-3,-3,',
+   },
+   recovering={parseflat'0,15,4,5,-2,-3,'},
   },
  })
 end
@@ -353,10 +377,18 @@ function newbatenemy(x,y)
   performattack=performenemymelee,
   frames={
    currentframe=1,
-   idling={{36,15,3,3, -1.5,-1.5}},
-   moving={animspd=0.21,{36,15,3,3, -1.5,-1.5},{39,15,3,3, -1.5,-1.5}},
-   attacking={animspd=0.32,{36,15,3,3, -1.5,-1.5},{39,15,3,3, -1.5,-1.5}},
-   recovering={{36,15,3,3, -1.5,-1.5}},
+   idling={parseflat'36,15,3,3,-1.5,-1.5,'},
+   moving={
+    animspd=0.21,
+    parseflat'36,15,3,3,-1.5,-1.5,',
+    parseflat'39,15,3,3,-1.5,-1.5,'
+   },
+   attacking={
+    animspd=0.32,
+    parseflat'36,15,3,3,-1.5,-1.5,',
+    parseflat'39,15,3,3,-1.5,-1.5,'
+   },
+   recovering={parseflat'36,15,3,3,-1.5,-1.5,'},
   },
  })
 end
@@ -379,10 +411,18 @@ function newbowskeleton(x,y)
   comfydist=20,
   frames={
    currentframe=1,
-   idling={{18,15,4,5, -2,-3}},
-   moving={animspd=0.18,{18,15,4,5, -2,-3},{22,15,4,5, -2,-3}},
-   attacking={animspd=0,{26,15,4,5, -2,-3},{31,15,4,5, -2,-3}},
-   recovering={{18,15,4,5, -2,-3}},
+   idling={parseflat'18,15,4,5,-2,-3,'},
+   moving={
+    animspd=0.18,
+    parseflat'18,15,4,5,-2,-3,',
+    parseflat'22,15,4,5,-2,-3,'
+   },
+   attacking={
+    animspd=0,
+    parseflat'26,15,4,5,-2,-3,',
+    parseflat'31,15,4,5,-2,-3,'
+   },
+   recovering={parseflat'18,15,4,5,-2,-3,'},
   },
  })
 end
@@ -403,10 +443,19 @@ function newskeletonking(x,y)
   attack_range=60,
   frames={
    currentframe=1,
-   idling={{0,40,15,18, -7,-13}},
-   moving={animspd=0.24,{16,40,15,18, -7,-13},{32,40,15,18, -7,-13}},
-   attacking={animspd=0,{0,40,15,18, -7,-13},{48,40,20,18, -10,-13},{72,40,15,18, -7,-13}},
-   recovering={{0,40,15,18, -7,-13}},
+   idling={parseflat'0,40,15,18,-7,-13,'},
+   moving={
+    animspd=0.24,
+    parseflat'16,40,15,18,-7,-13,',
+    parseflat'32,40,15,18,-7,-13,'
+   },
+   attacking={
+    animspd=0,
+    parseflat'0,40,15,18,-7,-13,',
+    parseflat'48,40,20,18,-10,-13,',
+    parseflat'72,40,15,18,-7,-13,'
+   },
+   recovering={parseflat'0,40,15,18,-7,-13,'},
   },
   performattack=function(boss)
 
@@ -728,10 +777,9 @@ function phasing(actor)
  })
 end
 
-antiframe={9,9,1,1, 0,0}
+antiframe=parseflat'9,9,1,1,0,0,'
 
 -- items
-swordidleframe={9,9,5,5, -2,-3}
 sword={
  name='steel sword, 1 dmg knockback',
  class='weapon',
@@ -740,14 +788,16 @@ sword={
  skill=swordattackskillfactory(1,15,28,1000,7),
  frames={
   currentframe=1,
-  idling={swordidleframe},
-  moving={swordidleframe},
-  attacking={{14,9,5,5, -2,-3},{18,9,7,5, -3,-3}},
-  recovering={swordidleframe},
+  idling={parseflat'9,9,5,5,-2,-3,'},
+  moving={parseflat'9,9,5,5,-2,-3,'},
+  attacking={
+   parseflat'14,9,5,5,-2,-3,',
+   parseflat'18,9,7,5,-3,-3,'
+  },
+  recovering={parseflat'9,9,5,5,-2,-3,'},
  },
 }
 
-bowidleframe={25,9,5,5, -2,-3}
 bow={
  name='cedar bow, 1 dmg',
  class='weapon',
@@ -757,10 +807,13 @@ bow={
  skill=bowattackskillfactory(1,26,6,1,7,3),
  frames={
   currentframe=1,
-  idling={bowidleframe},
-  moving={bowidleframe},
-  attacking={{30,9,5,5, -2,-3},{25,9,1,1, -2,-3}},
-  recovering={bowidleframe},
+  idling={parseflat'25,9,5,5,-2,-3,'},
+  moving={parseflat'25,9,5,5,-2,-3,'},
+  attacking={
+   parseflat'30,9,5,5,-2,-3,',
+   parseflat'25,9,1,1,-2,-3,',
+  },
+  recovering={parseflat'25,9,5,5,-2,-3,'},
  },
 }
 
@@ -768,7 +821,7 @@ fireboltbook={
  name='book of firebolt',
  class='book',
  sprite=45,
- skill=boltskillfactory(1,50,0,120,1,'fire',14,{8,14},{14,8}),
+ skill=boltskillfactory(1,50,0,120,1,'fire',14,parseflat'8,14,',parseflat'14,8,'),
  frames={
   currentframe=1,
   idling={antiframe},
@@ -782,7 +835,7 @@ iceboltbook={
  name='book of icebolt',
  class='book',
  sprite=63,
- skill=boltskillfactory(0,40,0,150,1,'ice',7,{12,12},{12,12}),
+ skill=boltskillfactory(0,40,0,150,1,'ice',7,parseflat'12,12,',parseflat'12,12,'),
  frames={
   currentframe=1,
   idling={antiframe},
@@ -792,7 +845,7 @@ iceboltbook={
  },
 }
 
-shieldframe={35,9,5,5, -2,-3}
+shieldframe=parseflat'35,9,5,5,-2,-3,'
 shield={
  name='steel shield, +1 armor',
  class='offhand',
@@ -823,7 +876,7 @@ ringmail={
  },
 }
 
-cloakidling={0,6,3,4, -1,-2}
+cloakidling=parseflat'0,6,3,4,-1,-2,'
 
 cloakofphasing={
  name='cloak of phasing',
@@ -895,7 +948,7 @@ mule=actorfactory({
  spd=0.25,
  frames={
   currentframe=1,
-  idling={{40,8,8,5, -4,-2.5}},
+  idling={parseflat'40,8,8,5,-4,-2.5,'},
  },
 })
 
@@ -965,10 +1018,17 @@ function dungeoninit()
   passiveskills={},
   frames={
    currentframe=1,
-   idling={{0,10,3,4, -1,-2}},
-   moving={{0,10,3,4, -1,-2},{3,10,3,4, -1,-2}},
-   attacking={animspd=0,{6,10,3,4, -1,-2},{0,10,3,4, -1,-2}},
-   recovering={{0,10,3,4, -1,-2}},
+   idling={parseflat'0,10,3,4,-1,-2,'},
+   moving={
+    parseflat'0,10,3,4,-1,-2,',
+    parseflat'3,10,3,4,-1,-2,'
+   },
+   attacking={
+    animspd=0,
+    parseflat'6,10,3,4,-1,-2,',
+    parseflat'0,10,3,4,-1,-2,'
+   },
+   recovering={parseflat'0,10,3,4,-1,-2,'},
   },
  })
 
