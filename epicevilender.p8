@@ -422,6 +422,85 @@ function newbowskeleton(x,y)
 end
 
 function newskeletonking(x,y)
+
+ function setupmelee(boss)
+  boss.islosindependent=nil
+  boss.attack_range=7
+  boss.attack_preperformdur=30
+  boss.attack_postperformdur=60
+  boss.attacking={
+   animspd=0,
+   parseflat'0,40,15,18,-7,-13,',
+   parseflat'48,40,20,18,-10,-13,',
+  }
+  boss.onpreperform=nil
+  boss.performattack=performmelee
+  boss.afterpostperform=setupmagic
+ end
+
+ function performmelee(boss)
+  add(attacks,{
+   isenemy=true,
+   throughwalls=true,
+   x=boss.x+cos(boss.a)*2,
+   y=boss.y-3,
+   halfw=7,
+   halfh=8,
+   state_counter=2,
+   typ='phys',
+   knockbackangle=boss.a,
+   damage=1,
+   targetcount=1,
+  })
+
+  sfx(4)
+ end
+
+ function setupmagic(boss)
+  boss.islosindependent=true
+  boss.attack_range=60
+  boss.attack_preperformdur=110
+  boss.attack_postperformdur=0
+  boss.attacking={
+   animspd=0,
+   parseflat'72,40,15,18,-7,-13,',
+   parseflat'72,40,15,18,-7,-13,',
+  }
+  boss.onpreperform=magicpreperform
+  boss.performattack=performmagic
+  boss.afterpostperform=setupmelee
+ end
+
+ function magicpreperform(boss)
+  boss.attack_x,boss.attack_y=findemptyfloor(boss.x,boss.y)
+  add(pemitters,{
+   follow={
+    x=boss.attack_x,
+    y=boss.attack_y,
+   },
+   life=140,
+   prate={1,2},
+   plife={10,15},
+   poffsets={-2,0.5,1,0.5},
+   dx={0,0},
+   dy={-0.3,0},
+   pcolors={11,3,1},
+  })
+
+  sfx(9)
+ end
+
+ function performmagic(boss)
+  local enemy=newmeleeskeleton(boss.attack_x,boss.attack_y)
+
+  -- summoning sickness
+  enemy.state='recovering'
+  enemy.laststate='recovering'
+  enemy.state_counter=50
+
+  add(actors,enemy)
+ end
+
  boss=actorfactory({
   isenemy=true,
   isbig=true,
@@ -433,8 +512,6 @@ function newskeletonking(x,y)
   runspd=0.4,
   spd=0.4,
   hp=10,
-  attack_type='magic',
-  attack_range=60,
   currentframe=1,
   idling={parseflat'0,40,15,18,-7,-13,'},
   moving={
@@ -442,95 +519,12 @@ function newskeletonking(x,y)
    parseflat'16,40,15,18,-7,-13,',
    parseflat'32,40,15,18,-7,-13,'
   },
-  attacking={
-   animspd=0,
-   parseflat'0,40,15,18,-7,-13,',
-   parseflat'48,40,20,18,-10,-13,',
-   parseflat'72,40,15,18,-7,-13,'
-  },
   recovering={parseflat'0,40,15,18,-7,-13,'},
-  performattack=function(boss)
-
-   if boss.attack_type == 'melee' then
-    if boss.laststate != 'attacking' then
-     boss.currentframe=1
-     boss.state_counter=90
-    else
-     boss.state_counter-=1
-    end
-
-    if boss.state_counter == 60 then
-     boss.currentframe=2
-     add(attacks,{
-      isenemy=true,
-      throughwalls=true,
-      x=boss.x+cos(boss.a)*2,
-      y=boss.y-3,
-      halfw=7,
-      halfh=8,
-      state_counter=2,
-      typ='phys',
-      knockbackangle=boss.a,
-      damage=1,
-      targetcount=1,
-     })
-
-     sfx(4)
-    end
-
-    if boss.state_counter <= 0 then
-     boss.x-=cos(boss.a)*3
-     boss.attack_type='magic'
-     boss.attack_range=60
-     boss.state='idling'
-    end
-
-   elseif boss.attack_type == 'magic' then
-    if boss.laststate != 'attacking' then
-     boss.currentframe=3
-     boss.state_counter=110
-
-     boss.attack_x,boss.attack_y=findemptyfloor(boss.x,boss.y)
-
-     add(pemitters,{
-      follow={
-       x=boss.attack_x,
-       y=boss.attack_y,
-      },
-      life=110+30,
-      prate={1,2},
-      plife={10,15},
-      poffsets={-2,0.5,1,0.5},
-      dx={0,0},
-      dy={-0.3,0},
-      pcolors={11,3,1},
-     })
-
-     sfx(9)
-
-    else
-     boss.state_counter-=1
-    end
-
-    if boss.state_counter <= 0 then
-
-     local enemy=newmeleeskeleton(boss.attack_x,boss.attack_y)
-
-     -- summoning sickness
-     enemy.state='recovering'
-     enemy.laststate='recovering'
-     enemy.state_counter=50
-
-     add(actors,enemy)
-
-     boss.attack_type='melee'
-     boss.attack_range=7
-     boss.state='idling'
-    end
-
-   end
-  end,
+  onroam=setupmagic,
  })
+
+ setupmagic(boss)
+
  return boss
 end
 
@@ -1279,11 +1273,7 @@ function dungeonupdate()
 
   elseif actor.state == 'attacking' then
 
-   if actor == boss then
-
-    boss.performattack(boss)
-
-   elseif actor == avatar then
+   if actor == avatar then
 
     -- update skills
     if avatar.state_counter <= 0 then
@@ -1307,12 +1297,16 @@ function dungeonupdate()
     end
 
 
-   else -- all other enemies
+   else -- enemies
 
     if actor.laststate != 'attacking' then
      actor.ispreperform=true
      actor.currentframe=1
      actor.state_counter=actor.attack_preperformdur
+
+     if actor.onpreperform then
+      actor.onpreperform(actor)
+     end
     end
 
     if actor.ispreperform and actor.state_counter <= 0 then
@@ -1322,6 +1316,9 @@ function dungeonupdate()
      actor.currentframe=2
 
     elseif actor.state_counter <= 0 then
+     if actor.afterpostperform then
+      actor.afterpostperform(actor)
+     end
      actor.state='idling'
     end
    end
@@ -1426,7 +1423,11 @@ function dungeonupdate()
 
    -- attack
    elseif isswinging or withinattackdistance and
-         (haslostoavatar or enemy.attack_type == 'magic') then
+         (haslostoavatar or enemy.islosindependent) then
+
+    if enemy.laststate != 'attacking' then
+     enemy.currentframe=1
+    end
 
     enemy.state='attacking'
     enemy.targetx=avatar.x
@@ -1483,9 +1484,8 @@ function dungeonupdate()
     enemy.targety=enemy.y+sin(enemy.a)*10
     enemy.spd=enemy.runspd*0.5
 
-    if enemy == boss then
-     enemy.attack_type='magic'
-     enemy.attack_range=60
+    if enemy.onroam then
+     enemy.onroam(enemy)
     end
 
    end
