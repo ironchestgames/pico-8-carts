@@ -43,10 +43,13 @@ function parseflat(s)
 end
 
 function isaabbscolliding(aabb1,aabb2)
- return aabb1.x - aabb1.halfw < aabb2.x + aabb2.halfw and
-        aabb1.x + aabb1.halfw > aabb2.x - aabb2.halfw and
-        aabb1.y - aabb1.halfh < aabb2.y + aabb2.halfh and
-        aabb1.y + aabb1.halfh > aabb2.y - aabb2.halfh
+ if aabb1.x - aabb1.halfw < aabb2.x + aabb2.halfw and
+    aabb1.x + aabb1.halfw > aabb2.x - aabb2.halfw and
+    aabb1.y - aabb1.halfh < aabb2.y + aabb2.halfh and
+    aabb1.y + aabb1.halfh > aabb2.y - aabb2.halfh then
+  return aabb2
+ end
+ -- return nil
 end
 
 wallaabb={
@@ -78,8 +81,7 @@ function isinsidewall(aabb)
    return wallaabb
   end
  end
-
- return false
+ -- return nil
 end
 
 function haslos(_x1,_y1,_x2,_y2)
@@ -99,7 +101,7 @@ function haslos(_x1,_y1,_x2,_y2)
   n-=1
 
   if floormap[flr(y/8)][flr(x/8)] == 1 then
-   return false
+   return
   end
 
   if error > 0 then
@@ -125,35 +127,8 @@ function normalize(n)
  return sgn(n)
 end
 
-newaabb={} -- note: used internally in collision funcs
-
-function floormapcollision(aabb,_dx,_dy)
- local dx,dy=_dx,_dy
-
- newaabb.halfw,newaabb.halfh=aabb.halfw,aabb.halfh
-
- -- next pos with new x
- newaabb.x,newaabb.y=aabb.x+_dx,aabb.y
-
- -- is it inside wall?
- local wallaabb=isinsidewall(newaabb)
- if wallaabb then
-  dx=(aabb.halfw+wallaabb.halfw-abs(aabb.x-wallaabb.x))*-sgn(_dx)
- end
-
- -- reset x and set new y
- newaabb.x,newaabb.y=aabb.x,aabb.y+_dy
-
- -- is it inside wall?
- local wallaabb=isinsidewall(newaabb)
- if wallaabb then
-  dy=(aabb.halfh+wallaabb.halfh-abs(aabb.y-wallaabb.y))*-sgn(_dy)
- end
-
- return dx,dy
-end
-
-function collideaabbs(aabb,other,_dx,_dy)
+newaabb={}
+function collideaabbs(collisionfunc,aabb,other,_dx,_dy)
  local dx,dy=_dx,_dy
 
  -- set aabb halfs
@@ -163,16 +138,18 @@ function collideaabbs(aabb,other,_dx,_dy)
  newaabb.x,newaabb.y=aabb.x+_dx,aabb.y
 
  -- is it colliding w other
- if isaabbscolliding(newaabb,other) then
-  dx=(aabb.halfw+other.halfw-abs(aabb.x-other.x))*-sgn(_dx)
+ local collidedwith=collisionfunc(newaabb,other)
+ if collidedwith then
+  dx=(aabb.halfw+collidedwith.halfw-abs(aabb.x-collidedwith.x))*-sgn(_dx)
  end
 
  -- set next pos along y
  newaabb.x,newaabb.y=aabb.x,aabb.y+_dy
 
  -- is it colliding w other
- if isaabbscolliding(newaabb,other) then
-  dy=(aabb.halfh+other.halfh-abs(aabb.y-other.y))*-sgn(_dy)
+ local collidedwith=collisionfunc(newaabb,other)
+ if collidedwith then
+  dy=(aabb.halfh+collidedwith.halfh-abs(aabb.y-collidedwith.y))*-sgn(_dy)
  end
 
  return dx,dy
@@ -1648,6 +1625,7 @@ function dungeonupdate()
  for actor in all(actors) do
   if actor != avatar and not actor.isghost then
    local _dx,_dy=collideaabbs(
+     isaabbscolliding,
      avatar,
      actor,
      avatar.dx,
@@ -1659,8 +1637,10 @@ function dungeonupdate()
 
  -- movement check against floormap
  for actor in all(actors) do
-  local _dx,_dy=floormapcollision(
+  local _dx,_dy=collideaabbs(
+    isinsidewall,
     actor,
+    nil,
     actor.dx,
     actor.dy)
 
