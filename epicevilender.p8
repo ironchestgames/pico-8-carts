@@ -130,12 +130,10 @@ newaabb={} -- note: used internally in collision funcs
 function floormapcollision(aabb,_dx,_dy)
  local dx,dy=_dx,_dy
 
- newaabb.halfw=aabb.halfw
- newaabb.halfh=aabb.halfh
+ newaabb.halfw,newaabb.halfh=aabb.halfw,aabb.halfh
 
  -- next pos with new x
- newaabb.x=aabb.x+dx
- newaabb.y=aabb.y
+ newaabb.x,newaabb.y=aabb.x+_dx,aabb.y
 
  -- is it inside wall?
  local wallaabb=isinsidewall(newaabb)
@@ -144,8 +142,7 @@ function floormapcollision(aabb,_dx,_dy)
  end
 
  -- reset x and set new y
- newaabb.x=aabb.x
- newaabb.y=aabb.y+dy
+ newaabb.x,newaabb.y=aabb.x,aabb.y+_dy
 
  -- is it inside wall?
  local wallaabb=isinsidewall(newaabb)
@@ -160,12 +157,10 @@ function collideaabbs(aabb,other,_dx,_dy)
  local dx,dy=_dx,_dy
 
  -- set aabb halfs
- newaabb.halfw=aabb.halfw
- newaabb.halfh=aabb.halfh
+ newaabb.halfw,newaabb.halfh=aabb.halfw,aabb.halfh
 
  -- set next pos along x
- newaabb.x=aabb.x+_dx
- newaabb.y=aabb.y
+ newaabb.x,newaabb.y=aabb.x+_dx,aabb.y
 
  -- is it colliding w other
  if isaabbscolliding(newaabb,other) then
@@ -173,16 +168,12 @@ function collideaabbs(aabb,other,_dx,_dy)
  end
 
  -- set next pos along y
- newaabb.x=aabb.x
- newaabb.y=aabb.y+_dy
+ newaabb.x,newaabb.y=aabb.x,aabb.y+_dy
 
  -- is it colliding w other
  if isaabbscolliding(newaabb,other) then
   dy=(aabb.halfh+other.halfh-abs(aabb.y-other.y))*-sgn(_dy)
  end
-
- -- todo: next pos along x and y together
- --       to test when moving from any corner quadrant
 
  return dx,dy
 end
@@ -253,15 +244,18 @@ function getvfxframeindex(angle)
 end
 
 -- todo: this is only convenience dev function
-function actorfactory(params)
- params.state='idling'
- params.state_counter=0
- params.dx=0
- params.dy=0
- params.dmgfxcounter=0
- params.toocloseto={}
+function actorfactory(actor)
+ actor.state='idling'
+ actor.state_counter=0
+ actor.currentframe=1
+ actor.dx=0
+ actor.dy=0
+ actor.runspd=actor.spd
+ actor.dmgfxcounter=0
+ actor.comfydist=actor.comfydist or 1
+ actor.toocloseto={}
 
- return params
+ return actor
 end
 
 function performenemymelee(enemy)
@@ -334,14 +328,12 @@ function newmeleeskeleton(x,y)
   a=0,
   halfw=1.5,
   halfh=2,
-  runspd=0.5,
   spd=0.5,
   hp=3,
   attack_preperformdur=40,
   attack_postperformdur=10,
   attack_range=7,
   performattack=performenemymelee,
-  currentframe=1,
   idling={parseflat'0,15,4,5,-2,-3,'},
   moving={
    animspd=0.18,
@@ -366,14 +358,12 @@ function newbatenemy(x,y)
   a=0,
   halfw=1.5,
   halfh=2,
-  runspd=0.75,
   spd=0.75,
   hp=1,
   attack_preperformdur=30,
   attack_postperformdur=0,
   attack_range=7,
   performattack=performenemymelee,
-  currentframe=1,
   idling={parseflat'36,15,3,3,-1.5,-1.5,'},
   moving={
    animspd=0.21,
@@ -397,7 +387,6 @@ function newbowskeleton(x,y)
   a=0,
   halfw=1.5,
   halfh=2,
-  runspd=0.5,
   spd=0.5,
   hp=2,
   attack_preperformdur=60,
@@ -405,7 +394,6 @@ function newbowskeleton(x,y)
   attack_range=40,
   performattack=performenemybow,
   comfydist=20,
-  currentframe=1,
   idling={parseflat'18,15,4,5,-2,-3,'},
   moving={
    animspd=0.18,
@@ -509,10 +497,8 @@ function newskeletonking(x,y)
   a=0,
   halfw=1.5,
   halfh=3,
-  runspd=0.4,
   spd=0.4,
   hp=10,
-  currentframe=1,
   idling={parseflat'0,40,15,18,-7,-13,'},
   moving={
    animspd=0.24,
@@ -970,7 +956,6 @@ function dungeoninit()
   -- skill2=nil,
   -- currentskill=nil,
   passiveskills={},
-  currentframe=1,
   idling={parseflat'0,10,3,4,-1,-2,'},
   moving={
    parseflat'0,10,3,4,-1,-2,',
@@ -1392,10 +1377,7 @@ function dungeonupdate()
    -- movement vars
    local ismovingoutofcollision=enemy.ismovingoutofcollision
    local collidedwithwall=enemy.wallcollisiondx != nil
-   local istooclosetoavatar=distancetoavatar <= 1
-   if enemy.comfydist then
-    istooclosetoavatar=distancetoavatar <= enemy.comfydist
-   end
+   local istooclosetoavatar=distancetoavatar <= enemy.comfydist
    local hastoocloseto=#enemy.toocloseto > 0
    local hastarget=enemy.targetx!=nil
 
