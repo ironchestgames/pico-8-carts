@@ -2124,9 +2124,13 @@ function equipupdate()
 
  -- init available skills
  availableskills={}
+ avatar.passiveskills={}
  for item in all(equipped) do
   if item.skill then
    add(availableskills,item.skill)
+  end
+  if not item.skill.perform then
+   add(avatar.passiveskills,item.skill)
   end
  end
 
@@ -2215,19 +2219,28 @@ function equipupdate()
    sfx(7)
   end
 
+  local selectedskill=availableskills[availableskillscur]
   if btnp(4) then
-   avatar.skill1=availableskills[availableskillscur]
-   if avatar.skill2 == avatar.skill1 then
-    avatar.skill2=nil
+   if selectedskill.perform then
+    avatar.skill1=selectedskill
+    if avatar.skill2 == avatar.skill1 then
+     avatar.skill2=nil
+    end
+    sfx(8)
+   else
+    sfx(6)
    end
-   sfx(8)
   end
   if btnp(5) then
-   avatar.skill2=availableskills[availableskillscur]
-   if avatar.skill1 == avatar.skill2 then
-    avatar.skill1=nil
+   if selectedskill.perform then
+    avatar.skill2=selectedskill
+    if avatar.skill1 == avatar.skill2 then
+     avatar.skill1=nil
+    end
+    sfx(8)
+   else
+    sfx(6)
    end
-   sfx(8)
   end
 
  -- exit
