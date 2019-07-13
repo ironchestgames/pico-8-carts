@@ -965,9 +965,9 @@ function mapinit()
 
  local basemap={}
 
- for _y=0,15 do
+ for _y=-1,16 do
   basemap[_y]={}
-  for _x=0,15 do
+  for _x=-1,16 do
    basemap[_y][_x]=1
   end
  end
@@ -1075,9 +1075,9 @@ function mapinit()
    {},
    {}
 
- for _y=0,15 do
+ for _y=-1,16 do
   floormap[_y]={}
-  for _x=0,15 do
+  for _x=-1,16 do
    local _col,ax,ay=
      basemap[_y][_x],
      _x*8+4,
@@ -1125,8 +1125,12 @@ function mapinit()
      halfw=4,
      halfh=4,
      sprite=dungeonthemes[nexttheme].spr1+2,
-     text='',
-     enter=nextfloor,
+     text='\x8e go deeper',
+     enter=function()
+      if btnp(4) then
+       nextfloor()
+      end
+     end,
     }
 
     add(interactables,door)
@@ -1161,6 +1165,7 @@ function dungeonupdate()
  gametick+=1
 
  if gametick < 120 then
+  currentinteractable=nil
   return
  end
 
