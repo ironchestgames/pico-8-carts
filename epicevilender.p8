@@ -1186,7 +1186,7 @@ function dungeonupdate()
    avatar.state='moving'
    avatar.state_counter=2
   end
- else
+ elseif avatar.state != 'recovering' then
   avatar.dx,avatar.dy=0,0
  end
 
