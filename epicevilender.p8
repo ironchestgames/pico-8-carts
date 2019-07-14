@@ -983,6 +983,11 @@ function dungeoninit()
  dungeonlevel=1
  dungeontheme=1
  nexttheme=1
+
+ for dungeontheme in all(dungeonthemes) do
+  dungeontheme.levelcount=3+flr(rnd()*3)
+ end
+
  mapinit()
 end
 
@@ -1029,6 +1034,8 @@ function mapinit()
  local enemytypes={5,6,7}
  local enemies={}
 
+ dungeonthemes[dungeontheme].levelcount-=1
+
  while stepcount > 0 do
 
   local nextx,nexty=curx+cos(angle),cury+sin(angle)
@@ -1058,13 +1065,10 @@ function mapinit()
   basemap[enemy.y][enemy.x]=enemy.typ
  end
 
- if dungeonlevel % 3 == 2 then
-  nexttheme+=1
- end
-
- if dungeonlevel % 3 == 0 then
+ if dungeonthemes[dungeontheme].levelcount == 0 then
   local enemy=enemies[#enemies]
   basemap[enemy.y][enemy.x]=8
+  nexttheme+=1
  end
 
  -- door
