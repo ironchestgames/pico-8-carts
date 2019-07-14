@@ -609,7 +609,7 @@ function burningeffect(actor)
   actor.effect.counter=0
   add(pemitters,{
    follow=actor,
-   life=120,
+   life=actor.state_counter,
    prate={2,4},
    plife={15,25},
    poffsets={-2,0.5,2,0.5},
@@ -680,7 +680,9 @@ swordattackskillfactory=function(
   preperformdur,
   postperformdur,
   targetcount,
-  attackcol)
+  attackcol,
+  typ,
+  recovertime)
  return {
   sprite=31,
   desc='sword attack',
@@ -697,7 +699,8 @@ swordattackskillfactory=function(
     halfw=2,
     halfh=2,
     state_counter=1,
-    typ='knockback',
+    typ=typ or 'knockback',
+    recovertime=recovertime or 0,
     knockbackangle=user.a,
     damage=damage,
     targetcount=targetcount,
@@ -857,106 +860,171 @@ end
 antiframe=parseflat'9,9,1,1,0,0,'
 
 -- items
-sword={
- name='steel sword, 1 dmg, knockback',
- class='weapon',
- sprite=47,
- col=6,
- skill=swordattackskillfactory(1,15,28,1000,7),
- currentframe=1,
- idling={parseflat'9,9,5,5,-2,-3,'},
- moving={parseflat'9,9,5,5,-2,-3,'},
- attacking={
-  parseflat'14,9,5,5,-2,-3,',
-  parseflat'18,9,7,5,-3,-3,'
- },
- recovering={parseflat'9,9,5,5,-2,-3,'},
-}
 
-bow={
- name='cedar bow, 1 dmg',
- class='weapon',
- twohand=true,
- sprite=46,
- col=4,
- skill=bowattackskillfactory(1,26,6,1,7,3),
- currentframe=1,
- idling={parseflat'25,9,5,5,-2,-3,'},
- moving={parseflat'25,9,5,5,-2,-3,'},
- attacking={
-  parseflat'30,9,5,5,-2,-3,',
-  parseflat'25,9,1,1,-2,-3,',
- },
- recovering={parseflat'25,9,5,5,-2,-3,'},
-}
+function swordfactory(name,sprite,col,skill)
+ local idleframe=parseflat'9,9,5,5,-2,-3,'
+ return {
+  name=name,
+  class='weapon',
+  sprite=sprite,
+  col=col,
+  skill=skill,
+  currentframe=1,
+  idling={idleframe},
+  moving={idleframe},
+  attacking={
+   parseflat'14,9,5,5,-2,-3,',
+   parseflat'18,9,7,5,-3,-3,'
+  },
+  recovering={idleframe},
+ }
+end
 
-icebow={
- name='the frozen arc, 1 dmg, ice',
- class='weapon',
- twohand=true,
- sprite=61,
- col=12,
- skill=bowattackskillfactory(1,26,6,1,7,12,'ice',150),
- currentframe=1,
- idling={parseflat'25,9,5,5,-2,-3,'},
- moving={parseflat'25,9,5,5,-2,-3,'},
- attacking={
-  parseflat'30,9,5,5,-2,-3,',
-  parseflat'25,9,1,1,-2,-3,',
- },
- recovering={parseflat'25,9,5,5,-2,-3,'},
-}
+sword=swordfactory(
+  'steel sword, 1 dmg, knockback',
+  47,
+  6,
+  swordattackskillfactory(1,15,28,1000,7))
 
-fireboltbook={
- name='book of firebolt',
- class='book',
- sprite=45,
- skill=boltskillfactory(1,50,0,120,1,'fire',14,parseflat'8,14,',parseflat'14,8,',29,'firebolt'),
- currentframe=1,
- idling={antiframe},
- moving={antiframe},
- attacking={antiframe,antiframe},
- recovering={antiframe},
-}
+flamingsword=swordfactory(
+  'flaming sword, 1 dmg, fire',
+  60,
+  8,
+  swordattackskillfactory(1,15,28,1000,14,'fire',60))
 
-iceboltbook={
- name='book of icebolt',
- class='book',
- sprite=63,
- skill=boltskillfactory(0,40,0,150,1,'ice',7,parseflat'12,12,',parseflat'12,12,',28,'icebolt'),
- currentframe=1,
- idling={antiframe},
- moving={antiframe},
- attacking={antiframe,antiframe},
- recovering={antiframe},
-}
+function bowfactory(name,sprite,col,skill)
+ local idleframe=parseflat'25,9,5,5,-2,-3,'
+ return {
+  name=name,
+  class='weapon',
+  twohand=true,
+  sprite=sprite,
+  col=col,
+  skill=skill,
+  currentframe=1,
+  idling={idleframe},
+  moving={idleframe},
+  attacking={
+   parseflat'30,9,5,5,-2,-3,',
+   parseflat'25,9,1,1,-2,-3,',
+  },
+  recovering={idleframe},
+ }
+end
 
-shieldframe=parseflat'35,9,5,5,-2,-3,'
-shield={
- name='steel shield, +1 armor',
- class='offhand',
- sprite=44,
- col=13,
- armor=1,
- currentframe=1,
- idling={shieldframe},
- moving={shieldframe},
- attacking={shieldframe},
- recovering={shieldframe},
-}
+bow=bowfactory(
+  'cedar bow, 1 dmg',
+  46,
+  4,
+  bowattackskillfactory(1,26,6,1,7,3))
 
-ringmail={
- name='ringmail, +1 armor',
- class='armor',
- sprite=43,
- col=5,
- armor=1,
- currentframe=1,
- idling={antiframe},
- moving={antiframe},
- attacking={antiframe,antiframe},
- recovering={antiframe},
-}
+icebow=bowfactory(
+ 'the frozen arc, 1 dmg, ice',
+ 61,
+ 12,
+ bowattackskillfactory(1,26,6,1,7,12,'ice',150))
+
+function bookfactory(name,sprite,skill)
+ return {
+  name=name,
+  class='book',
+  sprite=sprite,
+  skill=skill,
+  currentframe=1,
+  idling={antiframe},
+  moving={antiframe},
+  attacking={antiframe,antiframe},
+  recovering={antiframe},
+ }
+end
+
+fireboltbook=bookfactory(
+  'book of firebolt',
+  45,
+  boltskillfactory(
+    1,
+    50,
+    0,
+    120,
+    1,
+    'fire',
+    14,
+    parseflat'8,14,',
+    parseflat'14,8,',
+    29,
+    'firebolt'))
+
+
+iceboltbook=bookfactory(
+  'book of icebolt',
+  63,
+  boltskillfactory(
+    0,
+    40,
+    0,
+    150,
+    1,
+    'ice',
+    7,
+    parseflat'12,12,',
+    parseflat'12,12,',
+    28,
+    'icebolt'))
+
+function shieldfactory(name,sprite,col,armor)
+ local shieldframe=parseflat'35,9,5,5,-2,-3,'
+ return {
+  name=name,
+  class='offhand',
+  sprite=sprite,
+  col=col,
+  armor=armor,
+  currentframe=1,
+  idling={shieldframe},
+  moving={shieldframe},
+  attacking={shieldframe},
+  recovering={shieldframe},
+ }
+end
+
+shield=shieldfactory(
+  'steel shield, +1 armor',
+  44,
+  13,
+  1)
+
+knightshield=shieldfactory(
+  'knight shield, +2 armor',
+  59,
+  6,
+  2)
+
+function armorfactory(name,sprite,col,armor)
+ return {
+  name=name,
+  class='armor',
+  sprite=sprite,
+  col=col,
+  armor=armor,
+  currentframe=1,
+  idling={antiframe},
+  moving={antiframe},
+  attacking={antiframe,antiframe},
+  recovering={antiframe},
+ }
+end
+
+ringmail=armorfactory(
+  'ringmail, +1 armor',
+  43,
+  5,
+  1)
+
+platemail=armorfactory(
+  'platemail, +2 armor',
+  58,
+  6,
+  2)
 
 cloakidling=parseflat'0,6,3,4,-1,-2,'
 
@@ -1012,6 +1080,10 @@ allitems={
  shield,
  ironhelmet,
  leatherboots,
+ flamingsword,
+ icebow,
+ platemail,
+ knightshield,
 }
 
 dungeonthemes={
@@ -1096,7 +1168,7 @@ function dungeoninit()
  nexttheme=1
 
  for dungeontheme in all(dungeonthemes) do
-  dungeontheme.levelcount=3+flr(rnd()*3)
+  dungeontheme.levelcount=2+flr(rnd()*1)
  end
 
  mapinit()
@@ -2403,26 +2475,29 @@ function equipupdate()
   end
 
   local selectedskill=availableskills[availableskillscur]
-  if btnp(4) then
-   if selectedskill.perform then
-    avatar.skill1=selectedskill
-    if avatar.skill2 == avatar.skill1 then
-     avatar.skill2=nil
+
+  if selectedskill then
+   if btnp(4) then
+    if selectedskill.perform then
+     avatar.skill1=selectedskill
+     if avatar.skill2 == avatar.skill1 then
+      avatar.skill2=nil
+     end
+     sfx(8)
+    else
+     sfx(6)
     end
-    sfx(8)
-   else
-    sfx(6)
    end
-  end
-  if btnp(5) then
-   if selectedskill.perform then
-    avatar.skill2=selectedskill
-    if avatar.skill1 == avatar.skill2 then
-     avatar.skill1=nil
+   if btnp(5) then
+    if selectedskill.perform then
+     avatar.skill2=selectedskill
+     if avatar.skill1 == avatar.skill2 then
+      avatar.skill1=nil
+     end
+     sfx(8)
+    else
+     sfx(6)
     end
-    sfx(8)
-   else
-    sfx(6)
    end
   end
 
@@ -2602,22 +2677,22 @@ __gfx__
 2020202020000000000000000000000000000000000060000229922002299220000000000000000000000000d1d1d1d111111cc1111118811611511111961111
 000000000000000000000000000000000000000000700000024444200244442000000000000000000000000011111dd111111111111111114444112114191111
 000000000dd000000000200020000000020050505060000002222220022222200000000000000000000000001111ddd111111111111111114111111291119111
-060d060d0660060000060206020620006020555555007000000000000000000000000000000000000006d00005600d500666ddd0008888800000004200000066
-666d666d6600666dd0066206626662066620050505060000000000000000000000000000444420200066d500d556d55d06dd11d008ffff40000006400000066d
-060006000600060000062006200620006020000000070000000000000000cc00000000004422202006d6d55050d55d0506d6d1d00222224000006040000067d0
+060d060d0660060000060206020620006020555555007000000000000000000000000000000000000006d00005600d5000000000008888800000004200000066
+666d666d6600666dd0066206626662066620050505060000000000000000000000000000444420200066d500d556d55d0066dd0008ffff40000006400000066d
+060006000600060000062006200620006020000000070000000000000000cc00000000004422202006d6d55050d55d0506dd11d00222224000006040000067d0
 60600600606060600060600600606006060000000000000000000000000ccccc0000000004440400d6d6d555d024920d06d6d1d0022822400006004000067d00
 0700007077770000777707777700007000070088800777022022022200cc00ccc00000000a9909006766dddd00d55d000d1dd1d002288240006005000f67d000
 007007000077700777007777777707000000788888777772200020202cc0000cc0000000044440400006d0000056d5000d1111d0028e824006005000009d0000
-0070070000077777700070000000770000007888887777700000000000cc00cc0000000002444404d000000d00d55d0000d11d00028e82404444000002090000
-00777700000770077000700000007770000778888877777000000000000cccc000000000002222025000000500000000000dd000022222002000000090000000
-007777000000000000007777777707777777708880077700000000000000cc0000000000000000000000000000000000000000000000007c0020010000666660
-077777700000000000000777770000777777000000000000000000000022300000000000000000000000000000000000000000000000070c0e2221d0067777d0
-777777770000000000000000000000070070003300000330020033002000330000000000000000000000000000000000000000000000700c02eeed100cccccd0
-70000000077777777000000070000000070000330020033020003302000033000003300000033000000000000000000000000000000700c6022002100c7c7cd0
-7700000077077777000000007700000077000333020033330033333000033300003330000003300000000000000000000000000000700d20022002100cc7ccd0
-777000077700777000000000777000077700033330003330000333000003330000333322003330000000000000000000000000000700d200022002100c7c7cd0
-77707707770000000000000077770077770004440000444300044400000444300044400000333000000000000000000000000000700c2000022002100cccccd0
-77700007770007000000000007777777700003030000300000000300000300000340300000444300000000000000000000000000ccc60000220000210ccccc00
+0070070000077777700070000000770000007888887777700000000000cc00cc0000000002444404d000000d00d55d0000dddd00028e82404444000002090000
+00777700000770077000700000007770000778888877777000000000000cccc00000000000222202500000050000000000000000022222002000000090000000
+007777000000000000007777777707777777708880077700000000000000cc000000000000000000000000000766dd60000000880000007c0020010000666660
+077777700000000000000777770000777777000000000000000000000022300000000000000000006770066d06cc11d0000008880000070c0e2221d0067777d0
+77777777000000000000000000000007007000330000033002003300200033000000000000000000166d5dd006c6d1d066008e800000700c02eeed100cccccd0
+7000000007777777700000007000000007000033002003302000330200003300000330000003300010d6d50007c6d1606008e800000700c6022002100c7c7cd0
+77000000770777770000000077000000770003330200333300333330000333000033300000033000606d5d0d0d1dd1d0068e800000700d20022002100cc7ccd0
+77700007770077700000000077700007770003333000333000033300000333000033332200333000d0d6d5050d1111d0006800000700d200022002100c7c7cd0
+77707707770000000000000077770077770004440000444300044400000444300044400000333000000d50000061160002050500700c2000022002100cccccd0
+7770000777000700000000000777777770000303000030000000030000030000034030000044430000000000000dd00050005500ccc60000220000210ccccc00
 77000000770007000000000700000000007000000000000000660000000000000090000000000000000000000000000000000000000000000000000000000000
 70000000070000000000007000000000000700000030603060330030000000900050000000000000000000000000000000000000000000000000000000000000
 00000000000077700777700000000000000007777333633363300333660030503050000000000000000000000000000000000000000000000000000000000000
