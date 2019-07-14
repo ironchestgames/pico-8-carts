@@ -962,7 +962,7 @@ function dungeoninit()
    -- book=nil,
    -- amulet=nil,
   },
-  inventory={sword},
+  inventory={},
   skill1=sword.skill,
   -- skill2=nil,
   -- currentskill=nil,
@@ -1246,7 +1246,9 @@ function dungeonupdate()
    avatar.state_counter=skill.preperformdur
 
    avatar.currentframe=1
-   avatar.items.weapon.currentframe=1
+   if avatar.items.weapon then
+    avatar.items.weapon.currentframe=1
+   end
 
    if avatar.currentskill.startpemitter then
     avatar.currentskill.startpemitter(avatar,skill.preperformdur)
@@ -1541,7 +1543,7 @@ function dungeonupdate()
     if attack.typ == 'ice' and
        actor.effect and
        actor.effect.func == freezeeffect then
-     attack.damage=min(attack.damage,1)
+     attack.damage=max(attack.damage,1)
     end
 
     -- do damage
@@ -1576,16 +1578,21 @@ function dungeonupdate()
        halfw=4,
        halfh=4,
        sprite=22,
-       text='\x8e open',
+       text='\x8e loot',
        enter=function(i)
         if btnp(4) and not i.isopen then
-         i.isopen=true
-         i.text='empty'
-         i.sprite=23
-         local item=allitems[flr(rnd(#allitems))+1]
-         del(allitems,item)
-         add(avatar.inventory,item)
-         sfx(20)
+         if #avatar.inventory >= 10 then
+          i.text='inventory full, \x8e try again'
+          sfx(7)
+         else
+          i.isopen=true
+          i.text='[empty]'
+          i.sprite=23
+          local item=allitems[flr(rnd(#allitems))+1]
+          del(allitems,item)
+          add(avatar.inventory,item)
+          sfx(20)
+         end
         end
        end,
       })
@@ -2236,7 +2243,7 @@ function equipupdate()
      del(avatar.inventory,avatar.inventory[sellcur])
      avatar.skill1,avatar.skill2=nil,nil
 
-     sfx(1)
+     sfx(21)
     else
      sellcur=inventorycur
     end
@@ -2255,14 +2262,18 @@ function equipupdate()
   end
 
   if btnp(4) then
-   local selectedclass=equipslots[equippedcur][1]
-   local selecteditem=avatar.items[selectedclass]
-   if selecteditem then
-    avatar.items[selecteditem.class]=nil
-    add(avatar.inventory,selecteditem)
-    avatar.skill1,avatar.skill2=nil,nil
+   if #avatar.inventory >= 10 then
+    sfx(6)
+   else
+    local selectedclass=equipslots[equippedcur][1]
+    local selecteditem=avatar.items[selectedclass]
+    if selecteditem then
+     avatar.items[selecteditem.class]=nil
+     add(avatar.inventory,selecteditem)
+     avatar.skill1,avatar.skill2=nil,nil
+    end
+    sfx(8)
    end
-   sfx(8)
   end
 
  -- available skills
@@ -2609,7 +2620,7 @@ __sfx__
 010800001a85000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 01080000250402604028040290402b0402d0400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 010a00001d1522115024150291502d150001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000300000a5500c5500c5500f55013550185501b5501d5501f550225502455029550295503055020500265002a500345003d50000500005000050000500005000050000500005000050000500005000050000500
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
