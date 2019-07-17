@@ -1024,39 +1024,38 @@ platemail=armorfactory(
   6,
   2)
 
-cloakidling=parseflat'0,6,3,4,-1,-2,'
+function cloakfactory(name,sprite,col,col2,skill)
+ local cloakidling=parseflat'0,6,3,4,-1,-2,'
+ return {
+  name=name,
+  class='armor',
+  iscloak=true,
+  sprite=sprite,
+  col=col,
+  col2=col2,
+  armor=0,
+  skill=skill,
+  currentframe=1,
+  idling={cloakidling},
+  moving={cloakidling},
+  attacking={cloakidling},
+  recovering={cloakidling},
+ }
+end
 
-cloakofphasing={
- name='cloak of phasing',
- class='armor',
- iscloak=true,
- sprite=62,
- col=2,
- col2=1,
- armor=0,
- skill=skillfactory(27,'passive, phase away on hit',phasing),
- currentframe=1,
- idling={cloakidling},
- moving={cloakidling},
- attacking={cloakidling},
- recovering={cloakidling},
-}
+cloakofphasing=cloakfactory(
+  'cloak of phasing',
+  62,
+  2,
+  1,
+  skillfactory(27,'passive, phase away on hit',phasing))
 
-cloakofflames={
- name='cloak of flames',
- class='armor',
- iscloak=true,
- sprite=26,
- col=8,
- col2=2,
- armor=0,
- currentframe=1,
- skill=skillfactory(7,'passive, cannot be burned',nil,'fire'),
- idling={cloakidling},
- moving={cloakidling},
- attacking={cloakidling},
- recovering={cloakidling},
-}
+cloakofflames=cloakfactory(
+  'cloak of flames',
+  26,
+  8,
+  2,
+  skillfactory(7,'passive, cannot be burned',nil,'fire'))
 
 ironhelmet={
  name='iron helmet, +1 armor',
@@ -1084,37 +1083,37 @@ leatherboots={
  recovering={antiframe},
 }
 
-amuletoffire={
- name='amulet of fire',
- class='amulet',
- sprite=25,
- skill=skillfactory(7,'passive, cannot be burned',nil,'fire'),
- currentframe=1,
- idling={antiframe},
- moving={antiframe},
- attacking={antiframe,antiframe},
- recovering={antiframe},
-}
+function amuletfactory(name,sprite,skill)
+ return {
+  name=name,
+  class='amulet',
+  sprite=sprite,
+  skill=skill,
+  currentframe=1,
+  idling={antiframe},
+  moving={antiframe},
+  attacking={antiframe,antiframe},
+  recovering={antiframe},
+ }
+end
 
-amuletofresurrection={
- name='amulet of resurrection',
- class='amulet',
- sprite=6,
- skill=skillfactory(5,'passive, resurrect once',function (actor)
-  if actor.hp <= 0 then
-   actor.removeme=nil
-   actor.hp=3
-   actor.items.amulet=nil
-   del(actor.passiveskills,amuletofresurrection.skill)
-   sfx(21)
-  end
- end),
- currentframe=1,
- idling={antiframe},
- moving={antiframe},
- attacking={antiframe,antiframe},
- recovering={antiframe},
-}
+amuletoffire=amuletfactory(
+  'amulet of fire',
+  25,
+  skillfactory(7,'passive, cannot be burned',nil,'fire'))
+
+amuletofresurrection=amuletfactory(
+  'amulet of resurrection',
+  6,
+  skillfactory(5,'passive, resurrect once',function (actor)
+   if actor.hp <= 0 then
+    actor.removeme=nil
+    actor.hp=3
+    actor.items.amulet=nil
+    del(actor.passiveskills,amuletofresurrection.skill)
+    sfx(21)
+   end
+  end))
 
 allitems={
  sword,
