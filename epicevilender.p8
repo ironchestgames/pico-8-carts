@@ -15,6 +15,14 @@ function debug(_s1,_s2,_s3,_s4,_s5)
   ,'debug',false)
 end
 
+function contains(_t,_v)
+ for v in all(_t) do
+  if v == _v then
+   return true
+  end
+ end
+end
+
 function clone(_t)
  local t={}
  for k,v in pairs(_t) do
@@ -697,7 +705,7 @@ swordattackskillfactory=function(
     halfw=2,
     halfh=2,
     state_counter=1,
-    typ=typ or 'knockback',
+    typ=typ,
     recovertime=recovertime or 0,
     knockbackangle=actor.a,
     damage=damage,
@@ -855,91 +863,45 @@ function phasing(actor)
  })
 end
 
-antiframe=parseflat'9,9,1,1,0,0,'
-
 -- items
 
-function swordfactory(name,sprite,col,skill)
- local idleframe=parseflat'9,9,5,5,-2,-3,'
- return {
-  name=name,
-  class='weapon',
-  sprite=sprite,
-  col=col,
-  skill=skill,
-  currentframe=1,
-  idling={idleframe},
-  moving={idleframe},
-  attacking={
-   parseflat'14,9,5,5,-2,-3,',
-   parseflat'18,9,7,5,-3,-3,'
-  },
-  recovering={idleframe},
- }
-end
+prefix={
+ { -- 1
+  name='knight\'s ',
+  armor=1,
+ },
+ { -- 2
+  name='dragonscale ',
+  skill=skillfactory(7,'passive, cannot be burned',nil,'fire'),
+ },
+}
 
-sword=swordfactory(
-  'steel sword, 1 dmg, knockback',
-  47,
-  6,
-  swordattackskillfactory(1,15,28,1000,7))
-
-flamingsword=swordfactory(
-  'flaming sword, 1 dmg, fire',
-  60,
-  8,
-  swordattackskillfactory(1,15,28,1000,14,'fire',60))
-
-function bowfactory(name,sprite,col,skill)
- local idleframe=parseflat'25,9,5,5,-2,-3,'
- return {
-  name=name,
-  class='weapon',
-  twohand=true,
-  sprite=sprite,
-  col=col,
-  skill=skill,
-  currentframe=1,
-  idling={idleframe},
-  moving={idleframe},
-  attacking={
-   parseflat'30,9,5,5,-2,-3,',
-   parseflat'25,9,1,1,-2,-3,',
-  },
-  recovering={idleframe},
- }
-end
-
-bow=bowfactory(
-  'cedar bow, 1 dmg',
-  46,
-  4,
-  bowattackskillfactory(1,26,6,1,7,2))
-
-icebow=bowfactory(
- 'the frozen arc, 1 dmg, ice',
- 61,
- 12,
- bowattackskillfactory(1,26,6,1,7,12,'ice',150))
-
-function bookfactory(name,sprite,skill)
- return {
-  name=name,
-  class='book',
-  sprite=sprite,
-  skill=skill,
-  currentframe=1,
-  idling={antiframe},
-  moving={antiframe},
-  attacking={antiframe,antiframe},
-  recovering={antiframe},
- }
-end
-
-fireboltbook=bookfactory(
-  'book of firebolt',
-  45,
-  boltskillfactory(
+suffix={
+ { -- 1
+  name=' of resurrection',
+  amulet_sprite=6,
+  skill=skillfactory(5,'passive, resurrect once',function (actor)
+   if actor.hp <= 0 then
+    actor.removeme=nil
+    actor.hp=3
+    actor.items.amulet=nil
+    del(actor.passiveskills,suffix[1].skill)
+    sfx(21)
+   end
+  end),
+ },
+ { -- 2
+  name=' of haste',
+  spdfactor=0.1,
+ },
+ { -- 3
+  name=' of phasing',
+  skill=skillfactory(27,'passive, phase away on hit',phasing),
+ },
+ { -- 4
+  name=' of firebolt',
+  book_sprite=45,
+  skill=boltskillfactory(
     1,
     50,
     0,
@@ -950,13 +912,12 @@ fireboltbook=bookfactory(
     parseflat'8,14,',
     parseflat'14,8,',
     29,
-    'firebolt'))
-
-
-iceboltbook=bookfactory(
-  'book of icebolt',
-  63,
-  boltskillfactory(
+    'firebolt'),
+ },
+ { -- 5
+  name=' of icebolt',
+  book_sprite=63,
+  skill=boltskillfactory(
     0,
     40,
     0,
@@ -965,174 +926,125 @@ iceboltbook=bookfactory(
     'ice',
     7,
     parseflat'12,12,',
-    parseflat'12,12,',
+    parseflat'12,13,',
     28,
-    'icebolt'))
+    'icebolt')
+ },
+ { -- 6 (sword attack)
+  name=' of fire',
+  col=8,
+  skill=swordattackskillfactory(1,15,28,1000,14,'fire',60),
+ },
+ { -- 7 (bow attack)
+  name='',
+  col=4,
+  skill=bowattackskillfactory(1,26,6,1,7,2),
+ },
+ { -- 8 (bow attack)
+  name=' of ice',
+  col=12,
+  skill=bowattackskillfactory(1,26,6,1,7,12,'ice',150),
+ },
+ { -- 9 (sword attack)
+  name=' of the bear',
+  skill=swordattackskillfactory(1,15,28,1000,7,'knockback'),
+ },
+}
 
-function shieldfactory(name,sprite,col,armor)
- local shieldframe=parseflat'35,9,5,5,-2,-3,'
- return {
-  name=name,
-  class='offhand',
-  sprite=sprite,
-  col=col,
-  armor=armor,
-  currentframe=1,
-  idling={shieldframe},
-  moving={shieldframe},
-  attacking={shieldframe},
-  recovering={shieldframe},
- }
-end
+cloakidling={parseflat'0,6,3,4,-1,-2,'}
+shieldidling={parseflat'35,9,5,5,-2,-3,'}
+swordidling={parseflat'9,9,5,5,-2,-3,'}
+bowidling={parseflat'25,9,5,5,-2,-3,'}
 
-shield=shieldfactory(
-  'steel shield, +1 armor',
-  44,
-  13,
-  1)
-
-knightshield=shieldfactory(
-  'knight shield, +2 armor',
-  59,
-  6,
-  2)
-
-function armorfactory(name,sprite,col,armor)
- return {
-  name=name,
+itemclasses={
+ {
+  class='boots',
+  sprite=41,
+  col=4,
+  prefix={2},
+  suffix={2},
+ },
+ {
+  class='helmet',
+  sprite=42,
+  col=13,
+  prefix={1},
+  suffix={},
+ },
+ {
+  class='amulet',
+  sprite=25,
+  prefix={2},
+  suffix={1},
+ },
+ { -- platemail
   class='armor',
-  sprite=sprite,
-  col=col,
-  armor=armor,
-  currentframe=1,
-  idling={antiframe},
-  moving={antiframe},
-  attacking={antiframe,antiframe},
-  recovering={antiframe},
- }
-end
-
-ringmail=armorfactory(
-  'ringmail, +1 armor',
-  43,
-  5,
-  1)
-
-platemail=armorfactory(
-  'platemail, +2 armor',
-  58,
-  6,
-  2)
-
-function cloakfactory(name,sprite,col,col2,skill)
- local cloakidling=parseflat'0,6,3,4,-1,-2,'
- return {
-  name=name,
+  sprite=58,
+  col=6,
+  prefix={1},
+  suffix={},
+ },
+ { -- cloak
   class='armor',
   iscloak=true,
-  sprite=sprite,
-  col=col,
-  col2=col2,
-  armor=0,
-  skill=skill,
-  currentframe=1,
-  idling={cloakidling},
-  moving={cloakidling},
-  attacking={cloakidling},
-  recovering={cloakidling},
+  sprite=26,
+  col=2,
+  col2=1,
+  prefix={2},
+  suffix={2,3},
+  idling=cloakidling,
+  moving=cloakidling,
+  attacking=cloakidling,
+  recovering=cloakidling,
+ },
+ { -- shield
+  class='offhand',
+  sprite=44,
+  col=13,
+  prefix={1,2},
+  suffix={3},
+  idling=shieldidling,
+  moving=shieldidling,
+  attacking=shieldidling,
+  recovering=shieldidling,
+ },
+ {
+  class='book',
+  sprite=nil,
+  prefix={},
+  suffix={4,5}
+ },
+ { -- sword
+  class='weapon',
+  sprite=47,
+  col=6,
+  prefix={},
+  suffix={6,9},
+  idling=swordidling,
+  moving=swordidling,
+  attacking={
+   parseflat'14,9,5,5,-2,-3,',
+   parseflat'18,9,7,5,-3,-3,'
+  },
+  recovering=swordidling,
+ },
+ { -- bow
+  class='weapon',
+  twohand=true,
+  sprite=46,
+  col=4,
+  prefix={},
+  suffix={7,8},
+  idling=bowidling,
+  moving=bowidling,
+  attacking={
+   parseflat'30,9,5,5,-2,-3,',
+   parseflat'25,9,1,1,-2,-3,',
+  },
+  recovering=bowidling,
  }
-end
-
-cloakofphasing=cloakfactory(
-  'cloak of phasing',
-  62,
-  2,
-  1,
-  skillfactory(27,'passive, phase away on hit',phasing))
-
-cloakofflames=cloakfactory(
-  'cloak of flames',
-  26,
-  8,
-  2,
-  skillfactory(7,'passive, cannot be burned',nil,'fire'))
-
-ironhelmet={
- name='iron helmet, +1 armor',
- class='helmet',
- sprite=42,
- col=13,
- armor=1,
- currentframe=1,
- idling={antiframe},
- moving={antiframe},
- attacking={antiframe,antiframe},
- recovering={antiframe},
 }
 
-leatherboots={
- name='boots of haste, +10% speed',
- class='boots',
- sprite=41,
- col=4,
- spdfactor=0.1,
- currentframe=1,
- idling={antiframe},
- moving={antiframe},
- attacking={antiframe,antiframe},
- recovering={antiframe},
-}
-
-function amuletfactory(name,sprite,skill)
- return {
-  name=name,
-  class='amulet',
-  sprite=sprite,
-  skill=skill,
-  currentframe=1,
-  idling={antiframe},
-  moving={antiframe},
-  attacking={antiframe,antiframe},
-  recovering={antiframe},
- }
-end
-
-amuletoffire=amuletfactory(
-  'amulet of fire',
-  25,
-  skillfactory(7,'passive, cannot be burned',nil,'fire'))
-
-amuletofresurrection=amuletfactory(
-  'amulet of resurrection',
-  6,
-  skillfactory(5,'passive, resurrect once',function (actor)
-   if actor.hp <= 0 then
-    actor.removeme=nil
-    actor.hp=3
-    actor.items.amulet=nil
-    del(actor.passiveskills,amuletofresurrection.skill)
-    sfx(21)
-   end
-  end))
-
-allitems={
- sword,
- bow,
- fireboltbook,
- iceboltbook,
- cloakofphasing,
- cloakofflames,
- ringmail,
- shield,
- ironhelmet,
- leatherboots,
- flamingsword,
- icebow,
- platemail,
- knightshield,
- amuletoffire,
- amuletofresurrection,
-}
 
 dungeonthemes={
  { -- forest
@@ -1173,6 +1085,24 @@ function dungeoninit()
    dungeonupdate,
    dungeondraw
 
+ sword={
+  class='weapon',
+  name='sword',
+  sprite=47,
+  col=6,
+  suffix={
+   skill=swordattackskillfactory(1,15,28,1000,7),
+  },
+  currentframe=1,
+  idling=swordidling,
+  moving=swordidling,
+  attacking={
+   parseflat'14,9,5,5,-2,-3,',
+   parseflat'18,9,7,5,-3,-3,',
+  },
+  recovering=swordidling,
+ }
+
  avatar=actorfactory({
   x=64,
   y=56,
@@ -1194,7 +1124,7 @@ function dungeoninit()
    -- amulet=nil,
   },
   inventory={},
-  skill1=sword.skill,
+  skill1=sword.suffix.skill,
   -- skill2=nil,
   -- currentskill=nil,
   passiveskills={},
@@ -1230,6 +1160,7 @@ end
 
 curenemyidx=1
 gametick=0
+kills=0
 
 function mapinit()
 
@@ -1296,7 +1227,7 @@ function mapinit()
   basemap[enemy.y][enemy.x]=enemy.typ
  end
 
- if dungeonthemes[dungeontheme].levelcount == 0 then
+ if dungeonthemes[dungeontheme].levelcount == 3 then
   local enemy=enemies[#enemies]
   basemap[enemy.y][enemy.x]=8
   nexttheme+=1
@@ -1443,6 +1374,7 @@ function dungeonupdate()
 
  if avatar.hp <= 0 then
   if gametick-deathts > 150 and btnp(4) then
+   kills=0
    dungeoninit()
   end
   return
@@ -1815,13 +1747,14 @@ function dungeonupdate()
     -- check if actor dead
     if actor.hp <= 0 then
      actor.removeme=true
+     kills+=1
      hitsfx=3
 
      -- add chest
-     if actor == boss then
+     if kills % 5 == 0 then
       add(interactables,{
-       x=boss.x,
-       y=boss.y,
+       x=actor.x,
+       y=actor.y,
        halfw=4,
        halfh=4,
        sprite=22,
@@ -1835,8 +1768,59 @@ function dungeonupdate()
           i.isopen=true
           i.text='[empty]'
           i.sprite=23
-          local item=allitems[flr(rnd(#allitems))+1]
-          del(allitems,item)
+
+          local itemclass=itemclasses[
+            flr(rnd(#itemclasses))+1]
+          local _prefix=flr(rnd(#prefix))+1
+          local _suffix=flr(rnd(#suffix))+1
+
+          local itemname=itemclass.class
+          local armor=0
+          local spdfactor=0
+          local sprite=itemclass.sprite
+
+          if contains(itemclass.prefix,_prefix) then
+           _prefix=prefix[_prefix]
+           itemname=_prefix.name..itemname
+           armor+=(_prefix.armor or 0)
+           spdfactor+=(_prefix.spdfactor or 0)
+           sprite=_prefix[itemclass.class..'_sprite']
+          else
+           _prefix=nil
+          end
+
+          if contains(itemclass.suffix,_suffix) then
+           _suffix=suffix[_suffix]
+           itemname=itemname.._suffix.name
+           armor+=(_suffix.armor or 0)
+           spdfactor+=(_suffix.spdfactor or 0)
+           sprite=_suffix[itemclass.class..'_sprite']
+          else
+           _suffix=nil
+          end
+
+          if _prefix == nil and _suffix == nil then
+           itemname='useless '..itemname
+          end
+
+          local item={
+           class=itemclass.class,
+           name=itemname,
+           sprite=sprite or itemclass.sprite,
+           col=itemclass.col,
+           col2=itemclass.col2,
+           prefix=_prefix,
+           suffix=_suffix,
+           armor=armor,
+           spdfactor=spdfactor,
+           iscloak=itemclass.iscloak,
+           currentframe=1,
+           idling=itemclass.idling,
+           moving=itemclass.moving,
+           attacking=itemclass.attacking,
+           recovering=itemclass.recovering,
+          }
+
           add(avatar.inventory,item)
           sfx(20)
          end
@@ -2398,9 +2382,6 @@ end
 
 function equipupdate()
 
- -- mute melody channel
- -- sfx(18,0)
-
  -- init equipped items
  avatar.startarmor=0
  avatar.spdfactor=1
@@ -2418,17 +2399,32 @@ function equipupdate()
  -- init available active skills
  availableskills={}
  for item in all(equipped) do
-  if item.skill and item.skill.perform then
-   add(availableskills,item.skill)
+  if item.prefix and
+     item.prefix.skill and
+     item.prefix.skill.perform then
+   add(availableskills,item.prefix.skill)
+  end
+  if item.suffix and
+     item.suffix.skill and
+     item.suffix.skill.perform then
+   add(availableskills,item.suffix.skill)
   end
  end
 
  -- init available passive skills
  avatar.passiveskills={}
  for item in all(equipped) do
-  if item.skill and not item.skill.perform then
-   add(availableskills,item.skill)
-   add(avatar.passiveskills,item.skill)
+  if item.prefix and
+     item.prefix.skill
+     and not item.prefix.skill.perform then
+   add(availableskills,item.prefix.skill)
+   add(avatar.passiveskills,item.prefix.skill)
+  end
+  if item.suffix and
+     item.suffix.skill
+     and not item.suffix.skill.perform then
+   add(availableskills,item.suffix.skill)
+   add(avatar.passiveskills,item.suffix.skill)
   end
  end
 
@@ -2702,22 +2698,23 @@ end
 
 
 _init=function()
- gametick=0
- _update60=function()
-  gametick+=1
-  if btnp(4) then
+
+ -- gametick=0
+ -- _update60=function()
+ --  gametick+=1
+ --  if btnp(4) then
    dungeoninit()
-  end
- end
- _draw=function()
-  cls(0)
-  sspr(41,56,87,72,21,20)
-  col=13
-  if gametick % 60 <= 30 then
-   col=6
-  end
-  print('\x8e to start',42,118,col)
- end
+ --  end
+ -- end
+ -- _draw=function()
+ --  cls(0)
+ --  sspr(41,56,87,72,21,20)
+ --  col=13
+ --  if gametick % 60 <= 30 then
+ --   col=6
+ --  end
+ --  print('\x8e to start',42,118,col)
+ -- end
 end
 
 __gfx__
