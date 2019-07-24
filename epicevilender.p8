@@ -5,17 +5,11 @@ __lua__
 -- by ironchest games
 
 printh('debug started','debug',true)
-function debug(_s1,_s2,_s3,_s4,_s5)
- printh(
-  tostr(_s1)..', '..
-  tostr(_s2)..', '..
-  tostr(_s3)..', '..
-  tostr(_s4)..', '..
-  tostr(_s5)
-  ,'debug',false)
+function debug(s)
+ printh(tostr(s),'debug',false)
 end
 
-function contains(_t,_v)
+function has(_t,_v)
  for v in all(_t) do
   if v == _v then
    return true
@@ -32,7 +26,7 @@ function clone(_t)
 end
 
 -- note: last char needs to be ','
-function parseflat(s)
+function paf(s) -- parseflat
  local t,_s={},''
  while #s > 0 do
   local d=sub(s,1,1)
@@ -48,27 +42,26 @@ function parseflat(s)
 end
 
 function isaabbscolliding(a,b)
- if a.x - a.halfw < b.x + b.halfw and
-    a.x + a.halfw > b.x - b.halfw and
-    a.y - a.halfh < b.y + b.halfh and
-    a.y + a.halfh > b.y - b.halfh then
+ if a.x - a.hw < b.x + b.hw and
+    a.x + a.hw > b.x - b.hw and
+    a.y - a.hh < b.y + b.hh and
+    a.y + a.hh > b.y - b.hh then
   return b
  end
- -- return nil
 end
 
 wallaabb={
  x=0,
  y=0,
- halfw=4,
- halfh=4,
+ hw=4,
+ hh=4,
 }
 function isinsidewall(aabb)
  local x1,y1,x2,y2=
-   aabb.x-aabb.halfw,
-   aabb.y-aabb.halfh,
-   aabb.x+aabb.halfw,
-   aabb.y+aabb.halfh
+   aabb.x-aabb.hw,
+   aabb.y-aabb.hh,
+   aabb.x+aabb.hw,
+   aabb.y+aabb.hh
 
  for point in all({
     {x1,y1},
@@ -77,16 +70,15 @@ function isinsidewall(aabb)
     {x1,y2},
    }) do
   local mapx,mapy=flr(point[1]/8),flr(point[2]/8)
-  wallaabb.x=mapx*8+wallaabb.halfw
-  wallaabb.y=mapy*8+wallaabb.halfh
+  wallaabb.x=mapx*8+wallaabb.hw
+  wallaabb.y=mapy*8+wallaabb.hh
 
   -- note: hitboxes should not be larger than 8x8
-  if floormap[mapy][mapx] == 1 and
+  if walls[mapy][mapx] == 1 and
      isaabbscolliding(aabb,wallaabb) then
    return wallaabb
   end
  end
- -- return nil
 end
 
 function haslos(_x1,_y1,_x2,_y2)
@@ -105,7 +97,7 @@ function haslos(_x1,_y1,_x2,_y2)
  while n > 0 do
   n-=1
 
-  if floormap[flr(y/8)][flr(x/8)] == 1 then
+  if walls[flr(y/8)][flr(x/8)] == 1 then
    return
   end
 
@@ -125,51 +117,51 @@ function dist(x1,y1,x2,y2)
  return sqrt(dx*dx+dy*dy)
 end
 
-function normalize(n)
+function norm(n)
  if n == 0 then
   return 0
  end
  return sgn(n)
 end
 
-newaabb={}
+_aabb={}
 function collideaabbs(func,aabb,other,_dx,_dy)
  local dx,dy=_dx,_dy
 
- -- set aabb halfs
- newaabb.halfw,newaabb.halfh=aabb.halfw,aabb.halfh
+ -- set aabb halves
+ _aabb.hw,_aabb.hh=aabb.hw,aabb.hh
 
  -- set next pos along x
- newaabb.x,newaabb.y=aabb.x+_dx,aabb.y
+ _aabb.x,_aabb.y=aabb.x+_dx,aabb.y
 
  -- is it colliding w other
- local collidedwith=func(newaabb,other)
+ local collidedwith=func(_aabb,other)
  if collidedwith then
-  dx=(aabb.halfw+collidedwith.halfw-abs(aabb.x-collidedwith.x))*-sgn(_dx)
+  dx=(aabb.hw+collidedwith.hw-abs(aabb.x-collidedwith.x))*-sgn(_dx)
  end
 
  -- set next pos along y
- newaabb.x,newaabb.y=aabb.x,aabb.y+_dy
+ _aabb.x,_aabb.y=aabb.x,aabb.y+_dy
 
  -- is it colliding w other
- local collidedwith=func(newaabb,other)
+ local collidedwith=func(_aabb,other)
  if collidedwith then
-  dy=(aabb.halfh+collidedwith.halfh-abs(aabb.y-collidedwith.y))*-sgn(_dy)
+  dy=(aabb.hh+collidedwith.hh-abs(aabb.y-collidedwith.y))*-sgn(_dy)
  end
 
  return dx,dy
 end
 
-function findemptyfloor(origx,origy)
+function findflr(_x,_y)
  local a,d=rnd(),1
 
  repeat
   a+=0.05
   d+=0.02
   x,y=
-    mid(1,flr(origx/8+cos(a)*2),14),
-    mid(1,flr(origy/8+sin(a)*2),14)
- until floormap[y] and floormap[y][x] == 0
+    mid(1,flr(_x/8+cos(a)*2),14),
+    mid(1,flr(_y/8+sin(a)*2),14)
+ until walls[y] and walls[y][x] == 0
 
  return x*8+4,y*8+4
 end
@@ -186,111 +178,107 @@ btnmasktoangle={
 }
 
 meleevfxframes={
- [0]=parseflat'0,20,4,7,-1,-5,', -- right
- [0.125]=parseflat'8,20,6,4,-3,-2,', -- right/up
- [0.25]=parseflat'20,20,9,3,-3,-1,', -- up
- [0.375]=parseflat'14,20,6,4,-2,-2,', -- up/left
- [0.5]=parseflat'4,20,4,7,-2,-5,', -- left
- [0.625]=parseflat'29,20,4,7,-3,-6,', -- left/down
- [0.75]=parseflat'20,23,9,3,-4,-2,', -- down
- [0.875]=parseflat'33,20,4,7,0,-6,', -- down/right
- [1]=parseflat'0,20,4,7,-1,-5,', -- right (wrapped)
+ [0]=paf'0,20,4,7,-1,-5,', -- right
+ [0.125]=paf'8,20,6,4,-3,-2,', -- right/up
+ [0.25]=paf'20,20,9,3,-3,-1,', -- up
+ [0.375]=paf'14,20,6,4,-2,-2,', -- up/left
+ [0.5]=paf'4,20,4,7,-2,-5,', -- left
+ [0.625]=paf'29,20,4,7,-3,-6,', -- left/down
+ [0.75]=paf'20,23,9,3,-4,-2,', -- down
+ [0.875]=paf'33,20,4,7,0,-6,', -- down/right
+ [1]=paf'0,20,4,7,-1,-5,', -- right (wrapped)
 }
 
 bowvfxframes={
- [0]=parseflat'0,27,6,7,-3,-5,', -- right
- [0.125]=parseflat'17,32,7,7,-4,-3,', -- right/up
- [0.25]=parseflat'10,31,7,6,-3,-3,', -- up
- [0.375]=parseflat'34,32,7,7,-3,-3,', -- up/left
- [0.5]=parseflat'4,27,6,7, -2,-5,', -- left
- [0.625]=parseflat'22,27,7,7,-2,-5,', -- left/down
- [0.75]=parseflat'10,27,7,6,-3,-4,', -- down
- [0.875]=parseflat'29,27,7,7,-4,-4,', -- down/right
- [1]=parseflat'0,27,6,7,-3,-5,', -- right (wrapped)
+ [0]=paf'0,27,6,7,-3,-5,', -- right
+ [0.125]=paf'17,32,7,7,-4,-3,', -- right/up
+ [0.25]=paf'10,31,7,6,-3,-3,', -- up
+ [0.375]=paf'34,32,7,7,-3,-3,', -- up/left
+ [0.5]=paf'4,27,6,7, -2,-5,', -- left
+ [0.625]=paf'22,27,7,7,-2,-5,', -- left/down
+ [0.75]=paf'10,27,7,6,-3,-4,', -- down
+ [0.875]=paf'29,27,7,7,-4,-4,', -- down/right
+ [1]=paf'0,27,6,7,-3,-5,', -- right (wrapped)
 }
 
 arrowframes={
- [0]=parseflat'50,20,2,1,-1,-0.5,', -- right
- [0.125]=parseflat'52,20,2,2,-1,-1,', -- right/up
- [0.25]=parseflat'54,20,1,2,-0.5,-1,', -- up
- [0.375]=parseflat'55,20,2,2,-1,-1,', -- up/left
- [0.5]=parseflat'50,20,2,1,-1,-0.5,', -- left
- [0.625]=parseflat'52,20,2,2,-1,-1,', -- left/down
- [0.75]=parseflat'54,20,1,2,-0.5,-1,', -- down
- [0.875]=parseflat'55,20,2,2,-1,-1,', -- down/right
- [1]=parseflat'50,20,2,1,-1,-0.5,', -- right (wrapped)
+ [0]=paf'50,20,2,1,-1,-0.5,', -- right
+ [0.125]=paf'52,20,2,2,-1,-1,', -- right/up
+ [0.25]=paf'54,20,1,2,-0.5,-1,', -- up
+ [0.375]=paf'55,20,2,2,-1,-1,', -- up/left
+ [0.5]=paf'50,20,2,1,-1,-0.5,', -- left
+ [0.625]=paf'52,20,2,2,-1,-1,', -- left/down
+ [0.75]=paf'54,20,1,2,-0.5,-1,', -- down
+ [0.875]=paf'55,20,2,2,-1,-1,', -- down/right
+ [1]=paf'50,20,2,1,-1,-0.5,', -- right (wrapped)
 }
 
-function getvfxframeindex(angle)
- return min(flr((angle+0.0625)*8)/8,1)
+function getvfxframei(a)
+ return min(flr((a+0.0625)*8)/8,1)
 end
 
 -- todo: this is only convenience dev function
-function actorfactory(actor)
- actor.state='idling'
- actor.state_counter=0
- actor.currentframe=1
- actor.dx=0
- actor.dy=0
- actor.runspd=actor.spd
- actor.dmgfxcounter=0
- actor.comfydist=actor.comfydist or 1
- actor.toocloseto={}
+function actorfactory(_a)
+ _a.state='idling'
+ _a.state_c=0
+ _a.curframe=1
+ _a.dx=0
+ _a.dy=0
+ _a.runspd=_a.spd
+ _a.dmgfx_c=0
+ _a.comfydist=_a.comfydist or 1
+ _a.toocloseto={}
 
- return actor
+ return _a
 end
 
-function performenemymelee(actor)
+function performenemymelee(_a)
  local a=atan2(
-  actor.targetx-actor.x,
-  actor.targety-actor.y)
+  _a.tarx-_a.x,
+  _a.tary-_a.y)
 
  add(attacks,{
   isenemy=true,
-  x=actor.x+cos(a)*4,
-  y=actor.y+sin(a)*4,
-  halfw=2,
-  halfh=2,
-  state_counter=1,
+  x=_a.x+cos(a)*4,
+  y=_a.y+sin(a)*4,
+  hw=2,
+  hh=2,
+  state_c=1,
   typ='knockback',
-  knockbackangle=a,
-  damage=1,
-  targetcount=1000,
+  knocka=a,
+  dmg=1,
+  tar_c=1000,
  })
 
- local x,y=
-   actor.x+cos(actor.a)*4,
-   actor.y+sin(actor.a)*4
+ local f=clone(meleevfxframes[getvfxframei(_a.a)])
+ f[5]=_a.x+cos(_a.a)*4+f[5]
+ f[6]=_a.y+sin(_a.a)*4+f[6]
+ f.c=10
+ f.col=7
 
- local frame=clone(meleevfxframes[getvfxframeindex(actor.a)])
- frame[5]=x+frame[5]
- frame[6]=y+frame[6]
- frame.counter=10
- frame.col=7
-
- add(vfxs,{frame})
+ add(vfxs,{f})
 
  sfx(4)
 end
 
-function performenemybow(actor)
- local a=getvfxframeindex(atan2(
-  actor.targetx-actor.x,
-  actor.targety-actor.y))
+function performenemybow(_a)
+ local a=getvfxframei(atan2(
+  _a.tarx-_a.x,
+  _a.tary-_a.y))
 
  add(attacks,{
   isenemy=true,
-  x=actor.x-0.5,
-  y=actor.y-0.5,
-  halfw=1,
-  halfh=1,
-  state_counter=1000,
+  x=_a.x-0.5,
+  y=_a.y-0.5,
+  hw=1,
+  hh=1,
+  state_c=1000,
   dx=cos(a)*1.6,
   dy=sin(a)*1.6,
-  damage=1,
-  targetcount=1,
+  dmg=1,
+  tar_c=1,
   frames={
-   currentframe=1,
+   curframe=1,
    clone(arrowframes[a]),
   },
   col=2,
@@ -308,26 +296,26 @@ function newmeleetroll(x,y)
   x=x,
   y=y,
   a=0,
-  halfw=1.5,
-  halfh=2,
+  hw=1.5,
+  hh=2,
   spd=0.45,
   hp=2,
-  attack_preperformdur=50,
-  attack_postperformdur=20,
-  attack_range=7,
-  performattack=performenemymelee,
-  idling={parseflat'41,32,4,5,-2,-3,'},
+  att_preprfm=50,
+  att_postprfm=20,
+  att_range=7,
+  prfmatt=performenemymelee,
+  idling={paf'41,32,4,5,-2,-3,'},
   moving={
    animspd=0.18,
-   parseflat'41,32,4,5,-2,-3,',
-   parseflat'45,32,4,5,-2,-3,'
+   paf'41,32,4,5,-2,-3,',
+   paf'45,32,4,5,-2,-3,'
   },
   attacking={
    animspd=0,
-   parseflat'49,32,4,5,-2,-3,',
-   parseflat'52,32,6,5,-3,-3,',
+   paf'49,32,4,5,-2,-3,',
+   paf'52,32,6,5,-3,-3,',
   },
-  recovering={parseflat'41,32,4,5,-2,-3,'},
+  recovering={paf'41,32,4,5,-2,-3,'},
  })
 end
 
@@ -340,26 +328,26 @@ function newtrollcaster(x,y)
    1,
    'fire',
    14,
-   parseflat'8,14,',
-   parseflat'14,8,'),
-  parseflat'59,32,4,6,-2,-3,'
+   paf'8,14,',
+   paf'14,8,'),
+  paf'59,32,4,6,-2,-3,'
 
  return actorfactory({
   isenemy=true,
   x=x,
   y=y,
   a=0,
-  halfw=1.5,
-  halfh=2,
+  hw=1.5,
+  hh=2,
   spd=0.25,
   hp=1,
-  attack_preperformdur=100,
-  attack_postperformdur=20,
-  attack_range=60,
-  performattack=function(actor)
+  att_preprfm=100,
+  att_postprfm=20,
+  att_range=60,
+  prfmatt=function(actor)
    a,actor.a=actor.a,atan2(
-     actor.targetx-actor.x,
-     actor.targety-actor.y)
+     actor.tarx-actor.x,
+     actor.tary-actor.y)
    boltskill.perform(actor)
    actor.a=a
   end,
@@ -371,11 +359,11 @@ function newtrollcaster(x,y)
   },
   attacking={
    animspd=0,
-   parseflat'63,32,4,6,-2,-3,',
+   paf'63,32,4,6,-2,-3,',
    idleframe,
   },
   recovering={idleframe},
-  onpreperform=boltskill.startpemitter,
+  onpreprfm=boltskill.startpemitter,
  })
 end
 
@@ -386,57 +374,57 @@ function newgianttroll(x,y)
   x=x,
   y=y,
   a=0,
-  halfw=1.5,
-  halfh=3,
+  hw=1.5,
+  hh=3,
   isbig=true,
   spd=0.7,
   hp=7,
-  attack_preperformdur=40,
-  attack_postperformdur=30,
-  attack_range=7,
-  performattack=performenemymelee,
-  idling={parseflat'36,25,7,7,-4,-4,'},
+  att_preprfm=40,
+  att_postprfm=30,
+  att_range=7,
+  prfmatt=performenemymelee,
+  idling={paf'36,25,7,7,-4,-4,'},
   moving={
    animspd=0.18,
-   parseflat'43,25,7,7,-4,-4,',
-   parseflat'50,25,7,7,-4,-4,'
+   paf'43,25,7,7,-4,-4,',
+   paf'50,25,7,7,-4,-4,'
   },
   attacking={
    animspd=0,
-   parseflat'57,25,7,7,-4,-4,',
-   parseflat'64,25,8,7,-4,-4,',
+   paf'57,25,7,7,-4,-4,',
+   paf'64,25,8,7,-4,-4,',
   },
-  recovering={parseflat'72,25,7,7,-4,-4,'},
+  recovering={paf'72,25,7,7,-4,-4,'},
  })
  return boss
 end
 
-function newmeleeskeleton(x,y)
+function newmeleeskele(x,y)
  return actorfactory({
   isenemy=true,
   x=x,
   y=y,
   a=0,
-  halfw=1.5,
-  halfh=2,
+  hw=1.5,
+  hh=2,
   spd=0.5,
   hp=3,
-  attack_preperformdur=40,
-  attack_postperformdur=10,
-  attack_range=7,
-  performattack=performenemymelee,
-  idling={parseflat'0,15,4,5,-2,-3,'},
+  att_preprfm=40,
+  att_postprfm=10,
+  att_range=7,
+  prfmatt=performenemymelee,
+  idling={paf'0,15,4,5,-2,-3,'},
   moving={
    animspd=0.18,
-   parseflat'0,15,4,5,-2,-3,',
-   parseflat'4,15,4,5,-2,-3,'
+   paf'0,15,4,5,-2,-3,',
+   paf'4,15,4,5,-2,-3,'
   },
   attacking={
    animspd=0,
-   parseflat'8,15,4,5,-2,-3,',
-   parseflat'11,15,6,5,-3,-3,',
+   paf'8,15,4,5,-2,-3,',
+   paf'11,15,6,5,-3,-3,',
   },
-  recovering={parseflat'0,15,4,5,-2,-3,'},
+  recovering={paf'0,15,4,5,-2,-3,'},
  })
 end
 
@@ -447,135 +435,135 @@ function newbatenemy(x,y)
   x=x,
   y=y,
   a=0,
-  halfw=1.5,
-  halfh=2,
+  hw=1.5,
+  hh=2,
   spd=0.75,
   hp=1,
-  attack_preperformdur=30,
-  attack_postperformdur=0,
-  attack_range=7,
-  performattack=performenemymelee,
-  idling={parseflat'36,15,3,3,-1.5,-1.5,'},
+  att_preprfm=30,
+  att_postprfm=0,
+  att_range=7,
+  prfmatt=performenemymelee,
+  idling={paf'36,15,3,3,-1.5,-1.5,'},
   moving={
    animspd=0.21,
-   parseflat'36,15,3,3,-1.5,-1.5,',
-   parseflat'39,15,3,3,-1.5,-1.5,'
+   paf'36,15,3,3,-1.5,-1.5,',
+   paf'39,15,3,3,-1.5,-1.5,'
   },
   attacking={
    animspd=0.32,
-   parseflat'36,15,3,3,-1.5,-1.5,',
-   parseflat'39,15,3,3,-1.5,-1.5,'
+   paf'36,15,3,3,-1.5,-1.5,',
+   paf'39,15,3,3,-1.5,-1.5,'
   },
-  recovering={parseflat'36,15,3,3,-1.5,-1.5,'},
+  recovering={paf'36,15,3,3,-1.5,-1.5,'},
  })
 end
 
-function newbowskeleton(x,y)
+function newbowskele(x,y)
  return actorfactory({
   isenemy=true,
   x=x,
   y=y,
   a=0,
-  halfw=1.5,
-  halfh=2,
+  hw=1.5,
+  hh=2,
   spd=0.5,
   hp=2,
-  attack_preperformdur=60,
-  attack_postperformdur=4,
-  attack_range=40,
-  performattack=performenemybow,
+  att_preprfm=60,
+  att_postprfm=4,
+  att_range=40,
+  prfmatt=performenemybow,
   comfydist=20,
-  idling={parseflat'18,15,4,5,-2,-3,'},
+  idling={paf'18,15,4,5,-2,-3,'},
   moving={
    animspd=0.18,
-   parseflat'18,15,4,5,-2,-3,',
-   parseflat'22,15,4,5,-2,-3,'
+   paf'18,15,4,5,-2,-3,',
+   paf'22,15,4,5,-2,-3,'
   },
   attacking={
    animspd=0,
-   parseflat'26,15,4,5,-2,-3,',
-   parseflat'31,15,4,5,-2,-3,'
+   paf'26,15,4,5,-2,-3,',
+   paf'31,15,4,5,-2,-3,'
   },
-  recovering={parseflat'18,15,4,5,-2,-3,'},
+  recovering={paf'18,15,4,5,-2,-3,'},
  })
 end
 
-function newskeletonking(x,y)
+function newskeleking(x,y)
 
- function setupmelee(boss)
-  boss.islosindependent=nil
-  boss.attack_range=7
-  boss.attack_preperformdur=30
-  boss.attack_postperformdur=60
-  boss.attacking={
+ function setupmelee(_a)
+  _a.nolos=nil
+  _a.att_range=7
+  _a.att_preprfm=30
+  _a.att_postprfm=60
+  _a.attacking={
    animspd=0,
-   parseflat'0,40,15,18,-7,-13,',
-   parseflat'0,58,20,18,-10,-13,',
+   paf'0,40,15,18,-7,-13,',
+   paf'0,58,20,18,-10,-13,',
   }
-  boss.onpreperform=nil
-  boss.performattack=performmelee
-  boss.afterpostperform=setupmagic
+  _a.onpreprfm=nil
+  _a.prfmatt=performmelee
+  _a.afterpostprfm=setupmagic
  end
 
- function performmelee(boss)
+ function performmelee(_a)
   add(attacks,{
    isenemy=true,
    throughwalls=true,
-   x=boss.x+cos(boss.a)*2,
-   y=boss.y-3,
-   halfw=7,
-   halfh=8,
-   state_counter=2,
+   x=_a.x+cos(_a.a)*2,
+   y=_a.y-3,
+   hw=7,
+   hh=8,
+   state_c=2,
    typ='knockback',
-   knockbackangle=boss.a,
-   damage=1,
-   targetcount=1,
+   knocka=_a.a,
+   dmg=1,
+   tar_c=1,
   })
 
   sfx(4)
  end
 
- function setupmagic(boss)
-  boss.islosindependent=true
-  boss.attack_range=60
-  boss.attack_preperformdur=110
-  boss.attack_postperformdur=0
-  boss.attacking={
+ function setupmagic(_a)
+  _a.nolos=true
+  _a.att_range=60
+  _a.att_preprfm=110
+  _a.att_postprfm=0
+  _a.attacking={
    animspd=0,
-   parseflat'24,58,15,18,-7,-13,',
-   parseflat'24,58,15,18,-7,-13,',
+   paf'24,58,15,18,-7,-13,',
+   paf'24,58,15,18,-7,-13,',
   }
-  boss.onpreperform=magicpreperform
-  boss.performattack=performmagic
-  boss.afterpostperform=setupmelee
+  _a.onpreprfm=magicpreprfm
+  _a.prfmatt=performmagic
+  _a.afterpostprfm=setupmelee
  end
 
- function magicpreperform(boss)
-  boss.attack_x,boss.attack_y=findemptyfloor(boss.x,boss.y)
+ function magicpreprfm(_a)
+  _a.att_x,_a.att_y=findflr(_a.x,_a.y)
   add(pemitters,{
    follow={
-    x=boss.attack_x,
-    y=boss.attack_y,
+    x=_a.att_x,
+    y=_a.att_y,
    },
    life=140,
-   prate=parseflat'1,2,',
-   plife=parseflat'10,15,',
-   poffsets=parseflat'-2,0.5,1,0.5,',
-   dx=parseflat'0,0,',
-   dy=parseflat'-0.3,0,',
-   pcolors=parseflat'11,3,1,',
+   prate=paf'1,2,',
+   plife=paf'10,15,',
+   poffsets=paf'-2,0.5,1,0.5,',
+   dx=paf'0,0,',
+   dy=paf'-0.3,0,',
+   pcolors=paf'11,3,1,',
   })
 
   sfx(9)
  end
 
- function performmagic(boss)
-  local enemy=newmeleeskeleton(boss.attack_x,boss.attack_y)
+ function performmagic(_a)
+  local enemy=newmeleeskele(_a.att_x,_a.att_y)
 
   -- summoning sickness
   enemy.state='recovering'
   enemy.laststate='recovering'
-  enemy.state_counter=50
+  enemy.state_c=50
 
   add(actors,enemy)
  end
@@ -587,17 +575,17 @@ function newskeletonking(x,y)
   x=x,
   y=y,
   a=0,
-  halfw=1.5,
-  halfh=3,
+  hw=1.5,
+  hh=3,
   spd=0.4,
   hp=10,
-  idling={parseflat'0,40,15,18,-7,-13,'},
+  idling={paf'0,40,15,18,-7,-13,'},
   moving={
    animspd=0.24,
-   parseflat'16,40,15,18,-7,-13,',
-   parseflat'32,40,15,18,-7,-13,'
+   paf'16,40,15,18,-7,-13,',
+   paf'32,40,15,18,-7,-13,'
   },
-  recovering={parseflat'0,40,15,18,-7,-13,'},
+  recovering={paf'0,40,15,18,-7,-13,'},
   onroam=setupmagic,
  })
 
@@ -609,66 +597,66 @@ end
 
 -- effects
 
-function burningeffect(actor)
- if actor.effect.counter == nil then
-  actor.effect.counter=0
+function burningeffect(_a)
+ if _a.effect.c == nil then
+  _a.effect.c=0
   add(pemitters,{
-   follow=actor,
-   life=actor.state_counter,
-   prate=parseflat'2,4,',
-   plife=parseflat'15,25,',
-   poffsets=parseflat'-2,0.5,2,0.5,',
-   dx=parseflat'0,0,',
-   dy=parseflat'-0.3,0,',
-   pcolors=parseflat'8,14,',
+   follow=_a,
+   life=_a.state_c,
+   prate=paf'2,4,',
+   plife=paf'15,25,',
+   poffsets=paf'-2,0.5,2,0.5,',
+   dx=paf'0,0,',
+   dy=paf'-0.3,0,',
+   pcolors=paf'8,14,',
   })
  end
 
- actor.effect.counter-=1
+ _a.effect.c-=1
 
- if actor.effect.counter <= 0 then
-  actor.effect.counter=12
+ if _a.effect.c <= 0 then
+  _a.effect.c=12
 
-  actor.a=rnd()
+  _a.a=rnd()
  end
 
- actor.dx=cos(actor.a)*actor.spd
- actor.dy=sin(actor.a)*actor.spd
+ _a.dx=cos(_a.a)*_a.spd
+ _a.dy=sin(_a.a)*_a.spd
 
 end
 
-function freezeeffect(actor)
+function freezeeffect(_a)
  add(vfxs,{
   {
    57,18,8,7,
-   actor.x-4,actor.y-3.5,
-   counter=2,
+   _a.x-4,_a.y-3.5,
+   c=2,
   },
  })
 
- actor.dx=0
- actor.dy=0
+ _a.dx=0
+ _a.dy=0
 end
 
-function stunningeffect(actor)
- if actor.effect.counter == nil or
-    actor.effect.counter <= 0 then
+function stunningeffect(_a)
+ if _a.effect.c == nil or
+    _a.effect.c <= 0 then
   local t,x,y=
     5,
-    actor.x-1.5,
-    actor.y-actor.halfh*2-1
+    _a.x-1.5,
+    _a.y-_a.hh*2-1
 
-  actor.effect.counter=t*3
+  _a.effect.c=t*3
   add(vfxs,{
-   {42,13,3,2, x,y, counter=t,col=7},
-   {42,15,3,2, x,y, counter=t,col=7},
-   {42,17,3,2, x,y, counter=t,col=7},
+   {42,13,3,2, x,y, c=t,col=7},
+   {42,15,3,2, x,y, c=t,col=7},
+   {42,17,3,2, x,y, c=t,col=7},
   })
  end
 
- actor.effect.counter-=1
+ _a.effect.c-=1
 
- actor.dx,actor.dy=0,0
+ _a.dx,_a.dy=0,0
 end
 
 -- skills
@@ -682,40 +670,40 @@ skillfactory=function(sprite,desc,onhit,immune)
 end
 
 swordattackskillfactory=function(
-  damage,
-  preperformdur,
-  postperformdur,
-  targetcount,
+  dmg,
+  preprfm,
+  postprfm,
+  tar_c,
   attackcol,
   typ,
   recovertime)
  return {
   sprite=31,
   desc='sword attack',
-  preperformdur=preperformdur,
-  postperformdur=postperformdur,
-  perform=function(actor,skill)
+  preprfm=preprfm,
+  postprfm=postprfm,
+  perform=function(_a,skill)
    local x,y=
-     actor.x+cos(actor.a)*4,
-     actor.y+sin(actor.a)*4
+     _a.x+cos(_a.a)*4,
+     _a.y+sin(_a.a)*4
 
    add(attacks,{
     x=x,
     y=y,
-    halfw=2,
-    halfh=2,
-    state_counter=1,
+    hw=2,
+    hh=2,
+    state_c=1,
     typ=typ,
     recovertime=recovertime or 0,
-    knockbackangle=actor.a,
-    damage=damage,
-    targetcount=targetcount,
+    knocka=_a.a,
+    dmg=dmg,
+    tar_c=tar_c,
    })
 
-   local frame=clone(meleevfxframes[actor.a])
+   local frame=clone(meleevfxframes[_a.a])
    frame[5]=x+frame[5]
    frame[6]=y+frame[6]
-   frame.counter=skill.postperformdur
+   frame.c=skill.postprfm
    frame.col=attackcol
 
    add(vfxs,{frame})
@@ -726,10 +714,10 @@ swordattackskillfactory=function(
 end
 
 bowattackskillfactory=function(
-  damage,
-  preperformdur,
-  postperformdur,
-  targetcount,
+  dmg,
+  preprfm,
+  postprfm,
+  tar_c,
   attackcol,
   arrowcol,
   typ,
@@ -737,36 +725,36 @@ bowattackskillfactory=function(
  return {
   sprite=30,
   desc='bow attack',
-  preperformdur=preperformdur,
-  postperformdur=postperformdur,
-  perform=function(actor,skill)
+  preprfm=preprfm,
+  postprfm=postprfm,
+  perform=function(_a,skill)
    local x,y=
-     actor.x+cos(actor.a)*4,
-     actor.y+sin(actor.a)*4
+     _a.x+cos(_a.a)*4,
+     _a.y+sin(_a.a)*4
 
    add(attacks,{
     x=x-0.5,
     y=y-0.5,
-    halfw=1,
-    halfh=1,
-    state_counter=1000,
-    dx=cos(actor.a)*1.6,
-    dy=sin(actor.a)*1.6,
-    damage=damage,
+    hw=1,
+    hh=1,
+    state_c=1000,
+    dx=cos(_a.a)*1.6,
+    dy=sin(_a.a)*1.6,
+    dmg=dmg,
     typ=typ,
     recovertime=recovertime,
-    targetcount=targetcount,
+    tar_c=tar_c,
     frames={
-     currentframe=1,
-     clone(arrowframes[actor.a]),
+     curframe=1,
+     clone(arrowframes[_a.a]),
     },
     col=arrowcol,
    })
 
-   local frame=clone(bowvfxframes[actor.a])
+   local frame=clone(bowvfxframes[_a.a])
    frame[5]=x+frame[5]
    frame[6]=y+frame[6]
-   frame.counter=skill.postperformdur
+   frame.c=skill.postprfm
    frame.col=attackcol
 
    add(vfxs,{frame})
@@ -777,11 +765,11 @@ bowattackskillfactory=function(
 end
 
 boltskillfactory=function(
-  damage,
-  preperformdur,
-  postperformdur,
+  dmg,
+  preprfm,
+  postprfm,
   recovertime,
-  targetcount,
+  tar_c,
   effecttype,
   attackcol,
   castingpemittercols,
@@ -791,42 +779,42 @@ boltskillfactory=function(
  return {
   sprite=sprite,
   desc=desc,
-  preperformdur=preperformdur,
-  postperformdur=postperformdur,
-  startpemitter=function(actor,life)
+  preprfm=preprfm,
+  postprfm=postprfm,
+  startpemitter=function(_a,life)
    add(pemitters,{
-    follow=actor,
-    life=life or actor.attack_preperformdur,
-    prate=parseflat'2,4,',
-    plife=parseflat'15,25,',
-    poffsets=parseflat'-2,0.5,2,0.5,',
-    dx=parseflat'0,0,',
-    dy=parseflat'-0.3,0,',
+    follow=_a,
+    life=life or _a.att_preprfm,
+    prate=paf'2,4,',
+    plife=paf'15,25,',
+    poffsets=paf'-2,0.5,2,0.5,',
+    dx=paf'0,0,',
+    dy=paf'-0.3,0,',
     pcolors=castingpemittercols,
    })
    sfx(9)
   end,
-  perform=function(actor)
+  perform=function(_a)
    local x,y=
-     actor.x+cos(actor.a)*4,
-     actor.y+sin(actor.a)*4
+     _a.x+cos(_a.a)*4,
+     _a.y+sin(_a.a)*4
 
    local attack={
-    isenemy=actor.isenemy,
+    isenemy=_a.isenemy,
     x=x,
     y=y,
-    halfw=1,
-    halfh=1,
-    state_counter=1000,
-    dx=cos(actor.a)*1.2,
-    dy=sin(actor.a)*1.2,
-    damage=damage,
+    hw=1,
+    hh=1,
+    state_c=1000,
+    dx=cos(_a.a)*1.2,
+    dy=sin(_a.a)*1.2,
+    dmg=dmg,
     typ=effecttype,
     recovertime=recovertime,
-    targetcount=targetcount,
+    tar_c=tar_c,
     frames={
-     currentframe=1,
-     parseflat'47,20,3,3, -0.5,-0.5,',
+     curframe=1,
+     paf'47,20,3,3, -0.5,-0.5,',
     },
     col=attackcol,
    }
@@ -836,11 +824,11 @@ boltskillfactory=function(
    add(pemitters,{
     follow=attack,
     life=1000,
-    prate=parseflat'0,1,',
-    plife=parseflat'3,5,',
-    poffsets=parseflat'-1,-1,1,1,',
-    dx=parseflat'0,0,',
-    dy=parseflat'0,0,',
+    prate=paf'0,1,',
+    plife=paf'3,5,',
+    poffsets=paf'-1,-1,1,1,',
+    dx=paf'0,0,',
+    dy=paf'0,0,',
     pcolors=boltpemittercols,
    })
    sfx(32)
@@ -849,22 +837,21 @@ boltskillfactory=function(
 end
 
 -- passive skills
-function phasing(actor)
- local x,y=findemptyfloor(actor.x,actor.y)
- actor.x,actor.y=x,y
+function phasing(_a)
+ local x,y=findflr(_a.x,_a.y)
+ _a.x,_a.y=x,y
  add(vfxs,{
-  {9,9,1,1, 0,0, counter=2},
+  {9,9,1,1,0,0,c=2},
   {
-   draw=function(frame)
-    circ(x,y,frame.counter*1.5,12)
+   draw=function(f)
+    circ(x,y,f.c*1.5,12)
    end,
-   counter=12,
+   c=12,
   },
  })
 end
 
 -- items
-
 prefix={
  { -- 1
   name='knight\'s ',
@@ -880,12 +867,12 @@ suffix={
  { -- 1
   name=' of resurrection',
   amulet_sprite=6,
-  skill=skillfactory(5,'passive, resurrect once',function (actor)
-   if actor.hp <= 0 then
-    actor.removeme=nil
-    actor.hp=3
-    actor.items.amulet=nil
-    del(actor.passiveskills,suffix[1].skill)
+  skill=skillfactory(5,'passive, resurrect once',function (_a)
+   if _a.hp <= 0 then
+    _a.removeme=nil
+    _a.hp=3
+    _a.items.amulet=nil
+    del(_a.passiveskills,suffix[1].skill)
     sfx(21)
    end
   end),
@@ -909,8 +896,8 @@ suffix={
     1,
     'fire',
     14,
-    parseflat'8,14,',
-    parseflat'14,8,',
+    paf'8,14,',
+    paf'14,8,',
     29,
     'firebolt'),
  },
@@ -925,8 +912,8 @@ suffix={
     1,
     'ice',
     7,
-    parseflat'12,12,',
-    parseflat'12,13,',
+    paf'12,12,',
+    paf'12,13,',
     28,
     'icebolt')
  },
@@ -951,37 +938,37 @@ suffix={
  },
 }
 
-cloakidling={parseflat'0,6,3,4,-1,-2,'}
-shieldidling={parseflat'35,9,5,5,-2,-3,'}
-swordidling={parseflat'9,9,5,5,-2,-3,'}
-bowidling={parseflat'25,9,5,5,-2,-3,'}
+cloakidling={paf'0,6,3,4,-1,-2,'}
+shieldidling={paf'35,9,5,5,-2,-3,'}
+swordidling={paf'9,9,5,5,-2,-3,'}
+bowidling={paf'25,9,5,5,-2,-3,'}
 
 itemclasses={
  {
   class='boots',
   sprite=41,
   col=4,
-  prefix={2},
-  suffix={2},
+  prefix=paf'2,',
+  suffix=paf'2,',
  },
  {
   class='helmet',
   sprite=42,
   col=13,
-  prefix={1},
+  prefix=paf'1,',
   suffix={},
  },
  {
   class='amulet',
   sprite=25,
-  prefix={2},
-  suffix={1},
+  prefix=paf'2,',
+  suffix=paf'1,',
  },
  { -- platemail
   class='armor',
   sprite=58,
   col=6,
-  prefix={1},
+  prefix=paf'1,',
   suffix={},
  },
  { -- cloak
@@ -990,8 +977,8 @@ itemclasses={
   sprite=26,
   col=2,
   col2=1,
-  prefix={2},
-  suffix={2,3},
+  prefix=paf'2,',
+  suffix=paf'2,3,',
   idling=cloakidling,
   moving=cloakidling,
   attacking=cloakidling,
@@ -1001,8 +988,8 @@ itemclasses={
   class='offhand',
   sprite=44,
   col=13,
-  prefix={1,2},
-  suffix={3},
+  prefix=paf'1,2,',
+  suffix=paf'3,',
   idling=shieldidling,
   moving=shieldidling,
   attacking=shieldidling,
@@ -1010,21 +997,21 @@ itemclasses={
  },
  {
   class='book',
-  sprite=nil,
+  sprite=79,
   prefix={},
-  suffix={4,5}
+  suffix=paf'4,5,'
  },
  { -- sword
   class='weapon',
   sprite=47,
   col=6,
   prefix={},
-  suffix={6,9},
+  suffix=paf'6,9,',
   idling=swordidling,
   moving=swordidling,
   attacking={
-   parseflat'14,9,5,5,-2,-3,',
-   parseflat'18,9,7,5,-3,-3,'
+   paf'14,9,5,5,-2,-3,',
+   paf'18,9,7,5,-3,-3,'
   },
   recovering=swordidling,
  },
@@ -1034,19 +1021,18 @@ itemclasses={
   sprite=46,
   col=4,
   prefix={},
-  suffix={7,8},
+  suffix=paf'7,8,',
   idling=bowidling,
   moving=bowidling,
   attacking={
-   parseflat'30,9,5,5,-2,-3,',
-   parseflat'25,9,1,1,-2,-3,',
+   paf'30,9,5,5,-2,-3,',
+   paf'25,9,1,1,-2,-3,',
   },
   recovering=bowidling,
  }
 }
 
-
-dungeonthemes={
+themes={
  { -- forest
   spr1=240,
   musicstart=0,
@@ -1062,9 +1048,9 @@ dungeonthemes={
   musicstart=3,
   enemytypes={
    newbatenemy,
-   newmeleeskeleton,
-   newbowskeleton,
-   newskeletonking,
+   newmeleeskele,
+   newbowskele,
+   newskeleking,
   }
  },
  { --  catacombs
@@ -1072,9 +1058,9 @@ dungeonthemes={
   musicstart=0,
   enemytypes={
    newbatenemy,
-   newmeleeskeleton,
-   newbowskeleton,
-   newskeletonking,
+   newmeleeskele,
+   newbowskele,
+   newskeleking,
   }
  },
 }
@@ -1093,21 +1079,23 @@ function dungeoninit()
   suffix={
    skill=swordattackskillfactory(1,15,28,1000,7),
   },
-  currentframe=1,
+  curframe=1,
   idling=swordidling,
   moving=swordidling,
   attacking={
-   parseflat'14,9,5,5,-2,-3,',
-   parseflat'18,9,7,5,-3,-3,',
+   paf'14,9,5,5,-2,-3,',
+   paf'18,9,7,5,-3,-3,',
   },
   recovering=swordidling,
  }
 
+ idleframe=paf'0,10,3,4,-1,-2,'
+
  avatar=actorfactory({
   x=64,
   y=56,
-  halfw=1.5,
-  halfh=2,
+  hw=1.5,
+  hh=2,
   a=0,
   spdfactor=1,
   spd=0.5,
@@ -1128,44 +1116,42 @@ function dungeoninit()
   -- skill2=nil,
   -- currentskill=nil,
   passiveskills={},
-  idling={parseflat'0,10,3,4,-1,-2,'},
+  idling={idleframe},
   moving={
-   parseflat'0,10,3,4,-1,-2,',
-   parseflat'3,10,3,4,-1,-2,'
+   idleframe,
+   paf'3,10,3,4,-1,-2,'
   },
   attacking={
    animspd=0,
-   parseflat'6,10,3,4,-1,-2,',
-   parseflat'0,10,3,4,-1,-2,'
+   paf'6,10,3,4,-1,-2,',
+   idleframe
   },
-  recovering={parseflat'0,10,3,4,-1,-2,'},
+  recovering={idleframe},
  })
 
- dungeonlevel=1
- dungeontheme=1
+ dungeonlvl=1
+ theme=1
  nexttheme=1
 
- for dungeontheme in all(dungeonthemes) do
-  dungeontheme.levelcount=2+flr(rnd()*1)
+ for theme in all(themes) do
+  theme.lvl_c=2+flr(rnd()*1)
  end
 
  mapinit()
 end
 
 function nextfloor()
- dungeontheme=nexttheme
- dungeonlevel+=1
+ theme=nexttheme
+ dungeonlvl+=1
  mapinit()
 end
 
-curenemyidx=1
-gametick=0
+curenemyi=1
+tick=0
 kills=0
 
 function mapinit()
-
  local basemap={}
-
  for _y=-1,16 do
   basemap[_y]={}
   for _x=-1,16 do
@@ -1175,7 +1161,7 @@ function mapinit()
 
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
 
- if dungeontheme == 1 and door then
+ if theme == 1 and door then
   local doorx,doory=flr(door.x/8),flr(door.y/8)
   if doorx == 0 then
    avatarx=14
@@ -1189,27 +1175,26 @@ function mapinit()
  end
 
  local curx,cury=avatarx,avatary
- local angle=0
+ local a=0
  local steps=500
- local stepcount=steps
- local enemycount=10
- local enemytypes={5,6,7}
+ local step_c=steps
+ local enemy_c=10
+ local enemytypes=paf'5,6,7,'
  local enemies={}
+ local angles=paf'-0.25,0.25,'
+ themes[theme].lvl_c-=1
 
- dungeonthemes[dungeontheme].levelcount-=1
+ while step_c > 0 do
 
- while stepcount > 0 do
-
-  local nextx,nexty=curx+cos(angle),cury+sin(angle)
+  local nextx,nexty=curx+cos(a),cury+sin(a)
 
   if flr(rnd(3)) == 0 or
      nextx <= 0 or
      nextx > 14 or
      nexty <= 0 or
      nexty > 14 then
-   local angles={-0.25,0.25}
-   angle+=angles[flr(rnd(#angles)+1)]
-  elseif stepcount != 0 and stepcount % (steps / enemycount) == 0 then
+   a+=angles[flr(rnd(#angles)+1)]
+  elseif step_c != 0 and step_c % (steps / enemy_c) == 0 then
    add(enemies,{
     x=curx,
     y=cury,
@@ -1220,14 +1205,14 @@ function mapinit()
    cury=nexty
    basemap[cury][curx]=0
   end
-  stepcount-=1
+  step_c-=1
  end
 
  for enemy in all(enemies) do
   basemap[enemy.y][enemy.x]=enemy.typ
  end
 
- if dungeonthemes[dungeontheme].levelcount == 0 then
+ if themes[theme].lvl_c == 0 then
   local enemy=enemies[#enemies]
   basemap[enemy.y][enemy.x]=8
   nexttheme+=1
@@ -1235,30 +1220,28 @@ function mapinit()
 
  -- door
  if nexttheme == 1 then
-  if abs(angle%1) == 0.25 then
-   angle=0.75
+  if abs(a%1) == 0.25 then
+   a=0.75
   end
   while curx > 0 and
      curx < 15 and
      cury > 0 and
      cury < 15 do
    basemap[cury][curx]=0
-   curx+=cos(angle)
-   cury+=sin(angle)
+   curx+=cos(a)
+   cury+=sin(a)
   end
  end
  basemap[cury][curx]=2
 
  basemap[avatary][avatarx]=15
 
-
-
  -- reset
- curenemyidx,
- gametick,
+ curenemyi,
+ tick,
  isdoorspawned,
  boss,
- floormap,
+ walls,
  actors,
  attacks,
  pemitters,
@@ -1276,7 +1259,7 @@ function mapinit()
    {}
 
  for _y=-1,16 do
-  floormap[_y]={}
+  walls[_y]={}
   for _x=-1,16 do
    local _col,ax,ay=
      basemap[_y][_x],
@@ -1295,8 +1278,8 @@ function mapinit()
     add(interactables,{
      x=avatar.x,
      y=avatar.y,
-     halfw=4,
-     halfh=2.5,
+     hw=4,
+     hh=2.5,
      sprite=2,
      text='\x8e inventory',
      enter=function ()
@@ -1312,7 +1295,7 @@ function mapinit()
    -- create enemy
    if _col >= 5 and _col <= 8 then
     add(actors,
-      dungeonthemes[dungeontheme].enemytypes[_col-4](ax,ay))
+      themes[theme].enemytypes[_col-4](ax,ay))
     _col=0
    end
 
@@ -1322,9 +1305,9 @@ function mapinit()
     door={
      x=ax,
      y=ay,
-     halfw=4,
-     halfh=4,
-     sprite=dungeonthemes[nexttheme].spr1+2,
+     hw=4,
+     hh=4,
+     sprite=themes[nexttheme].spr1+2,
      text='\x8e go deeper',
      enter=function()
       if btnp(4) then
@@ -1336,18 +1319,18 @@ function mapinit()
     add(interactables,door)
 
     _col=0
-    if dungeontheme == 1 then
+    if theme == 1 then
      _col=1
     end
    end
 
-   -- set floormap value
-   floormap[_y][_x]=_col
+   -- set walls value
+   walls[_y][_x]=_col
   end
  end
 
  -- start theme music
- music(dungeonthemes[dungeontheme].musicstart,0,0b0011)
+ music(themes[theme].musicstart,0,0b0011)
  if boss then
   music(7)
  end
@@ -1365,15 +1348,15 @@ function dungeonupdate()
  --  end
  -- end
 
- gametick+=1
+ tick+=1
 
- if gametick < 120 then
-  currentinteractable=nil
+ if tick < 120 then
+  curinteractable=nil
   return
  end
 
  if avatar.hp <= 0 then
-  if gametick-deathts > 150 and btnp(4) then
+  if tick-deathts > 150 and btnp(4) then
    kills=0
    dungeoninit()
   end
@@ -1385,10 +1368,10 @@ function dungeonupdate()
   if avatar.state != 'recovering' and
      avatar.state != 'attacking' then
    avatar.a=angle
-   avatar.dx=normalize(cos(avatar.a))
-   avatar.dy=normalize(sin(avatar.a))
+   avatar.dx=norm(cos(avatar.a))
+   avatar.dy=norm(sin(avatar.a))
    avatar.state='moving'
-   avatar.state_counter=2
+   avatar.state_c=2
   end
  elseif avatar.state != 'recovering' then
   avatar.dx,avatar.dy=0,0
@@ -1411,37 +1394,37 @@ function dungeonupdate()
   if skill then
    avatar.state='attacking'
    avatar.currentskill=skill
-   avatar.ispreperform=true
+   avatar.ispreprfm=true
 
-   avatar.state_counter=skill.preperformdur
+   avatar.state_c=skill.preprfm
 
-   avatar.currentframe=1
+   avatar.curframe=1
    if avatar.items.weapon then
-    avatar.items.weapon.currentframe=1
+    avatar.items.weapon.curframe=1
    end
 
    if avatar.currentskill.startpemitter then
-    avatar.currentskill.startpemitter(avatar,skill.preperformdur)
+    avatar.currentskill.startpemitter(avatar,skill.preprfm)
    end
   end
  end
 
  -- update actors
- local enemycount=0
+ local enemy_c=0
  for actor in all(actors) do
   if actor.isenemy then
-   enemycount+=1
+   enemy_c+=1
   end
 
-  if actor.state_counter > 0 then
-   actor.state_counter-=1
+  if actor.state_c > 0 then
+   actor.state_c-=1
   end
 
   -- handle states
   if actor.state == 'idling' then
 
    -- reset enemy specifics
-   actor.targetx,actor.targety=nil,nil
+   actor.tarx,actor.tary=nil,nil
    actor.ismovingoutofcollision=nil
 
   elseif actor.state == 'attacking' then
@@ -1449,26 +1432,26 @@ function dungeonupdate()
    if actor == avatar then
 
     -- update skills
-    if avatar.state_counter <= 0 then
-     if avatar.ispreperform then
+    if avatar.state_c <= 0 then
+     if avatar.ispreprfm then
 
       local skill=avatar.currentskill
       skill.perform(avatar,skill)
 
       -- set avatar to postperform
-      avatar.state_counter=skill.postperformdur
-      avatar.ispreperform=false
+      avatar.state_c=skill.postprfm
+      avatar.ispreprfm=false
 
       -- set next attacking frame
-      avatar.currentframe=2
+      avatar.curframe=2
       if avatar.items.weapon then
-       avatar.items.weapon.currentframe=2
+       avatar.items.weapon.curframe=2
       end
 
      else -- note: done performing
       avatar.state='idling'
       if avatar.items.weapon then
-       avatar.items.weapon.currentframe=1
+       avatar.items.weapon.curframe=1
       end
      end
     end
@@ -1477,24 +1460,24 @@ function dungeonupdate()
    else -- enemies
 
     if actor.laststate != 'attacking' then
-     actor.ispreperform=true
-     actor.currentframe=1
-     actor.state_counter=actor.attack_preperformdur
+     actor.ispreprfm=true
+     actor.curframe=1
+     actor.state_c=actor.att_preprfm
 
-     if actor.onpreperform then
-      actor.onpreperform(actor)
+     if actor.onpreprfm then
+      actor.onpreprfm(actor)
      end
     end
 
-    if actor.ispreperform and actor.state_counter <= 0 then
-     actor.performattack(actor)
-     actor.ispreperform=false
-     actor.state_counter=actor.attack_postperformdur
-     actor.currentframe=2
+    if actor.ispreprfm and actor.state_c <= 0 then
+     actor.prfmatt(actor)
+     actor.ispreprfm=false
+     actor.state_c=actor.att_postprfm
+     actor.curframe=2
 
-    elseif actor.state_counter <= 0 then
-     if actor.afterpostperform then
-      actor.afterpostperform(actor)
+    elseif actor.state_c <= 0 then
+     if actor.afterpostprfm then
+      actor.afterpostprfm(actor)
      end
      actor.state='idling'
     end
@@ -1506,7 +1489,7 @@ function dungeonupdate()
     actor.effect.func(actor)
    end
 
-   if actor.state_counter <= 0 then
+   if actor.state_c <= 0 then
     actor.state='idling'
     actor.effect=nil
    end
@@ -1514,19 +1497,19 @@ function dungeonupdate()
   elseif actor.state == 'moving' and
          actor.isenemy then
 
-   if actor.state_counter <= 0 then
+   if actor.state_c <= 0 then
     actor.ismovingoutofcollision=nil
    end
 
    actor.a=atan2(
-     actor.targetx-actor.x,
-     actor.targety-actor.y)
+     actor.tarx-actor.x,
+     actor.tary-actor.y)
 
    if dist(
        actor.x,
        actor.y,
-       actor.targetx,
-       actor.targety) <= actor.spd + 0.1 then
+       actor.tarx,
+       actor.tary) <= actor.spd + 0.1 then
     actor.state='idling'
    end
 
@@ -1536,7 +1519,7 @@ function dungeonupdate()
   end
 
   if actor == avatar and
-     actor.state_counter <= 0 then
+     actor.state_c <= 0 then
    actor.state='idling'
    actor.currentskill=nil
   end
@@ -1546,66 +1529,61 @@ function dungeonupdate()
 
 
  -- ai to make decisions
- curenemyidx+=1
- if curenemyidx > #actors then
-  curenemyidx=1
+ curenemyi+=1
+ if curenemyi > #actors then
+  curenemyi=1
  end
  do
-  local enemy=actors[curenemyidx]
+  local enemy=actors[curenemyi]
   if enemy and enemy.isenemy then
-
-   -- resolving effect vars
-   local isresolvingeffect=enemy.state=='recovering'
 
    -- todo: ai should have aggravator instead of
    --       avatar hard-coded
 
    -- aggression vars
-   local distancetoavatar=dist(enemy.x,enemy.y,avatar.x,avatar.y)
-   local withinattackdistance=distancetoavatar <= enemy.attack_range
+   local disttoavatar=dist(enemy.x,enemy.y,avatar.x,avatar.y)
+   local inattdist=disttoavatar <= enemy.att_range
    local haslostoavatar=haslos(enemy.x,enemy.y,avatar.x,avatar.y)
-   local isswinging=enemy.state == 'attacking'
+   local isattacking=enemy.state == 'attacking'
 
    -- movement vars
-   local ismovingoutofcollision=enemy.ismovingoutofcollision
    local collidedwithwall=enemy.wallcollisiondx != nil
-   local istooclosetoavatar=distancetoavatar <= enemy.comfydist
+   local istooclosetoavatar=disttoavatar <= enemy.comfydist
    local hastoocloseto=#enemy.toocloseto > 0
-   local hastarget=enemy.targetx!=nil
+   local hastarget=enemy.tarx!=nil
 
-
-   if isresolvingeffect then
-    -- resolving effect
+   -- resolving effect
+   if enemy.state=='recovering' then
 
    -- continue to move out of collision
-   elseif ismovingoutofcollision then
+   elseif enemy.ismovingoutofcollision then
 
     enemy.state='moving'
 
    -- too close to avatar, note: collidedwithwall not working here?
-   elseif istooclosetoavatar and (not isswinging) and (not collidedwithwall) then
+   elseif istooclosetoavatar and (not isattacking) and (not collidedwithwall) then
 
     enemy.state='moving'
     enemy.a=atan2(
       avatar.x-enemy.x,
       avatar.y-enemy.y)+0.5 -- note: go the other way
-    enemy.targetx=enemy.x+cos(enemy.a)*10
-    enemy.targety=enemy.y+sin(enemy.a)*10
+    enemy.tarx=enemy.x+cos(enemy.a)*10
+    enemy.tary=enemy.y+sin(enemy.a)*10
     enemy.ismovingoutofcollision=true
-    enemy.state_counter=60
+    enemy.state_c=60
     enemy.spd=enemy.runspd
 
    -- attack
-   elseif isswinging or withinattackdistance and
-         (haslostoavatar or enemy.islosindependent) then
+   elseif isattacking or inattdist and
+         (haslostoavatar or enemy.nolos) then
 
     if enemy.laststate != 'attacking' then
-     enemy.currentframe=1
+     enemy.curframe=1
     end
 
     enemy.state='attacking'
-    enemy.targetx=avatar.x
-    enemy.targety=avatar.y
+    enemy.tarx=avatar.x
+    enemy.tary=avatar.y
     -- todo: swing timer
 
    -- colliding w wall, move out of
@@ -1615,10 +1593,10 @@ function dungeonupdate()
     enemy.a=atan2(
       enemy.x+enemy.wallcollisiondx-enemy.x,
       enemy.y+enemy.wallcollisiondy-enemy.y)+rnd(0.2)-0.1
-    enemy.targetx=enemy.x+cos(enemy.a)*10
-    enemy.targety=enemy.y+sin(enemy.a)*10
+    enemy.tarx=enemy.x+cos(enemy.a)*10
+    enemy.tary=enemy.y+sin(enemy.a)*10
     enemy.ismovingoutofcollision=true
-    enemy.state_counter=60
+    enemy.state_c=60
 
    -- colliding w other, move out of
    elseif hastoocloseto then
@@ -1628,23 +1606,23 @@ function dungeonupdate()
     enemy.a=atan2(
       collidedwith.x-enemy.x,
       collidedwith.y-enemy.y)+0.5 -- note: go the other way
-    enemy.targetx=enemy.x+cos(enemy.a)*10
-    enemy.targety=enemy.y+sin(enemy.a)*10
+    enemy.tarx=enemy.x+cos(enemy.a)*10
+    enemy.tary=enemy.y+sin(enemy.a)*10
     enemy.ismovingoutofcollision=true
-    enemy.state_counter=60
+    enemy.state_c=60
 
-   -- set avatar position as target, move there
+   -- set avatar position as tar, move there
    elseif haslostoavatar then
 
     enemy.state='moving'
-    enemy.targetx=avatar.x
-    enemy.targety=avatar.y
+    enemy.tarx=avatar.x
+    enemy.tary=avatar.y
     enemy.a=atan2(
-      enemy.targetx-enemy.x,
-      enemy.targety-enemy.y)
+      enemy.tarx-enemy.x,
+      enemy.tary-enemy.y)
     enemy.spd=enemy.runspd
 
-   -- continue to move to target
+   -- continue to move to tar
    elseif hastarget then
 
     enemy.state='moving'
@@ -1654,8 +1632,8 @@ function dungeonupdate()
 
     enemy.state='moving'
     enemy.a=rnd()
-    enemy.targetx=enemy.x+cos(enemy.a)*10
-    enemy.targety=enemy.y+sin(enemy.a)*10
+    enemy.tarx=enemy.x+cos(enemy.a)*10
+    enemy.tary=enemy.y+sin(enemy.a)*10
     enemy.spd=enemy.runspd*0.5
 
     if enemy.onroam then
@@ -1679,84 +1657,84 @@ function dungeonupdate()
   -- note: after this deltas should not change by input
  end
 
- -- check level cleared
- if enemycount <= 0 and not isdoorspawned then
+ -- check lvl cleared
+ if enemy_c <= 0 and not isdoorspawned then
   isdoorspawned=true
-  floormap[(door.y-4)/8][(door.x-4)/8]=0
+  walls[(door.y-4)/8][(door.x-4)/8]=0
   music(20)
  end
 
  -- collide against interactables
- currentinteractable=nil
+ curinteractable=nil
  if isdoorspawned then
   for i in all(interactables) do
    if isaabbscolliding(avatar,i) then
     i.enter(i)
-    currentinteractable=i
+    curinteractable=i
    end
   end
  end
 
  -- collide against attacks
  for attack in all(attacks) do
-  for actor in all(actors) do
+  for _a in all(actors) do
    if (not attack.removeme) and
-      (not actor.removeme) and
-      attack.isenemy != actor.isenemy and
-      isaabbscolliding(attack,actor) then
+      (not _a.removeme) and
+      attack.isenemy != _a.isenemy and
+      isaabbscolliding(attack,_a) then
 
-    attack.targetcount-=1
+    attack.tar_c-=1
 
     local hitsfx=6
 
     -- special case if ice and already frozen
     if attack.typ == 'ice' and
-       actor.effect and
-       actor.effect.func == freezeeffect then
-     attack.damage=max(attack.damage,1)
+       _a.effect and
+       _a.effect.func == freezeeffect then
+     attack.dmg=max(attack.dmg,1)
     end
 
-    for skill in all(actor.passiveskills) do
+    for skill in all(_a.passiveskills) do
      if attack.typ != nil and
         skill.immune == attack.typ then
-      attack.damage=0
+      attack.dmg=0
       attack.recovertime=nil
       attack.typ=nil
      end
     end
 
-    -- do damage
-    if actor.armor and actor.armor > 0 then
-     actor.armor-=attack.damage
-     if actor.armor < 0 then
-      actor.hp+=actor.armor
-      actor.armor=0
+    -- do dmg
+    if _a.armor and _a.armor > 0 then
+     _a.armor-=attack.dmg
+     if _a.armor < 0 then
+      _a.hp+=_a.armor
+      _a.armor=0
      end
     else
-     actor.hp-=attack.damage
+     _a.hp-=attack.dmg
     end
 
     -- go into recovering
-    actor.state='recovering'
+    _a.state='recovering'
     if attack.recovertime then
-     actor.state_counter=attack.recovertime
+     _a.state_c=attack.recovertime
     else
-     actor.state_counter=0
+     _a.state_c=0
     end
 
-    -- check if actor dead
-    if actor.hp <= 0 then
-     actor.removeme=true
+    -- check if _a dead
+    if _a.hp <= 0 then
+     _a.removeme=true
      kills+=1
      hitsfx=3
 
      -- add chest
      if kills % 5 == 0 then
       add(interactables,{
-       x=actor.x,
-       y=actor.y,
-       halfw=4,
-       halfh=4,
+       x=_a.x,
+       y=_a.y,
+       hw=4,
+       hh=4,
        sprite=22,
        text='\x8e loot',
        enter=function(i)
@@ -1779,7 +1757,7 @@ function dungeonupdate()
           local spdfactor=0
           local sprite=itemclass.sprite
 
-          if contains(itemclass.prefix,_prefix) then
+          if has(itemclass.prefix,_prefix) then
            _prefix=prefix[_prefix]
            itemname=_prefix.name..itemname
            armor+=(_prefix.armor or 0)
@@ -1789,7 +1767,7 @@ function dungeonupdate()
            _prefix=nil
           end
 
-          if contains(itemclass.suffix,_suffix) then
+          if has(itemclass.suffix,_suffix) then
            _suffix=suffix[_suffix]
            itemname=itemname.._suffix.name
            armor+=(_suffix.armor or 0)
@@ -1814,7 +1792,7 @@ function dungeonupdate()
            armor=armor,
            spdfactor=spdfactor,
            iscloak=itemclass.iscloak,
-           currentframe=1,
+           curframe=1,
            idling=itemclass.idling,
            moving=itemclass.moving,
            attacking=itemclass.attacking,
@@ -1834,43 +1812,43 @@ function dungeonupdate()
 
     -- effects
 
-    actor.dmgfxcolor=8 -- note: red is default color
+    _a.dmgfx_col=8 -- note: red is default color
 
-    if attack.typ == 'knockback' and not actor.isbig then
-     actor.dx=cos(attack.knockbackangle)*5
-     actor.dy=sin(attack.knockbackangle)*5
+    if attack.typ == 'knockback' and not _a.isbig then
+     _a.dx=cos(attack.knocka)*5
+     _a.dy=sin(attack.knocka)*5
 
     elseif attack.typ == 'fire' then
-     actor.effect={func=burningeffect}
+     _a.effect={func=burningeffect}
 
     elseif attack.typ == 'stun' then
-     actor.effect={func=stunningeffect}
+     _a.effect={func=stunningeffect}
 
     elseif attack.typ == 'ice' then
-     actor.effect={func=freezeeffect}
-     actor.dmgfxcolor=12
+     _a.effect={func=freezeeffect}
+     _a.dmgfx_col=12
     end
 
     sfx(hitsfx)
 
     -- vfx
 
-    -- start damage indication
-    actor.dmgfxcounter=20
+    -- start dmg indication
+    _a.dmgfx_c=20
 
     -- hit flash
     local x,y=
-      actor.x+actor.dx/2,
-      actor.y+actor.dy/2
+      _a.x+_a.dx/2,
+      _a.y+_a.dy/2
     add(vfxs,{
-     {42,20,5,5,x-2.5,y-2.5,counter=4,col=actor.dmgfxcolor},
-     {42,20,5,5,x-2.5,y-2.5,counter=5,col=7},
+     {42,20,5,5,x-2.5,y-2.5,c=4,col=_a.dmgfx_col},
+     {42,20,5,5,x-2.5,y-2.5,c=5,col=7},
     })
 
     -- on hit handling
-    for skill in all(actor.passiveskills) do
+    for skill in all(_a.passiveskills) do
      if skill.onhit then
-      skill.onhit(actor)
+      skill.onhit(_a)
      end
     end
    end
@@ -1878,8 +1856,8 @@ function dungeonupdate()
  end
 
  -- reset toocloseto
- for actor in all(actors) do
-  actor.toocloseto={}
+ for _a in all(actors) do
+  _a.toocloseto={}
  end
 
  -- enemies movement check against others
@@ -1895,7 +1873,7 @@ function dungeonupdate()
         enemy.x,
         enemy.y,
         other.x,
-        other.y) < enemy.halfh + other.halfh then
+        other.y) < enemy.hh + other.hh then
     add(enemy.toocloseto,other)
     add(other.toocloseto,enemy)
    end
@@ -1903,12 +1881,12 @@ function dungeonupdate()
  end
 
  -- avatar movement check against other actors
- for actor in all(actors) do
-  if actor != avatar and not actor.isghost then
+ for _a in all(actors) do
+  if _a != avatar and not _a.isghost then
    local _dx,_dy=collideaabbs(
      isaabbscolliding,
      avatar,
-     actor,
+     _a,
      avatar.dx,
      avatar.dy)
 
@@ -1916,36 +1894,36 @@ function dungeonupdate()
   end
  end
 
- -- movement check against floormap
- for actor in all(actors) do
+ -- movement check against walls
+ for _a in all(actors) do
   local _dx,_dy=collideaabbs(
     isinsidewall,
-    actor,
+    _a,
     nil,
-    actor.dx,
-    actor.dy)
+    _a.dx,
+    _a.dy)
 
-  if actor.isenemy then
-   actor.wallcollisiondx=nil
-   actor.wallcollisiondy=nil
-   if _dx != actor.dx or
-      _dy != actor.dy then
-    actor.wallcollisiondx=_dx
-    actor.wallcollisiondy=_dy
+  if _a.isenemy then
+   _a.wallcollisiondx=nil
+   _a.wallcollisiondy=nil
+   if _dx != _a.dx or
+      _dy != _a.dy then
+    _a.wallcollisiondx=_dx
+    _a.wallcollisiondy=_dy
    end
   end
 
-  actor.x+=_dx
-  actor.y+=_dy
-  actor.dx,actor.dy=0,0
+  _a.x+=_dx
+  _a.y+=_dy
+  _a.dx,_a.dy=0,0
  end
 
  -- update attacks
  for attack in all(attacks) do
-  if attack.state_counter then
-   attack.state_counter-=1
-   if attack.state_counter <= 0 or
-      attack.targetcount <= 0 then
+  if attack.state_c then
+   attack.state_c-=1
+   if attack.state_c <= 0 or
+      attack.tar_c <= 0 then
     attack.removeme=true
    end
   end
@@ -1971,32 +1949,32 @@ function dungeonupdate()
   end
  end
 
- -- update damage indicator
- for actor in all(actors) do
-  if actor.dmgfxcounter > 0 then
-   actor.dmgfxcounter-=1
+ -- update dmg indicator
+ for _a in all(actors) do
+  if _a.dmgfx_c > 0 then
+   _a.dmgfx_c-=1
   end
  end
 
  -- update actor animation frames
- for actor in all(actors) do
-  local stateframes=actor[actor.state]
+ for _a in all(actors) do
+  local stateframes=_a[_a.state]
 
   local animspd=0.25 -- note: default
   if stateframes.animspd then
    animspd=stateframes.animspd
   end
-  actor.currentframe+=animspd*actor.spd
+  _a.curframe+=animspd*_a.spd
 
-  if actor.currentframe >= #stateframes+1 then
-   actor.currentframe=1
+  if _a.curframe >= #stateframes+1 then
+   _a.curframe=1
   end
  end
 
  -- update vfx
  for vfx in all(vfxs) do
-  vfx[1].counter-=1
-  if vfx[1].counter <= 0 then
+  vfx[1].c-=1
+  if vfx[1].c <= 0 then
    del(vfx,vfx[1])
   end
 
@@ -2006,21 +1984,21 @@ function dungeonupdate()
  end
 
  -- update pemitters
- for pemitter in all(pemitters) do
-  if not pemitter.counter then
-   pemitter.counter=pemitter.prate[1]
+ for _p in all(pemitters) do
+  if not _p.c then
+   _p.c=_p.prate[1]
   end
-  if not pemitter.particles then
-   pemitter.particles={}
+  if not _p.particles then
+   _p.particles={}
   end
-  pemitter.counter-=1
-  if pemitter.counter <= 0 then
+  _p.c-=1
+  if _p.c <= 0 then
    local x,y,poffsets,pdx,pdy=
-     pemitter.follow.x,
-     pemitter.follow.y,
-     pemitter.poffsets,
-     pemitter.dx,
-     pemitter.dy
+     _p.follow.x,
+     _p.follow.y,
+     _p.poffsets,
+     _p.dx,
+     _p.dy
 
    x+=poffsets[1]+rnd(poffsets[3]+abs(poffsets[1]))
    y+=poffsets[2]+rnd(poffsets[4]+abs(poffsets[2]))
@@ -2029,53 +2007,53 @@ function dungeonupdate()
      pdx[1]+rnd(pdx[2]+abs(pdx[1])),
      pdy[1]+rnd(pdy[2]+abs(pdy[1]))
 
-   add(pemitter.particles,{
-    counter=
-      pemitter.plife[1]+rnd(pemitter.plife[2]),
+   add(_p.particles,{
+    c=
+      _p.plife[1]+rnd(_p.plife[2]),
     x=x,
     y=y,
     dx=dx,
     dy=dy,
    })
 
-   pemitter.counter=
-     pemitter.prate[1]+rnd(pemitter.prate[2])
+   _p.c=
+     _p.prate[1]+rnd(_p.prate[2])
   end
 
-  pemitter.life-=1
-  if pemitter.life <= 0 then
-   pemitter.removeme=true
+  _p.life-=1
+  if _p.life <= 0 then
+   _p.removeme=true
   end
 
   -- update this pemitters particles
-  for particle in all(pemitter.particles) do
-   particle.counter-=1
-   particle.col=pemitter.pcolors[1]
-   particle.x+=particle.dx
-   particle.y+=particle.dy
-   if particle.counter <= pemitter.plife[1] then
-    particle.col=pemitter.pcolors[2]
+  for par in all(_p.particles) do
+   par.c-=1
+   par.col=_p.pcolors[1]
+   par.x+=par.dx
+   par.y+=par.dy
+   if par.c <= _p.plife[1] then
+    par.col=_p.pcolors[2]
    end
 
-   if particle.counter <= 0 then
-    del(pemitter.particles,particle)
+   if par.c <= 0 then
+    del(_p.particles,par)
    end
   end
 
  end
 
  -- remove pemitters
- for pemitter in all(pemitters) do
-  if pemitter.removeme or
-     pemitter.follow.removeme then
-   del(pemitters,pemitter)
+ for _p in all(pemitters) do
+  if _p.removeme or
+     _p.follow.removeme then
+   del(pemitters,_p)
   end
  end
 
  -- remove actors
- for actor in all(actors) do
-  if actor.removeme then
-   del(actors,actor)
+ for _a in all(actors) do
+  if _a.removeme then
+   del(actors,_a)
   end
  end
 
@@ -2096,7 +2074,7 @@ function dungeonupdate()
  -- play death sound
  if avatar.hp <= 0 then
   music(-1)
-  deathts=gametick
+  deathts=tick
   sfx(2)
  end
 end
@@ -2106,13 +2084,13 @@ function dungeondraw()
  cls(0)
 
  -- get theme start sprite
- local spr1=dungeonthemes[dungeontheme].spr1
+ local spr1=themes[theme].spr1
 
  -- draw walls
- for _y=0,#floormap do
-  for _x=0,#floormap[_y] do
-   if floormap[_y][_x] != 0 then
-    if _y == #floormap or floormap[_y+1] and floormap[_y+1][_x] != 0 then
+ for _y=0,#walls do
+  for _x=0,#walls[_y] do
+   if walls[_y][_x] != 0 then
+    if _y == #walls or walls[_y+1] and walls[_y+1][_x] != 0 then
      spr(spr1+1,_x*8,_y*8)
     else
      spr(spr1,_x*8,_y*8)
@@ -2123,11 +2101,11 @@ function dungeondraw()
 
  -- draw interactables
  if isdoorspawned then
-  for i in all(interactables) do
+  for _i in all(interactables) do
    spr(
-    i.sprite,
-    i.x-i.halfw,
-    i.y-i.halfh)
+    _i.sprite,
+    _i.x-_i.hw,
+    _i.y-_i.hh)
   end
  end
 
@@ -2135,19 +2113,19 @@ function dungeondraw()
  for attack in all(attacks) do
 
   if attack.frames then
-   local frame=attack.frames[attack.frames.currentframe]
+   local f=attack.frames[attack.frames.curframe]
    if attack.col then
     pal(2,attack.col,0)
    end
    sspr(
-    frame[1],
-    frame[2],
-    frame[3],
-    frame[4],
-    attack.x+frame[5],
-    attack.y+frame[6],
-    frame[3],
-    frame[4])
+    f[1],
+    f[2],
+    f[3],
+    f[4],
+    attack.x+f[5],
+    attack.y+f[6],
+    f[3],
+    f[4])
 
    pal(2,2,0)
   end
@@ -2159,17 +2137,17 @@ function dungeondraw()
  --       to y when sorting
 
  -- draw actors
- for actor in all(actors) do
+ for _a in all(actors) do
 
   -- draw actor frame
-  local state,flipx=actor.state,false
-  local frame=actor[state][flr(actor.currentframe)]
-  if actor.a and actor.a >= 0.25 and actor.a <= 0.75 then
+  local state,flipx=_a.state,false
+  local f=_a[state][flr(_a.curframe)]
+  if _a.a and _a.a >= 0.25 and _a.a <= 0.75 then
    flipx=true
   end
 
   -- draw item colors
-  if actor == avatar then
+  if _a == avatar then
    if avatar.items.helmet then
     pal(15,avatar.items.helmet.col,0)
    end
@@ -2181,86 +2159,86 @@ function dungeondraw()
    end
   end
 
-  -- draw damage overlay color
-  if actor.dmgfxcounter > 0 then
+  -- draw dmg overlay color
+  if _a.dmgfx_c > 0 then
    for i=1,15 do
-    pal(i,actor.dmgfxcolor,0)
+    pal(i,_a.dmgfx_col,0)
    end
   end
 
   sspr(
-    frame[1],
-    frame[2],
-    frame[3],
-    frame[4],
-    actor.x+frame[5],
-    actor.y+frame[6],
-    frame[3],
-    frame[4],
+    f[1],
+    f[2],
+    f[3],
+    f[4],
+    _a.x+f[5],
+    _a.y+f[6],
+    f[3],
+    f[4],
     flipx)
 
   -- draw weapon
-  if actor == avatar and
+  if _a == avatar and
      avatar.items.weapon then
    item=avatar.items.weapon
    local stateframes=item[state]
-   local frame=stateframes[min(
-     flr(item.currentframe),
+   local f=stateframes[min(
+     flr(item.curframe),
      #stateframes)]
    pal(6,item.col,0)
    sspr(
-     frame[1],
-     frame[2],
-     frame[3],
-     frame[4],
-     actor.x+frame[5],
-     actor.y+frame[6],
-     frame[3],
-     frame[4],
+     f[1],
+     f[2],
+     f[3],
+     f[4],
+     _a.x+f[5],
+     _a.y+f[6],
+     f[3],
+     f[4],
      flipx)
   end
 
   -- draw offhand
-  if actor == avatar and
+  if _a == avatar and
      avatar.items.offhand then
    item=avatar.items.offhand
    local stateframes=item[state]
-   local frame=stateframes[min(
-     flr(item.currentframe),
+   local f=stateframes[min(
+     flr(item.curframe),
      #stateframes)]
    pal(6,item.col,0)
    sspr(
-     frame[1],
-     frame[2],
-     frame[3],
-     frame[4],
-     actor.x+frame[5],
-     actor.y+frame[6],
-     frame[3],
-     frame[4],
+     f[1],
+     f[2],
+     f[3],
+     f[4],
+     _a.x+f[5],
+     _a.y+f[6],
+     f[3],
+     f[4],
      flipx)
   end
 
   -- draw cloak
-  if actor == avatar and
+  if _a == avatar and
      avatar.items.armor and
      avatar.items.armor.iscloak then
    item=avatar.items.armor
    local stateframes=item[state]
-   local frame=stateframes[min(
-     flr(item.currentframe),
+   local f=stateframes[min(
+     flr(item.curframe),
      #stateframes)]
    pal(1,item.col,0)
    pal(3,item.col2,0)
    sspr(
-     frame[1],
-     frame[2],
-     frame[3],
-     frame[4],
-     actor.x+frame[5],
-     actor.y+frame[6],
-     frame[3],
-     frame[4],
+     f[1],
+     f[2],
+     f[3],
+     f[4],
+     _a.x+f[5],
+     _a.y+f[6],
+     f[3],
+     f[4],
      flipx)
   end
 
@@ -2273,41 +2251,41 @@ function dungeondraw()
 
  -- draw vfx
  for vfx in all(vfxs) do
-  local frame=vfx[1]
-  if frame.draw then
-   frame.draw(frame)
+  local f=vfx[1]
+  if f.draw then
+   f.draw(f)
   else
-   pal(7,frame.col,0)
+   pal(7,f.col,0)
    sspr(
-     frame[1],
-     frame[2],
-     frame[3],
-     frame[4],
-     frame[5],
-     frame[6])
+     f[1],
+     f[2],
+     f[3],
+     f[4],
+     f[5],
+     f[6])
    pal(7,7,0)
   end
  end
 
  -- draw particles
- for pemitter in all(pemitters) do
-  for particle in all(pemitter.particles) do
+ for _p in all(pemitters) do
+  for par in all(_p.particles) do
    pset(
-     particle.x,
-     particle.y,
-     particle.col)
+     par.x,
+     par.y,
+     par.col)
   end
  end
 
  -- draw interactable text
- if currentinteractable then
+ if curinteractable then
   print(
-   currentinteractable.text,
+   curinteractable.text,
    mid(
      0,
-     currentinteractable.x-#currentinteractable.text*2,
-     124-#currentinteractable.text*4),
-   max(8,currentinteractable.y-8),
+     curinteractable.x-#curinteractable.text*2,
+     124-#curinteractable.text*4),
+   max(8,curinteractable.y-8),
    10)
  end
 
@@ -2326,21 +2304,21 @@ function dungeondraw()
   sspr(x,0,5,5,121-offset-_i*6,1)
  end
 
- if dungeonlevel > 0 then
-  print('level '..dungeonlevel,3,1,6)
+ if dungeonlvl > 0 then
+  print('level '..dungeonlvl,3,1,6)
  end
 
  if avatar.hp <= 0 then
   print('a deadly blow',40,60,8)
-  if gametick-deathts > 150 then
+  if tick-deathts > 150 then
    print('press \x8e to continue',26,68,8)
   end
  end
 
  -- draw boss hp
  if boss and boss.hp > 0 then
-  local halfw=boss.hp*6/2
-  rectfill(64-halfw,123,64+halfw,125,8)
+  local hw=boss.hp*6/2
+  rectfill(64-hw,123,64+hw,125,8)
   print(boss.name,64-#boss.name*2,122,15)
  end
 
@@ -2698,23 +2676,22 @@ end
 
 
 _init=function()
-
- -- gametick=0
- -- _update60=function()
- --  gametick+=1
- --  if btnp(4) then
+ music(11)
+ _update60=function()
+  tick+=1
+  if btnp(4) then
    dungeoninit()
- --  end
- -- end
- -- _draw=function()
- --  cls(0)
- --  sspr(41,56,87,72,21,20)
- --  col=13
- --  if gametick % 60 <= 30 then
- --   col=6
- --  end
- --  print('\x8e to start',42,118,col)
- -- end
+  end
+ end
+ _draw=function()
+  cls(1)
+  sspr(79,99,49,29,42,32)
+  col=7
+  if tick % 60 <= 30 then
+   col=13
+  end
+  print('\x8e to start',42,118,col)
+ end
 end
 
 __gfx__
@@ -2750,14 +2727,14 @@ __gfx__
 77700007770077700000000077700007770003333000333000033300000333000033332200333000d0d6d5050d1111d0006800000700d200022002100c7c7cd0
 77707707770000000000000077770077770004440000444300044400000444300044400000333000000d50000061160002050500700c2000022002100cccccd0
 7770000777000700000000000777777770000303000030000000030000030000034030000044430000000000000dd00050005500ccc60000220000210ccccc00
-77000000770007000000000700000000007000000000000000660000000000000090000000000000000000000000000000000000000000000000000000000000
-70000000070000000000007000000000000700000030603060330030000000900050000000000000000000000000000000000000000000000000000000000000
-00000000000077700777700000000000000007777333633363300333660030503050000000000000000000000000000000000000000000000000000000000000
-00000000000777770077770000000000000077770040004000400040000444544450000000000000000000000000000000000000000000000000000000000000
-00000000007777777007770000000000000077700303003003030303000424542450000000000000000000000000000000000000000000000000000000000000
-00000000000000000000770000000000000077000000000000000000000424542400000000000000000000000000000000000000000000000000000000000000
-00000000000000000000070000000000000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+77000000770007000000000700000000007000000000000000660000000000000090000000000000000000000000000000000000000000000000000000999990
+70000000070000000000007000000000000700000030603060330030000000900050000000000000000000000000000000000000000000000000000009ffff20
+00000000000077700777700000000000000007777333633363300333660030503050000000000000000000000000000000000000000000000000000004444420
+00000000000777770077770000000000000077770040004000400040000444544450000000000000000000000000000000000000000000000000000004444420
+00000000007777777007770000000000000077700303003003030303000424542450000000000000000000000000000000000000000000000000000004444420
+00000000000000000000770000000000000077000000000000000000000424542400000000000000000000000000000000000000000000000000000004444420
+00000000000000000000070000000000000070000000000000000000000000000000000000000000000000000000000000000000000000000000000004444420
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004444400
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -2774,78 +2751,78 @@ __gfx__
 00406066600000000040606660000000004060666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00040006000000000004000600000000000400060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00d040606000000000d040606000000000d040606000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0d000060600000000d000060600000000d000060600000000000000000000000000000000000000000000000000150000000005155d551500000000000000000
-d000006060000000d000006000000000d00000006000000000000000000000000000000000000000000000000015100000055dd6677766665510000000000000
-00000077777770000000000000000000000000000000000000000000000000000000000000000000000000000155100015dd7777777777777665100000000000
-00007777777777700000000000000000000000000000000000000000000000000000000000000000000000000555000556777777777777777777d50000000000
-007777777777777770000000000000000000000000000000000000000000000000000000000000000000000055d000556777777777777777777776d100000000
-07777777777777777700000000000000000000000000000000000000000000000000000000000000000000055d1015d777777777777777777777777610000000
-d777777777000777770000000000000000000000000000000000000000000000000000770000000000000055d501567777777777777777777777777761000000
-0d7777700000000077700000000000000000000000000000000000000000000000000067000000000000015d5115d7777777777777777777777777776d100000
-00d777000f0000000770000000000000f00000000000000000000000000000000000006740000000000015d5505d77777777777777777777777776666d510000
-000d7400ff000000007700000000000ff00b0000000000000000000000000000000000762000000000001d5d0557777777777777777777777777776ddd550000
-000040006600000000770000000000066000000000000000000000000000000000000574400000000001d5d15567777777777777777777777777776ddd655000
-000406006600000000070000000000066006000000000050000000000d77d000000007740000000000155d515d77777777777777777777777777777666dd5100
-00000060600000000007000000000006006000000000077d000000057765100000005762205000000055d51156777777777777777777777777777777766dd100
-000000066600000000070000000000666600000000006750000000677702220000006742067d0000055d5505577777777777777777777777777777777766d500
-00000000600000000007000000000606000000000000774220000d7664400057776576400077500055d550156777777777777777777777777777777777766510
-000000066600000000700000004060666000000000057d200000675224200d775d677720005750015d5d10156777777777777777777777777777777777776610
-0000000060000000007000000004000600000000000d7440000d7d22257757602247677767774005d5d100557777777777777777777777777777777777777650
-00000006060000000700000000d040606000000000067400001764220777777422d7644d67d2201d5d50015d7777777777777777777777777777777777777651
-0000006000600007700000000d0000606000000000077200007744605777654000764046752461d5677501d777777777777777777777777777777777777777d1
-000000060006077000000000d00000606000000000077400067627750777447d0576220774077d5d7777157777777777744777777777777777777777777777d5
-0000000000000000000000000000000000000000001770001772476006776775067420d760d765d77d77d5774677477764477777777777777777777777777761
-00000000000000000000000000000000000000000017620067546744077777640764007744774467d477467647764f7764f777777777777777777777777777d5
-00000000000000000000000000000000000000000057600176427740574267d2d7622d7645764477447747744774477774777777777777777777777777777761
-0000000000000000000000000000000000000000005742067424762576247742774207740674277624777764476467477d77777744f7777777777777777777d5
-000000000000000000000000000000000000000000d740576226742d70457645774067744774d7744077774277447746746677764477777777777777777777d1
-000000000000000000000000000000000000000000d7426754077457540674277625776477647774057477467747762674467774467777777777777777777755
-0000000000000000000000000000000000000000006745764507747d220777777747776777477d745762776776777447744d6774477777777777777777777651
-000000000000000000000000000000000000000000672774771777d020d7777577765777d77754777704777d77767777644d6744677777777777777777777d50
-00000000000000000000000000000000000000000076d7d771007d22577674424760447444754247d04057454747766644dd77446d6666777777777777777550
-000000000000000000000000000000000000000001767747640024257762242404240524242420042400042454247424245677445d66d666677777777777d510
-000000000000000000000000000000000000000001777567420000577522222000200542555000004000002051444245455d7d45d5dddd6d66777777767d5100
-00000000000000000000000000000000000000000777547742000077d422000000001d5d550000000000000011155455111774255d5d5d5ddd777766d6d51100
-00000000000000000000000000000000000000000774427640000d76420000000001d5d5d00000000000000010115567511774455555d5d5d7777dd5d5515000
-0000000000000000000000000000000000000000000425760000176426755d001616765d106700d50710060006111d7771576477555557765776745515110000
-000000000000000000000000000000000000000000220576200076d277777750677777d5067776766760676057700d774067477765557777d777427651100000
-000000000000000000000000000000000000000000000d76000d76247657760077767751d7d477d2764076506740077d247777d7455776274d77477601000000
-000000000000000000000000000000000000000000000d74200774477447744d776d74407744774d7d4d7d457640d77445777577456762674677777441100000
-00000000000000000000000000000000000000000000066400d7d457644764077727740776267627740774077d2077760d774476247744762774476407700000
-00000000000000000000000000000000000000000000067420764067d2674267744762577447746762476247742d75775676467446777765774267d257500000
-00000000000000000000000000000000000000000000077406762276447644776477427764577477446744777407746747744774477744547524774276220000
-000000000000000000000000000000000000000000000775577425764676477744774477d277647744774d7742774267676267d2777442476545764670400000
-00000000000000000000000000000000000000000000076267440d76477d77742d76476747774777477747d7477744777744674776742d76040d744754000000
-00000000000000000000000000000000000000000000076576400577767776724d777567777767777d7775477756777774407777547777604005777522000000
-0000000000000000000000000000000000000000000017467422007742d7444455d7422774777427d2276226750446674420077524d765040000775220000000
-00000000000000000000000000000000000000000000576762200022424242425002422044767042422242204240224242000042402242400000224200000000
-00000000000000000000000000000000000000000000d77754000002220425551002220027774400220002000400020220000024000222000000022200000000
-00000000000000000000000000000000000000000000777540000000005555d50000000007772000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000001774420000000055555510488888887742828888888888000048888888888888888088888888400000000
-111111111111111111111111000000000000000000000242510000001555555028888888e7722888888888888000288888888888888888888888888880000000
-111111111111111100000001000000000000000000000420011100015d5555002888888877448888888888880000488888888888888888888888888882000000
-000000001111111155011001000000000000000000000000001150115155d100088888887f428888888888800000088888888888888882888888888880000000
-01101111111111115500001100000000000000000000000000001515111d10000008888e74288888288888400000088888800008888800288888888200000000
-01001110111111115515500100000000000000000000000000000151115500000002888772204888088884800000088888200008888800088888800000000000
-00000000111111115515500100000000000000000000000000000115151100000002888744000020048888880000088888000008888800028888800000000000
-11011011111111115515515100000000000000000000000000000011515100044002887740000000008888880000888880000008888820008888800000000000
-10010011111111111111111100000000000000000000000000000001151511420002877822028000004888882002888880000008888800028888800000000000
-11111111111111110000000000000000000000000000000000000000000011400004888248888800000888888008888800000008888820028888800000000000
-11111111111111110050050000000000000000000000000000000000000001250008884288888800000288888228888800000008888820048888200000000000
-11011111111111110055550000000000000000000000000000000000000424425118888888888800000088888888888000000008888880028888200000000000
-10110101111111110050050000000000000000000000000001000000004424000118888888888800000088888888884000000008888880088888200000000000
-10101001111111110155551000000000000000000000000001510000000042000008888800288200000028888888882000000008888880088888200000002000
-10101010111111111050050100000000000000000000000000151100040004000008888800000000000008888888880000000008888820088888200000048820
-00100010111111110111111000000000000000000000000000001000025204000008888820000020000000888888820000000008888820088888200000888820
-01000100111111110000000000000000000000000000000000000000044004000004888820024888000000888888800000000008888800088888820288888800
-00000d0000000d000000000000000000000000000000000000000000000002000028888288888888000000488888800000000008888882888884888888888200
-00d00d0000d00d000000000000000000000000000000000000000000000002002888888888888882000000088888200000000088888888888888888888888000
-00d0d11000d0d1100000000000000000000000000000011000000000004040008888888888888880000000088888000000000888888888888888888888882000
-0ddd01100ddd01100000000000000000000000000000155500000000044400028888888888888800000000048888000000000888888888888888888888880000
-0dd101100dd101100000000000000000000000000001115510000000000000004884442000002000000000008888000000000282002228428840002020000000
-ddd11011ddd110110000000000000000000000000005111500000000000000000000000000000000000000000882000000000000000000000000000000000000
-dd111011dd1110110000000000000000000000000011511100000000000000000000000000000000000000000000000000000000000000000000000000000000
-00100100001001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0d000060600000000d000060600000000d0000606000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d000006060000000d000006000000000d00000006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000077777770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00007777777777700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00777777777777777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+07777777777777777700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d7777777770007777700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0d777770000000007770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00d777000f0000000770000000000000f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000d7400ff000000007700000000000ff00b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00004000660000000077000000000006600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00040600660000000007000000000006600600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000060600000000007000000000006006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000006660000000007000000000066660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000600000000007000000000606000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000006660000000070000000406066600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000600000000070000000040006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000006060000000700000000d04060600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000006000600007700000000d000060600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000060006077000000000d0000060600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000007070777077707770707007707070077000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000007070d7d07d70d7d070707d7070707dd000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000007070070077d00700707070707070777000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000777007007d700700707070707070dd7000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000d7d0777070700700d77077d0d77077d000000000000000000
+11111111111111111111111100000000000000000000000000000000000000000000000000000000d00ddd0d0d00d000dd0dd000dd0dd0000000000000000000
+11111111111111110000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000111111115501100100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+01101111111111115500001100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+01001110111111115515500100000000000000000000000000000000000000000000000000000007070777077000700707077700770707077707770000000000
+000000001111111155155001000000000000000000000000000000000000000000000000000000070707d707d707d707070d7d07dd070707dd07d70000000000
+110110111111111155155151000000000000000000000000000000000000000000000000000000070707770707070707070070077707770770077d0000000000
+100100111111111111111111000000000000000000000000000000000000000000000000000000077707d70707077d070700700dd707d707d007d70000000000
+1111111111111111000000000000000000000000000000000000000000000000000000000000000d7d070707070d770d770777077d0707077707070000000000
+11111111111111110050050000000000000000000000000000000000000000000000000000000000d00d0d0d0d00dd00dd0ddd0dd00d0d0ddd0d0d0000000000
+11011111111111110055550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+10110101111111110050050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+10101001111111110155551000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+10101010111111111050050100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00100010111111110111111000000000000000000000000000000000000000000000000000000000000000000000000288888882888802888828888088888000
+01000100111111110000000000000000000000000000000000000000000000000000000000000000000000000000000028822280288200288202882028220000
+00000d0000000d000000000000000000000000000000000000000000000000000000000000000000000000000005000008800020028000082000882028800000
+00d00d0000d00d000000000000000000000000000000000000000000000000000000000000000000000000050050000008800000008800880000880008800000
+00d0d11000d0d1100000000000000000000000000000000000000000000000000000000000000000000000505050000008888200008808820000880008800000
+0ddd01100ddd01100000000000000000000000000000000000000000000000000000000000000000000000505055000008828000002888200000880008800000
+0dd101100dd101100000000000000000000000000000000000000000000000000000000000000000000000050050000008802000000888200000880008800000
+ddd11011ddd110110000000000000000000000000000000000000000000000000000000000000000000000000050000008800080000282000000880028800008
+dd111011dd1110110000000000000000000000000000000000000000000000000000000000000000000000000500000288888880000080000228888288888882
+00100100001001000000000000000000000000000000000000000000000000000000000000000000000000000000000022222220000020000022222022222220
 __label__
 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
 eee0e0e0ee00eee0eee0eee0eee00000eee0eee0eee00ee0eee00000e000eee0ee00eee00000ee00eee0e0e0eee00000eee0eee0eee00000eee0000000000000
@@ -3003,7 +2980,7 @@ __sfx__
 012c000013730137351800015734167311673518734187351a7341a7321a735000000d91200000000000000013730137351800015734167311673518734187351a7341a7351c7341c73019732197321973500000
 012c00000e734021350e734021350e734021350e7340213509734091350973409135097340913509734011350e734021350e734021350e734021350e734021350973409135097340913509734091350973409135
 012c00000773407135077340713507734071350773407135027340213502734021350273402135027340513507734071350773407135077340713507734071350e734021350e7340213509734091350973401135
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+01e300080e77515775147750c7751077517775167750f775007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -3041,7 +3018,7 @@ __music__
 01 25264344
 00 25264344
 02 27674344
-00 706e4344
+03 1a6e4344
 00 706e4344
 00 706e4344
 00 706e4344
