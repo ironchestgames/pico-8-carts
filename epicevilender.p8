@@ -4,7 +4,7 @@ __lua__
 -- virtuous vanquisher of evil (v1.0)
 -- by ironchest games
 
-cartdata('ironchestgames_vvoe_v1_dev1')
+cartdata('ironchestgames_vvoe_v1_dev5')
 
 printh('debug started','debug',true)
 function debug(s)
@@ -48,7 +48,7 @@ function saveitem(_slot,_class,_prefix,_suffix)
 end
 
 if dget(1) == 0 then
- saveitem(1,8,0,10)
+ saveitem(1,8,1,0)
 end
 
 function loaditem(_i)
@@ -883,30 +883,41 @@ function createitem(_itemclass,_prefix,_suffix)
  local itemname,
    armor,
    spdfactor,
-   sprite
+   sprite,
+   prefixt,
+   col,
+   col2
    =
    itemclass.name,
    0,
    0,
-   itemclass.sprite
- if _prefix != 0 and _prefix != nil then
-  _prefix=prefix[_prefix]
-  itemname=_prefix.name..itemname
-  armor+=(_prefix.armor or 0)
-  spdfactor+=(_prefix.spdfactor or 0)
-  sprite=_prefix[itemclass.slot..'_sprite']
- else
-  _prefix=nil
- end
+   itemclass.sprite,
+   itemclass.prefix or prefix,
+   itemclass.col,
+   itemclass.col2
 
- if _suffix != 0 and _suffix != nil then
+ if _suffix != 0 then
   _suffix=suffix[_suffix]
   itemname=itemname.._suffix.name
   armor+=(_suffix.armor or 0)
   spdfactor+=(_suffix.spdfactor or 0)
   sprite=_suffix[itemclass.slot..'_sprite']
+  col=_suffix.col
+  col2=_suffix.col2
  else
   _suffix=nil
+ end
+
+ if _prefix != 0 then
+  _prefix=prefixt[_prefix]
+  itemname=_prefix.name..itemname
+  armor+=(_prefix.armor or 0)
+  spdfactor+=(_prefix.spdfactor or 0)
+  sprite=_prefix[itemclass.slot..'_sprite']
+  col=_prefix.col
+  col2=_prefix.col2
+ else
+  _prefix=nil
  end
 
  if _prefix == nil and _suffix == nil then
@@ -918,8 +929,8 @@ function createitem(_itemclass,_prefix,_suffix)
   slot=itemclass.slot,
   name=itemname,
   sprite=sprite or itemclass.sprite,
-  col=itemclass.col,
-  col2=itemclass.col2,
+  col=col or itemclass.col,
+  col2=col2 or itemclass.col2,
   prefix=_prefix,
   suffix=_suffix,
   armor=armor,
@@ -934,20 +945,61 @@ function createitem(_itemclass,_prefix,_suffix)
  }
 end
 
+swordprefix={
+ {
+  name='',
+  skill=swordattackskillfactory(1,15,28,1000,7),
+ },
+ {
+  name='ice ',
+  col=12,
+  skill=swordattackskillfactory(1,15,28,1000,7,'ice',150),
+ },
+ {
+  name='flaming ',
+  col=8,
+  skill=swordattackskillfactory(1,15,28,1000,14,'fire',60),
+ },
+ {
+  name='heavy ',
+  col=13,
+  skill=swordattackskillfactory(1,15,28,1000,7,'knockback'),
+ },
+}
+
+bowprefix={
+ {
+  name='',
+  col=4,
+  skill=bowattackskillfactory(1,26,6,1,7,2),
+  twohand=true,
+ },
+ {
+  name='ice ',
+  col=12,
+  skill=bowattackskillfactory(1,26,6,1,7,12,'ice',150),
+  twohand=true,
+ },
+}
+
 prefix={
- { -- 1
+ {
   name='knight\'s ',
   armor=1,
  },
- { -- 2
+ {
+  name='feathered ',
+  spdfactor=0.1,
+ },
+ {
   name='dragonscale ',
   skill=skillfactory(7,'passive, cannot be burned',nil,'fire'),
  },
 }
 
 suffix={
- { -- 1
-  name=' of resurrection',
+ {
+  name=' of resurrect',
   amulet_sprite=6,
   skill=skillfactory(5,'passive, resurrect once',function (_a)
    if _a.hp <= 0 then
@@ -960,15 +1012,15 @@ suffix={
    end
   end),
  },
- { -- 2
+ {
   name=' of haste',
   spdfactor=0.1,
  },
- { -- 3
+ {
   name=' of phasing',
   skill=skillfactory(27,'passive, phase away on hit',phasing),
  },
- { -- 4
+ {
   name=' of firebolt',
   book_sprite=45,
   skill=boltskillfactory(
@@ -984,7 +1036,7 @@ suffix={
     29,
     'firebolt'),
  },
- { -- 5
+ {
   name=' of icebolt',
   book_sprite=63,
   skill=boltskillfactory(
@@ -1000,31 +1052,6 @@ suffix={
     28,
     'icebolt')
  },
- { -- 6 (sword attack)
-  name=' of fire',
-  col=8,
-  skill=swordattackskillfactory(1,15,28,1000,14,'fire',60),
- },
- { -- 7 (basic bow attack)
-  name='',
-  col=4,
-  skill=bowattackskillfactory(1,26,6,1,7,2),
-  twohand=true,
- },
- { -- 8 (bow attack)
-  name=' of ice',
-  col=12,
-  skill=bowattackskillfactory(1,26,6,1,7,12,'ice',150),
-  twohand=true,
- },
- { -- 9 (sword attack)
-  name=' of the bear',
-  skill=swordattackskillfactory(1,15,28,1000,7,'knockback'),
- },
- { -- 10 (basic sword attack)
-  name='',
-  skill=swordattackskillfactory(1,15,28,1000,7),
- }
 }
 
 cloakidling,
@@ -1044,31 +1071,23 @@ itemclasses={
   name='boots',
   sprite=41,
   col=4,
-  prefix=pfn'2,',
-  suffix=pfn'2,',
  },
  { -- 2
   slot='helmet',
   name='helmet',
   sprite=42,
   col=13,
-  prefix=pfn'1,',
-  suffix={},
  },
  { -- 3
   slot='amulet',
   name='amulet',
   sprite=25,
-  prefix=pfn'2,',
-  suffix=pfn'1,',
  },
  { -- 4 platemail
   slot='armor',
   name='platemail',
   sprite=58,
   col=6,
-  prefix=pfn'1,',
-  suffix={},
  },
  { -- 5 cloak
   slot='armor',
@@ -1077,8 +1096,6 @@ itemclasses={
   sprite=26,
   col=2,
   col2=1,
-  prefix=pfn'2,',
-  suffix=pfn'2,3,',
   idling=cloakidling,
   moving=cloakidling,
   attacking=cloakidling,
@@ -1089,8 +1106,6 @@ itemclasses={
   name='shield',
   sprite=44,
   col=13,
-  prefix=pfn'1,2,',
-  suffix=pfn'3,',
   idling=shieldidling,
   moving=shieldidling,
   attacking=shieldidling,
@@ -1100,16 +1115,13 @@ itemclasses={
   slot='book',
   name='book',
   sprite=79,
-  prefix={},
-  suffix=pfn'4,5,'
  },
  { -- 8 sword
   slot='weapon',
   name='sword',
   sprite=47,
   col=6,
-  prefix={},
-  suffix=pfn'6,9,',
+  prefix=swordprefix,
   idling=swordidling,
   moving=swordidling,
   attacking={
@@ -1124,8 +1136,7 @@ itemclasses={
   twohand=true,
   sprite=46,
   col=4,
-  prefix={},
-  suffix=pfn'7,8,',
+  prefix=bowprefix,
   idling=bowidling,
   moving=bowidling,
   attacking={
@@ -1849,17 +1860,20 @@ function dungeonupdate()
           i.text='[empty]'
           i.sprite=23
 
-          local _itemclass=flr(rnd(#itemclasses))+1
-          local itemclass=itemclasses[_itemclass]
-          local _prefix=itemclass.prefix[
-            flr(rnd(#itemclass.prefix+1))]
-          local _suffix=itemclass.suffix[
-            flr(rnd(#itemclass.suffix+1))]
+          local _itemclassn=flr(rnd(#itemclasses))+1
+          local itemclass=itemclasses[_itemclassn]
+          local _prefix=itemclass.prefix or prefix
+          local _prefixn=flr(rnd(#_prefix+1))
+          local _suffixn=flr(rnd(#suffix+1))
+
+          if _itemclassn == 7 then
+           _prefixn=0
+          end
 
           item=createitem(
-           _itemclass,
-           _prefix,
-           _suffix)
+           _itemclassn,
+           _prefixn,
+           _suffixn)
 
           add(avatar.inventory,item)
           sfx(20)
@@ -2391,6 +2405,7 @@ inventorycur,
 equippedcur,
 availableskillscur,
 sectioncur,
+spdfactornr,
 equipped,
 availableskills,
 equipslots=
@@ -2398,6 +2413,7 @@ equipslots=
   1,
   1,
   4,
+  0,
   {},
   {},
   {
@@ -2420,6 +2436,7 @@ function equipupdate()
  -- init equipped items
  avatar.startarmor=0
  avatar.spdfactor=1
+ spdfactornr=0
  equipped={}
  for _,item in pairs(avatar.items) do
   add(equipped,item)
@@ -2428,6 +2445,7 @@ function equipupdate()
   end
   if item.spdfactor then
    avatar.spdfactor+=item.spdfactor
+   spdfactornr+=-flr(-item.spdfactor*100)
   end
  end
 
@@ -2611,7 +2629,9 @@ function equipupdate()
      saveitem(
        k,
        avatar.items[v].class,
-       has(prefix,avatar.items[v].prefix),
+       has(
+         itemclasses[avatar.items[v].class].prefix or
+         prefix,avatar.items[v].prefix),
        has(suffix,avatar.items[v].suffix))
     else
      saveitem(k,0,0,0)
@@ -2638,99 +2658,69 @@ function equipdraw()
  fillp()
 
  -- draw inventory section
- local offsetx,y,i,col=0,17,1,
+ local offsetx,i,col=0,1,
    sectioncur == 1 and 10 or 4
- print('saddlebags',4,y-9,col)
+ print('saddlebags',4,17-9,col)
  for item in all(avatar.inventory) do
-  spr(item.sprite,6+offsetx,y)
+  spr(item.sprite,6+offsetx,17)
   if sectioncur == 1 and i == inventorycur then
-   rect(
-    6+offsetx-2,
-    y-2,
-    6+offsetx+9,
-    y+9,
-    10)
-
+   rect(4+offsetx,15,15+offsetx,26,10)
    if i == sellcur then
-    sspr(10,0,5,5,offsetx+4,y-2)
+    sspr(10,0,5,5,offsetx+4,15)
    end
-
-   print(
-    item.name,
-    4,
-    y+12,
-    7)
+   print(item.name,4,29,7)
   end
-
   offsetx+=12
   i+=1
  end
 
  -- draw equipped section
- offsetx,y,i,col=0,52,1,
+ offsetx,i,col=0,1,
    sectioncur == 2 and 10 or 4
- print('equipped',4,y-9,col)
+ print('equipped',4,43,col)
+ if spdfactornr > 0 then
+  print('+'..spdfactornr..'% spd',50,43,13)
+ end
+ for _i=0,avatar.startarmor-1 do
+  sspr(0,0,5,5,121-_i*6,43)
+ end
  for slot in all(equipslots) do
   local item=avatar.items[slot[1]]
   if not item then
-   spr(slot[2],6+offsetx,y)
+   spr(slot[2],6+offsetx,52)
   else
-   spr(item.sprite,6+offsetx,y)
+   spr(item.sprite,6+offsetx,52)
   end
-
   if sectioncur == 2 and i == equippedcur then
-   rect(
-    6+offsetx-2,
-    y-2,
-    6+offsetx+9,
-    y+9,
-    10)
-
+   rect(4+offsetx,50,15+offsetx,61,10)
    if item then
-    print(
-     item.name,
-     4,
-     y+12,
-     7)
+    print(item.name,4,64,7)
    end
   end
-
   offsetx+=12
   i+=1
  end
 
  -- draw availableskills section
- offsetx,y,i,col=0,88,1,
+ offsetx,i,col=0,1,
    sectioncur == 3 and 10 or 4
- print('skills',4,y-9,col)
+ print('skills',4,79,col)
  for skill in all(availableskills) do
-  spr(skill.sprite,6+offsetx,y)
+  spr(skill.sprite,6+offsetx,88)
   if sectioncur == 3 and i == availableskillscur then
-   rect(
-    6+offsetx-2,
-    y-2,
-    6+offsetx+9,
-    y+9,
-    10)
-
-    if skill then
-     print(
-      skill.desc,
-      4,
-      y+21,
-      7)
-    end
+   rect(4+offsetx,86,15+offsetx,97,10)
+   if skill then
+    print(skill.desc,4,109,7)
+   end
   end
-
   if skill == avatar.skill1 then
-   spr(24,6+offsetx,y+12)
-   print('\x8e',6+offsetx+1,y+12,11)
+   spr(24,6+offsetx,100)
+   print('\x8e',7+offsetx,100,11)
   end
   if skill == avatar.skill2 then
-   spr(24,6+offsetx,y+12)
-   print('\x97',6+offsetx+1,y+12,8)
+   spr(24,6+offsetx,100)
+   print('\x97',7+offsetx,100,8)
   end
-
   offsetx+=12
   i+=1
  end
@@ -2738,27 +2728,24 @@ function equipdraw()
  -- draw exit button
  col=sectioncur == 4 and 10 or 4
  print('exit',57,120,col)
-
 end
 
-
 function _init()
- -- music(11)
- -- _update60=function()
- --  tick+=1
- --  if btnp(4) then
-   equipinit()
- --  end
- -- end
- -- _draw=function()
- --  cls(1)
- --  sspr(79,99,49,29,42,32)
- --  col=7
- --  if tick % 60 <= 30 then
- --   col=13
- --  end
- --  print('\x8e to start',42,118,col)
- -- end
+ music(11)
+end
+
+function _update60()
+ tick+=1
+ if btnp(4) then
+  equipinit()
+ end
+end
+
+function _draw()
+ cls(1)
+ sspr(79,99,49,29,42,32)
+ col=tick % 60 <= 30 and 13 or 7
+ print('\x8e to start',42,118,col)
 end
 
 __gfx__
