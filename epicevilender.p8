@@ -11,13 +11,6 @@ function debug(s)
  printh(tostr(s),'debug',false)
 end
 
-function tern(cond,t,f)
- if cond then
-  return t
- end
- return f
-end
-
 function has(_t,_v)
  for k,v in pairs(_t) do
   if v == _v then
@@ -80,8 +73,6 @@ function isaabbscolliding(a,b)
 end
 
 wallaabb={
- x=0,
- y=0,
  hw=4,
  hh=4,
 }
@@ -92,12 +83,12 @@ function isinsidewall(aabb)
    aabb.x+aabb.hw,
    aabb.y+aabb.hh
 
- for point in all({
+ for point in all{
     {x1,y1},
     {x2,y1},
     {x2,y2},
     {x1,y2},
-   }) do
+   } do
   local mapx,mapy=flr(point[1]/8),flr(point[2]/8)
   wallaabb.x,wallaabb.y=
     mapx*8+wallaabb.hw,
@@ -148,7 +139,7 @@ function dist(x1,y1,x2,y2)
 end
 
 function norm(n)
- return tern(n == 0,0,sgn(n))
+ return n == 0 and 0 or sgn(n)
 end
 
 _aabb={}
@@ -193,7 +184,7 @@ function findflr(_x,_y)
  return x*8+4,y*8+4
 end
 
-btnmasktoangle={
+btnmasktoa={
  [0x0002]=0, -- right
  [0x0006]=0.125, -- right/up
  [0x0004]=0.25, -- up
@@ -204,40 +195,50 @@ btnmasktoangle={
  [0x000a]=0.875, -- down/right
 }
 
-meleevfxframes={
- [0]=pfn'0,20,4,7,-1,-5,', -- right
- [0.125]=pfn'8,20,6,4,-3,-2,', -- right/up
- [0.25]=pfn'20,20,9,3,-3,-1,', -- up
- [0.375]=pfn'14,20,6,4,-2,-2,', -- up/left
- [0.5]=pfn'4,20,4,7,-2,-5,', -- left
- [0.625]=pfn'29,20,4,7,-3,-6,', -- left/down
- [0.75]=pfn'20,23,9,3,-4,-2,', -- down
- [0.875]=pfn'33,20,4,7,0,-6,', -- down/right
- [1]=pfn'0,20,4,7,-1,-5,', -- right (wrapped)
+function aframes(_fs)
+ local t={}
+ local j=1
+ for i=0,1,0.125 do
+  t[i]=pfn(_fs[j])
+  j+=1
+ end
+ return t
+end
+
+meleevfxframes=aframes{
+ '0,20,4,7,-1,-5,', -- right
+ '8,20,6,4,-3,-2,', -- right/up
+ '20,20,9,3,-3,-1,', -- up
+ '14,20,6,4,-2,-2,', -- up/left
+ '4,20,4,7,-2,-5,', -- left
+ '29,20,4,7,-3,-6,', -- left/down
+ '20,23,9,3,-4,-2,', -- down
+ '33,20,4,7,0,-6,', -- down/right
+ '0,20,4,7,-1,-5,', -- right (wrapped)
 }
 
-bowvfxframes={
- [0]=pfn'0,27,6,7,-3,-5,', -- right
- [0.125]=pfn'17,32,7,7,-4,-3,', -- right/up
- [0.25]=pfn'10,31,7,6,-3,-3,', -- up
- [0.375]=pfn'34,32,7,7,-3,-3,', -- up/left
- [0.5]=pfn'4,27,6,7, -2,-5,', -- left
- [0.625]=pfn'22,27,7,7,-2,-5,', -- left/down
- [0.75]=pfn'10,27,7,6,-3,-4,', -- down
- [0.875]=pfn'29,27,7,7,-4,-4,', -- down/right
- [1]=pfn'0,27,6,7,-3,-5,', -- right (wrapped)
+bowvfxframes=aframes{
+ '0,27,6,7,-3,-5,', -- right
+ '17,32,7,7,-4,-3,', -- right/up
+ '10,31,7,6,-3,-3,', -- up
+ '34,32,7,7,-3,-3,', -- up/left
+ '4,27,6,7, -2,-5,', -- left
+ '22,27,7,7,-2,-5,', -- left/down
+ '10,27,7,6,-3,-4,', -- down
+ '29,27,7,7,-4,-4,', -- down/right
+ '0,27,6,7,-3,-5,', -- right (wrapped)
 }
 
-arrowframes={
- [0]=pfn'50,20,2,1,-1,-0.5,', -- right
- [0.125]=pfn'52,20,2,2,-1,-1,', -- right/up
- [0.25]=pfn'54,20,1,2,-0.5,-1,', -- up
- [0.375]=pfn'55,20,2,2,-1,-1,', -- up/left
- [0.5]=pfn'50,20,2,1,-1,-0.5,', -- left
- [0.625]=pfn'52,20,2,2,-1,-1,', -- left/down
- [0.75]=pfn'54,20,1,2,-0.5,-1,', -- down
- [0.875]=pfn'55,20,2,2,-1,-1,', -- down/right
- [1]=pfn'50,20,2,1,-1,-0.5,', -- right (wrapped)
+arrowframes=aframes{
+ '50,20,2,1,-1,-0.5,', -- right
+ '52,20,2,2,-1,-1,', -- right/up
+ '54,20,1,2,-0.5,-1,', -- up
+ '55,20,2,2,-1,-1,', -- up/left
+ '50,20,2,1,-1,-0.5,', -- left
+ '52,20,2,2,-1,-1,', -- left/down
+ '54,20,1,2,-0.5,-1,', -- down
+ '55,20,2,2,-1,-1,', -- down/right
+ '50,20,2,1,-1,-0.5,', -- right (wrapped)
 }
 
 function getvfxframei(a)
@@ -333,7 +334,7 @@ end
 -- enemy factories
 
 function newmeleetroll(x,y)
- return actorfactory({
+ return actorfactory{
   isenemy=true,
   x=x,
   y=y,
@@ -358,7 +359,7 @@ function newmeleetroll(x,y)
    pfn'52,32,6,5,-3,-3,',
   },
   recovering={pfn'41,32,4,5,-2,-3,'},
- })
+ }
 end
 
 function newtrollcaster(x,y)
@@ -374,7 +375,7 @@ function newtrollcaster(x,y)
    pfn'14,8,'),
   pfn'59,32,4,6,-2,-3,'
 
- return actorfactory({
+ return actorfactory{
   isenemy=true,
   x=x,
   y=y,
@@ -406,11 +407,11 @@ function newtrollcaster(x,y)
   },
   recovering={idleframe},
   onpreprfm=boltskill.startpemitter,
- })
+ }
 end
 
 function newgianttroll(x,y)
- boss=actorfactory({
+ boss=actorfactory{
   name='giant troll',
   isenemy=true,
   x=x,
@@ -437,12 +438,12 @@ function newgianttroll(x,y)
    pfn'64,25,8,7,-4,-4,',
   },
   recovering={pfn'72,25,7,7,-4,-4,'},
- })
+ }
  return boss
 end
 
 function newmeleeskele(x,y)
- return actorfactory({
+ return actorfactory{
   isenemy=true,
   x=x,
   y=y,
@@ -467,11 +468,11 @@ function newmeleeskele(x,y)
    pfn'11,15,6,5,-3,-3,',
   },
   recovering={pfn'0,15,4,5,-2,-3,'},
- })
+ }
 end
 
 function newbatenemy(x,y)
- return actorfactory({
+ return actorfactory{
   isenemy=true,
   isghost=true,
   x=x,
@@ -497,11 +498,11 @@ function newbatenemy(x,y)
    pfn'39,15,3,3,-1.5,-1.5,'
   },
   recovering={pfn'36,15,3,3,-1.5,-1.5,'},
- })
+ }
 end
 
 function newbowskele(x,y)
- return actorfactory({
+ return actorfactory{
   isenemy=true,
   x=x,
   y=y,
@@ -527,7 +528,7 @@ function newbowskele(x,y)
    pfn'31,15,4,5,-2,-3,'
   },
   recovering={pfn'18,15,4,5,-2,-3,'},
- })
+ }
 end
 
 function newskeleking(x,y)
@@ -614,7 +615,7 @@ function newskeleking(x,y)
   add(actors,_e)
  end
 
- boss=actorfactory({
+ boss=actorfactory{
   name='skeleton king',
   isenemy=true,
   isbig=true,
@@ -633,7 +634,7 @@ function newskeleking(x,y)
   },
   recovering={pfn'0,40,15,18,-7,-13,'},
   onroam=setupmagic,
- })
+ }
 
  setupmagic(boss)
 
@@ -685,7 +686,7 @@ function freezeeffect(_a)
 end
 
 -- skills -- todo: maybe remove this?
-skillfactory=function(sprite,desc,onhit,immune)
+function skillfactory(sprite,desc,onhit,immune)
  return {
   sprite=sprite,
   desc=desc,
@@ -694,7 +695,7 @@ skillfactory=function(sprite,desc,onhit,immune)
  }
 end
 
-swordattackskillfactory=function(
+function swordattackskillfactory(
   dmg,
   preprfm,
   postprfm,
@@ -738,7 +739,7 @@ swordattackskillfactory=function(
  }
 end
 
-bowattackskillfactory=function(
+function bowattackskillfactory(
   dmg,
   preprfm,
   postprfm,
@@ -789,7 +790,7 @@ bowattackskillfactory=function(
  }
 end
 
-boltskillfactory=function(
+function boltskillfactory(
   dmg,
   preprfm,
   postprfm,
@@ -1172,7 +1173,7 @@ themes={
 
 idleframe=pfn'0,10,3,4,-1,-2,'
 
-avatar=actorfactory({
+avatar=actorfactory{
  x=64,
  y=56,
  hw=1.5,
@@ -1208,7 +1209,7 @@ avatar=actorfactory({
   idleframe
  },
  recovering={idleframe},
-})
+}
 
 
 function dungeoninit()
@@ -1464,7 +1465,7 @@ function dungeonupdate()
   return
  end
 
- local angle=btnmasktoangle[band(btn(),0b1111)] -- note: filter out o/x buttons from dpad input
+ local angle=btnmasktoa[band(btn(),0b1111)] -- note: filter out o/x buttons from dpad input
  if angle then
   if avatar.state != 'recovering' and
      avatar.state != 'attacking' then
@@ -2637,8 +2638,8 @@ function equipdraw()
  fillp()
 
  -- draw inventory section
- local offsetx,y,i,col=0,17,1,0
- col=tern(sectioncur == 1,10,4)
+ local offsetx,y,i,col=0,17,1,
+   sectioncur == 1 and 10 or 4
  print('saddlebags',4,y-9,col)
  for item in all(avatar.inventory) do
   spr(item.sprite,6+offsetx,y)
@@ -2666,8 +2667,8 @@ function equipdraw()
  end
 
  -- draw equipped section
- offsetx,y,i=0,52,1
- col=tern(sectioncur == 2,10,4)
+ offsetx,y,i,col=0,52,1,
+   sectioncur == 2 and 10 or 4
  print('equipped',4,y-9,col)
  for slot in all(equipslots) do
   local item=avatar.items[slot[1]]
@@ -2699,8 +2700,8 @@ function equipdraw()
  end
 
  -- draw availableskills section
- offsetx,y,i=0,88,1
- col=tern(sectioncur == 3,10,4)
+ offsetx,y,i,col=0,88,1,
+   sectioncur == 3 and 10 or 4
  print('skills',4,y-9,col)
  for skill in all(availableskills) do
   spr(skill.sprite,6+offsetx,y)
@@ -2735,13 +2736,13 @@ function equipdraw()
  end
 
  -- draw exit button
- col=tern(sectioncur == 4,10,4)
+ col=sectioncur == 4 and 10 or 4
  print('exit',57,120,col)
 
 end
 
 
-_init=function()
+function _init()
  -- music(11)
  -- _update60=function()
  --  tick+=1
