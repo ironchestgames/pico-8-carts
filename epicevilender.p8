@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 18
 __lua__
--- virtuous vanquisher of evil (v1.0)
+-- virtuous vanquisher of evil 1.0
 -- by ironchest games
 
 cartdata('ironchestgames_vvoe_v1_dev5')
@@ -878,6 +878,16 @@ function phasing(_a)
 end
 
 -- items
+slots={
+ 'weapon',
+ 'offhand',
+ 'armor',
+ 'boots',
+ 'helmet',
+ 'book',
+ 'amulet',
+}
+
 function createitem(_itemclass,_prefix,_suffix)
  local itemclass=itemclasses[_itemclass]
  local itemname,
@@ -901,7 +911,7 @@ function createitem(_itemclass,_prefix,_suffix)
   itemname=itemname.._suffix.name
   armor+=(_suffix.armor or 0)
   spdfactor+=(_suffix.spdfactor or 0)
-  sprite=_suffix[itemclass.slot..'_sprite']
+  sprite=_suffix[itemclass.slot..'_spr']
   col=_suffix.col
   col2=_suffix.col2
  else
@@ -913,7 +923,7 @@ function createitem(_itemclass,_prefix,_suffix)
   itemname=_prefix.name..itemname
   armor+=(_prefix.armor or 0)
   spdfactor+=(_prefix.spdfactor or 0)
-  sprite=_prefix[itemclass.slot..'_sprite']
+  sprite=_prefix[itemclass.slot..'_spr']
   col=_prefix.col
   col2=_prefix.col2
  else
@@ -1000,14 +1010,22 @@ prefix={
 suffix={
  {
   name=' of resurrect',
-  amulet_sprite=6,
+  amulet_spr=6,
   skill=skillfactory(5,'passive, resurrect once',function (_a)
    if _a.hp <= 0 then
     _a.hp,
     _a.removeme,
-    _a.items.amulet
-      =3,nil,nil
-    del(_a.passiveskills,suffix[1].skill)
+    _item
+      =3,nil,_a.items[v]
+    for k,v in pairs(slots) do
+     if _item.suffix and
+        _item.suffix.skill == suffix[1] then
+      _a.items[v]=nil
+      saveitem(k,0,0,0)
+      del(_a.passiveskills,suffix[1])
+      break
+     end
+    end
     sfx(21)
    end
   end),
@@ -1022,7 +1040,7 @@ suffix={
  },
  {
   name=' of firebolt',
-  book_sprite=45,
+  book_spr=45,
   skill=boltskillfactory(
     1,
     50,
@@ -1038,7 +1056,7 @@ suffix={
  },
  {
   name=' of icebolt',
-  book_sprite=63,
+  book_spr=63,
   skill=boltskillfactory(
     0,
     40,
@@ -1239,7 +1257,6 @@ function dungeoninit()
  nexttheme
    =1,1,1
 
-
  for _t in all(themes) do
   _t.lvl_c=2+flr(rnd()*1)
  end
@@ -1293,14 +1310,11 @@ function mapinit()
  themes[theme].lvl_c-=1
 
  while step_c > 0 do
-
   local nextx,nexty=curx+cos(a),cury+sin(a)
 
   if flr(rnd(3)) == 0 or
-     nextx <= 0 or
-     nextx > 14 or
-     nexty <= 0 or
-     nexty > 14 then
+     nextx <= 0 or nextx > 14 or
+     nexty <= 0 or nexty > 14 then
    a+=angles[flr(rnd(#angles)+1)]
   elseif step_c != 0 and step_c % (steps / enemy_c) == 0 then
    add(enemies,{
@@ -1330,17 +1344,14 @@ function mapinit()
   if abs(a%1) == 0.25 then
    a=0.75
   end
-  while curx > 0 and
-     curx < 15 and
-     cury > 0 and
-     cury < 15 do
+  while curx > 0 and curx < 15 and
+        cury > 0 and cury < 15 do
    basemap[cury][curx]=0
    curx+=cos(a)
    cury+=sin(a)
   end
  end
  basemap[cury][curx]=2
-
  basemap[avatary][avatarx]=15
 
  -- reset
@@ -1354,24 +1365,12 @@ function mapinit()
  pemitters,
  vfxs,
  interactables=
-   1,
-   0,
-   nil,
-   nil,
-   {},
-   {},
-   {},
-   {},
-   {},
-   {}
+   1,0,nil,nil,{},{},{},{},{},{}
 
  for _y=-1,16 do
   walls[_y]={}
   for _x=-1,16 do
-   local _col,ax,ay=
-     basemap[_y][_x],
-     _x*8+4,
-     _y*8+4
+   local _col,ax,ay=basemap[_y][_x],_x*8+4,_y*8+4
 
    -- create avatar
    if _col == 15 then
@@ -1463,14 +1462,7 @@ function dungeonupdate()
 
  if avatar.hp <= 0 then
   if tick-deathts > 150 and btnp(4) then
-   avatar.inventory,
-   kills,
-   theme,
-   door=
-     {},
-     0,
-     nil,
-     nil
+   avatar.inventory,kills,theme,door={},0,nil,nil
    equipinit()
   end
   return
@@ -1491,14 +1483,14 @@ function dungeonupdate()
  end
 
  -- consider skill button input
- local skillbuttondown=0
+ local skillbuttondown=nil
  if btn(4) then
   skillbuttondown=1
  elseif btn(5) then
   skillbuttondown=2
  end
 
- if skillbuttondown != 0 and
+ if skillbuttondown and
     (avatar.state == 'idling' or
      avatar.state == 'moving') then
 
@@ -1536,18 +1528,15 @@ function dungeonupdate()
   -- handle states
   if actor.state == 'idling' then
 
-   -- reset enemy specifics
-   actor.tarx,actor.tary=nil,nil
-   actor.ismovingoutofcollision=nil
+   -- reset enemy vars
+   actor.tarx,actor.tary,actor.ismovingoutofcollision=nil,nil,nil
 
   elseif actor.state == 'attacking' then
-
    if actor == avatar then
 
     -- update skills
     if avatar.state_c <= 0 then
      if avatar.ispreprfm then
-
       local skill=avatar.currentskill
       skill.perform(avatar,skill)
 
@@ -1568,7 +1557,6 @@ function dungeonupdate()
       end
      end
     end
-
 
    else -- enemies
 
@@ -1597,7 +1585,6 @@ function dungeonupdate()
    end
 
   elseif actor.state == 'recovering' then
-
    if actor.effect then
     actor.effect.func(actor)
    end
@@ -1609,7 +1596,6 @@ function dungeonupdate()
 
   elseif actor.state == 'moving' and
          actor.isenemy then
-
    if actor.state_c <= 0 then
     actor.ismovingoutofcollision=nil
    end
@@ -1625,10 +1611,8 @@ function dungeonupdate()
        actor.tary) <= actor.spd + 0.1 then
     actor.state='idling'
    end
-
    actor.dx=cos(actor.a)*actor.spd
    actor.dy=sin(actor.a)*actor.spd
-
   end
 
   if actor == avatar and
@@ -1752,21 +1736,19 @@ function dungeonupdate()
     if enemy.onroam then
      enemy.onroam(enemy)
     end
-
    end
   end
  end
 
  -- update the next-position
  for actor in all(actors) do
-
   local spdfactor=1
   if actor.spdfactor then
    spdfactor=actor.spdfactor
   end
-  actor.dx=actor.dx*(actor.spd*spdfactor)
-  actor.dy=actor.dy*(actor.spd*spdfactor)
-
+  actor.dx,actor.dy=
+    actor.dx*(actor.spd*spdfactor),
+    actor.dy*(actor.spd*spdfactor)
   -- note: after this deltas should not change by input
  end
 
@@ -1795,7 +1777,6 @@ function dungeonupdate()
       (not _a.removeme) and
       attack.isenemy != _a.isenemy and
       isaabbscolliding(attack,_a) then
-
     attack.tar_c-=1
 
     local hitsfx=6
@@ -1808,7 +1789,7 @@ function dungeonupdate()
     end
 
     for skill in all(_a.passiveskills) do
-     if attack.typ != nil and
+     if attack.typ and
         skill.immune == attack.typ then
       attack.dmg=0
       attack.recovertime=nil
@@ -1844,10 +1825,8 @@ function dungeonupdate()
      -- add chest
      if kills % 5 == 0 then
       add(interactables,{
-       x=_a.x,
-       y=_a.y,
-       hw=4,
-       hh=4,
+       x=_a.x,y=_a.y,
+       hw=4,hh=4,
        sprite=22,
        text='\x8e loot',
        enter=function(i)
@@ -1856,24 +1835,21 @@ function dungeonupdate()
           i.text='inventory full, \x8e try again'
           sfx(7)
          else
-          i.isopen=true
-          i.text='[empty]'
-          i.sprite=23
+          i.isopen,i.text,i.sprite=
+            true,'[empty]',23
 
           local _itemclassn=flr(rnd(#itemclasses))+1
           local itemclass=itemclasses[_itemclassn]
           local _prefix=itemclass.prefix or prefix
-          local _prefixn=flr(rnd(#_prefix+1))
-          local _suffixn=flr(rnd(#suffix+1))
+          local _prefixn,_suffixn=
+            flr(rnd(#_prefix+1)),
+            flr(rnd(#suffix+1))
 
           if _itemclassn == 7 then
            _prefixn=0
           end
 
-          item=createitem(
-           _itemclassn,
-           _prefixn,
-           _suffixn)
+          item=createitem(_itemclassn,_prefixn,_suffixn)
 
           add(avatar.inventory,item)
           sfx(20)
@@ -1882,12 +1858,10 @@ function dungeonupdate()
        end,
       })
      end
-
      -- todo: add death vfx here
     end
 
     -- effects
-
     _a.dmgfx_col=8 -- note: red is default color
 
     if attack.typ == 'knockback' and not _a.isbig then
@@ -1908,9 +1882,7 @@ function dungeonupdate()
     _a.dmgfx_c=20
 
     -- hit flash
-    local x,y=
-      _a.x+_a.dx/2,
-      _a.y+_a.dy/2
+    local x,y=_a.x+_a.dx/2,_a.y+_a.dy/2
     add(vfxs,{
      {42,20,5,5,x-2.5,y-2.5,c=4,col=_a.dmgfx_col},
      {42,20,5,5,x-2.5,y-2.5,c=5,col=7},
@@ -1934,17 +1906,13 @@ function dungeonupdate()
  -- enemies movement check against others
  for i=1,#actors-1 do
   for j=i+1,#actors do
-   local enemy=actors[i]
-   local other=actors[j]
+   local enemy,other=actors[i],actors[j]
    if enemy != other and
       enemy != avatar and
       other != avatar and
       enemy.isenemy and
-      dist(
-        enemy.x,
-        enemy.y,
-        other.x,
-        other.y) < enemy.hh + other.hh then
+      dist(enemy.x,enemy.y,other.x,other.y) <
+        enemy.hh + other.hh then
     add(enemy.toocloseto,other)
     add(other.toocloseto,enemy)
    end
@@ -1955,11 +1923,7 @@ function dungeonupdate()
  for _a in all(actors) do
   if _a != avatar and not _a.isghost then
    local _dx,_dy=collideaabbs(
-     isaabbscolliding,
-     avatar,
-     _a,
-     avatar.dx,
-     avatar.dy)
+     isaabbscolliding,avatar,_a,avatar.dx,avatar.dy)
 
    avatar.dx,avatar.dy=_dx,_dy
   end
@@ -1968,11 +1932,7 @@ function dungeonupdate()
  -- movement check against walls
  for _a in all(actors) do
   local _dx,_dy=collideaabbs(
-    isinsidewall,
-    _a,
-    nil,
-    _a.dx,
-    _a.dy)
+    isinsidewall,_a,nil,_a.dx,_a.dy)
 
   if _a.isenemy then
    _a.wallcollisiondx=nil
@@ -2002,15 +1962,12 @@ function dungeonupdate()
   if attack.dx then
    attack.x+=attack.dx
   end
-
   if attack.dy then
    attack.y+=attack.dy
   end
 
-  if attack.x > 128 or
-     attack.x < 0 or
-     attack.y > 128 or
-     attack.y < 0 then
+  if attack.x > 128 or attack.x < 0 or
+     attack.y > 128 or attack.y < 0 then
    attack.removeme=true
   end
 
@@ -2030,13 +1987,11 @@ function dungeonupdate()
  -- update actor animation frames
  for _a in all(actors) do
   local stateframes=_a[_a.state]
-
   local animspd=0.25 -- note: default
   if stateframes.animspd then
    animspd=stateframes.animspd
   end
   _a.curframe+=animspd*_a.spd
-
   if _a.curframe >= #stateframes+1 then
    _a.curframe=1
   end
@@ -2079,16 +2034,11 @@ function dungeonupdate()
      pdy[1]+rnd(pdy[2]+abs(pdy[1]))
 
    add(_p.particles,{
-    c=
-      _p.plife[1]+rnd(_p.plife[2]),
-    x=x,
-    y=y,
-    dx=dx,
-    dy=dy,
+    c=_p.plife[1]+rnd(_p.plife[2]),
+    x=x,y=y,dx=dx,dy=dy,
    })
 
-   _p.c=
-     _p.prate[1]+rnd(_p.prate[2])
+   _p.c=_p.prate[1]+rnd(_p.prate[2])
   end
 
   _p.life-=1
@@ -2105,7 +2055,6 @@ function dungeonupdate()
    if par.c <= _p.plife[1] then
     par.col=_p.pcolors[2]
    end
-
    if par.c <= 0 then
     del(_p.particles,par)
    end
@@ -2115,8 +2064,7 @@ function dungeonupdate()
 
  -- remove pemitters
  for _p in all(pemitters) do
-  if _p.removeme or
-     _p.follow.removeme then
+  if _p.removeme or _p.follow.removeme then
    del(pemitters,_p)
   end
  end
@@ -2153,8 +2101,6 @@ end
 
 function dungeondraw()
  cls(0)
-
- -- get theme start sprite
  local spr1=themes[theme].spr1
 
  -- draw walls
@@ -2173,44 +2119,24 @@ function dungeondraw()
  -- draw interactables
  if isdoorspawned then
   for _i in all(interactables) do
-   spr(
-    _i.sprite,
-    _i.x-_i.hw,
-    _i.y-_i.hh)
+   spr(_i.sprite,_i.x-_i.hw,_i.y-_i.hh)
   end
  end
 
  -- draw attacks
  for attack in all(attacks) do
-
   if attack.frames then
    local f=attack.frames[attack.frames.curframe]
    if attack.col then
     pal(2,attack.col,0)
    end
-   sspr(
-    f[1],
-    f[2],
-    f[3],
-    f[4],
-    attack.x+f[5],
-    attack.y+f[6],
-    f[3],
-    f[4])
-
+   sspr(f[1],f[2],f[3],f[4],attack.x+f[5],attack.y+f[6],f[3],f[4])
    pal(2,2,0)
   end
  end
 
- -- todo: sort on y and z
- --       maybe z can be layers?
- --       per z add 128 (plus margin)
- --       to y when sorting
-
  -- draw actors
  for _a in all(actors) do
-
-  -- draw actor frame
   local state,flipx=_a.state,false
   local f=_a[state][flr(_a.curframe)]
   if _a.a and _a.a >= 0.25 and _a.a <= 0.75 then
@@ -2237,16 +2163,7 @@ function dungeondraw()
    end
   end
 
-  sspr(
-    f[1],
-    f[2],
-    f[3],
-    f[4],
-    _a.x+f[5],
-    _a.y+f[6],
-    f[3],
-    f[4],
-    flipx)
+  sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
 
   -- draw weapon
   if _a == avatar and
@@ -2257,16 +2174,7 @@ function dungeondraw()
      flr(item.curframe),
      #stateframes)]
    pal(6,item.col,0)
-   sspr(
-     f[1],
-     f[2],
-     f[3],
-     f[4],
-     _a.x+f[5],
-     _a.y+f[6],
-     f[3],
-     f[4],
-     flipx)
+   sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
   end
 
   -- draw cloak
@@ -2280,16 +2188,7 @@ function dungeondraw()
      #stateframes)]
    pal(1,item.col,0)
    pal(3,item.col2,0)
-   sspr(
-     f[1],
-     f[2],
-     f[3],
-     f[4],
-     _a.x+f[5],
-     _a.y+f[6],
-     f[3],
-     f[4],
-     flipx)
+   sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
   end
 
   -- draw offhand
@@ -2301,16 +2200,7 @@ function dungeondraw()
      flr(item.curframe),
      #stateframes)]
    pal(6,item.col,0)
-   sspr(
-     f[1],
-     f[2],
-     f[3],
-     f[4],
-     _a.x+f[5],
-     _a.y+f[6],
-     f[3],
-     f[4],
-     flipx)
+   sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
   end
 
   -- reset colors
@@ -2327,13 +2217,7 @@ function dungeondraw()
    f.draw(f)
   else
    pal(7,f.col,0)
-   sspr(
-     f[1],
-     f[2],
-     f[3],
-     f[4],
-     f[5],
-     f[6])
+   sspr(f[1],f[2],f[3],f[4],f[5],f[6])
    pal(7,7,0)
   end
  end
@@ -2341,19 +2225,14 @@ function dungeondraw()
  -- draw particles
  for _p in all(pemitters) do
   for par in all(_p.particles) do
-   pset(
-     par.x,
-     par.y,
-     par.col)
+   pset(par.x,par.y,par.col)
   end
  end
 
  -- draw interactable text
  if curinteractable then
-  print(
-   curinteractable.text,
-   mid(
-     0,
+  print(curinteractable.text,
+   mid(0,
      curinteractable.x-#curinteractable.text*2,
      124-#curinteractable.text*4),
    max(8,curinteractable.y-8),
@@ -2409,13 +2288,7 @@ spdfactornr,
 equipped,
 availableskills,
 equipslots=
-  1,
-  1,
-  1,
-  4,
-  0,
-  {},
-  {},
+  1,1,1,4,0,{},{},
   {
    {'helmet',10},
    {'armor',11},
@@ -2476,7 +2349,8 @@ function equipupdate()
   end
   if item.suffix and
      item.suffix.skill and
-     (not has(avatar.passiveskills,item.suffix.skill)) and
+     (item.suffix.skill.name == ' of resurrect' or
+      not has(avatar.passiveskills,item.suffix.skill)) and
      not item.suffix.skill.perform then
    add(availableskills,item.suffix.skill)
    add(avatar.passiveskills,item.suffix.skill)
@@ -2615,15 +2489,6 @@ function equipupdate()
  -- exit
  elseif sectioncur == 4 then
   if btnp(4) or btnp(5) then
-   local slots={
-    'weapon',
-    'offhand',
-    'armor',
-    'boots',
-    'helmet',
-    'book',
-    'amulet',
-   }
    for k,v in pairs(slots) do
     if avatar.items[v] then
      saveitem(
@@ -2732,20 +2597,18 @@ end
 
 function _init()
  music(11)
-end
-
-function _update60()
- tick+=1
- if btnp(4) then
-  equipinit()
+ _update60=function()
+  tick+=1
+  if btnp(4) then
+   equipinit()
+  end
  end
-end
-
-function _draw()
- cls(1)
- sspr(79,99,49,29,42,32)
- col=tick % 60 <= 30 and 13 or 7
- print('\x8e to start',42,118,col)
+ _draw=function()
+  cls(1)
+  sspr(79,99,49,29,42,32)
+  col=tick % 60 <= 30 and 13 or 7
+  print('\x8e to start',42,118,col)
+ end
 end
 
 __gfx__
