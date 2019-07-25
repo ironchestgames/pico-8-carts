@@ -1,18 +1,27 @@
 pico-8 cartridge // http://www.pico-8.com
 version 18
 __lua__
--- epic evil ender (v1.0)
+-- virtuous vanquisher of evil (v1.0)
 -- by ironchest games
+
+cartdata('ironchestgames_vvoe_v1_dev1')
 
 printh('debug started','debug',true)
 function debug(s)
  printh(tostr(s),'debug',false)
 end
 
+function tern(cond,t,f)
+ if cond then
+  return t
+ end
+ return f
+end
+
 function has(_t,_v)
- for v in all(_t) do
+ for k,v in pairs(_t) do
   if v == _v then
-   return true
+   return k
   end
  end
 end
@@ -26,7 +35,7 @@ function clone(_t)
 end
 
 -- note: last char needs to be ','
-function paf(s) -- parseflat
+function pfn(s) -- parseflat num
  local t,_s={},''
  while #s > 0 do
   local d=sub(s,1,1)
@@ -39,6 +48,26 @@ function paf(s) -- parseflat
   s=sub(s,2)
  end
  return t
+end
+
+function saveitem(_slot,_class,_prefix,_suffix)
+ dset(_slot,_class+shl(_prefix,4)+shl(_suffix,8))
+end
+
+if dget(1) == 0 then
+ saveitem(1,8,0,10)
+end
+
+function loaditem(_i)
+ local dat=dget(_i)
+ local _class=band(dat,0b1111)
+ if _class == 0 then
+  return
+ end
+ return createitem(
+   _class,
+   band(dat,0b11110000)/16,
+   band(dat,0b111100000000)/256)
 end
 
 function isaabbscolliding(a,b)
@@ -70,8 +99,9 @@ function isinsidewall(aabb)
     {x1,y2},
    }) do
   local mapx,mapy=flr(point[1]/8),flr(point[2]/8)
-  wallaabb.x=mapx*8+wallaabb.hw
-  wallaabb.y=mapy*8+wallaabb.hh
+  wallaabb.x,wallaabb.y=
+    mapx*8+wallaabb.hw,
+    mapy*8+wallaabb.hh
 
   -- note: hitboxes should not be larger than 8x8
   if walls[mapy][mapx] == 1 and
@@ -118,10 +148,7 @@ function dist(x1,y1,x2,y2)
 end
 
 function norm(n)
- if n == 0 then
-  return 0
- end
- return sgn(n)
+ return tern(n == 0,0,sgn(n))
 end
 
 _aabb={}
@@ -178,39 +205,39 @@ btnmasktoangle={
 }
 
 meleevfxframes={
- [0]=paf'0,20,4,7,-1,-5,', -- right
- [0.125]=paf'8,20,6,4,-3,-2,', -- right/up
- [0.25]=paf'20,20,9,3,-3,-1,', -- up
- [0.375]=paf'14,20,6,4,-2,-2,', -- up/left
- [0.5]=paf'4,20,4,7,-2,-5,', -- left
- [0.625]=paf'29,20,4,7,-3,-6,', -- left/down
- [0.75]=paf'20,23,9,3,-4,-2,', -- down
- [0.875]=paf'33,20,4,7,0,-6,', -- down/right
- [1]=paf'0,20,4,7,-1,-5,', -- right (wrapped)
+ [0]=pfn'0,20,4,7,-1,-5,', -- right
+ [0.125]=pfn'8,20,6,4,-3,-2,', -- right/up
+ [0.25]=pfn'20,20,9,3,-3,-1,', -- up
+ [0.375]=pfn'14,20,6,4,-2,-2,', -- up/left
+ [0.5]=pfn'4,20,4,7,-2,-5,', -- left
+ [0.625]=pfn'29,20,4,7,-3,-6,', -- left/down
+ [0.75]=pfn'20,23,9,3,-4,-2,', -- down
+ [0.875]=pfn'33,20,4,7,0,-6,', -- down/right
+ [1]=pfn'0,20,4,7,-1,-5,', -- right (wrapped)
 }
 
 bowvfxframes={
- [0]=paf'0,27,6,7,-3,-5,', -- right
- [0.125]=paf'17,32,7,7,-4,-3,', -- right/up
- [0.25]=paf'10,31,7,6,-3,-3,', -- up
- [0.375]=paf'34,32,7,7,-3,-3,', -- up/left
- [0.5]=paf'4,27,6,7, -2,-5,', -- left
- [0.625]=paf'22,27,7,7,-2,-5,', -- left/down
- [0.75]=paf'10,27,7,6,-3,-4,', -- down
- [0.875]=paf'29,27,7,7,-4,-4,', -- down/right
- [1]=paf'0,27,6,7,-3,-5,', -- right (wrapped)
+ [0]=pfn'0,27,6,7,-3,-5,', -- right
+ [0.125]=pfn'17,32,7,7,-4,-3,', -- right/up
+ [0.25]=pfn'10,31,7,6,-3,-3,', -- up
+ [0.375]=pfn'34,32,7,7,-3,-3,', -- up/left
+ [0.5]=pfn'4,27,6,7, -2,-5,', -- left
+ [0.625]=pfn'22,27,7,7,-2,-5,', -- left/down
+ [0.75]=pfn'10,27,7,6,-3,-4,', -- down
+ [0.875]=pfn'29,27,7,7,-4,-4,', -- down/right
+ [1]=pfn'0,27,6,7,-3,-5,', -- right (wrapped)
 }
 
 arrowframes={
- [0]=paf'50,20,2,1,-1,-0.5,', -- right
- [0.125]=paf'52,20,2,2,-1,-1,', -- right/up
- [0.25]=paf'54,20,1,2,-0.5,-1,', -- up
- [0.375]=paf'55,20,2,2,-1,-1,', -- up/left
- [0.5]=paf'50,20,2,1,-1,-0.5,', -- left
- [0.625]=paf'52,20,2,2,-1,-1,', -- left/down
- [0.75]=paf'54,20,1,2,-0.5,-1,', -- down
- [0.875]=paf'55,20,2,2,-1,-1,', -- down/right
- [1]=paf'50,20,2,1,-1,-0.5,', -- right (wrapped)
+ [0]=pfn'50,20,2,1,-1,-0.5,', -- right
+ [0.125]=pfn'52,20,2,2,-1,-1,', -- right/up
+ [0.25]=pfn'54,20,1,2,-0.5,-1,', -- up
+ [0.375]=pfn'55,20,2,2,-1,-1,', -- up/left
+ [0.5]=pfn'50,20,2,1,-1,-0.5,', -- left
+ [0.625]=pfn'52,20,2,2,-1,-1,', -- left/down
+ [0.75]=pfn'54,20,1,2,-0.5,-1,', -- down
+ [0.875]=pfn'55,20,2,2,-1,-1,', -- down/right
+ [1]=pfn'50,20,2,1,-1,-0.5,', -- right (wrapped)
 }
 
 function getvfxframei(a)
@@ -219,15 +246,25 @@ end
 
 -- todo: this is only convenience dev function
 function actorfactory(_a)
- _a.state='idling'
- _a.state_c=0
- _a.curframe=1
- _a.dx=0
- _a.dy=0
- _a.runspd=_a.spd
- _a.dmgfx_c=0
- _a.comfydist=_a.comfydist or 1
- _a.toocloseto={}
+ _a.state,
+ _a.state_c,
+ _a.curframe,
+ _a.dx,
+ _a.dy,
+ _a.runspd,
+ _a.dmgfx_c,
+ _a.comfydist,
+ _a.toocloseto
+   =
+   'idling',
+   0,
+   1,
+   0,
+   0,
+   _a.spd,
+   0,
+   _a.comfydist or 1,
+   {}
 
  return _a
 end
@@ -251,10 +288,15 @@ function performenemymelee(_a)
  })
 
  local f=clone(meleevfxframes[getvfxframei(_a.a)])
- f[5]=_a.x+cos(_a.a)*4+f[5]
- f[6]=_a.y+sin(_a.a)*4+f[6]
- f.c=10
- f.col=7
+ f[5],
+ f[6],
+ f.c,
+ f.col
+   =
+   _a.x+cos(_a.a)*4+f[5],
+   _a.y+sin(_a.a)*4+f[6],
+   10,
+   7
 
  add(vfxs,{f})
 
@@ -304,18 +346,18 @@ function newmeleetroll(x,y)
   att_postprfm=20,
   att_range=7,
   prfmatt=performenemymelee,
-  idling={paf'41,32,4,5,-2,-3,'},
+  idling={pfn'41,32,4,5,-2,-3,'},
   moving={
    animspd=0.18,
-   paf'41,32,4,5,-2,-3,',
-   paf'45,32,4,5,-2,-3,'
+   pfn'41,32,4,5,-2,-3,',
+   pfn'45,32,4,5,-2,-3,'
   },
   attacking={
    animspd=0,
-   paf'49,32,4,5,-2,-3,',
-   paf'52,32,6,5,-3,-3,',
+   pfn'49,32,4,5,-2,-3,',
+   pfn'52,32,6,5,-3,-3,',
   },
-  recovering={paf'41,32,4,5,-2,-3,'},
+  recovering={pfn'41,32,4,5,-2,-3,'},
  })
 end
 
@@ -328,9 +370,9 @@ function newtrollcaster(x,y)
    1,
    'fire',
    14,
-   paf'8,14,',
-   paf'14,8,'),
-  paf'59,32,4,6,-2,-3,'
+   pfn'8,14,',
+   pfn'14,8,'),
+  pfn'59,32,4,6,-2,-3,'
 
  return actorfactory({
   isenemy=true,
@@ -359,7 +401,7 @@ function newtrollcaster(x,y)
   },
   attacking={
    animspd=0,
-   paf'63,32,4,6,-2,-3,',
+   pfn'63,32,4,6,-2,-3,',
    idleframe,
   },
   recovering={idleframe},
@@ -383,18 +425,18 @@ function newgianttroll(x,y)
   att_postprfm=30,
   att_range=7,
   prfmatt=performenemymelee,
-  idling={paf'36,25,7,7,-4,-4,'},
+  idling={pfn'36,25,7,7,-4,-4,'},
   moving={
    animspd=0.18,
-   paf'43,25,7,7,-4,-4,',
-   paf'50,25,7,7,-4,-4,'
+   pfn'43,25,7,7,-4,-4,',
+   pfn'50,25,7,7,-4,-4,'
   },
   attacking={
    animspd=0,
-   paf'57,25,7,7,-4,-4,',
-   paf'64,25,8,7,-4,-4,',
+   pfn'57,25,7,7,-4,-4,',
+   pfn'64,25,8,7,-4,-4,',
   },
-  recovering={paf'72,25,7,7,-4,-4,'},
+  recovering={pfn'72,25,7,7,-4,-4,'},
  })
  return boss
 end
@@ -413,18 +455,18 @@ function newmeleeskele(x,y)
   att_postprfm=10,
   att_range=7,
   prfmatt=performenemymelee,
-  idling={paf'0,15,4,5,-2,-3,'},
+  idling={pfn'0,15,4,5,-2,-3,'},
   moving={
    animspd=0.18,
-   paf'0,15,4,5,-2,-3,',
-   paf'4,15,4,5,-2,-3,'
+   pfn'0,15,4,5,-2,-3,',
+   pfn'4,15,4,5,-2,-3,'
   },
   attacking={
    animspd=0,
-   paf'8,15,4,5,-2,-3,',
-   paf'11,15,6,5,-3,-3,',
+   pfn'8,15,4,5,-2,-3,',
+   pfn'11,15,6,5,-3,-3,',
   },
-  recovering={paf'0,15,4,5,-2,-3,'},
+  recovering={pfn'0,15,4,5,-2,-3,'},
  })
 end
 
@@ -443,18 +485,18 @@ function newbatenemy(x,y)
   att_postprfm=0,
   att_range=7,
   prfmatt=performenemymelee,
-  idling={paf'36,15,3,3,-1.5,-1.5,'},
+  idling={pfn'36,15,3,3,-1.5,-1.5,'},
   moving={
    animspd=0.21,
-   paf'36,15,3,3,-1.5,-1.5,',
-   paf'39,15,3,3,-1.5,-1.5,'
+   pfn'36,15,3,3,-1.5,-1.5,',
+   pfn'39,15,3,3,-1.5,-1.5,'
   },
   attacking={
    animspd=0.32,
-   paf'36,15,3,3,-1.5,-1.5,',
-   paf'39,15,3,3,-1.5,-1.5,'
+   pfn'36,15,3,3,-1.5,-1.5,',
+   pfn'39,15,3,3,-1.5,-1.5,'
   },
-  recovering={paf'36,15,3,3,-1.5,-1.5,'},
+  recovering={pfn'36,15,3,3,-1.5,-1.5,'},
  })
 end
 
@@ -473,18 +515,18 @@ function newbowskele(x,y)
   att_range=40,
   prfmatt=performenemybow,
   comfydist=20,
-  idling={paf'18,15,4,5,-2,-3,'},
+  idling={pfn'18,15,4,5,-2,-3,'},
   moving={
    animspd=0.18,
-   paf'18,15,4,5,-2,-3,',
-   paf'22,15,4,5,-2,-3,'
+   pfn'18,15,4,5,-2,-3,',
+   pfn'22,15,4,5,-2,-3,'
   },
   attacking={
    animspd=0,
-   paf'26,15,4,5,-2,-3,',
-   paf'31,15,4,5,-2,-3,'
+   pfn'26,15,4,5,-2,-3,',
+   pfn'31,15,4,5,-2,-3,'
   },
-  recovering={paf'18,15,4,5,-2,-3,'},
+  recovering={pfn'18,15,4,5,-2,-3,'},
  })
 end
 
@@ -497,8 +539,8 @@ function newskeleking(x,y)
   _a.att_postprfm=60
   _a.attacking={
    animspd=0,
-   paf'0,40,15,18,-7,-13,',
-   paf'0,58,20,18,-10,-13,',
+   pfn'0,40,15,18,-7,-13,',
+   pfn'0,58,20,18,-10,-13,',
   }
   _a.onpreprfm=nil
   _a.prfmatt=performmelee
@@ -530,8 +572,8 @@ function newskeleking(x,y)
   _a.att_postprfm=0
   _a.attacking={
    animspd=0,
-   paf'24,58,15,18,-7,-13,',
-   paf'24,58,15,18,-7,-13,',
+   pfn'24,58,15,18,-7,-13,',
+   pfn'24,58,15,18,-7,-13,',
   }
   _a.onpreprfm=magicpreprfm
   _a.prfmatt=performmagic
@@ -546,26 +588,30 @@ function newskeleking(x,y)
     y=_a.att_y,
    },
    life=140,
-   prate=paf'1,2,',
-   plife=paf'10,15,',
-   poffsets=paf'-2,0.5,1,0.5,',
-   dx=paf'0,0,',
-   dy=paf'-0.3,0,',
-   pcolors=paf'11,3,1,',
+   prate=pfn'1,2,',
+   plife=pfn'10,15,',
+   poffsets=pfn'-2,0.5,1,0.5,',
+   dx=pfn'0,0,',
+   dy=pfn'-0.3,0,',
+   pcolors=pfn'11,3,1,',
   })
 
   sfx(9)
  end
 
  function performmagic(_a)
-  local enemy=newmeleeskele(_a.att_x,_a.att_y)
+  local _e=newmeleeskele(_a.att_x,_a.att_y)
 
   -- summoning sickness
-  enemy.state='recovering'
-  enemy.laststate='recovering'
-  enemy.state_c=50
+  _e.state,
+  _e.laststate,
+  _e.state_c
+    =
+    'recovering',
+    'recovering',
+    50
 
-  add(actors,enemy)
+  add(actors,_e)
  end
 
  boss=actorfactory({
@@ -579,13 +625,13 @@ function newskeleking(x,y)
   hh=3,
   spd=0.4,
   hp=10,
-  idling={paf'0,40,15,18,-7,-13,'},
+  idling={pfn'0,40,15,18,-7,-13,'},
   moving={
    animspd=0.24,
-   paf'16,40,15,18,-7,-13,',
-   paf'32,40,15,18,-7,-13,'
+   pfn'16,40,15,18,-7,-13,',
+   pfn'32,40,15,18,-7,-13,'
   },
-  recovering={paf'0,40,15,18,-7,-13,'},
+  recovering={pfn'0,40,15,18,-7,-13,'},
   onroam=setupmagic,
  })
 
@@ -603,12 +649,12 @@ function burningeffect(_a)
   add(pemitters,{
    follow=_a,
    life=_a.state_c,
-   prate=paf'2,4,',
-   plife=paf'15,25,',
-   poffsets=paf'-2,0.5,2,0.5,',
-   dx=paf'0,0,',
-   dy=paf'-0.3,0,',
-   pcolors=paf'8,14,',
+   prate=pfn'2,4,',
+   plife=pfn'15,25,',
+   poffsets=pfn'-2,0.5,2,0.5,',
+   dx=pfn'0,0,',
+   dy=pfn'-0.3,0,',
+   pcolors=pfn'8,14,',
   })
  end
 
@@ -620,8 +666,9 @@ function burningeffect(_a)
   _a.a=rnd()
  end
 
- _a.dx=cos(_a.a)*_a.spd
- _a.dy=sin(_a.a)*_a.spd
+ _a.dx,_a.dy=
+   cos(_a.a)*_a.spd,
+   sin(_a.a)*_a.spd
 
 end
 
@@ -634,32 +681,10 @@ function freezeeffect(_a)
   },
  })
 
- _a.dx=0
- _a.dy=0
-end
-
-function stunningeffect(_a)
- if _a.effect.c == nil or
-    _a.effect.c <= 0 then
-  local t,x,y=
-    5,
-    _a.x-1.5,
-    _a.y-_a.hh*2-1
-
-  _a.effect.c=t*3
-  add(vfxs,{
-   {42,13,3,2, x,y, c=t,col=7},
-   {42,15,3,2, x,y, c=t,col=7},
-   {42,17,3,2, x,y, c=t,col=7},
-  })
- end
-
- _a.effect.c-=1
-
  _a.dx,_a.dy=0,0
 end
 
--- skills
+-- skills -- todo: maybe remove this?
 skillfactory=function(sprite,desc,onhit,immune)
  return {
   sprite=sprite,
@@ -770,7 +795,7 @@ boltskillfactory=function(
   postprfm,
   recovertime,
   tar_c,
-  effecttype,
+  typ,
   attackcol,
   castingpemittercols,
   boltpemittercols,
@@ -785,11 +810,11 @@ boltskillfactory=function(
    add(pemitters,{
     follow=_a,
     life=life or _a.att_preprfm,
-    prate=paf'2,4,',
-    plife=paf'15,25,',
-    poffsets=paf'-2,0.5,2,0.5,',
-    dx=paf'0,0,',
-    dy=paf'-0.3,0,',
+    prate=pfn'2,4,',
+    plife=pfn'15,25,',
+    poffsets=pfn'-2,0.5,2,0.5,',
+    dx=pfn'0,0,',
+    dy=pfn'-0.3,0,',
     pcolors=castingpemittercols,
    })
    sfx(9)
@@ -809,12 +834,12 @@ boltskillfactory=function(
     dx=cos(_a.a)*1.2,
     dy=sin(_a.a)*1.2,
     dmg=dmg,
-    typ=effecttype,
+    typ=typ,
     recovertime=recovertime,
     tar_c=tar_c,
     frames={
      curframe=1,
-     paf'47,20,3,3, -0.5,-0.5,',
+     pfn'47,20,3,3, -0.5,-0.5,',
     },
     col=attackcol,
    }
@@ -824,11 +849,11 @@ boltskillfactory=function(
    add(pemitters,{
     follow=attack,
     life=1000,
-    prate=paf'0,1,',
-    plife=paf'3,5,',
-    poffsets=paf'-1,-1,1,1,',
-    dx=paf'0,0,',
-    dy=paf'0,0,',
+    prate=pfn'0,1,',
+    plife=pfn'3,5,',
+    poffsets=pfn'-1,-1,1,1,',
+    dx=pfn'0,0,',
+    dy=pfn'0,0,',
     pcolors=boltpemittercols,
    })
    sfx(32)
@@ -852,6 +877,62 @@ function phasing(_a)
 end
 
 -- items
+function createitem(_itemclass,_prefix,_suffix)
+ local itemclass=itemclasses[_itemclass]
+ local itemname,
+   armor,
+   spdfactor,
+   sprite
+   =
+   itemclass.name,
+   0,
+   0,
+   itemclass.sprite
+ if _prefix != 0 and _prefix != nil then
+  _prefix=prefix[_prefix]
+  itemname=_prefix.name..itemname
+  armor+=(_prefix.armor or 0)
+  spdfactor+=(_prefix.spdfactor or 0)
+  sprite=_prefix[itemclass.slot..'_sprite']
+ else
+  _prefix=nil
+ end
+
+ if _suffix != 0 and _suffix != nil then
+  _suffix=suffix[_suffix]
+  itemname=itemname.._suffix.name
+  armor+=(_suffix.armor or 0)
+  spdfactor+=(_suffix.spdfactor or 0)
+  sprite=_suffix[itemclass.slot..'_sprite']
+ else
+  _suffix=nil
+ end
+
+ if _prefix == nil and _suffix == nil then
+  itemname='useless '..itemname
+ end
+
+ return {
+  class=_itemclass,
+  slot=itemclass.slot,
+  name=itemname,
+  sprite=sprite or itemclass.sprite,
+  col=itemclass.col,
+  col2=itemclass.col2,
+  prefix=_prefix,
+  suffix=_suffix,
+  armor=armor,
+  spdfactor=spdfactor,
+  iscloak=itemclass.iscloak,
+  twohand=itemclass.twohand,
+  curframe=1,
+  idling=itemclass.idling,
+  moving=itemclass.moving,
+  attacking=itemclass.attacking,
+  recovering=itemclass.recovering,
+ }
+end
+
 prefix={
  { -- 1
   name='knight\'s ',
@@ -869,9 +950,10 @@ suffix={
   amulet_sprite=6,
   skill=skillfactory(5,'passive, resurrect once',function (_a)
    if _a.hp <= 0 then
-    _a.removeme=nil
-    _a.hp=3
-    _a.items.amulet=nil
+    _a.hp,
+    _a.removeme,
+    _a.items.amulet
+      =3,nil,nil
     del(_a.passiveskills,suffix[1].skill)
     sfx(21)
    end
@@ -896,8 +978,8 @@ suffix={
     1,
     'fire',
     14,
-    paf'8,14,',
-    paf'14,8,',
+    pfn'8,14,',
+    pfn'14,8,',
     29,
     'firebolt'),
  },
@@ -912,8 +994,8 @@ suffix={
     1,
     'ice',
     7,
-    paf'12,12,',
-    paf'12,13,',
+    pfn'12,12,',
+    pfn'12,13,',
     28,
     'icebolt')
  },
@@ -922,111 +1004,132 @@ suffix={
   col=8,
   skill=swordattackskillfactory(1,15,28,1000,14,'fire',60),
  },
- { -- 7 (bow attack)
+ { -- 7 (basic bow attack)
   name='',
   col=4,
   skill=bowattackskillfactory(1,26,6,1,7,2),
+  twohand=true,
  },
  { -- 8 (bow attack)
   name=' of ice',
   col=12,
   skill=bowattackskillfactory(1,26,6,1,7,12,'ice',150),
+  twohand=true,
  },
  { -- 9 (sword attack)
   name=' of the bear',
   skill=swordattackskillfactory(1,15,28,1000,7,'knockback'),
  },
+ { -- 10 (basic sword attack)
+  name='',
+  skill=swordattackskillfactory(1,15,28,1000,7),
+ }
 }
 
-cloakidling={paf'0,6,3,4,-1,-2,'}
-shieldidling={paf'35,9,5,5,-2,-3,'}
-swordidling={paf'9,9,5,5,-2,-3,'}
-bowidling={paf'25,9,5,5,-2,-3,'}
+cloakidling,
+shieldidling,
+swordidling,
+bowidling
+  =
+  {pfn'0,6,3,4,-1,-2,'},
+  {pfn'35,9,5,5,-2,-3,'},
+  {pfn'9,9,5,5,-2,-3,'},
+  {pfn'25,9,5,5,-2,-3,'}
+
 
 itemclasses={
- {
-  class='boots',
+ { -- 1
+  slot='boots',
+  name='boots',
   sprite=41,
   col=4,
-  prefix=paf'2,',
-  suffix=paf'2,',
+  prefix=pfn'2,',
+  suffix=pfn'2,',
  },
- {
-  class='helmet',
+ { -- 2
+  slot='helmet',
+  name='helmet',
   sprite=42,
   col=13,
-  prefix=paf'1,',
+  prefix=pfn'1,',
   suffix={},
  },
- {
-  class='amulet',
+ { -- 3
+  slot='amulet',
+  name='amulet',
   sprite=25,
-  prefix=paf'2,',
-  suffix=paf'1,',
+  prefix=pfn'2,',
+  suffix=pfn'1,',
  },
- { -- platemail
-  class='armor',
+ { -- 4 platemail
+  slot='armor',
+  name='platemail',
   sprite=58,
   col=6,
-  prefix=paf'1,',
+  prefix=pfn'1,',
   suffix={},
  },
- { -- cloak
-  class='armor',
+ { -- 5 cloak
+  slot='armor',
+  name='cloak',
   iscloak=true,
   sprite=26,
   col=2,
   col2=1,
-  prefix=paf'2,',
-  suffix=paf'2,3,',
+  prefix=pfn'2,',
+  suffix=pfn'2,3,',
   idling=cloakidling,
   moving=cloakidling,
   attacking=cloakidling,
   recovering=cloakidling,
  },
- { -- shield
-  class='offhand',
+ { -- 6 shield
+  slot='offhand',
+  name='shield',
   sprite=44,
   col=13,
-  prefix=paf'1,2,',
-  suffix=paf'3,',
+  prefix=pfn'1,2,',
+  suffix=pfn'3,',
   idling=shieldidling,
   moving=shieldidling,
   attacking=shieldidling,
   recovering=shieldidling,
  },
- {
-  class='book',
+ { -- 7
+  slot='book',
+  name='book',
   sprite=79,
   prefix={},
-  suffix=paf'4,5,'
+  suffix=pfn'4,5,'
  },
- { -- sword
-  class='weapon',
+ { -- 8 sword
+  slot='weapon',
+  name='sword',
   sprite=47,
   col=6,
   prefix={},
-  suffix=paf'6,9,',
+  suffix=pfn'6,9,',
   idling=swordidling,
   moving=swordidling,
   attacking={
-   paf'14,9,5,5,-2,-3,',
-   paf'18,9,7,5,-3,-3,'
+   pfn'14,9,5,5,-2,-3,',
+   pfn'18,9,7,5,-3,-3,'
   },
   recovering=swordidling,
  },
- { -- bow
-  class='weapon',
+ { -- 9 bow
+  slot='weapon',
+  name='bow',
   twohand=true,
   sprite=46,
   col=4,
   prefix={},
-  suffix=paf'7,8,',
+  suffix=pfn'7,8,',
   idling=bowidling,
   moving=bowidling,
   attacking={
-   paf'30,9,5,5,-2,-3,',
-   paf'25,9,1,1,-2,-3,',
+   pfn'30,9,5,5,-2,-3,',
+   pfn'25,9,1,1,-2,-3,',
   },
   recovering=bowidling,
  }
@@ -1065,76 +1168,68 @@ themes={
  },
 }
 
+-- init avatar
+
+idleframe=pfn'0,10,3,4,-1,-2,'
+
+avatar=actorfactory({
+ x=64,
+ y=56,
+ hw=1.5,
+ hh=2,
+ a=0,
+ spdfactor=1,
+ spd=0.5,
+ hp=3,
+ startarmor=0,
+ armor=0,
+ items={
+  weapon=loaditem(1),
+  offhand=loaditem(2),
+  armor=loaditem(3),
+  boots=loaditem(4),
+  helmet=loaditem(5),
+  book=loaditem(6),
+  amulet=loaditem(7),
+ },
+ inventory={},
+ -- skill1=nil,
+ -- skill2=nil,
+ -- currentskill=nil,
+ passiveskills={},
+ idling={idleframe},
+ moving={
+  idleframe,
+  pfn'3,10,3,4,-1,-2,'
+ },
+ attacking={
+  animspd=0,
+  pfn'6,10,3,4,-1,-2,',
+  idleframe
+ },
+ recovering={idleframe},
+})
+
 
 function dungeoninit()
  _update60,_draw=
    dungeonupdate,
    dungeondraw
 
- sword={
-  class='weapon',
-  name='sword',
-  sprite=47,
-  col=6,
-  suffix={
-   skill=swordattackskillfactory(1,15,28,1000,7),
-  },
-  curframe=1,
-  idling=swordidling,
-  moving=swordidling,
-  attacking={
-   paf'14,9,5,5,-2,-3,',
-   paf'18,9,7,5,-3,-3,',
-  },
-  recovering=swordidling,
- }
+ avatar.removeme,
+ avatar.hp,
+ avatar.x,
+ avatar.y
+   =nil,3,64,56
 
- idleframe=paf'0,10,3,4,-1,-2,'
+ dungeonlvl,
+ theme,
+ nexttheme
+   =1,1,1
 
- avatar=actorfactory({
-  x=64,
-  y=56,
-  hw=1.5,
-  hh=2,
-  a=0,
-  spdfactor=1,
-  spd=0.5,
-  hp=3,
-  startarmor=0,
-  armor=0,
-  items={
-   weapon=sword,
-   -- offhand=nil,
-   -- armor=nil,
-   -- boots=nil,
-   -- helmet=nil,
-   -- book=nil,
-   -- amulet=nil,
-  },
-  inventory={},
-  skill1=sword.suffix.skill,
-  -- skill2=nil,
-  -- currentskill=nil,
-  passiveskills={},
-  idling={idleframe},
-  moving={
-   idleframe,
-   paf'3,10,3,4,-1,-2,'
-  },
-  attacking={
-   animspd=0,
-   paf'6,10,3,4,-1,-2,',
-   idleframe
-  },
-  recovering={idleframe},
- })
 
- dungeonlvl=1
- theme=1
- nexttheme=1
-
- for theme in all(themes) do
-  theme.lvl_c=2+flr(rnd()*1)
+ for _t in all(themes) do
+  _t.lvl_c=2+flr(rnd()*1)
  end
 
  mapinit()
@@ -1146,9 +1241,10 @@ function nextfloor()
  mapinit()
 end
 
-curenemyi=1
-tick=0
-kills=0
+tick,
+kills,
+curenemyi
+  =0,0,1
 
 function mapinit()
  local basemap={}
@@ -1179,9 +1275,9 @@ function mapinit()
  local steps=500
  local step_c=steps
  local enemy_c=10
- local enemytypes=paf'5,6,7,'
+ local enemytypes=pfn'5,6,7,'
  local enemies={}
- local angles=paf'-0.25,0.25,'
+ local angles=pfn'-0.25,0.25,'
  themes[theme].lvl_c-=1
 
  while step_c > 0 do
@@ -1201,15 +1297,14 @@ function mapinit()
     typ=enemytypes[flr(rnd(#enemytypes)+1)],
    })
   else
-   curx=nextx
-   cury=nexty
+   curx,cury=nextx,nexty
    basemap[cury][curx]=0
   end
   step_c-=1
  end
 
- for enemy in all(enemies) do
-  basemap[enemy.y][enemy.x]=enemy.typ
+ for _e in all(enemies) do
+  basemap[_e.y][_e.x]=_e.typ
  end
 
  if themes[theme].lvl_c == 0 then
@@ -1271,7 +1366,6 @@ function mapinit()
     avatar=actorfactory(avatar)
     avatar.x,avatar.y=ax,ay
     avatar.armor=avatar.startarmor
-
     add(actors,avatar)
 
     -- add mule
@@ -1357,8 +1451,15 @@ function dungeonupdate()
 
  if avatar.hp <= 0 then
   if tick-deathts > 150 and btnp(4) then
-   kills=0
-   dungeoninit()
+   avatar.inventory,
+   kills,
+   theme,
+   door=
+     {},
+     0,
+     nil,
+     nil
+   equipinit()
   end
   return
  end
@@ -1747,57 +1848,17 @@ function dungeonupdate()
           i.text='[empty]'
           i.sprite=23
 
-          local itemclass=itemclasses[
-            flr(rnd(#itemclasses))+1]
-          local _prefix=flr(rnd(#prefix))+1
-          local _suffix=flr(rnd(#suffix))+1
+          local _itemclass=flr(rnd(#itemclasses))+1
+          local itemclass=itemclasses[_itemclass]
+          local _prefix=itemclass.prefix[
+            flr(rnd(#itemclass.prefix+1))]
+          local _suffix=itemclass.suffix[
+            flr(rnd(#itemclass.suffix+1))]
 
-          local itemname=itemclass.class
-          local armor=0
-          local spdfactor=0
-          local sprite=itemclass.sprite
-
-          if has(itemclass.prefix,_prefix) then
-           _prefix=prefix[_prefix]
-           itemname=_prefix.name..itemname
-           armor+=(_prefix.armor or 0)
-           spdfactor+=(_prefix.spdfactor or 0)
-           sprite=_prefix[itemclass.class..'_sprite']
-          else
-           _prefix=nil
-          end
-
-          if has(itemclass.suffix,_suffix) then
-           _suffix=suffix[_suffix]
-           itemname=itemname.._suffix.name
-           armor+=(_suffix.armor or 0)
-           spdfactor+=(_suffix.spdfactor or 0)
-           sprite=_suffix[itemclass.class..'_sprite']
-          else
-           _suffix=nil
-          end
-
-          if _prefix == nil and _suffix == nil then
-           itemname='useless '..itemname
-          end
-
-          local item={
-           class=itemclass.class,
-           name=itemname,
-           sprite=sprite or itemclass.sprite,
-           col=itemclass.col,
-           col2=itemclass.col2,
-           prefix=_prefix,
-           suffix=_suffix,
-           armor=armor,
-           spdfactor=spdfactor,
-           iscloak=itemclass.iscloak,
-           curframe=1,
-           idling=itemclass.idling,
-           moving=itemclass.moving,
-           attacking=itemclass.attacking,
-           recovering=itemclass.recovering,
-          }
+          item=createitem(
+           _itemclass,
+           _prefix,
+           _suffix)
 
           add(avatar.inventory,item)
           sfx(20)
@@ -1821,17 +1882,12 @@ function dungeonupdate()
     elseif attack.typ == 'fire' then
      _a.effect={func=burningeffect}
 
-    elseif attack.typ == 'stun' then
-     _a.effect={func=stunningeffect}
-
     elseif attack.typ == 'ice' then
      _a.effect={func=freezeeffect}
      _a.dmgfx_col=12
     end
 
     sfx(hitsfx)
-
-    -- vfx
 
     -- start dmg indication
     _a.dmgfx_c=20
@@ -2198,15 +2254,17 @@ function dungeondraw()
      flipx)
   end
 
-  -- draw offhand
+  -- draw cloak
   if _a == avatar and
-     avatar.items.offhand then
-   item=avatar.items.offhand
+     avatar.items.armor and
+     avatar.items.armor.iscloak then
+   item=avatar.items.armor
    local stateframes=item[state]
    local f=stateframes[min(
      flr(item.curframe),
      #stateframes)]
-   pal(6,item.col,0)
+   pal(1,item.col,0)
+   pal(3,item.col2,0)
    sspr(
      f[1],
      f[2],
@@ -2219,17 +2277,15 @@ function dungeondraw()
      flipx)
   end
 
-  -- draw cloak
+  -- draw offhand
   if _a == avatar and
-     avatar.items.armor and
-     avatar.items.armor.iscloak then
-   item=avatar.items.armor
+     avatar.items.offhand then
+   item=avatar.items.offhand
    local stateframes=item[state]
    local f=stateframes[min(
      flr(item.curframe),
      #stateframes)]
-   pal(1,item.col,0)
-   pal(3,item.col2,0)
+   pal(6,item.col,0)
    sspr(
      f[1],
      f[2],
@@ -2311,7 +2367,8 @@ function dungeondraw()
  if avatar.hp <= 0 then
   print('a deadly blow',40,60,8)
   if tick-deathts > 150 then
-   print('press \x8e to continue',26,68,8)
+   print('(you\'ve lost your inventory)',12,72,8)
+   print('press \x8e to continue',26,80,8)
   end
  end
 
@@ -2355,7 +2412,6 @@ equipslots=
 function equipinit()
  _update60=equipupdate
  _draw=equipdraw
- poke(0x5f43,0b0011) -- note: undocumented lopass
 end
 
 function equipupdate()
@@ -2393,14 +2449,16 @@ function equipupdate()
  avatar.passiveskills={}
  for item in all(equipped) do
   if item.prefix and
-     item.prefix.skill
-     and not item.prefix.skill.perform then
+     item.prefix.skill and
+     (not has(avatar.passiveskills,item.prefix.skill)) and
+     not item.prefix.skill.perform then
    add(availableskills,item.prefix.skill)
    add(avatar.passiveskills,item.prefix.skill)
   end
   if item.suffix and
-     item.suffix.skill
-     and not item.suffix.skill.perform then
+     item.suffix.skill and
+     (not has(avatar.passiveskills,item.suffix.skill)) and
+     not item.suffix.skill.perform then
    add(availableskills,item.suffix.skill)
    add(avatar.passiveskills,item.suffix.skill)
   end
@@ -2417,7 +2475,7 @@ function equipupdate()
 
  -- init inventory
  for item in all(avatar.inventory) do
-  if avatar.items[item.class] == item then
+  if avatar.items[item.slot] == item then
    del(avatar.inventory,item)
   end
  end
@@ -2438,18 +2496,18 @@ function equipupdate()
 
     avatar.skill1,avatar.skill2=nil,nil
 
-    if avatar.items[selecteditem.class] then
-     add(avatar.inventory,avatar.items[selecteditem.class])
+    if avatar.items[selecteditem.slot] then
+     add(avatar.inventory,avatar.items[selecteditem.slot])
     end
 
-    avatar.items[selecteditem.class]=selecteditem
+    avatar.items[selecteditem.slot]=selecteditem
 
     if selecteditem.twohand then
      add(avatar.inventory,avatar.items.offhand)
      avatar.items.offhand=nil
     end
 
-    if selecteditem.class == 'offhand' and
+    if selecteditem.slot == 'offhand' and
        avatar.items.weapon and
        avatar.items.weapon.twohand then
      add(avatar.inventory,avatar.items.weapon)
@@ -2487,10 +2545,10 @@ function equipupdate()
    if #avatar.inventory >= 10 then
     sfx(6)
    else
-    local selectedclass=equipslots[equippedcur][1]
-    local selecteditem=avatar.items[selectedclass]
+    local selecteditem=avatar.items[
+      equipslots[equippedcur][1]]
     if selecteditem then
-     avatar.items[selecteditem.class]=nil
+     avatar.items[selecteditem.slot]=nil
      add(avatar.inventory,selecteditem)
      avatar.skill1,avatar.skill2=nil,nil
     end
@@ -2538,9 +2596,33 @@ function equipupdate()
  -- exit
  elseif sectioncur == 4 then
   if btnp(4) or btnp(5) then
-   _draw=dungeondraw
-   _update60=dungeonupdate
-   poke(0x5f43,0)
+   local slots={
+    'weapon',
+    'offhand',
+    'armor',
+    'boots',
+    'helmet',
+    'book',
+    'amulet',
+   }
+   for k,v in pairs(slots) do
+    if avatar.items[v] then
+     saveitem(
+       k,
+       avatar.items[v].class,
+       has(prefix,avatar.items[v].prefix),
+       has(suffix,avatar.items[v].suffix))
+    else
+     saveitem(k,0,0,0)
+    end
+   end
+   
+   if theme then
+    _draw=dungeondraw
+    _update60=dungeonupdate
+   else
+    dungeoninit()
+   end
   end
  end
 
@@ -2556,11 +2638,7 @@ function equipdraw()
 
  -- draw inventory section
  local offsetx,y,i,col=0,17,1,0
- if sectioncur == 1 then
-  col=10
- else
-  col=4
- end
+ col=tern(sectioncur == 1,10,4)
  print('saddlebags',4,y-9,col)
  for item in all(avatar.inventory) do
   spr(item.sprite,6+offsetx,y)
@@ -2589,11 +2667,7 @@ function equipdraw()
 
  -- draw equipped section
  offsetx,y,i=0,52,1
- if sectioncur == 2 then
-  col=10
- else
-  col=4
- end
+ col=tern(sectioncur == 2,10,4)
  print('equipped',4,y-9,col)
  for slot in all(equipslots) do
   local item=avatar.items[slot[1]]
@@ -2626,11 +2700,7 @@ function equipdraw()
 
  -- draw availableskills section
  offsetx,y,i=0,88,1
- if sectioncur == 3 then
-  col=10
- else
-  col=4
- end
+ col=tern(sectioncur == 3,10,4)
  print('skills',4,y-9,col)
  for skill in all(availableskills) do
   spr(skill.sprite,6+offsetx,y)
@@ -2665,33 +2735,29 @@ function equipdraw()
  end
 
  -- draw exit button
- if sectioncur == 4 then
-  col=10
- else
-  col=4
- end
+ col=tern(sectioncur == 4,10,4)
  print('exit',57,120,col)
 
 end
 
 
 _init=function()
- music(11)
- _update60=function()
-  tick+=1
-  if btnp(4) then
-   dungeoninit()
-  end
- end
- _draw=function()
-  cls(1)
-  sspr(79,99,49,29,42,32)
-  col=7
-  if tick % 60 <= 30 then
-   col=13
-  end
-  print('\x8e to start',42,118,col)
- end
+ -- music(11)
+ -- _update60=function()
+ --  tick+=1
+ --  if btnp(4) then
+   equipinit()
+ --  end
+ -- end
+ -- _draw=function()
+ --  cls(1)
+ --  sspr(79,99,49,29,42,32)
+ --  col=7
+ --  if tick % 60 <= 30 then
+ --   col=13
+ --  end
+ --  print('\x8e to start',42,118,col)
+ -- end
 end
 
 __gfx__
