@@ -6,11 +6,6 @@ __lua__
 
 cartdata'ironchestgames_vvoe_v1_dev9'
 
--- printh('debug started','debug',true)
--- function debug(s)
---  printh(tostr(s),'debug',false)
--- end
-
 function has(_t,_v)
  for k,v in pairs(_t) do
   if v == _v then
@@ -737,8 +732,8 @@ function createitem(_itemclass,_prefix,_suffix)
  local itemclass=itemclasses[_itemclass]
  local itemname,armor,spdfactor,prefixt,
    col,col2,sprite=
-   itemclass.name,itemclass.armor or 0,0,itemclass.prefix or prefix,
-   itemclass.col,itemclass.col2
+   itemclass.name,itemclass.armor or 0,itemclass.spdfactor or 0,
+   itemclass.prefix or prefix,itemclass.col,itemclass.col2
 
  if _suffix != 0 then
   _suffix=suffix[_suffix]
@@ -855,10 +850,10 @@ suffix={
    sprite=10,
    desc='passive, phase away on hit',
    onhit=function(_a)
-    local x,y=findflr(_a.x,_a.y)
-    _a.x,_a.y=x,y
+    local x,y,_f=findflr(_a.x,_a.y),pfn'9,9,1,1,0,0,'
+    _a.x,_a.y,_f.c=x,y,2
     add(vfxs,{
-     {9,9,1,1,0,0,c=2},
+     _f,
      {draw=function(f)
        circ(x,y,f.c*1.5,12)
       end,
@@ -888,9 +883,9 @@ itemclasses={
  {slot='helmet',name='helmet',sprite=41,col=5},
  {slot='amulet',name='amulet',sprite=160,prefix=amuletprefix},
  {slot='armor',name='platemail',sprite=58,col=5,armor=1},
- {slot='armor',name='cloak',sprite=227,col=4,col2=2,iscloak=true,
+ {slot='armor',name='cloak',sprite=227,col=4,col2=2,iscloak=true,spdfactor=0.1,
   idling=cloakidling,moving=cloakidling, attacking=cloakidling,recovering=cloakidling},
- {slot='offhand',name='shield',sprite=75,col=2,
+ {slot='offhand',name='shield',sprite=75,col=2,armor=1,
   idling=shieldidling,moving=shieldidling,attacking=shieldidling,recovering=shieldidling},
  {slot='book',name='book',sprite=176},
  {slot='weapon',name='sword',sprite=195,col=6,prefix=swordprefix,
@@ -1149,8 +1144,8 @@ function dungeonupdate()
       skill.perform(avatar,skill)
 
       -- set avatar to postperform
-      avatar.state_c,avatar.ispreprfm,avatar.curframe=
-       skill.postprfm,false,2
+      avatar.state_c,avatar.curframe,avatar.ispreprfm=
+       skill.postprfm,2
 
       -- set next attacking frame
       if avatar.items.weapon then
@@ -1178,8 +1173,8 @@ function dungeonupdate()
 
     if actor.ispreprfm and actor.state_c <= 0 then
      actor.prfmatt(actor)
-     actor.ispreprfm,actor.state_c,actor.curframe=
-      false,actor.att_postprfm,2
+     actor.state_c,actor.curframe,actor.ispreprfm=
+      actor.att_postprfm,2
 
     elseif actor.state_c <= 0 then
      if actor.afterpostprfm then
@@ -1225,7 +1220,7 @@ function dungeonupdate()
  end
  do
   local enemy=actors[curenemyi]
-  if enemy and enemy.isenemy then
+  if enemy and enemy.isenemy and not enemy.removeme then
 
    -- aggression vars
    disttoavatar=dist(enemy.x,enemy.y,avatar.x,avatar.y)
@@ -1367,11 +1362,7 @@ function dungeonupdate()
 
     -- go into recovering
     _a.state='recovering'
-    if attack.recovertime then
-     _a.state_c=attack.recovertime
-    else
-     _a.state_c=0
-    end
+    _a.state_c=attack.recovertime or 0
 
     -- check if _a dead
     if _a.hp <= 0 then
@@ -1397,12 +1388,18 @@ function dungeonupdate()
           i.isopen,i.text,i.sprite=
             true,'[empty]',i.sprite+1
 
-          local _itemclassn=flr(rnd(#itemclasses))+1
+          local _itemclassn,_n,_m=
+           flr(rnd(#itemclasses))+1,1,0
+
+          if theme == 3 and boss then
+           _n,_m=0,1
+          end
+
           local itemclass=itemclasses[_itemclassn]
           local _prefix=itemclass.prefix or prefix
           local _prefixn,_suffixn=_itemclassn == 7 and 0 or
-            flr(rnd(#_prefix+1)),
-            flr(rnd(#suffix+1))
+           flr(rnd(#_prefix+_n))+_m,
+           flr(rnd(#suffix+_n))+_m
 
           _suffixn=i.isbosschest and _suffixn or 0
           sfx(20)
@@ -1416,7 +1413,7 @@ function dungeonupdate()
     end
 
     -- effects
-    _a.dmgfx_col=8 -- note: red is default color
+    _a.dmgfx_col,_a.dmgfx_c=8,20
 
     if attack.typ == 'knockback' and not _a.isbig then
      _a.dx,_a.dy=cos(attack.knocka)*5,sin(attack.knocka)*5
@@ -1429,9 +1426,6 @@ function dungeonupdate()
     end
 
     sfx(hitsfx)
-
-    -- start dmg indication
-    _a.dmgfx_c=20
 
     -- hit flash
     local x,y=_a.x+_a.dx/2,_a.y+_a.dy/2
@@ -1891,11 +1885,10 @@ function equipupdate()
 
  -- inventory
  if sectioncur == 1 then
-  if btnp0 then
-   inventorycur=mid(1,inventorycur-1,#avatar.inventory)
-   sfx(7)
-  elseif btnp1 then
-   inventorycur=mid(1,inventorycur+1,#avatar.inventory)
+  local _n=btnp0 and 1 or btnp1 and -1
+  if _n then
+   inventorycur=mid(1,inventorycur-_n,#avatar.inventory)
+   sellcur=nil
    sfx(7)
   end
 
