@@ -4,12 +4,12 @@ __lua__
 -- virtuous vanquisher of evil 1.0
 -- by ironchest games
 
-cartdata('ironchestgames_vvoe_v1_dev5')
+cartdata'ironchestgames_vvoe_v1_dev9'
 
-printh('debug started','debug',true)
-function debug(s)
- printh(tostr(s),'debug',false)
-end
+-- printh('debug started','debug',true)
+-- function debug(s)
+--  printh(tostr(s),'debug',false)
+-- end
 
 function has(_t,_v)
  for k,v in pairs(_t) do
@@ -72,30 +72,20 @@ function isaabbscolliding(a,b)
  end
 end
 
-wallaabb={
- hw=4,
- hh=4,
-}
+wallaabb={hw=4,hh=4}
 function isinsidewall(aabb)
  local x1,y1,x2,y2=
-   aabb.x-aabb.hw,
-   aabb.y-aabb.hh,
-   aabb.x+aabb.hw,
-   aabb.y+aabb.hh
+   aabb.x-aabb.hw,aabb.y-aabb.hh,
+   aabb.x+aabb.hw,aabb.y+aabb.hh
 
- for point in all{
-    {x1,y1},
-    {x2,y1},
-    {x2,y2},
-    {x1,y2},
-   } do
-  local mapx,mapy=flr(point[1]/8),flr(point[2]/8)
-  wallaabb.x,wallaabb.y=
-    mapx*8+wallaabb.hw,
-    mapy*8+wallaabb.hh
+ for p in all{{x1,y1},{x2,y1},{x2,y2},{x1,y2}} do
+  local mapx,mapy=flr(p[1]/8),flr(p[2]/8)
+  wallaabb.x,wallaabb.y=mapx*8+wallaabb.hw,mapy*8+wallaabb.hh
 
   -- note: hitboxes should not be larger than 8x8
-  if walls[mapy][mapx] == 1 and
+  if not walls[mapy] or not walls[mapy][mapx] then
+   aabb.removeme=true
+  elseif walls[mapy][mapx] == 1 and
      isaabbscolliding(aabb,wallaabb) then
    return wallaabb
   end
@@ -104,12 +94,9 @@ end
 
 function haslos(_x1,_y1,_x2,_y2)
  local dx,dy,x,y,xinc,yinc=
-   abs(_x2-_x1),
-   abs(_y2-_y1),
-   _x1,
-   _y1,
-   sgn(_x2-_x1),
-   sgn(_y2-_y1)
+   abs(_x2-_x1),abs(_y2-_y1),
+   _x1,_y1,
+   sgn(_x2-_x1),sgn(_y2-_y1)
 
  local n,err=1+dx+dy,dx-dy
  dx*=2
@@ -117,11 +104,9 @@ function haslos(_x1,_y1,_x2,_y2)
 
  while n > 0 do
   n-=1
-
   if walls[flr(y/8)][flr(x/8)] == 1 then
    return
   end
-
   if err > 0 then
    x+=xinc
    err-=dy
@@ -147,10 +132,7 @@ function collideaabbs(func,aabb,other,_dx,_dy)
  local dx,dy=_dx,_dy
 
  -- set aabb halves
- _aabb.hw,_aabb.hh=aabb.hw,aabb.hh
-
- -- set next pos along x
- _aabb.x,_aabb.y=aabb.x+_dx,aabb.y
+ _aabb.x,_aabb.y,_aabb.hw,_aabb.hh=aabb.x+_dx,aabb.y,aabb.hw,aabb.hh
 
  -- is it colliding w other
  local collidedwith=func(_aabb,other)
@@ -172,7 +154,6 @@ end
 
 function findflr(_x,_y)
  local a,d=rnd(),1
-
  repeat
   a+=0.05
   d+=0.02
@@ -180,7 +161,6 @@ function findflr(_x,_y)
     mid(1,flr(_x/8+cos(a)*2),14),
     mid(1,flr(_y/8+sin(a)*2),14)
  until walls[y] and walls[y][x] == 0
-
  return x*8+4,y*8+4
 end
 
@@ -196,8 +176,7 @@ btnmasktoa={
 }
 
 function aframes(_fs)
- local t={}
- local j=1
+ local t,j={},1
  for i=0,1,0.125 do
   t[i]=pfn(_fs[j])
   j+=1
@@ -245,405 +224,7 @@ function getvfxframei(a)
  return min(flr((a+0.0625)*8)/8,1)
 end
 
--- todo: this is only convenience dev function
-function actorfactory(_a)
- _a.state,
- _a.state_c,
- _a.curframe,
- _a.dx,
- _a.dy,
- _a.runspd,
- _a.dmgfx_c,
- _a.comfydist,
- _a.toocloseto
-   =
-   'idling',
-   0,
-   1,
-   0,
-   0,
-   _a.spd,
-   0,
-   _a.comfydist or 1,
-   {}
-
- return _a
-end
-
-function performenemymelee(_a)
- local a=atan2(
-  _a.tarx-_a.x,
-  _a.tary-_a.y)
-
- add(attacks,{
-  isenemy=true,
-  x=_a.x+cos(a)*4,
-  y=_a.y+sin(a)*4,
-  hw=2,
-  hh=2,
-  state_c=1,
-  typ='knockback',
-  knocka=a,
-  dmg=1,
-  tar_c=1000,
- })
-
- local f=clone(meleevfxframes[getvfxframei(_a.a)])
- f[5],
- f[6],
- f.c,
- f.col
-   =
-   _a.x+cos(_a.a)*4+f[5],
-   _a.y+sin(_a.a)*4+f[6],
-   10,
-   7
-
- add(vfxs,{f})
-
- sfx(4)
-end
-
-function performenemybow(_a)
- local a=getvfxframei(atan2(
-  _a.tarx-_a.x,
-  _a.tary-_a.y))
-
- add(attacks,{
-  isenemy=true,
-  x=_a.x-0.5,
-  y=_a.y-0.5,
-  hw=1,
-  hh=1,
-  state_c=1000,
-  dx=cos(a)*1.6,
-  dy=sin(a)*1.6,
-  dmg=1,
-  tar_c=1,
-  frames={
-   curframe=1,
-   clone(arrowframes[a]),
-  },
-  col=2,
- })
-
- sfx(5)
-end
-
-
--- enemy factories
-
-function newmeleetroll(x,y)
- return actorfactory{
-  isenemy=true,
-  x=x,
-  y=y,
-  a=0,
-  hw=1.5,
-  hh=2,
-  spd=0.45,
-  hp=2,
-  att_preprfm=50,
-  att_postprfm=20,
-  att_range=7,
-  prfmatt=performenemymelee,
-  idling={pfn'41,32,4,5,-2,-3,'},
-  moving={
-   animspd=0.18,
-   pfn'41,32,4,5,-2,-3,',
-   pfn'45,32,4,5,-2,-3,'
-  },
-  attacking={
-   animspd=0,
-   pfn'49,32,4,5,-2,-3,',
-   pfn'52,32,6,5,-3,-3,',
-  },
-  recovering={pfn'41,32,4,5,-2,-3,'},
- }
-end
-
-function newtrollcaster(x,y)
- local boltskill,idleframe=boltskillfactory(
-   1,
-   50,
-   0,
-   120,
-   1,
-   'fire',
-   14,
-   pfn'8,14,',
-   pfn'14,8,'),
-  pfn'59,32,4,6,-2,-3,'
-
- return actorfactory{
-  isenemy=true,
-  x=x,
-  y=y,
-  a=0,
-  hw=1.5,
-  hh=2,
-  spd=0.25,
-  hp=1,
-  att_preprfm=100,
-  att_postprfm=20,
-  att_range=60,
-  prfmatt=function(actor)
-   a,actor.a=actor.a,atan2(
-     actor.tarx-actor.x,
-     actor.tary-actor.y)
-   boltskill.perform(actor)
-   actor.a=a
-  end,
-  comfydist=30,
-  idling={idleframe},
-  moving={
-   animspd=0.18,
-   idleframe
-  },
-  attacking={
-   animspd=0,
-   pfn'63,32,4,6,-2,-3,',
-   idleframe,
-  },
-  recovering={idleframe},
-  onpreprfm=boltskill.startpemitter,
- }
-end
-
-function newgianttroll(x,y)
- boss=actorfactory{
-  name='giant troll',
-  isenemy=true,
-  x=x,
-  y=y,
-  a=0,
-  hw=1.5,
-  hh=3,
-  isbig=true,
-  spd=0.7,
-  hp=7,
-  att_preprfm=40,
-  att_postprfm=30,
-  att_range=7,
-  prfmatt=performenemymelee,
-  idling={pfn'36,25,7,7,-4,-4,'},
-  moving={
-   animspd=0.18,
-   pfn'43,25,7,7,-4,-4,',
-   pfn'50,25,7,7,-4,-4,'
-  },
-  attacking={
-   animspd=0,
-   pfn'57,25,7,7,-4,-4,',
-   pfn'64,25,8,7,-4,-4,',
-  },
-  recovering={pfn'72,25,7,7,-4,-4,'},
- }
- return boss
-end
-
-function newmeleeskele(x,y)
- return actorfactory{
-  isenemy=true,
-  x=x,
-  y=y,
-  a=0,
-  hw=1.5,
-  hh=2,
-  spd=0.5,
-  hp=3,
-  att_preprfm=40,
-  att_postprfm=10,
-  att_range=7,
-  prfmatt=performenemymelee,
-  idling={pfn'0,15,4,5,-2,-3,'},
-  moving={
-   animspd=0.18,
-   pfn'0,15,4,5,-2,-3,',
-   pfn'4,15,4,5,-2,-3,'
-  },
-  attacking={
-   animspd=0,
-   pfn'8,15,4,5,-2,-3,',
-   pfn'11,15,6,5,-3,-3,',
-  },
-  recovering={pfn'0,15,4,5,-2,-3,'},
- }
-end
-
-function newbatenemy(x,y)
- return actorfactory{
-  isenemy=true,
-  isghost=true,
-  x=x,
-  y=y,
-  a=0,
-  hw=1.5,
-  hh=2,
-  spd=0.75,
-  hp=1,
-  att_preprfm=30,
-  att_postprfm=0,
-  att_range=7,
-  prfmatt=performenemymelee,
-  idling={pfn'36,15,3,3,-1.5,-1.5,'},
-  moving={
-   animspd=0.21,
-   pfn'36,15,3,3,-1.5,-1.5,',
-   pfn'39,15,3,3,-1.5,-1.5,'
-  },
-  attacking={
-   animspd=0.32,
-   pfn'36,15,3,3,-1.5,-1.5,',
-   pfn'39,15,3,3,-1.5,-1.5,'
-  },
-  recovering={pfn'36,15,3,3,-1.5,-1.5,'},
- }
-end
-
-function newbowskele(x,y)
- return actorfactory{
-  isenemy=true,
-  x=x,
-  y=y,
-  a=0,
-  hw=1.5,
-  hh=2,
-  spd=0.5,
-  hp=2,
-  att_preprfm=60,
-  att_postprfm=4,
-  att_range=40,
-  prfmatt=performenemybow,
-  comfydist=20,
-  idling={pfn'18,15,4,5,-2,-3,'},
-  moving={
-   animspd=0.18,
-   pfn'18,15,4,5,-2,-3,',
-   pfn'22,15,4,5,-2,-3,'
-  },
-  attacking={
-   animspd=0,
-   pfn'26,15,4,5,-2,-3,',
-   pfn'31,15,4,5,-2,-3,'
-  },
-  recovering={pfn'18,15,4,5,-2,-3,'},
- }
-end
-
-function newskeleking(x,y)
-
- function setupmelee(_a)
-  _a.nolos=nil
-  _a.att_range=7
-  _a.att_preprfm=30
-  _a.att_postprfm=60
-  _a.attacking={
-   animspd=0,
-   pfn'0,40,15,18,-7,-13,',
-   pfn'0,58,20,18,-10,-13,',
-  }
-  _a.onpreprfm=nil
-  _a.prfmatt=performmelee
-  _a.afterpostprfm=setupmagic
- end
-
- function performmelee(_a)
-  add(attacks,{
-   isenemy=true,
-   throughwalls=true,
-   x=_a.x+cos(_a.a)*2,
-   y=_a.y-3,
-   hw=7,
-   hh=8,
-   state_c=2,
-   typ='knockback',
-   knocka=_a.a,
-   dmg=1,
-   tar_c=1,
-  })
-
-  sfx(4)
- end
-
- function setupmagic(_a)
-  _a.nolos=true
-  _a.att_range=60
-  _a.att_preprfm=110
-  _a.att_postprfm=0
-  _a.attacking={
-   animspd=0,
-   pfn'24,58,15,18,-7,-13,',
-   pfn'24,58,15,18,-7,-13,',
-  }
-  _a.onpreprfm=magicpreprfm
-  _a.prfmatt=performmagic
-  _a.afterpostprfm=setupmelee
- end
-
- function magicpreprfm(_a)
-  _a.att_x,_a.att_y=findflr(_a.x,_a.y)
-  add(pemitters,{
-   follow={
-    x=_a.att_x,
-    y=_a.att_y,
-   },
-   life=140,
-   prate=pfn'1,2,',
-   plife=pfn'10,15,',
-   poffsets=pfn'-2,0.5,1,0.5,',
-   dx=pfn'0,0,',
-   dy=pfn'-0.3,0,',
-   pcolors=pfn'11,3,1,',
-  })
-
-  sfx(9)
- end
-
- function performmagic(_a)
-  local _e=newmeleeskele(_a.att_x,_a.att_y)
-
-  -- summoning sickness
-  _e.state,
-  _e.laststate,
-  _e.state_c
-    =
-    'recovering',
-    'recovering',
-    50
-
-  add(actors,_e)
- end
-
- boss=actorfactory{
-  name='skeleton king',
-  isenemy=true,
-  isbig=true,
-  x=x,
-  y=y,
-  a=0,
-  hw=1.5,
-  hh=3,
-  spd=0.4,
-  hp=10,
-  idling={pfn'0,40,15,18,-7,-13,'},
-  moving={
-   animspd=0.24,
-   pfn'16,40,15,18,-7,-13,',
-   pfn'32,40,15,18,-7,-13,'
-  },
-  recovering={pfn'0,40,15,18,-7,-13,'},
-  onroam=setupmagic,
- }
-
- setupmagic(boss)
-
- return boss
-end
-
-
 -- effects
-
 function burningeffect(_a)
  if _a.effect.c == nil then
   _a.effect.c=0
@@ -660,17 +241,14 @@ function burningeffect(_a)
  end
 
  _a.effect.c-=1
-
  if _a.effect.c <= 0 then
   _a.effect.c=12
-
   _a.a=rnd()
  end
 
  _a.dx,_a.dy=
    cos(_a.a)*_a.spd,
    sin(_a.a)*_a.spd
-
 end
 
 function freezeeffect(_a)
@@ -681,22 +259,11 @@ function freezeeffect(_a)
    c=2,
   },
  })
-
  _a.dx,_a.dy=0,0
 end
 
 -- skills -- todo: maybe remove this?
-function skillfactory(sprite,desc,onhit,immune)
- return {
-  sprite=sprite,
-  desc=desc,
-  onhit=onhit,
-  immune=immune,
- }
-end
-
 function swordattackskillfactory(
-  dmg,
   preprfm,
   postprfm,
   tar_c,
@@ -704,7 +271,7 @@ function swordattackskillfactory(
   typ,
   recovertime)
  return {
-  sprite=31,
+  sprite=12,
   desc='sword attack',
   preprfm=preprfm,
   postprfm=postprfm,
@@ -722,7 +289,6 @@ function swordattackskillfactory(
     typ=typ,
     recovertime=recovertime or 0,
     knocka=_a.a,
-    dmg=dmg,
     tar_c=tar_c,
    })
 
@@ -740,7 +306,6 @@ function swordattackskillfactory(
 end
 
 function bowattackskillfactory(
-  dmg,
   preprfm,
   postprfm,
   tar_c,
@@ -749,7 +314,7 @@ function bowattackskillfactory(
   typ,
   recovertime)
  return {
-  sprite=30,
+  sprite=13,
   desc='bow attack',
   preprfm=preprfm,
   postprfm=postprfm,
@@ -766,7 +331,6 @@ function bowattackskillfactory(
     state_c=1000,
     dx=cos(_a.a)*1.6,
     dy=sin(_a.a)*1.6,
-    dmg=dmg,
     typ=typ,
     recovertime=recovertime,
     tar_c=tar_c,
@@ -791,7 +355,6 @@ function bowattackskillfactory(
 end
 
 function boltskillfactory(
-  dmg,
   preprfm,
   postprfm,
   recovertime,
@@ -834,7 +397,6 @@ function boltskillfactory(
     state_c=1000,
     dx=cos(_a.a)*1.2,
     dy=sin(_a.a)*1.2,
-    dmg=dmg,
     typ=typ,
     recovertime=recovertime,
     tar_c=tar_c,
@@ -877,43 +439,328 @@ function phasing(_a)
  })
 end
 
+-- actors
+function actfact(_a)
+ _a.state,_a.state_c,_a.curframe,_a.dx,_a.dy,
+ _a.runspd,_a.dmgfx_c,_a.comfydist,_a.toocloseto,_a.a
+   ='idling',0,1,0,0,_a.spd,0,_a.comfydist or 1,{},0
+
+ return _a
+end
+
+function performenemymelee(_a)
+ local a,att_siz=atan2(
+  _a.tarx-_a.x,_a.tary-_a.y),_a.att_siz or 2
+ add(attacks,{
+  isenemy=true,
+  x=_a.x+cos(a)*4,
+  y=_a.y+sin(a)*4,
+  hw=att_siz,
+  hh=att_siz,
+  state_c=1,
+  typ=_a.att_typ or 'knockback',
+  recovertime=_a.att_recovertime,
+  knocka=a,
+  tar_c=1000,
+ })
+ local f=clone(meleevfxframes[getvfxframei(_a.a)])
+ f[5],f[6],f.c,f.col=
+   _a.x+cos(_a.a)*4+f[5],_a.y+sin(_a.a)*4+f[6],
+   10,_a.att_col or 7
+ add(vfxs,{f})
+ sfx(4)
+end
+
+function performenemybow(_a)
+ local a=getvfxframei(atan2(_a.tarx-_a.x,_a.tary-_a.y))
+ add(attacks,{
+  isenemy=true,
+  x=_a.x-0.5,y=_a.y-0.5,
+  hw=1,hh=1,
+  state_c=1000,
+  dx=cos(a)*1.6,dy=sin(a)*1.6,
+  tar_c=1,
+  frames={curframe=1,clone(arrowframes[a])},
+  col=2
+ })
+ sfx(5)
+end
+
+
+-- enemy factories
+
+function newmeleetroll(x,y)
+ return actfact{
+  isenemy=true,
+  x=x,y=y,
+  hw=1.5,hh=2,
+  spd=0.45,
+  hp=2,
+  att_preprfm=50,
+  att_postprfm=20,
+  att_range=7,
+  prfmatt=performenemymelee,
+  idling={pfn'41,32,4,5,-2,-3,'},
+  moving={animspd=0.18,pfn'41,32,4,5,-2,-3,',pfn'45,32,4,5,-2,-3,'},
+  attacking={animspd=0,pfn'49,32,4,5,-2,-3,',pfn'52,32,6,5,-3,-3,'},
+  recovering={pfn'41,32,4,5,-2,-3,'}
+ }
+end
+
+function casterfactory(_hp,_cols,_idlef,_attackf,_boltskill)
+ return function(x,y)
+  return actfact{
+   isenemy=true,
+   x=x,y=y,
+   hw=1.5,hh=2,
+   spd=0.25*_hp,
+   hp=_hp,
+   att_preprfm=100,
+   att_postprfm=20,
+   att_range=60,
+   cols=_cols,
+   prfmatt=function(actor)
+    a,actor.a=actor.a,atan2(actor.tarx-actor.x,actor.tary-actor.y)
+    _boltskill.perform(actor)
+    actor.a=a
+   end,
+   comfydist=30,
+   idling={_idlef},
+   moving={animspd=0.18,_idlef},
+   attacking={animspd=0,_attackf,_idlef},
+   recovering={_idlef},
+   onpreprfm=_boltskill.startpemitter
+  }
+ end
+end
+
+newtrollcaster=casterfactory(
+ 1,pfn'3,4,2,5,9,',pfn'59,32,4,7,-2,-4.5,',pfn'63,32,4,7,-2,-4.5,',
+ boltskillfactory(50,0,120,1,'fire',14,pfn'8,14,',pfn'14,8,'))
+
+newdemoncaster=casterfactory(
+ 3,pfn'8,13,5,6,12,',pfn'59,32,4,8,-2,-5.5,',pfn'63,32,4,8,-2,-5.5,',
+ boltskillfactory(40,0,120,1,'ice',7,pfn'12,12,',pfn'12,13,'))
+
+function newgianttroll(x,y)
+ boss=actfact{
+  name='giant troll',
+  isenemy=true,
+  x=x,y=y,
+  hw=1.5,hh=3,
+  isbig=true,
+  spd=0.7,
+  hp=7,
+  att_preprfm=40,
+  att_postprfm=30,
+  att_range=7,
+  prfmatt=performenemymelee,
+  idling={pfn'36,25,7,7,-4,-4,'},
+  moving={animspd=0.18,pfn'43,25,7,7,-4,-4,',pfn'50,25,7,7,-4,-4,'},
+  attacking={animspd=0,pfn'57,25,7,7,-4,-4,',pfn'64,25,8,7,-4,-4,'},
+  recovering={pfn'72,25,7,7,-4,-4,'}
+ }
+ return boss
+end
+
+function newmeleeskele(x,y)
+ return actfact{
+  isenemy=true,
+  x=x,y=y,
+  hw=1.5,hh=2,
+  spd=0.5,
+  hp=3,
+  att_preprfm=40,
+  att_postprfm=10,
+  att_range=7,
+  prfmatt=performenemymelee,
+  idling={pfn'0,15,4,5,-2,-3,'},
+  moving={animspd=0.18,pfn'0,15,4,5,-2,-3,',pfn'4,15,4,5,-2,-3,'},
+  attacking={animspd=0,pfn'8,15,4,5,-2,-3,',pfn'11,15,6,5,-3,-3,'},
+  recovering={pfn'0,15,4,5,-2,-3,'}
+ }
+end
+
+function batfactory(_att_col,_att_typ,_att_recovertime,_cols)
+ return function(x,y)
+  return actfact{
+   isenemy=true,
+   isghost=true,
+   x=x,y=y,
+   hw=1.5,hh=2,
+   spd=0.75,
+   hp=1,
+   att_preprfm=30,
+   att_postprfm=0,
+   att_range=7,
+   att_col=_att_col,
+   att_typ=_att_typ,
+   att_recovertime=_att_recovertime,
+   cols=_cols,
+   prfmatt=performenemymelee,
+   idling={pfn'36,15,3,3,-1.5,-1.5,'},
+   moving={animspd=0.21,pfn'36,15,3,3,-1.5,-1.5,',pfn'39,15,3,3,-1.5,-1.5,'},
+   attacking={animspd=0.32,pfn'36,15,3,3,-1.5,-1.5,',pfn'39,15,3,3,-1.5,-1.5,'},
+   recovering={pfn'36,15,3,3,-1.5,-1.5,'}
+  }
+ end
+end
+
+newbatenemy=batfactory()
+newfirebatenemy=batfactory(14,'fire',120,pfn'0,0,0,0,8,')
+
+function newbowskele(x,y)
+ return actfact{
+  isenemy=true,
+  x=x,y=y,
+  hw=1.5,hh=2,
+  spd=0.5,
+  hp=2,
+  att_preprfm=60,
+  att_postprfm=4,
+  att_range=40,
+  prfmatt=performenemybow,
+  comfydist=20,
+  idling={pfn'18,15,4,5,-2,-3,'},
+  moving={animspd=0.18,pfn'18,15,4,5,-2,-3,',pfn'22,15,4,5,-2,-3,'},
+  attacking={animspd=0,pfn'26,15,4,5,-2,-3,',pfn'31,15,4,5,-2,-3,'},
+  recovering={pfn'18,15,4,5,-2,-3,'}
+ }
+end
+
+function newskeleking(x,y)
+
+ function setupmelee(_a)
+  _a.att_range,
+  _a.att_preprfm,
+  _a.att_postprfm,
+  _a.prfmatt,
+  _a.afterpostprfm,
+  _a.attacking,
+  _a.onpreprfm,
+  _a.nolos
+   =7,30,60,performmelee,setupmagic,
+   {animspd=0,pfn'0,40,15,18,-7,-13,',pfn'0,58,20,18,-10,-13,'}
+ end
+
+ function performmelee(_a)
+  add(attacks,{
+   isenemy=true,
+   throughwalls=true,
+   x=_a.x+cos(_a.a)*2,y=_a.y-3,
+   hw=7,hh=8,
+   state_c=2,
+   typ='knockback',
+   knocka=_a.a,
+   tar_c=1,
+  })
+  sfx(4)
+ end
+
+ function setupmagic(_a)
+  _a.att_range,
+  _a.att_preprfm,
+  _a.att_postprfm,
+  _a.prfmatt,
+  _a.afterpostprfm,
+  _a.attacking,
+  _a.onpreprfm,
+  _a.nolos
+    =60,110,0,performmagic,setupmelee,{
+      animspd=0,
+      pfn'24,58,15,18,-7,-13,',
+      pfn'24,58,15,18,-7,-13,',
+     },magicpreprfm,true
+ end
+
+ function magicpreprfm(_a)
+  _a.att_x,_a.att_y=findflr(_a.x,_a.y)
+  add(pemitters,{
+   follow={x=_a.att_x,y=_a.att_y},
+   life=140,
+   prate=pfn'1,2,',
+   plife=pfn'10,15,',
+   poffsets=pfn'-2,0.5,1,0.5,',
+   dx=pfn'0,0,',dy=pfn'-0.3,0,',
+   pcolors=pfn'11,3,1,',
+  })
+
+  sfx(9)
+ end
+
+ function performmagic(_a)
+  local _e=newmeleeskele(_a.att_x,_a.att_y)
+  _e.state,_e.laststate,_e.state_c='recovering','recovering',50
+  add(actors,_e)
+ end
+
+ boss=actfact{
+  name='skeleton king',
+  isenemy=true,
+  isbig=true,
+  x=x,y=y,
+  hw=1.5,hh=3,
+  spd=0.4,
+  hp=10,
+  idling={pfn'0,40,15,18,-7,-13,'},
+  moving={animspd=0.24,pfn'16,40,15,18,-7,-13,',pfn'32,40,15,18,-7,-13,'},
+  recovering={pfn'0,40,15,18,-7,-13,'},
+  onroam=setupmagic
+ }
+ setupmagic(boss)
+ return boss
+end
+
+function newdemonboss(x,y)
+ boss=actfact{
+  name='the evil',
+  isenemy=true,
+  isbig=true,
+  x=x,y=y,
+  hw=2,hh=3,
+  spd=1,
+  hp=20,
+  att_preprfm=30,
+  att_postprfm=50,
+  att_range=16,
+  att_siz=12,
+  att_col=0,
+  att_typ='fire',
+  att_recovertime=90,
+  prfmatt=performenemymelee,
+  passiveskills={{immune='fire'},{immune='ice'}},
+  idling={animspd=12,pfn'95,71,19,18,-10,-15,',pfn'77,71,19,18,-10,-15,'},
+  moving={animspd=0.24,pfn'41,71,19,18,-10,-15,',pfn'59,71,19,18,-10,-15,'},
+  attacking={animspd=0,pfn'79,45,31,24,-15,-20,',pfn'48,45,31,24,-15,-20,'},
+  recovering={pfn'95,71,19,18,-10,-15,'}
+ }
+ return boss
+end
+
 -- items
 slots={
- 'weapon',
- 'offhand',
- 'armor',
- 'boots',
- 'helmet',
- 'book',
- 'amulet',
+ 'weapon', -- 1
+ 'offhand', -- 2
+ 'armor', -- 3
+ 'helmet', -- 4
+ 'boots', -- 5
+ 'amulet', -- 6
+ 'book' -- 7
 }
 
 function createitem(_itemclass,_prefix,_suffix)
  local itemclass=itemclasses[_itemclass]
- local itemname,
-   armor,
-   spdfactor,
-   sprite,
-   prefixt,
-   col,
-   col2
-   =
-   itemclass.name,
-   0,
-   0,
-   itemclass.sprite,
-   itemclass.prefix or prefix,
-   itemclass.col,
-   itemclass.col2
+ local itemname,armor,spdfactor,prefixt,
+   col,col2,sprite=
+   itemclass.name,itemclass.armor or 0,0,itemclass.prefix or prefix,
+   itemclass.col,itemclass.col2
 
  if _suffix != 0 then
   _suffix=suffix[_suffix]
   itemname=itemname.._suffix.name
   armor+=(_suffix.armor or 0)
   spdfactor+=(_suffix.spdfactor or 0)
-  sprite=_suffix[itemclass.slot..'_spr']
-  col=_suffix.col
-  col2=_suffix.col2
+  col,col2,sprite=_suffix.cols and _suffix.cols[_itemclass],_suffix.cols2 and _suffix.cols2[_itemclass],_suffix.sprites[_itemclass]
  else
   _suffix=nil
  end
@@ -923,14 +770,12 @@ function createitem(_itemclass,_prefix,_suffix)
   itemname=_prefix.name..itemname
   armor+=(_prefix.armor or 0)
   spdfactor+=(_prefix.spdfactor or 0)
-  sprite=_prefix[itemclass.slot..'_spr']
-  col=_prefix.col
-  col2=_prefix.col2
+  col,col2,sprite=_prefix.cols and _prefix.cols[_itemclass] or _prefix.col,_prefix.cols2 and _prefix.cols2[_itemclass],_prefix.sprites[_itemclass]
  else
   _prefix=nil
  end
 
- if _prefix == nil and _suffix == nil then
+ if not (_prefix or _suffix) then
   itemname='useless '..itemname
  end
 
@@ -956,243 +801,125 @@ function createitem(_itemclass,_prefix,_suffix)
 end
 
 swordprefix={
- {
-  name='',
-  skill=swordattackskillfactory(1,15,28,1000,7),
- },
- {
-  name='ice ',
-  col=12,
-  skill=swordattackskillfactory(1,15,28,1000,7,'ice',150),
- },
- {
-  name='flaming ',
-  col=8,
-  skill=swordattackskillfactory(1,15,28,1000,14,'fire',60),
- },
- {
-  name='heavy ',
-  col=13,
-  skill=swordattackskillfactory(1,15,28,1000,7,'knockback'),
- },
+ {name='',sprites={},skill=swordattackskillfactory(15,28,1000,7)},
+ {name='ice ',col=12,sprites=pfn'30,46,162,63,232,79,49,199,214,',
+  skill=swordattackskillfactory(15,28,1000,7,'ice',150)},
+ {name='flaming ',col=8,sprites=pfn'29,45,162,62,231,78,178,198,213,',
+  skill=swordattackskillfactory(15,28,1000,14,'fire',60)},
+ {name='heavy ',col=13,sprites=pfn'-1,-1,-1,-1,-1,-1,-1,196,',
+  skill=swordattackskillfactory(15,28,1000,7,'knockback')},
 }
 
 bowprefix={
- {
-  name='',
-  col=4,
-  skill=bowattackskillfactory(1,26,6,1,7,2),
-  twohand=true,
- },
- {
-  name='ice ',
-  col=12,
-  skill=bowattackskillfactory(1,26,6,1,7,12,'ice',150),
-  twohand=true,
- },
+ {name='',col=4,sprites={},skill=bowattackskillfactory(26,6,1,7,2),twohand=true},
+ {name='ice ',col=12,sprites=pfn'30,46,162,63,232,79,49,199,214,',
+  skill=bowattackskillfactory(26,6,1,7,12,'ice',150),twohand=true},
+ {name='flaming ',col=8,sprites=pfn'29,45,162,62,231,78,178,198,213,',
+  skill=bowattackskillfactory(26,6,1,14,8,'fire',60),twohand=true},
 }
 
+amuletprefix={
+ {
+  name='skull ',
+  sprites=pfn'-1,-1,31,',
+  skill={
+   sprite=9,
+   desc='passive, resurrect once',
+   onhit=function (_a)
+    if _a.hp <= 0 then
+     _a.hp,_a.removeme=3
+     for k,v in pairs(slots) do
+      local _item=_a.items[v]
+      if _item and _item.prefix and
+         _item.prefix.skill == amuletprefix[1].skill then
+       _a.items[v]=nil
+       saveitem(k,0,0,0)
+       del(_a.passiveskills,_item.prefix.skill)
+       break
+      end
+     end
+     sfx(21)
+    end
+   end
+  }
+ }
+}
+
+comcols2=pfn'-1,-1,-1,-1,2,'
+
 prefix={
- {
-  name='knight\'s ',
-  armor=1,
+ {name='knight\'s ',sprites=pfn'26,42,-1,59,228,76,',
+  cols=pfn'13,13,-1,13,13,13,-1,13,',cols2=pfn'-1,-1,-1,-1,1,',armor=1},
+ {name='feathered ',sprites=pfn'27,43,161,60,229,95,177,197,212,',
+  cols=pfn'4,13,-1,2,4,4,-1,15,3,',cols2=comcols2,spdfactor=0.1},
+ {name='dragonscale ',sprites=pfn'28,44,-1,61,230,77,',
+  cols=pfn'9,9,-1,9,9,9,-1,-1,-1,',cols2=pfn'-1,-1,-1,-1,4,',skill={
+  sprite=8,desc='passive, cannot be burned',immune='fire'}
  },
- {
-  name='feathered ',
-  spdfactor=0.1,
- },
- {
-  name='dragonscale ',
-  skill=skillfactory(7,'passive, cannot be burned',nil,'fire'),
- },
+ {name='warming ',sprites=pfn'29,45,162,62,231,78,178,198,213,',
+  cols=pfn'8,8,-1,2,8,8,-1,8,8,',cols2=comcols2,skill={
+  sprite=11,desc='passive, cannot be frozen',immune='ice'}
+ }
 }
 
 suffix={
- {
-  name=' of resurrect',
-  amulet_spr=6,
-  skill=skillfactory(5,'passive, resurrect once',function (_a)
-   if _a.hp <= 0 then
-    _a.hp,_a.removeme=3,nil
-    for k,v in pairs(slots) do
-     local _item=_a.items[v]
-     if _item and
-        _item.suffix and
-        _item.suffix.skill == suffix[1].skill then
-      _a.items[v]=nil
-      saveitem(k,0,0,0)
-      del(_a.passiveskills,suffix[1].skill)
-      break
-     end
-    end
-    sfx(21)
-   end
-  end),
+ {name=' of haste',sprites=pfn'27,43,161,60,229,95,177,197,212,',
+  cols=pfn'4,13,-1,2,4,4,-1,15,3,',cols2=comcols2,spdfactor=0.1},
+ {name=' of phasing',sprites=pfn'30,46,162,63,232,79,47,199,214,',
+  cols=pfn'13,6,-1,12,12,12,-1,12,12,',cols2=comcols2,skill={
+   sprite=10,
+   desc='passive, phase away on hit',
+   onhit=phasing
+  }
+ },
+ {name=' of firebolt',sprites=pfn'29,45,162,62,231,78,178,198,213,',
+  cols=pfn'8,8,-1,2,8,8,-1,8,8,',cols2=comcols2,skill=boltskillfactory(
+  50,0,120,1,'fire',14,pfn'8,14,',pfn'14,8,',15,'firebolt')
  },
  {
-  name=' of haste',
-  spdfactor=0.1,
- },
- {
-  name=' of phasing',
-  skill=skillfactory(27,'passive, phase away on hit',phasing),
- },
- {
-  name=' of firebolt',
-  book_spr=45,
-  skill=boltskillfactory(
-    1,
-    50,
-    0,
-    120,
-    1,
-    'fire',
-    14,
-    pfn'8,14,',
-    pfn'14,8,',
-    29,
-    'firebolt'),
- },
- {
-  name=' of icebolt',
-  book_spr=63,
-  skill=boltskillfactory(
-    0,
-    40,
-    0,
-    150,
-    1,
-    'ice',
-    7,
-    pfn'12,12,',
-    pfn'12,13,',
-    28,
-    'icebolt')
- },
+  name=' of icebolt',sprites=pfn'30,46,162,63,232,79,179,199,214,',
+  cols=pfn'13,6,-1,12,12,12,-1,12,12,',cols2=comcols2,skill=boltskillfactory(
+  40,0,150,1,'ice',7,pfn'12,12,',pfn'12,13,',14,'icebolt')
+ }
 }
 
-cloakidling,
-shieldidling,
-swordidling,
-bowidling
-  =
-  {pfn'0,6,3,4,-1,-2,'},
-  {pfn'35,9,5,5,-2,-3,'},
-  {pfn'9,9,5,5,-2,-3,'},
-  {pfn'25,9,5,5,-2,-3,'}
-
+cloakidling,shieldidling,swordidling,bowidling
+  ={pfn'40,9,3,4,-1,-2,'},{pfn'35,9,5,5,-2,-3,'},
+  {pfn'9,9,5,5,-2,-3,'},{pfn'25,9,5,5,-2,-3,'}
 
 itemclasses={
- { -- 1
-  slot='boots',
-  name='boots',
-  sprite=41,
-  col=4,
+ {slot='boots',name='boots',sprite=25,col=2},
+ {slot='helmet',name='helmet',sprite=41,col=5},
+ {slot='amulet',name='amulet',sprite=160,prefix=amuletprefix},
+ {slot='armor',name='platemail',sprite=58,col=5,armor=1},
+ {slot='armor',name='cloak',sprite=227,col=4,col2=2,iscloak=true,
+  idling=cloakidling,moving=cloakidling, attacking=cloakidling,recovering=cloakidling},
+ {slot='offhand',name='shield',sprite=75,col=2,
+  idling=shieldidling,moving=shieldidling,attacking=shieldidling,recovering=shieldidling},
+ {slot='book',name='book',sprite=176},
+ {slot='weapon',name='sword',sprite=195,col=6,prefix=swordprefix,
+  idling=swordidling,moving=swordidling,attacking={
+   pfn'14,9,5,5,-2,-3,',pfn'18,9,7,5,-3,-3,'},
+  recovering=swordidling
  },
- { -- 2
-  slot='helmet',
-  name='helmet',
-  sprite=42,
-  col=13,
- },
- { -- 3
-  slot='amulet',
-  name='amulet',
-  sprite=25,
- },
- { -- 4 platemail
-  slot='armor',
-  name='platemail',
-  sprite=58,
-  col=6,
- },
- { -- 5 cloak
-  slot='armor',
-  name='cloak',
-  iscloak=true,
-  sprite=26,
-  col=2,
-  col2=1,
-  idling=cloakidling,
-  moving=cloakidling,
-  attacking=cloakidling,
-  recovering=cloakidling,
- },
- { -- 6 shield
-  slot='offhand',
-  name='shield',
-  sprite=44,
-  col=13,
-  idling=shieldidling,
-  moving=shieldidling,
-  attacking=shieldidling,
-  recovering=shieldidling,
- },
- { -- 7
-  slot='book',
-  name='book',
-  sprite=79,
- },
- { -- 8 sword
-  slot='weapon',
-  name='sword',
-  sprite=47,
-  col=6,
-  prefix=swordprefix,
-  idling=swordidling,
-  moving=swordidling,
-  attacking={
-   pfn'14,9,5,5,-2,-3,',
-   pfn'18,9,7,5,-3,-3,'
-  },
-  recovering=swordidling,
- },
- { -- 9 bow
-  slot='weapon',
-  name='bow',
-  twohand=true,
-  sprite=46,
-  col=4,
-  prefix=bowprefix,
-  idling=bowidling,
-  moving=bowidling,
-  attacking={
-   pfn'30,9,5,5,-2,-3,',
-   pfn'25,9,1,1,-2,-3,',
-  },
-  recovering=bowidling,
+ {slot='weapon',name='bow',sprite=211,col=4,twohand=true,prefix=bowprefix,
+  idling=bowidling,moving=bowidling,attacking={
+   pfn'30,9,5,5,-2,-3,',pfn'25,9,1,1,-2,-3,'},
+  recovering=bowidling
  }
 }
 
 themes={
- { -- forest
-  newmeleetroll,
-  newmeleetroll,
-  newtrollcaster,
-  newgianttroll,
- },
- { -- cave
-  newbatenemy,
-  newmeleeskele,
-  newbowskele,
-  newskeleking,
- },
- { --  catacombs
-  newbatenemy,
-  newmeleeskele,
-  newbowskele,
-  newskeleking,
- },
+ {newmeleetroll,newmeleetroll,newtrollcaster,newgianttroll},
+ {newbatenemy,newmeleeskele,newbowskele,newskeleking},
+ {newfirebatenemy,newdemoncaster,newdemoncaster,newdemonboss}
 }
 
 -- init avatar
-
 idleframe=pfn'0,10,3,4,-1,-2,'
-
-avatar=actorfactory{
+avatar=actfact{
  x=64,y=56,
  hw=1.5,hh=2,
- a=0,
  spdfactor=1,
  spd=0.5,
  hp=3,
@@ -1204,7 +931,7 @@ avatar=actorfactory{
  idling={idleframe},
  moving={idleframe,pfn'3,10,3,4,-1,-2,'},
  attacking={animspd=0,pfn'6,10,3,4,-1,-2,',idleframe},
- recovering={idleframe},
+ recovering={idleframe}
 }
 
 for k,v in pairs(slots) do
@@ -1212,38 +939,19 @@ for k,v in pairs(slots) do
 end
 
 function dungeoninit()
- _update60,_draw=
-   dungeonupdate,
-   dungeondraw
+ _update60,_draw=dungeonupdate,dungeondraw
 
- avatar.removeme,
- avatar.hp,
- avatar.x,
- avatar.y
-   =nil,3,64,56
-
- dungeonlvl,
- theme,
- nexttheme
-   =1,1,1
+ dungeonlvl,theme,nexttheme,
+ avatar.hp,avatar.x,avatar.y,avatar.removeme
+   =1,1,1,3,64,56
 
  for _t in all(themes) do
   _t.lvl_c=4+flr(rnd()*1)
  end
-
  mapinit()
 end
 
-function nextfloor()
- theme=nexttheme
- dungeonlvl+=1
- mapinit()
-end
-
-tick,
-kills,
-curenemyi
-  =0,0,1
+tick,kills,curenemyi=0,0,1
 
 function mapinit()
  local basemap={}
@@ -1255,42 +963,21 @@ function mapinit()
  end
 
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
-
- if theme == 1 and door then
-  local doorx,doory=flr(door.x/8),flr(door.y/8)
-  if doorx == 0 then
-   avatarx=14
-  elseif doorx == 15 then
-   avatarx=1
-  elseif doory == 0 then
-   avatary=14
-  elseif doory == 15 then
-   avatary=1
-  end
- end
-
- local curx,cury=avatarx,avatary
- local a=0
- local steps=500
- local step_c=steps
- local enemy_c=10
- local enemytypes=pfn'5,6,7,'
- local enemies={}
- local angles=pfn'-0.25,0.25,'
- themes[theme].lvl_c-=1
+ local curx,cury,a,steps,enemy_c,enemytypes,enemies,angles=
+  avatarx,avatary,0,600-theme*100,10,pfn'5,6,7,',{},
+   ({pfn'-0.25,0,0.25,0.5',pfn'-0.25,0.25,',pfn'-0.25,0,0.25,'})[theme]
+ local step_c,_theme=steps,themes[theme]
+ _theme.lvl_c-=1
 
  while step_c > 0 do
   local nextx,nexty=curx+cos(a),cury+sin(a)
-
   if flr(rnd(3)) == 0 or
      nextx <= 0 or nextx > 14 or
      nexty <= 0 or nexty > 14 then
    a+=angles[flr(rnd(#angles)+1)]
   elseif step_c != 0 and step_c % (steps / enemy_c) == 0 then
    add(enemies,{
-    x=curx,
-    y=cury,
-    typ=enemytypes[flr(rnd(#enemytypes)+1)],
+    x=curx,y=cury,typ=enemytypes[flr(rnd(#enemytypes)+1)],
    })
   else
    curx,cury=nextx,nexty
@@ -1303,39 +990,27 @@ function mapinit()
   basemap[_e.y][_e.x]=_e.typ
  end
 
- if themes[theme].lvl_c == 0 then
+ if _theme.lvl_c == 0 then
   local enemy=enemies[#enemies]
   basemap[enemy.y][enemy.x]=8
   nexttheme+=1
  end
 
  -- door
- if nexttheme == 1 then
-  if abs(a%1) == 0.25 then
-   a=0.75
-  end
-  while curx > 0 and curx < 15 and
-        cury > 0 and cury < 15 do
-   basemap[cury][curx]=0
-   curx+=cos(a)
-   cury+=sin(a)
-  end
- end
- basemap[cury][curx]=2
- basemap[avatary][avatarx]=15
+ basemap[cury][curx],basemap[avatary][avatarx]=2,15
 
  -- reset
  curenemyi,
  tick,
- isdoorspawned,
- boss,
  walls,
  actors,
  attacks,
  pemitters,
  vfxs,
- interactables=
-   1,0,nil,nil,{},{},{},{},{},{}
+ interactables,
+ isdoorspawned,
+ boss=
+   1,0,{},{},{},{},{},{}
 
  for _y=-1,16 do
   walls[_y]={}
@@ -1344,24 +1019,17 @@ function mapinit()
 
    -- create avatar
    if _col == 15 then
-    avatar=actorfactory(avatar)
-    avatar.x,avatar.y=ax,ay
-    avatar.armor=avatar.startarmor
+    avatar=actfact(avatar)
+    avatar.x,avatar.y,avatar.armor=ax,ay,avatar.startarmor
     add(actors,avatar)
 
     -- add mule
     add(interactables,{
-     x=avatar.x,
-     y=avatar.y,
-     hw=4,
-     hh=2.5,
-     sprite=2,
+     x=avatar.x,y=avatar.y,
+     hw=4,hh=2.5,
+     sprite=0,
      text='\x8e inventory',
-     enter=function ()
-      if btnp(4) then
-       equipinit()
-      end
-     end,
+     enter=equipinit,
     })
 
     _col=0
@@ -1369,57 +1037,41 @@ function mapinit()
 
    -- create enemy
    if _col >= 5 and _col <= 8 then
-    add(actors,
-      themes[theme][_col-4](ax,ay))
+    add(actors,_theme[_col-4](ax,ay))
     _col=0
    end
 
    -- create door
    if _col == 2 then
-
     door={
-     x=ax,
-     y=ay,
-     hw=4,
-     hh=4,
+     x=ax,y=ay,hw=4,hh=4,
      text='\x8e go deeper',
      enter=function()
-      if btnp(4) then
-       nextfloor()
-      end
+      theme=nexttheme
+      dungeonlvl+=1
+      mapinit()
      end,
     }
 
     if nexttheme > #themes then
      door.text,door.sprite,door.enter=
-      '\x8e go home',248,function()
-       if btnp(4) then
-        splash()
-       end
-      end
+      '\x8e go home',248,splash
     else
      door.sprite=178+nexttheme*16
     end
 
     add(interactables,door)
-
     _col=0
-    if theme == 1 then
-     _col=1
-    end
    end
 
-   -- set walls value
    walls[_y][_x]=_col
   end
  end
 
- -- start theme music
  music(theme*10,0,0b0011)
  if boss then
   music(1)
  end
-
 end
 
 function dungeonupdate()
@@ -1431,7 +1083,7 @@ function dungeonupdate()
 
  if avatar.hp <= 0 then
   if tick-deathts > 150 and btnp(4) then
-   avatar.inventory,kills,theme,door={},0,nil,nil
+   avatar.inventory,kills,theme,door={},0
    equipinit()
   end
   return
@@ -1442,17 +1094,15 @@ function dungeonupdate()
   if avatar.state != 'recovering' and
      avatar.state != 'attacking' then
    avatar.a=angle
-   avatar.dx=norm(cos(avatar.a))
-   avatar.dy=norm(sin(avatar.a))
-   avatar.state='moving'
-   avatar.state_c=2
+   avatar.dx,avatar.dy,avatar.state,avatar.state_c=
+    norm(cos(avatar.a)),norm(sin(avatar.a)),'moving',2
   end
  elseif avatar.state != 'recovering' then
   avatar.dx,avatar.dy=0,0
  end
 
  -- consider skill button input
- local skillbuttondown=nil
+ skillbuttondown=nil
  if btn(4) then
   skillbuttondown=1
  elseif btn(5) then
@@ -1466,13 +1116,10 @@ function dungeonupdate()
   local skill=avatar['skill'..skillbuttondown]
 
   if skill then
-   avatar.state='attacking'
-   avatar.currentskill=skill
-   avatar.ispreprfm=true
+   avatar.state,avatar.currentskill,avatar.ispreprfm,
+   avatar.state_c,avatar.curframe=
+    'attacking',skill,true,skill.preprfm,1
 
-   avatar.state_c=skill.preprfm
-
-   avatar.curframe=1
    if avatar.items.weapon then
     avatar.items.weapon.curframe=1
    end
@@ -1498,7 +1145,7 @@ function dungeonupdate()
   if actor.state == 'idling' then
 
    -- reset enemy vars
-   actor.tarx,actor.tary,actor.ismovingoutofcollision=nil,nil,nil
+   actor.tarx,actor.tary,actor.ismovingoutofcollision=nil
 
   elseif actor.state == 'attacking' then
    if actor == avatar then
@@ -1510,11 +1157,10 @@ function dungeonupdate()
       skill.perform(avatar,skill)
 
       -- set avatar to postperform
-      avatar.state_c=skill.postprfm
-      avatar.ispreprfm=false
+      avatar.state_c,avatar.ispreprfm,avatar.curframe=
+       skill.postprfm,false,2
 
       -- set next attacking frame
-      avatar.curframe=2
       if avatar.items.weapon then
        avatar.items.weapon.curframe=2
       end
@@ -1530,9 +1176,8 @@ function dungeonupdate()
    else -- enemies
 
     if actor.laststate != 'attacking' then
-     actor.ispreprfm=true
-     actor.curframe=1
-     actor.state_c=actor.att_preprfm
+     actor.ispreprfm,actor.curframe,actor.state_c=
+      true,1,actor.att_preprfm
 
      if actor.onpreprfm then
       actor.onpreprfm(actor)
@@ -1541,9 +1186,8 @@ function dungeonupdate()
 
     if actor.ispreprfm and actor.state_c <= 0 then
      actor.prfmatt(actor)
-     actor.ispreprfm=false
-     actor.state_c=actor.att_postprfm
-     actor.curframe=2
+     actor.ispreprfm,actor.state_c,actor.curframe=
+      false,actor.att_postprfm,2
 
     elseif actor.state_c <= 0 then
      if actor.afterpostprfm then
@@ -1559,35 +1203,23 @@ function dungeonupdate()
    end
 
    if actor.state_c <= 0 then
-    actor.state='idling'
-    actor.effect=nil
+    actor.state,actor.effect='idling'
    end
 
-  elseif actor.state == 'moving' and
-         actor.isenemy then
+  elseif actor.state == 'moving' and actor.isenemy then
    if actor.state_c <= 0 then
     actor.ismovingoutofcollision=nil
    end
+   actor.a=atan2(actor.tarx-actor.x,actor.tary-actor.y)
 
-   actor.a=atan2(
-     actor.tarx-actor.x,
-     actor.tary-actor.y)
-
-   if dist(
-       actor.x,
-       actor.y,
-       actor.tarx,
-       actor.tary) <= actor.spd + 0.1 then
+   if dist(actor.x,actor.y,actor.tarx,actor.tary) <= actor.spd + 0.1 then
     actor.state='idling'
    end
-   actor.dx=cos(actor.a)*actor.spd
-   actor.dy=sin(actor.a)*actor.spd
+   actor.dx,actor.dy=cos(actor.a)*actor.spd,sin(actor.a)*actor.spd
   end
 
-  if actor == avatar and
-     actor.state_c <= 0 then
-   actor.state='idling'
-   actor.currentskill=nil
+  if actor == avatar and actor.state_c <= 0 then
+   actor.state,actor.currentskill='idling'
   end
 
   actor.laststate=actor.state
@@ -1603,104 +1235,73 @@ function dungeonupdate()
   local enemy=actors[curenemyi]
   if enemy and enemy.isenemy then
 
-   -- todo: ai should have aggravator instead of
-   --       avatar hard-coded
-
    -- aggression vars
-   local disttoavatar=dist(enemy.x,enemy.y,avatar.x,avatar.y)
-   local inattdist=disttoavatar <= enemy.att_range
-   local haslostoavatar=haslos(enemy.x,enemy.y,avatar.x,avatar.y)
-   local isattacking=enemy.state == 'attacking'
-
-   -- movement vars
-   local collidedwithwall=enemy.wallcollisiondx != nil
-   local istooclosetoavatar=disttoavatar <= enemy.comfydist
-   local hastoocloseto=#enemy.toocloseto > 0
-   local hastarget=enemy.tarx!=nil
+   disttoavatar=dist(enemy.x,enemy.y,avatar.x,avatar.y)
+   haslostoavatar=haslos(enemy.x,enemy.y,avatar.x,avatar.y)
 
    -- resolving effect
    if enemy.state=='recovering' then
 
    -- continue to move out of collision
    elseif enemy.ismovingoutofcollision then
-
     enemy.state='moving'
 
-   -- too close to avatar, note: collidedwithwall not working here?
-   elseif istooclosetoavatar and (not isattacking) and (not collidedwithwall) then
+   -- too close to avatar, note: collided with wall not working here?
+   elseif disttoavatar <= enemy.comfydist and enemy.state != 'attacking' and enemy.wallcollisiondx == nil then
 
-    enemy.state='moving'
     enemy.a=atan2(
       avatar.x-enemy.x,
       avatar.y-enemy.y)+0.5 -- note: go the other way
-    enemy.tarx=enemy.x+cos(enemy.a)*10
-    enemy.tary=enemy.y+sin(enemy.a)*10
-    enemy.ismovingoutofcollision=true
-    enemy.state_c=60
-    enemy.spd=enemy.runspd
+    enemy.state,enemy.tarx,enemy.tary,enemy.ismovingoutofcollision,enemy.state_c,enemy.spd=
+     'moving',enemy.x+cos(enemy.a)*10,enemy.y+sin(enemy.a)*10,true,60,enemy.runspd
 
    -- attack
-   elseif isattacking or inattdist and
+   elseif enemy.state == 'attacking' or disttoavatar <= enemy.att_range and
          (haslostoavatar or enemy.nolos) then
 
     if enemy.laststate != 'attacking' then
      enemy.curframe=1
     end
 
-    enemy.state='attacking'
-    enemy.tarx=avatar.x
-    enemy.tary=avatar.y
-    -- todo: swing timer
+    enemy.state,enemy.tarx,enemy.tary='attacking',avatar.x,avatar.y
 
    -- colliding w wall, move out of
-   elseif collidedwithwall then
+   elseif enemy.wallcollisiondx then
 
-    enemy.state='moving'
     enemy.a=atan2(
       enemy.x+enemy.wallcollisiondx-enemy.x,
       enemy.y+enemy.wallcollisiondy-enemy.y)+rnd(0.2)-0.1
-    enemy.tarx=enemy.x+cos(enemy.a)*10
-    enemy.tary=enemy.y+sin(enemy.a)*10
-    enemy.ismovingoutofcollision=true
-    enemy.state_c=60
+    enemy.state,enemy.tarx,enemy.tary,enemy.ismovingoutofcollision,enemy.state_c,enemy.spd=
+     'moving',enemy.x+cos(enemy.a)*10,enemy.y+sin(enemy.a)*10,true,60,enemy.runspd
 
    -- colliding w other, move out of
-   elseif hastoocloseto then
+   elseif #enemy.toocloseto > 0 then
 
-    enemy.state='moving'
     local collidedwith=enemy.toocloseto[1]
     enemy.a=atan2(
       collidedwith.x-enemy.x,
       collidedwith.y-enemy.y)+0.5 -- note: go the other way
-    enemy.tarx=enemy.x+cos(enemy.a)*10
-    enemy.tary=enemy.y+sin(enemy.a)*10
-    enemy.ismovingoutofcollision=true
-    enemy.state_c=60
+    enemy.state,enemy.tarx,enemy.tary,enemy.ismovingoutofcollision,enemy.state_c,enemy.spd=
+     'moving',enemy.x+cos(enemy.a)*10,enemy.y+sin(enemy.a)*10,true,60,enemy.runspd
 
    -- set avatar position as tar, move there
    elseif haslostoavatar then
-
-    enemy.state='moving'
-    enemy.tarx=avatar.x
-    enemy.tary=avatar.y
-    enemy.a=atan2(
-      enemy.tarx-enemy.x,
-      enemy.tary-enemy.y)
-    enemy.spd=enemy.runspd
+    
+    enemy.state,enemy.tarx,enemy.tary,enemy.spd=
+     'moving',avatar.x,avatar.y,enemy.runspd
+    enemy.a=atan2(enemy.tarx-enemy.x,enemy.tary-enemy.y)
 
    -- continue to move to tar
-   elseif hastarget then
+   elseif enemy.tarx then
 
     enemy.state='moving'
 
    -- roam
-   elseif not hastarget then
+   elseif not enemy.tarx then
 
-    enemy.state='moving'
     enemy.a=rnd()
-    enemy.tarx=enemy.x+cos(enemy.a)*10
-    enemy.tary=enemy.y+sin(enemy.a)*10
-    enemy.spd=enemy.runspd*0.5
+    enemy.state,enemy.tarx,enemy.tary,enemy.spd=
+     'moving',enemy.x+cos(enemy.a)*10,enemy.y+sin(enemy.a)*10,enemy.runspd*0.5
 
     if enemy.onroam then
      enemy.onroam(enemy)
@@ -1723,8 +1324,7 @@ function dungeonupdate()
 
  -- check lvl cleared
  if enemy_c <= 0 and not isdoorspawned then
-  isdoorspawned=true
-  walls[(door.y-4)/8][(door.x-4)/8]=0
+  isdoorspawned,walls[(door.y-4)/8][(door.x-4)/8]=true,0
   music(6)
  end
 
@@ -1733,8 +1333,8 @@ function dungeonupdate()
  if isdoorspawned then
   for i in all(interactables) do
    if isaabbscolliding(avatar,i) then
-    i.enter(i)
     curinteractable=i
+    if btnp(4) then i.enter(i) end
    end
   end
  end
@@ -1747,34 +1347,30 @@ function dungeonupdate()
       attack.isenemy != _a.isenemy and
       isaabbscolliding(attack,_a) then
     attack.tar_c-=1
-
-    local hitsfx=6
-
-    -- special case if ice and already frozen
-    if attack.typ == 'ice' and
-       _a.effect and
-       _a.effect.func == freezeeffect then
-     attack.dmg=max(attack.dmg,1)
-    end
+    local dmg,hitsfx=1,6
 
     for skill in all(_a.passiveskills) do
-     if attack.typ and
+     if attack.typ != nil and
         skill.immune == attack.typ then
-      attack.dmg=0
-      attack.recovertime=nil
-      attack.typ=nil
+      attack.recovertime,attack.typ=nil
      end
+    end
+
+    -- special case if ice and already frozen
+    if attack.typ == 'ice' and not (_a.effect and
+        _a.effect.func == freezeeffect) then
+     dmg=0
     end
 
     -- do dmg
     if _a.armor and _a.armor > 0 then
-     _a.armor-=attack.dmg
+     _a.armor-=dmg
      if _a.armor < 0 then
       _a.hp+=_a.armor
       _a.armor=0
      end
     else
-     _a.hp-=attack.dmg
+     _a.hp-=dmg
     end
 
     -- go into recovering
@@ -1787,64 +1383,57 @@ function dungeonupdate()
 
     -- check if _a dead
     if _a.hp <= 0 then
-     _a.removeme=true
+     _a.removeme,hitsfx=true,3
      kills+=1
-     hitsfx=3
 
      -- add chest
-     if kills % (6-theme) <= 0 or _a == boss then
-      debug(kills)
-      kills=0
+     local isbosschest=_a == boss
+     if kills % (6-theme) <= 0 or isbosschest then
+      sprite,kills=isbosschest and 73 or 22,0
       add(interactables,{
        x=_a.x,y=_a.y,
        hw=4,hh=4,
-       sprite=22,
+       sprite=sprite,
        text='\x8e loot',
+       isbosschest=isbosschest,
        enter=function(i)
-        if btnp(4) and not i.isopen then
+        if not i.isopen then
          if #avatar.inventory >= 10 then
           i.text='inventory full, \x8e try again'
           sfx(7)
          else
           i.isopen,i.text,i.sprite=
-            true,'[empty]',23
+            true,'[empty]',i.sprite+1
 
           local _itemclassn=flr(rnd(#itemclasses))+1
           local itemclass=itemclasses[_itemclassn]
           local _prefix=itemclass.prefix or prefix
-          local _prefixn,_suffixn=
+          local _prefixn,_suffixn=_itemclassn == 7 and 0 or
             flr(rnd(#_prefix+1)),
             flr(rnd(#suffix+1))
 
-          if _itemclassn == 7 then
-           _prefixn=0
-          end
-
-          item=createitem(_itemclassn,_prefixn,_suffixn)
-
-          add(avatar.inventory,item)
+          _suffixn=i.isbosschest and _suffixn or 0
           sfx(20)
+
+          add(avatar.inventory,createitem(_itemclassn,_prefixn,_suffixn))
          end
         end
-       end,
+       end
       })
      end
-     -- todo: add death vfx here
     end
 
     -- effects
     _a.dmgfx_col=8 -- note: red is default color
 
     if attack.typ == 'knockback' and not _a.isbig then
-     _a.dx=cos(attack.knocka)*5
-     _a.dy=sin(attack.knocka)*5
+     _a.dx,_a.dy=cos(attack.knocka)*5,sin(attack.knocka)*5
 
     elseif attack.typ == 'fire' then
      _a.effect={func=burningeffect}
 
     elseif attack.typ == 'ice' then
-     _a.effect={func=freezeeffect}
-     _a.dmgfx_col=12
+     _a.effect,_a.dmgfx_col={func=freezeeffect},12
     end
 
     sfx(hitsfx)
@@ -1865,6 +1454,8 @@ function dungeonupdate()
       skill.onhit(_a)
      end
     end
+
+    attack.removeme=attack.tar_c <= 0
    end
   end
  end
@@ -1878,10 +1469,8 @@ function dungeonupdate()
  for i=1,#actors-1 do
   for j=i+1,#actors do
    local enemy,other=actors[i],actors[j]
-   if enemy != other and
-      enemy != avatar and
-      other != avatar and
-      enemy.isenemy and
+   if enemy != other and enemy != avatar and
+      other != avatar and enemy.isenemy and
       dist(enemy.x,enemy.y,other.x,other.y) <
         enemy.hh + other.hh then
     add(enemy.toocloseto,other)
@@ -1895,7 +1484,6 @@ function dungeonupdate()
   if _a != avatar and not _a.isghost then
    local _dx,_dy=collideaabbs(
      isaabbscolliding,avatar,_a,avatar.dx,avatar.dy)
-
    avatar.dx,avatar.dy=_dx,_dy
   end
  end
@@ -1906,12 +1494,9 @@ function dungeonupdate()
     isinsidewall,_a,nil,_a.dx,_a.dy)
 
   if _a.isenemy then
-   _a.wallcollisiondx=nil
-   _a.wallcollisiondy=nil
-   if _dx != _a.dx or
-      _dy != _a.dy then
-    _a.wallcollisiondx=_dx
-    _a.wallcollisiondy=_dy
+   _a.wallcollisiondx,_a.wallcollisiondy=nil
+   if _dx != _a.dx or _dy != _a.dy then
+    _a.wallcollisiondx,_a.wallcollisiondy=_dx,_dy
    end
   end
 
@@ -1922,28 +1507,20 @@ function dungeonupdate()
 
  -- update attacks
  for attack in all(attacks) do
-  if attack.state_c then
+  if attack.state_c and not attack.removeme then
    attack.state_c-=1
-   if attack.state_c <= 0 or
-      attack.tar_c <= 0 then
-    attack.removeme=true
-   end
+   attack.removeme=attack.state_c <= 0
   end
 
-  if attack.dx then
-   attack.x+=attack.dx
-  end
-  if attack.dy then
-   attack.y+=attack.dy
-  end
+  attack.x+=(attack.dx or 0)
+  attack.y+=(attack.dy or 0)
 
   if attack.x > 128 or attack.x < 0 or
      attack.y > 128 or attack.y < 0 then
    attack.removeme=true
   end
 
-  if not attack.throughwalls and
-     isinsidewall(attack) then
+  if isinsidewall(attack) and not attack.throughwalls then
    attack.removeme=true
   end
  end
@@ -1958,10 +1535,7 @@ function dungeonupdate()
  -- update actor animation frames
  for _a in all(actors) do
   local stateframes=_a[_a.state]
-  local animspd=0.25 -- note: default
-  if stateframes.animspd then
-   animspd=stateframes.animspd
-  end
+  animspd=stateframes.animspd or 0.25
   _a.curframe+=animspd*_a.spd
   if _a.curframe >= #stateframes+1 then
    _a.curframe=1
@@ -1982,20 +1556,11 @@ function dungeonupdate()
 
  -- update pemitters
  for _p in all(pemitters) do
-  if not _p.c then
-   _p.c=_p.prate[1]
-  end
-  if not _p.particles then
-   _p.particles={}
-  end
+  _p.c,_p.particles=_p.c or _p.prate[1],_p.particles or {}
   _p.c-=1
   if _p.c <= 0 then
    local x,y,poffsets,pdx,pdy=
-     _p.follow.x,
-     _p.follow.y,
-     _p.poffsets,
-     _p.dx,
-     _p.dy
+     _p.follow.x,_p.follow.y,_p.poffsets,_p.dx,_p.dy
 
    x+=poffsets[1]+rnd(poffsets[3]+abs(poffsets[1]))
    y+=poffsets[2]+rnd(poffsets[4]+abs(poffsets[2]))
@@ -2013,9 +1578,7 @@ function dungeonupdate()
   end
 
   _p.life-=1
-  if _p.life <= 0 then
-   _p.removeme=true
-  end
+  _p.removeme=_p.life <= 0
 
   -- update this pemitters particles
   for par in all(_p.particles) do
@@ -2108,11 +1671,9 @@ function dungeondraw()
 
  -- draw actors
  for _a in all(actors) do
-  local state,flipx=_a.state,false
-  local f=_a[state][flr(_a.curframe)]
-  if _a.a and _a.a >= 0.25 and _a.a <= 0.75 then
-   flipx=true
-  end
+  local state=_a.state
+  local f,flipx=_a[state][flr(_a.curframe)],
+   _a.a and _a.a >= 0.25 and _a.a <= 0.75
 
   -- draw item colors
   if _a == avatar then
@@ -2127,6 +1688,10 @@ function dungeondraw()
    end
   end
 
+  for k,v in pairs(_a.cols or {}) do
+   pal(k,v,0)
+  end
+
   -- draw dmg overlay color
   if _a.dmgfx_c > 0 then
    for i=1,15 do
@@ -2135,18 +1700,6 @@ function dungeondraw()
   end
 
   sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
-
-  -- draw weapon
-  if _a == avatar and
-     avatar.items.weapon then
-   item=avatar.items.weapon
-   local stateframes=item[state]
-   local f=stateframes[min(
-     flr(item.curframe),
-     #stateframes)]
-   pal(6,item.col,0)
-   sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
-  end
 
   -- draw cloak
   if _a == avatar and
@@ -2159,6 +1712,18 @@ function dungeondraw()
      #stateframes)]
    pal(1,item.col,0)
    pal(3,item.col2,0)
+   sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
+  end
+
+  -- draw weapon
+  if _a == avatar and
+     avatar.items.weapon then
+   item=avatar.items.weapon
+   local stateframes=item[state]
+   local f=stateframes[min(
+     flr(item.curframe),
+     #stateframes)]
+   pal(6,item.col,0)
    sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
   end
 
@@ -2218,11 +1783,8 @@ function dungeondraw()
  end
 
  for _i=0,avatar.startarmor-1 do
-  x=0
-  if _i >= avatar.armor then
-   x=5
-  end
-  sspr(x,0,5,5,121-offset-_i*6,1)
+  x=_i >= avatar.armor and 53 or 48
+  sspr(x,40,5,5,121-offset-_i*6,1)
  end
 
  if dungeonlvl > 0 then
@@ -2251,38 +1813,30 @@ end
 
 -- equip scene
 
-inventorycur,
-equippedcur,
-availableskillscur,
-sectioncur,
-spdfactornr,
-equipped,
-availableskills,
-equipslots=
-  1,1,1,4,0,{},{},
-  {
-   {'helmet',10},
-   {'armor',11},
-   {'amulet',8},
-   {'boots',9},
-   {'book',13},
-   {'offhand',12},
-   {'weapon',15},
-  }
-
 function equipinit()
- _update60=equipupdate
- _draw=equipdraw
+ _update60,
+ _draw,
+ inventorycur,
+ equippedcur,
+ availableskillscur,
+ sectioncur,
+ spdfactornr,
+ equipped,
+ availableskills=
+   equipupdate,equipdraw,1,1,1,4,0,{},{}
 end
 
 function equipupdate()
 
+ local btnp0,btnp1,btnp4,btnp5=btnp(0),btnp(1),btnp(4),btnp(5)
+
  -- init equipped items
  avatar.startarmor,
  avatar.spdfactor,
+ avatar_items,
  spdfactornr,
- equipped=0,1,0,{}
- for _,item in pairs(avatar.items) do
+ equipped=0,1,avatar.items,0,{}
+ for _,item in pairs(avatar_items) do
   add(equipped,item)
   if item.armor then
    avatar.startarmor+=item.armor
@@ -2312,18 +1866,16 @@ function equipupdate()
  avatar.passiveskills={}
  for item in all(equipped) do
   local _prefix,_suffix=item.prefix,item.suffix
-  if _prefix and
+  if _prefix == amuletprefix[1] or
+     _prefix and
      _prefix.skill and
-     (not _prefix.skill.perform) and
-     not has(avatar.passiveskills,_prefix.skill) then
+     (not _prefix.skill.perform) then
    add(availableskills,_prefix.skill)
    add(avatar.passiveskills,_prefix.skill)
   end
-  if _suffix == suffix[1] or
-     _suffix and
+  if _suffix and
      _suffix.skill and
-     (not _suffix.skill.perform) and
-      not has(avatar.passiveskills,_suffix.skill) then
+     (not _suffix.skill.perform) then
    add(availableskills,_suffix.skill)
    add(avatar.passiveskills,_suffix.skill)
   end
@@ -2340,54 +1892,50 @@ function equipupdate()
 
  -- init inventory
  for item in all(avatar.inventory) do
-  if avatar.items[item.slot] == item then
+  if avatar_items[item.slot] == item then
    del(avatar.inventory,item)
   end
  end
 
  -- inventory
  if sectioncur == 1 then
-  if btnp(0) then
+  if btnp0 then
    inventorycur=mid(1,inventorycur-1,#avatar.inventory)
    sfx(7)
-  elseif btnp(1) then
+  elseif btnp1 then
    inventorycur=mid(1,inventorycur+1,#avatar.inventory)
    sfx(7)
   end
 
   if #avatar.inventory > 0 then
-   if btnp(4) then
-    local selecteditem=avatar.inventory[inventorycur]
+   if btnp4 then
+    selecteditem,avatar.skill1,avatar.skill2=avatar.inventory[inventorycur]
 
-    avatar.skill1,avatar.skill2=nil,nil
-
-    if avatar.items[selecteditem.slot] then
-     add(avatar.inventory,avatar.items[selecteditem.slot])
+    if avatar_items[selecteditem.slot] then
+     add(avatar.inventory,avatar_items[selecteditem.slot])
     end
 
-    avatar.items[selecteditem.slot]=selecteditem
+    avatar_items[selecteditem.slot]=selecteditem
 
     if selecteditem.twohand then
-     add(avatar.inventory,avatar.items.offhand)
-     avatar.items.offhand=nil
+     add(avatar.inventory,avatar_items.offhand)
+     avatar_items.offhand=nil
     end
 
     if selecteditem.slot == 'offhand' and
-       avatar.items.weapon and
-       avatar.items.weapon.twohand then
-     add(avatar.inventory,avatar.items.weapon)
-     avatar.items.weapon=nil
+       avatar_items.weapon and
+       avatar_items.weapon.twohand then
+     add(avatar.inventory,avatar_items.weapon)
+     avatar_items.weapon=nil
     end
 
     inventorycur=mid(1,inventorycur,#avatar.inventory-1)
-
     sfx(8)
 
-   elseif btnp(5) then
+   elseif btnp5 then
     if sellcur then
      del(avatar.inventory,avatar.inventory[sellcur])
-     avatar.skill1,avatar.skill2=nil,nil
-
+     sellcur,avatar.skill1,avatar.skill2=nil
      sfx(21)
     else
      sellcur=inventorycur
@@ -2398,24 +1946,23 @@ function equipupdate()
  -- equipped
  elseif sectioncur == 2 then
   sellcur=nil
-  if btnp(0) then
-   equippedcur=mid(1,equippedcur-1,#equipslots)
+  if btnp0 then
+   equippedcur=mid(1,equippedcur-1,#slots)
    sfx(7)
-  elseif btnp(1) then
-   equippedcur=mid(1,equippedcur+1,#equipslots)
+  elseif btnp1 then
+   equippedcur=mid(1,equippedcur+1,#slots)
    sfx(7)
   end
 
-  if btnp(4) then
+  if btnp4 then
    if #avatar.inventory >= 10 then
     sfx(6)
    else
-    local selecteditem=avatar.items[
-      equipslots[equippedcur][1]]
+    local selecteditem=avatar_items[slots[equippedcur]]
     if selecteditem then
-     avatar.items[selecteditem.slot]=nil
+     avatar_items[selecteditem.slot]=nil
      add(avatar.inventory,selecteditem)
-     avatar.skill1,avatar.skill2=nil,nil
+     avatar.skill1,avatar.skill2=nil
     end
     sfx(8)
    end
@@ -2423,18 +1970,17 @@ function equipupdate()
 
  -- available skills
  elseif sectioncur == 3 then
-  if btnp(0) then
+  if btnp0 then
    availableskillscur=mid(1,availableskillscur-1,#availableskills)
    sfx(7)
-  elseif btnp(1) then
+  elseif btnp1 then
    availableskillscur=mid(1,availableskillscur+1,#availableskills)
    sfx(7)
   end
 
   local selectedskill=availableskills[availableskillscur]
-
   if selectedskill then
-   if btnp(4) then
+   if btnp4 then
     if selectedskill.perform then
      avatar.skill1=selectedskill
      if avatar.skill2 == avatar.skill1 then
@@ -2445,7 +1991,7 @@ function equipupdate()
      sfx(6)
     end
    end
-   if btnp(5) then
+   if btnp5 then
     if selectedskill.perform then
      avatar.skill2=selectedskill
      if avatar.skill1 == avatar.skill2 then
@@ -2460,50 +2006,47 @@ function equipupdate()
 
  -- exit
  elseif sectioncur == 4 then
-  if btnp(4) or btnp(5) then
-   for k,v in pairs(slots) do
-    if avatar.items[v] then
-     saveitem(
-       k,
-       avatar.items[v].class,
-       has(
-         itemclasses[avatar.items[v].class].prefix or
-         prefix,avatar.items[v].prefix),
-       has(suffix,avatar.items[v].suffix))
-    else
-     saveitem(k,0,0,0)
+  if btnp4 then
+   if avatar.skill1 or avatar.skill2 then
+    for k,v in pairs(slots) do
+     if avatar_items[v] then
+      saveitem(k,avatar_items[v].class,has(
+          itemclasses[avatar_items[v].class].prefix or
+          prefix,avatar_items[v].prefix),
+        has(suffix,avatar_items[v].suffix))
+     else
+      saveitem(k,0,0,0)
+     end
     end
-   end
-   
-   if theme then
-    _draw=dungeondraw
-    _update60=dungeonupdate
+    
+    if theme then
+     _update60,_draw=dungeonupdate,dungeondraw
+    else
+     dungeoninit()
+    end
    else
-    dungeoninit()
+    sectioncur=3
+    sfx(6)
    end
   end
  end
-
 end
 
 function equipdraw()
-
  cls(0)
-
- fillp(0b1010000110000101)
- rectfill(0,0,128,3,1)
- fillp()
+ -- fillp(0b1010000110000101)
+ -- rectfill(0,0,128,3,1)
+ -- fillp()
 
  -- draw inventory section
- local offsetx,i,col=0,1,
-   sectioncur == 1 and 10 or 4
- print('saddlebags',4,17-9,col)
+ local offsetx,i=0,1
+ print('saddlebags',4,17-9,sectioncur == 1 and 10 or 4)
  for item in all(avatar.inventory) do
   spr(item.sprite,6+offsetx,17)
   if sectioncur == 1 and i == inventorycur then
    rect(4+offsetx,15,15+offsetx,26,10)
    if i == sellcur then
-    sspr(10,0,5,5,offsetx+4,15)
+    sspr(58,40,5,5,offsetx+4,15)
    end
    print(item.name,4,29,7)
   end
@@ -2512,19 +2055,18 @@ function equipdraw()
  end
 
  -- draw equipped section
- offsetx,i,col=0,1,
-   sectioncur == 2 and 10 or 4
- print('equipped',4,43,col)
+ offsetx,i=0,1
+ print('equipped',4,43,sectioncur == 2 and 10 or 4)
  if spdfactornr > 0 then
   print('+'..spdfactornr..'% spd',50,43,13)
  end
  for _i=0,avatar.startarmor-1 do
-  sspr(0,0,5,5,121-_i*6,43)
+  sspr(48,40,5,5,121-_i*6,43)
  end
- for slot in all(equipslots) do
-  local item=avatar.items[slot[1]]
+ for k,v in pairs(slots) do
+  local item=avatar.items[v]
   if not item then
-   spr(slot[2],6+offsetx,52)
+   spr(k,6+offsetx,52)
   else
    spr(item.sprite,6+offsetx,52)
   end
@@ -2539,9 +2081,8 @@ function equipdraw()
  end
 
  -- draw availableskills section
- offsetx,i,col=0,1,
-   sectioncur == 3 and 10 or 4
- print('skills',4,79,col)
+ offsetx,i=0,1
+ print('skills',4,79,sectioncur == 3 and 10 or 4)
  for skill in all(availableskills) do
   spr(skill.sprite,6+offsetx,88)
   if sectioncur == 3 and i == availableskillscur then
@@ -2563,12 +2104,11 @@ function equipdraw()
  end
 
  -- draw exit button
- col=sectioncur == 4 and 10 or 4
- print('exit',57,120,col)
+ print('exit',57,120,sectioncur == 4 and 10 or 4)
 end
 
 function splash()
- music(0)
+ music()
  _update60=function()
   tick+=1
   if btnp(4) then
@@ -2592,134 +2132,134 @@ end
 _init=splash
 
 __gfx__
-66666555550888000000000000000000000000001d1111110d555500111111110555550000000000055555000550055005555550005555500000005500000055
-6ddd651115878780000005400000000000000000ddd11111d00000501d11d1115000005055505500555555505555555505555550050000000000055000000555
-6ddd6511158878800022544400000000000000001d11111150000050111dd1d15000005055505500555555505055550505555550055555000000505000005550
-06d60051508787800544440000000000000000001d1dddd1055005001d1d1dd10550050055505500500500505055550505555550055555000005005050055500
-0060000500088800504004000000000000000000111d1d11007766001dd111d10005500055505500550005500055550005555550055555000050050005555000
-00000000000000000050050000000000000000001111d1d1007161001ddd1dd10055550055550550550005500055550005555550055555000500500000550000
-0f000000000000000000000000000000000000001111dd11000716001dd1d1d10055550055555055550005500055550000555500055555005555000005050000
-11100000000000000000000000000000000000001111111100066000111111110005500005555055050005000000000000055000055555005000000050005000
-13100000000000000000000000000000000000000000000000000000000000000111111006dddd000080020011111ddd11111111111111111111114411111166
-131000000000000066000000000060000000000000000000000000000000000011111111600000d0078882e0111111dd11111111111111111111164111111666
-0f00f00f40000600000000000000060006000000000000000000000000000000111111110ddd0d0008777e201d111d1d11dc1cc1112818811111614111116761
-444444440000060000000006600006000066600000000000000000000242242011111111000eee0008800820ddd1d111d111c77c21118ee81116114191167611
-04004004000000000000000000006000060660000000000002422420011111100111111000e888e0088008201d11111111c1c77c11818ee81161151119676111
-20202020200000000000000000000000000000000000600002299220022992200000000000e8e28008800820d1d1d1d111111cc1111118811611511111961111
-000000000000000000000000000000000000000000700000024444200244442000000000008222800880082011111dd111111111111111114444112114191111
-000000000dd000000000200020000000020050505060000002222220022222200000000000088800880000821111ddd111111111111111114111111291119111
-060d060d0660060000060206020620006020555555007000000000000000000000000000000000000006d00005600d5000000000008888800000004200000066
-666d666d6600666dd0066206626662066620050505060000000000000000000000000000444420200066d500d556d55d0066dd0008ffff40000006400000066d
-060006000600060000062006200620006020000000070000000000000000cc00000000004422202006d6d55050d55d0506dd11d00222224000006040000067d0
-60600600606060600060600600606006060000000000000000000000000ccccc0000000004440400d6d6d555d024920d06d6d1d0022822400006004000067d00
-0700007077770000777707777700007000070088800777022022022200cc00ccc00000000a9909006766dddd00d55d000d1dd1d002288240006005000f67d000
-007007000077700777007777777707000000788888777772200020202cc0000cc0000000044440400006d0000056d5000d1111d0028e824006005000009d0000
-0070070000077777700070000000770000007888887777700000000000cc00cc0000000002444404d000000d00d55d0000dddd00028e82404444000002090000
-00777700000770077000700000007770000778888877777000000000000cccc00000000000222202500000050000000000000000022222002000000090000000
-007777000000000000007777777707777777708880077700000000000000cc000000000000000000000000000766dd60000000880000007c0020010000666660
-077777700000000000000777770000777777000000000000000000000022300000000000000000006770066d06cc11d0000008880000070c0e2221d0067777d0
-77777777000000000000000000000007007000330000033002003300200033000000000000000000166d5dd006c6d1d066008e800000700c02eeed100cccccd0
-7000000007777777700000007000000007000033002003302000330200003300000330000003300010d6d50007c6d1606008e800000700c6022002100c7c7cd0
-77000000770777770000000077000000770003330200333300333330000333000033300000033000606d5d0d0d1dd1d0068e800000700d20022002100cc7ccd0
-77700007770077700000000077700007770003333000333000033300000333000033332200333000d0d6d5050d1111d0006800000700d200022002100c7c7cd0
-77707707770000000000000077770077770004440000444300044400000444300044400000333000000d50000061160002050500700c2000022002100cccccd0
-7770000777000700000000000777777770000303000030000000030000030000034030000044430000000000000dd00050005500ccc60000220000210ccccc00
-77000000770007000000000700000000007000000000000000660000000000000090000000000000000000000000000000000000000000000000000000999990
-70000000070000000000007000000000000700000030603060330030000000900050000000000000000000000000000000000000000000000000000009ffff20
-00000000000077700777700000000000000007777333633363300333660030503050000000000000000000000000000000000000000000000000000004444420
-00000000000777770077770000000000000077770040004000400040000444544450000000000000000000000000000000000000000000000000000004444420
-00000000007777777007770000000000000077700303003003030303000424542450000000000000000000000000000000000000000000000000000004444420
-00000000000000000000770000000000000077000000000000000000000424542400000000000000000000000000000000000000000000000000000004444420
-00000000000000000000070000000000000070000000000000000000000000000000000000000000000000000000000000000000000000000000000004444420
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004444400
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000f000000000000000f000000000000000f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000ff00000000000000ff00000000000000ff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000006600000000000000660000000000000066000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000006600000000000000660000000000000066000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000600b000000000000600b000000000000600b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000066600000000000006660000000000000666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000606066000000000060606600000000006060660000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00406066600000000040606660000000004060666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00040006000000000004000600000000000400060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00d040606000000000d040606000000000d040606000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0d000060600000000d000060600000000d0000606000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-d000006060000000d000006000000000d00000006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000077777770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00007777777777700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00777777777777777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-07777777777777777700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-d7777777770007777700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0d777770000000007770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00d777000f0000000770000000000000f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000d7400ff000000007700000000000ff00b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00004000660000000077000000000006600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00040600660000000007000000000006600600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000060600000000007000000000006006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000055055555500550055005555500555055000555550000555550111111111d11111111111ddd111111d111111166111111441111111111111111
+00000540000005550555555055555555555555505550550050000050050000001d11d111ddd11111111111dddd1d11d111111666111116411111111111111111
+0022544400005550055555505055550555555550555055005000005005555500111dd1d11d1111111d111d1d11d11d11111167611111614111dc1cc111281881
+05444400500555000555555050555505500500505550550005500500055555001d1d1dd11d1dddd1ddd1d111111dd1d19116761111161141d111c77c21118ee8
+50400400055550000555555000555500550005505555055000055000055555001dd111d1111d1d111d1111111d1dd111196761111161151111c1c77c11818ee8
+00500500005500000555555000555500550005505555505500555500055555001ddd1dd11111d1d1d1d1d1d111d11d11119611111611511111111cc111111881
+00000000050500000055550000555500550005500555505500555500055555001dd1d1d11111dd1111111dd11d11d1dd14191111444411211111111111111111
+000000005000500000055000000000000500050000000000000550000555550011111111111111111111ddd11d11111191119111411111121111111111111111
+0000000000000000000000000000000000000000000000000000000000000000011111100000000000000000000000000000000000000000000000000d555500
+00000000000000006600000000006000000000000f00000000000000000000001111111144442020ddd0dd00444420209990990088808800dddd5050d0000050
+0f00f00f40000600000000000000060006000000111000000000000000000000111111114422202065506500442220207ff07f00fee0ee00dd55505050000050
+44444444000006000000000660000600006660001310000000000000024224201111111104440400ddd0dd000444040099909900888088000ddd0d0005500500
+04004004000000000000000000006000060660001310000002422420011111100111111009220200655065000a9909007ff07f00fee0ee000711010000776600
+20202020200000000000000000000000000000000000600002299220022992200000000004444040dddd0dd00444404099990990888808800dddd0d000716100
+000000000000000000000000000000000000000000700000024444200244442000000000024444045dddd0dd02444404499990992888808805dddd0d00071600
+000000000dd000000000200020000000020050505060000002222220022222200000000000222202055550550022220204444044022220220055550500066000
+060d060d0660060000060206020620006020555555007000000000000000000000000000000d50000d7dd5000009400009f994000f0000f00007600000ddddd0
+666d666d6600666dd0066206626662066620050505060000000000000000000000000000002d5100d7dd555000d941009f994440f000000f00776d000d666650
+060006000600060000062006200620006020000000070000000000000000cc0000000000042d5110676666d006d94110f77f9990f008200f07676dd001111150
+60600600606060600060600600606006060000000000000000000000000ccccc00000000222d5111600600d0ddd94111f22f0090ef2821fe67676ddd011d1150
+0700007077770000777707777700007000070088800777022022022200cc00ccc0000000d6dd5555d60006509f994444f77f99900e2821e07777666601d1d150
+007007000077700777007777777707000000788888777772200020202cc0000cc0000000000d5000dd60655000094000f72f0990022821100007600001d1d150
+0070070000077777700070000000770000007888887777700000000000cc00cc0000000000000000dd60655000000000977f99400888222060000006011d1150
+00777700000770077000700000007770000778888877777000000000000cccc000000000000000000d60650000000000097f940000000000d000000d01111100
+007777000000000000007777777707777777708880077700000000000000cc00000000000000000000000000000000006dd0055d09000040000000006770066d
+07777770000000000000077777000077777700000000000000000000002230000000000000000000d6600dd56770066d06655dd0f7700ff98ee00882066d5dd0
+777777770000000000000000000000070070003300000330020033002000330000000000000000001dd51550166d5dd0005225002ff949921882122000dcc500
+70000000077777777000000070000000070000330020033020003302000033000003300000033000105d510010d6d50000d22500209f940210282100006cc500
+77000000770777770000000077000000770003330200333300333330000333000033300000033000d0d51505606d5d0d004f9400f0f9490980821202004f9400
+77700007770077700000000077700007770003333000333000033300000333000033332200333000505d5101d0d6d50500d22500909f94042028210100dccd00
+7770770777000000000000007777007777000444000044430004440000044430004440000033300000051000000d5000000220000009400000021000000cc000
+777000077700070000000000077777777000030300003000000003000003000003403000004443000000000000000000000220000000000000000000000cc000
+7700000077000700000000070000000000700000000000000066000000000000005000000000000000000000000000000666ddd007ff99f00e88228006dd55d0
+70000000070000000000007000000000000700000030603060330030000000500040000000000000049449400044440006dd11d00f994490082200200dcc1150
+00000000000077700777700000000000000007777333633363300333660000400040000000000000022222200422224006d6d1d00f97f490082e80200dc6d150
+00000000000777770077770000000000000077770040004000400040000010401040000004944940022222200429424006d6d1d00797f4f00e2e808006c6d1d0
+000000000077777770077700000000000000777003030030030303030002224222400000044aa440044aa440042442400d1dd1d0094ff49002088020051dd150
+0000000000000000000077000000000000007700000000000000000000023242324000000499994004999940042222400d1111d0094444900200002005111150
+00000000000000000000070000000000000070000000000000000000000232423200000004999940049999400044440000d11d0000f44f000080080000d11d00
+000000000000000000000000000000000000000000000000000000000002324232000000044444400444444000000000000dd000000990000002200000055000
+00000000000000000000000000000000000000000000000066666555550888000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000006ddd65111587878000000000000000000000000000000000000000000000000000000000009f4400
+0000000000000000000000000000000000000000000000006ddd6511158878800000000000000000000000000000000000000000000000000000000009220040
+00000000000000000000000000000000000000000000000006d6005150878780000000000000000000000000000000000000000000000000000000000f294090
+00000000000000000000000000000000000000000000000000600005000888000000000000000000000000000000000000000000000000000000000004044040
+000000000000000000000000000000000000000000000000000000000eeeeeeee000000000000000000000000000000000000000000000000000000004000040
+00000000f000000000000000f000000000000000f00000000000000eeeeeeeeeeeee000000000000000000000000000000000000000000000000000000494400
+0000000ff00000000000000ff00000000000000ff000000000000eeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000000
+0000000660000000000000066000000000000006600000000000ee0000000eeeeeeeeee000000000600000000000000000000000000000000000000000000000
+00000006600000000000000660000000000000066000000000e0e00000000000eeeeeeee00000006665555d00000000000000000000000000000000000000000
+0000000600b000000000000600b000000000000600b0000000e000000000000000eeeeeee00000006000000d0000000000000000000000000000000000000000
+00000066600000000000006660000000000000666000000000000000000000000000eeeeee00000000000000d000000000000000000000000000000000000000
+000006060660000000000606066000000000060606600000e00000000000000000000eeeeee00000000000000d00400040000000000000000000000000000000
+0040606660000000004060666000000000406066600000000000000000000000000000eeeeee0000000000000dd044dd40000000000000000000000000000000
+0004000600000000000400060000000000040006000000000000000000000000400040eeeeee00000000000000dd0ddd00000000000000000000000000000000
+00d040606000000000d040606000000000d0406060000000000000000000000044dd400eeeeee0000000000000dd0ddd00000000000000000000000000000000
+0d000060600000000d000060600000000d000060600000000000000000000ddddddd000eeeeee00000000000000dddddd0000000000000000000000000000000
+d000006060000000d000006000000000d000000060000000000000000000dddddddd000eeeeeee0000000000000dddddd0000000000000000000000000000000
+00000077777770000000000000000000000000000000000000000dd0000dddddddd0000eeeeeee0000000000000ddddddd000000000000000000000000000000
+0000777777777770000000000000000000000000000000000000000dd00dddddddd00000eeeeee00000000000000dddddd000000000000000000000000000000
+007777777777777770000000000000000000000000000000000000000ddddddddddd0000eeeeeee0000000000000ddddddd00000000000000000000000000000
+0777777777777777770000000000000000000000000000000000000000ddddddddddd000eeeeeee0000000000000dddddddd0000000000000000000000000000
+d77777777700077777000000000000000000000000000000000000000dddddddd00ddd00eeeeeee000000000000dddd000dd0000000000000000000000000000
+0d77777000000000777000000000000000000000000000000000005ddddd000dd0000dd00eeeeee000000000d0d0dd00000d0000000000000000000000000000
+00d777000f0000000770000000000000f000000000000000000000000000005d0000000d00eeeee00000000d00d0dd0000050000000000000000000000000000
+000d7400ff000000007700000000000ff00b000000000000000000000000000000000000600eeee000000000dd00d00000000000000000000000000000000000
+000040006600000000770000000000066000000000000000000000000000000000000000060007e0000000000000d00000000000000000000000000000000000
+00040600660000000007000000000006600600000000000000000000000000000000000000667770000000000000500000000000000000000000000000000000
+00000060600000000007000000000006006000000000000000000000000000000000000000000700000000000000000000000000000000000000000000000000
 00000006660000000007000000000066660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000600000000007000000000606000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000006660000000070000000406066600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000600000000070000000040006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000006060000000700000000d04060600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000006000600007700000000d000060600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000060006077000000000d0000060600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000d0000000d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00d00d0000d00d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00d0d11000d0d1100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0ddd01100ddd01100000000000000000000000000000000000000000000000000000000000000007070777077707770707007707070077000000000000000000
-0dd101100dd101100000000000000000000000000000000000000000000000000000000000000007070d7d07d70d7d070707d7070707dd000000000000000000
-ddd11011ddd110110000000000000000000000000000000000000000000000000000000000000007070070077d00700707070707070777000000000000000000
-dd111011dd111011000000000000000000000000000000000000000000000000000000000000000777007007d700700707070707070dd7000000000000000000
-0010010000100100000000000000000000000000000000000000000000000000000000000000000d7d0777070700700d77077d0d77077d000000000000000000
-11111111111111111111111100000000000000000000000000000000000000000000000000000000d00ddd0d0d00d000dd0dd000dd0dd0000000000000000000
-11111111111111110000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000111111115501100100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-01101111111111115500001100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-01001110111111115515500100000000000000000000000000000000000000000000000000000007070777077000700707077700770707077707770000000000
-000000001111111155155001000000000000000000000000000000000000000000000000000000070707d707d707d707070d7d07dd070707dd07d70000000000
-110110111111111155155151000000000000000000000000000000000000000000000000000000070707770707070707070070077707770770077d0000000000
-100100111111111111111111000000000000000000000000000000000000000000000000000000077707d70707077d070700700dd707d707d007d70000000000
-5555555555555555000000000000000000000000000000000000000000000000000000000000000d7d070707070d770d770777077d0707077707070000000000
-55555555555555550040040000000000000000000000000000000000000000000000000000000000d00d0d0d0d00dd00dd0ddd0dd00d0d0ddd0d0d0000000000
-55255555555555550044440000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-52552525555555550040040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-52525225555555550144441000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-52525252555555551040040100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-22522252555555550111111000000000000000000000000000000000000000000000000000000000000000000000000288888882888802888828888088888000
-25222522555555550000000000000000000000000000000000000000000000000000000000000000000000000000000028822280288200288202882028220000
-11111111111111111111111100000000000000000000000000000000000000000000005500000000000000000005000008800020028000082000882028800000
-11111111111111110000000100000000000000000000000000000000000000000005525500000000000000050050000008800000008800880000880008800000
-00000000111111115501100100000000000000000000000000000000000000005525525500000000000000505050000008888200008808820000880008800000
-01101111111111115500001100000000000000000000000000000000000000005525525500000000000000505055000008828000002888200000880008800000
-01001110111111115515500100000000000000000000000000000000000000005525522200000000000000050050000008802000000888200000880008800000
-00000000111111115515500100000000000000000000000000000000000000005522222200000000000000000050000008800080000282000000880028800008
-11011011111111115515515100000000000000000000000000000000000000002222222200000000000000000500000288888880000080000228888288888882
-10010011111111111111111100000000000000000000000000000000000000000000000000000000000000000000000022222220000020000022222022222220
+00000006060000000700000000d04060600000000000000000000000000000000000000000000000000000000000000000000004000400000000000000000000
+0000006000600007700000000d0000606000000000000000000000000000000000400040000000000000040004000000000000044dd400000000000000000000
+000000060006077000000000d0000060600000000000000004000400000000000044dd40000000000000044dd400000000000000ddd000000000000000000000
+000000000000000000000000000000000000000000000000044dd40000000000000ddd0000000000000000ddd000000000000000ddd000000000000000000000
+00000000000000000000000000000000000000000000000000ddd00000000000000ddd0000000000000000ddd0000000000000dddddd000d0000000000000000
+00000000000000000000000000000000000000000000000000ddd000000000000dddddd000d000000000dddddd000d0000000ddddddd00d50000000000000000
+000000000000000000000000000000000000000000000000dddddd000d000000ddddddd00d500000000ddddddd00d50000000ddddddd0d050000000000000000
+0d5555000944440006dddd0004222200000000000000000ddddddd00d5000000ddddddd0d0500000000ddddddd0d050000000dddddddd0050000000000000000
+d000005090000040600000d040000020000000000000000ddddddd0d050000000ddddddd00500000000dddddddd00500000000ddddddd0050000000000000000
+50000050044404000ddd0d0002220200000000000000000dddddddd0050000000ddddddd005000000000ddddddd00500000000ddddd000060000000000000000
+05550500000aaa00000eee00000777000000000000000000ddddddd005000000dddddd00006000000000ddddd000060000000dddddd000666000000000000000
+0000400000a999a000e888e0007ccc7000000000000d000dddddd0000600000d0ddddd0006660000000ddd0dd00066600000d0dd0dd000060000000000000000
+0004440000a9a49000e8e280007c71d0000000000000ddd0dddddd00666000d00dddd0000060000dddd0dd0d000006000d00d0dd0d0000000000000000000000
+00004000009444900082228000d111d00000000000000000d000ddd006000d0000dd0000000000d00000d00d0000000000dd00d00d0000000000000000000000
+000040000009990000088800000ddd000000000000000000d0000dd000000d0000d00000000000000000d00d00000000000000d00d0000000000000000000000
+00999990009999900088888000666660000000000000000d00000d000000000000d0000000000000000050050000000000000050050000000000000000000000
+09ffff2009ffff2008ffff40067777d0000000000000000500000500000000000050000000000000000000000000000000000000000000000000000000000000
+0444442004444420022222400cccccd0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0444442004aaa420022822400c7c7cd0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0444442004444420022882400cc7ccd0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0444442004aa4420028e82400c7c7cd0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0444442004444420028e82400cccccd0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0444440004444400022222000ccccc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+11111111111111111111111100000066000000dd000000ff00000088000000660000000000000000000000000000000000000000000000000000000000000000
+1111111111111111000000010000066500000dd500000ff900000888000006660000000000000000000000000000000000000000000000000000000000000000
+000000001111111155011001000067509000d6500000f79066008e80dd0067600000000000000000000000000000000000000000000000000000000000000000
+50555055111111115500001100067500900d6500d00f79006008e800d00676000000000000000007070777077707770707007707070077000000000000000000
+0000000011111111551550010467500009d650000df79000068e80000d6760000000000000000007070d7d07d70d7d070707d7070707dd000000000000000000
+055505551111111155155001004500000095000000d9000000680000005600000000000000000007070070077d00700707070707070777000000000000000000
+0000000011111111551551510204000002040000020500000205050001050500000000000000000777007007d700700707070707070dd7000000000000000000
+5505550511111111111111114000000090004400d000500050005500c0005500000000000000000d7d0777070700700d77077d0d77077d000000000000000000
+1111111111111111111111110000004200000063000000f800000042000000000000000000000000d00ddd0d0d00d000dd0dd000dd0dd0000000000000000000
+111111111111111100000001000006400000060300000f0800000640000000000000000000000000000000000000000000000000000000000000000000000000
+00000000111111115501100100006040000060030000f00e000060c0000000000000000000000000000000000000000000000000000000000000000000000000
+1110110111111111550000110006004000060030000f008000060040000000000000000000000000000000000000000000000000000000000000000000000000
+110010011111111155155001006005000060042000f0042000600510000000000000000000000007070777077000700707077700770707077707770000000000
+00000000111111115515500106005000060042000f004200060051000000000000000000000000070707d707d707d707070d7d07dd070707dd07d70000000000
+0111101111111111551551514444000060032000f008200044c410000000000000000000000000070707770707070707070070077707770770077d0000000000
+011100101111111111111111200000003330000088e00000200000000000000000000000000000077707d70707077d070700700dd707d707d007d70000000000
+2222222222222222000000000040020000d0010000400200009004000080020000c001000000000d7d070707070d770d770777077d0707077707070000000000
+222222222222222200400400064442d007ddd1600a444290079994f0078882e007ccc16000000000d00d0d0d0d00dd00dd0ddd0dd00d0d0ddd0d0d0000000000
+22022222222222220044440004666d200d77761004aaa92009777f4008777e200c77761000000000000000000000000000000000000000000000000000000000
+202202022222222200400400044004200dd00d100440042009900940088008200cc00c1000000000000000000000000000000000000000000000000000000000
+202020022222222202444420044004200dd00d100440042009900940088008200cc00c1000000000000000000000000000000000000000000000000000000000
+202020202222222220400402044004200dd00d100440042009900940088008200cc00c1000000000000000000000000000000000000000000000000000000000
+002000202222222202222220044004200dd00d100440042009900940088008200cc00c1000000000000000000000000288888882888802888828888088888000
+02000200222222220000000044000042dd0000d1440000429900009488000082cc0000c100000000000000000000000028822280288200288202882028220000
+00000d00000000000000000000000000000000000000000000000000000000000000004400000000000000000005000008800020028000082000882028800000
+00d00d00000000000000000000000000000000000000000000000000000000000004424400000000000000050050000008800000008800880000880008800000
+00d0d110000000000000000000000000000000000000000000000000000000004424424400000000000000505050000008888200008808820000880008800000
+0ddd0110000000000000000000000000000000000000000000000000000000004424424400000000000000505055000008828000002888200000880008800000
+0dd10110000000000000000000000000000000000000000000000000000000004424422200000000000000050050000008802000000888200000880008800000
+ddd11011000000000000000000000000000000000000000000000000000000004422222200000000000000000050000008800080000282000000880028800008
+dd111011000000000000000000000000000000000000000000000000000000002222222200000000000000000500000288888880000080000228888288888882
+00100100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000022222220000020000022222022222220
 __label__
 00000000000000001110001111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000001111111111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -2867,7 +2407,7 @@ __sfx__
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+010a00001d1322113024130291302d1302f1303013030130001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000000
 010b00001a7321a7301a7201a725000000000000000007001c7321c7321c7201c7201c72500000000000000019740197401973219732197321973219732197201972500700000000000000000000000000000000
 010800001a85000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0104000025040250502604026050280402805029040290502b0502b0402d0402d0500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -2903,6 +2443,12 @@ __sfx__
 011600002671226715217140070021710217151a7101a7151f7141f7151e710007001c7101c7151a714007002571025715217120070021710217151f7101f7151f7121f715217140070021714217151e71100700
 011600001f7101f7151f7101f7151f7121f7151f7141f7151f7101f7152171121715227102271521714217152171521712217142171521710217151f7121f7151f7141f7151d7101d7151d7121d7151d71018711
 011600001f7101f7151f7101f7151f7121f7151f7141f7151f7101f71521712217152271022715217142171521715217122171421715217102171521712217152571425715257102571525712257152071119711
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+016000000e5300e5350e714115341053010535107141353411530115351171415534135301653116532165350e5300e5350e7141153410530105350f7140f5340e5300e5350c5000d5340e5300e5320e53500515
+01c00010027350000004735000000573500000077350a735027350000004735000000273501735027350000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __music__
 03 1a6e4344
 00 23244344
@@ -2925,9 +2471,9 @@ __music__
 00 6f6c4344
 00 706e4344
 00 114b4344
-01 2d6e4344
-00 2e6e4344
-02 2c6e4344
+03 38394344
+00 6e6e4344
+00 6c6e4344
 00 706e4344
 00 41424344
 00 41424344
