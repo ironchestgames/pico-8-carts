@@ -4,7 +4,7 @@ __lua__
 -- virtuous vanquisher of evil 1.0
 -- by ironchest games
 
-cartdata'ironchestgames_vvoe_v1_dev9'
+cartdata'ironchestgames_vvoe_v1_dev10'
 
 function has(_t,_v)
  for k,v in pairs(_t) do
@@ -23,7 +23,7 @@ function clone(_t)
 end
 
 -- note: last char needs to be ','
-function pfn(s) -- parseflat num
+function pfn(s)
  local t,_s={},''
  while #s > 0 do
   local d=sub(s,1,1)
@@ -782,8 +782,8 @@ end
 
 swordprefix={
  {name='',sprites={},skill=swordattackskillfactory(15,28,1000,7)},
- {name='ice ',col=12,sprites=pfn'30,46,162,63,232,79,49,199,214,',
-  skill=swordattackskillfactory(15,28,1000,7,'ice',150)},
+ {name='ice ',col=7,sprites=pfn'30,46,162,63,232,79,49,199,214,',
+  skill=swordattackskillfactory(15,28,1000,12,'ice',150)},
  {name='flaming ',col=8,sprites=pfn'29,45,162,62,231,78,178,198,213,',
   skill=swordattackskillfactory(15,28,1000,14,'fire',60)},
  {name='heavy ',col=13,sprites=pfn'-1,-1,-1,-1,-1,-1,-1,196,',
@@ -846,7 +846,7 @@ suffix={
  {name=' of haste',sprites=pfn'27,43,161,60,229,95,177,197,212,',
   cols=pfn'4,13,-1,2,4,4,-1,15,3,',cols2=comcols2,spdfactor=0.1},
  {name=' of phasing',sprites=pfn'30,46,162,63,232,79,47,199,214,',
-  cols=pfn'13,6,-1,12,12,12,-1,12,12,',cols2=comcols2,skill={
+  cols=pfn'13,6,-1,12,12,12,-1,12,12,',cols2=pfn'-1,-1,-1,-1,1,',skill={
    sprite=10,
    desc='passive, phase away on hit',
    onhit=function(_a)
@@ -869,7 +869,7 @@ suffix={
  },
  {
   name=' of icebolt',sprites=pfn'30,46,162,63,232,79,179,199,214,',
-  cols=pfn'13,6,-1,12,12,12,-1,12,12,',cols2=comcols2,skill=boltskillfactory(
+  cols=pfn'13,6,-1,12,12,12,-1,7,12,',cols2=pfn'-1,-1,-1,-1,1,',skill=boltskillfactory(
   40,0,150,1,'ice',7,pfn'12,12,',pfn'12,13,',14,'icebolt')
  }
 }
