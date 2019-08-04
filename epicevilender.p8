@@ -235,16 +235,15 @@ function burningeffect(_a)
 end
 
 function freezeeffect(_a)
- add(vfxs,{
-  {57,18,8,7,
-   _a.x-4,_a.y-3.5,
-   c=2
-  }
- })
+ add(vfxs,{{57,18,8,7,_a.x-4,_a.y-3.5,c=2}})
  _a.dx,_a.dy=0,0
 end
 
--- skills -- todo: maybe remove this?
+-- skills
+function getskillxy(_a)
+ return _a.x+cos(_a.a)*4,_a.y+sin(_a.a)*4
+end
+
 function swordattackskillfactory(
   attackcol,typ,recovertime,dmg)
  return {
@@ -253,11 +252,10 @@ function swordattackskillfactory(
   preprfm=15,
   postprfm=28,
   perform=function(_a,skill)
-   local x,y=
-     _a.x+cos(_a.a)*4,
-     _a.y+sin(_a.a)*4
+   local x,y=getskillxy(_a)
 
    add(attacks,{
+    isavatar=true,
     x=x,y=y,
     hw=2,hh=2,
     state_c=1,
@@ -286,11 +284,10 @@ function bowattackskillfactory(
   preprfm=preprfm,
   postprfm=6,
   perform=function(_a,skill)
-   local x,y=
-     _a.x+cos(_a.a)*4,
-     _a.y+sin(_a.a)*4
+   local x,y=getskillxy(_a)
 
    add(attacks,{
+    isavatar=true,
     x=x-0.5,y=y-0.5,
     hw=1,hh=1,
     state_c=1000,
@@ -298,11 +295,7 @@ function bowattackskillfactory(
     dy=sin(_a.a)*1.6,
     typ=typ,
     recovertime=recovertime,
-    tar_c=1,
-    frames={
-     curframe=1,
-     clone(arrowframes[_a.a]),
-    },
+    frame=clone(arrowframes[_a.a]),
     col=arrowcol,
    })
 
@@ -346,12 +339,10 @@ function boltskillfactory(
    sfx(9)
   end,
   perform=function(_a)
-   local x,y=
-     _a.x+cos(_a.a)*4,
-     _a.y+sin(_a.a)*4
+   local x,y=getskillxy(_a)
 
    local attack={
-    isenemy=_a.isenemy,
+    isavatar=_a.isavatar,
     x=x,y=y,
     hw=1,hh=1,
     state_c=1000,
@@ -360,10 +351,7 @@ function boltskillfactory(
     typ=typ,
     recovertime=recovertime,
     tar_c=tar_c,
-    frames={
-     curframe=1,
-     pfn'47,20,3,3, -0.5,-0.5,',
-    },
+    frame=pfn'47,20,3,3,-0.5,-0.5,',
     col=attackcol,
    }
    add(attacks,attack)
@@ -394,7 +382,6 @@ function performenemymelee(_a)
  local a,att_siz=atan2(
   _a.tarx-_a.x,_a.tary-_a.y),_a.att_siz or 2
  add(attacks,{
-  isenemy=true,
   x=_a.x+cos(a)*4,
   y=_a.y+sin(a)*4,
   hw=att_siz,
@@ -416,13 +403,11 @@ end
 function performenemybow(_a)
  local a=getvfxframei(atan2(_a.tarx-_a.x,_a.tary-_a.y))
  add(attacks,{
-  isenemy=true,
   x=_a.x-0.5,y=_a.y-0.5,
   hw=1,hh=1,
   state_c=1000,
   dx=cos(a)*1.6,dy=sin(a)*1.6,
-  tar_c=1,
-  frames={curframe=1,clone(arrowframes[a])},
+  frame=clone(arrowframes[a]),
   col=2
  })
  sfx(5)
@@ -431,7 +416,6 @@ end
 -- enemy factories
 function newmeleetroll(x,y)
  return actfact{
-  isenemy=true,
   x=x,y=y,
   hw=1.5,hh=2,
   spd=0.45,
@@ -450,7 +434,6 @@ end
 function casterfactory(_hp,_cols,_idlef,_attackf,_boltskill)
  return function(x,y)
   return actfact{
-   isenemy=true,
    x=x,y=y,
    hw=1.5,hh=2,
    spd=0.25*_hp,
@@ -485,7 +468,6 @@ newdemoncaster=casterfactory(
 function newgianttroll(x,y)
  boss=actfact{
   name='giant troll',
-  isenemy=true,
   x=x,y=y,
   hw=1.5,hh=3,
   isbig=true,
@@ -505,7 +487,6 @@ end
 
 function newmeleeskele(x,y)
  return actfact{
-  isenemy=true,
   x=x,y=y,
   hw=1.5,hh=2,
   spd=0.5,
@@ -524,7 +505,6 @@ end
 function batfactory(_att_col,_att_typ,_att_recovertime,_cols)
  return function(x,y)
   return actfact{
-   isenemy=true,
    isghost=true,
    x=x,y=y,
    hw=1.5,hh=2,
@@ -551,7 +531,6 @@ newfirebatenemy=batfactory(14,'fire',120,pfn'0,0,0,0,8,')
 
 function newbowskele(x,y)
  return actfact{
-  isenemy=true,
   x=x,y=y,
   hw=1.5,hh=2,
   spd=0.5,
@@ -585,14 +564,12 @@ function newskeleking(x,y)
 
  function performmelee(_a)
   add(attacks,{
-   isenemy=true,
    throughwalls=true,
    x=_a.x+cos(_a.a)*2,y=_a.y-3,
    hw=7,hh=8,
    state_c=2,
    typ='knockback',
    knocka=_a.a,
-   tar_c=1,
   })
   sfx(4)
  end
@@ -635,7 +612,6 @@ function newskeleking(x,y)
 
  boss=actfact{
   name='skeleton king',
-  isenemy=true,
   isbig=true,
   x=x,y=y,
   hw=1.5,hh=3,
@@ -653,7 +629,6 @@ end
 function newdemonboss(x,y)
  boss=actfact{
   name='the evil',
-  isenemy=true,
   isbig=true,
   x=x,y=y,
   hw=3.5,hh=3.5,
@@ -868,6 +843,7 @@ themes={
 -- init avatar
 idleframe=pfn'0,10,3,4,-1,-2,'
 avatar=actfact{
+ isavatar=true,
  x=64,y=56,
  hw=1.5,hh=2,
  spdfactor=1,
@@ -1068,7 +1044,7 @@ function dungeonupdate()
  -- update actors
  local enemy_c=0
  for actor in all(actors) do
-  if actor.isenemy then
+  if actor != avatar then
    enemy_c+=1
   end
   actor.state_c-=1
@@ -1131,7 +1107,7 @@ function dungeonupdate()
     actor.state,actor.effect='idling'
    end
 
-  elseif actor.state == 'moving' and actor.isenemy then
+  elseif actor.state == 'moving' and actor != avatar then
    if actor.state_c <= 0 then
     actor.ismovingoutofcollision=nil
    end
@@ -1156,7 +1132,7 @@ function dungeonupdate()
   curenemyi=1
  end
  enemy=actors[curenemyi]
- if enemy and enemy.isenemy and not enemy.removeme then
+ if enemy and enemy != avatar and not enemy.removeme then
 
   -- aggression vars
   disttoavatar,haslostoavatar=
@@ -1252,10 +1228,11 @@ function dungeonupdate()
 
  -- collide against attacks
  for attack in all(attacks) do
+  attack.tar_c=attack.tar_c or 1
   for _a in all(actors) do
    if (not attack.removeme) and
       (not _a.removeme) and
-      attack.isenemy != _a.isenemy and
+      attack.isavatar != _a.isavatar and
       isaabbscolliding(attack,_a) then
     attack.tar_c-=1
     local dmg,hitsfx=attack.dmg or 1,6
@@ -1376,7 +1353,7 @@ function dungeonupdate()
  for i=1,#actors-1 do
   for j=i+1,#actors do
    local enemy,other=actors[i],actors[j]
-   if enemy != other and enemy.isenemy and other.isenemy and
+   if enemy != other and enemy != avatar and other != avatar and
       dist(enemy.x,enemy.y,other.x,other.y) <
         enemy.hh + other.hh then
     add(enemy.toocloseto,other)
@@ -1399,7 +1376,7 @@ function dungeonupdate()
   local _dx,_dy=collideaabbs(
     isinsidewall,_a,nil,_a.dx,_a.dy)
 
-  if _a.isenemy then
+  if _a != avatar then
    _a.wallcollisiondx,_a.wallcollisiondy=nil
    if _dx != _a.dx or _dy != _a.dy then
     _a.wallcollisiondx,_a.wallcollisiondy=_dx,_dy
@@ -1565,8 +1542,8 @@ function dungeondraw()
 
  -- draw attacks
  for attack in all(attacks) do
-  if attack.frames then
-   local f=attack.frames[attack.frames.curframe]
+  if attack.frame then
+   local f=attack.frame
    if attack.col then
     pal(2,attack.col,0)
    end
