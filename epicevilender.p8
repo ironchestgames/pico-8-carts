@@ -1033,7 +1033,7 @@ function dungeonupdate()
   if avatar.state != 'recovering' and
      avatar.state != 'attacking' then
    avatar.a,avatar.dx,avatar.dy,avatar.state,avatar.state_c=
-    norm(cos(angle)),norm(sin(angle)),'moving',2,angle
+    angle,norm(cos(angle)),norm(sin(angle)),'moving',2
   end
  elseif avatar.state != 'recovering' then
   avatar.dx,avatar.dy=0,0
@@ -1294,7 +1294,7 @@ function dungeonupdate()
      kills+=1
 
      -- add chest
-     local isbosschest=_a == boss
+     local isbosschest=_a == boss or theme == 3 and boss
      if kills % (6-theme) <= 0 or isbosschest then
       sprite,kills=isbosschest and 73 or 22,0
       add(interactables,{
@@ -1376,8 +1376,7 @@ function dungeonupdate()
  for i=1,#actors-1 do
   for j=i+1,#actors do
    local enemy,other=actors[i],actors[j]
-   if enemy != other and enemy != avatar and
-      other != avatar and enemy.isenemy and
+   if enemy != other and enemy.isenemy and other.isenemy and
       dist(enemy.x,enemy.y,other.x,other.y) <
         enemy.hh + other.hh then
     add(enemy.toocloseto,other)
