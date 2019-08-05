@@ -64,19 +64,15 @@ function loaditem(_i)
 end
 
 function isaabbscolliding(a,b)
- if a.x-a.hw < b.x+b.hw and
-    a.x+a.hw > b.x-b.hw and
-    a.y-a.hh < b.y+b.hh and
-    a.y+a.hh > b.y-b.hh then
-  return b
- end
+ return a.x-a.hw < b.x+b.hw and a.x+a.hw > b.x-b.hw and
+  a.y-a.hh < b.y+b.hh and a.y+a.hh > b.y-b.hh and b
 end
 
 wallaabb={hw=4,hh=4}
 function isinsidewall(aabb)
  local x1,y1,x2,y2=
-   aabb.x-aabb.hw,aabb.y-aabb.hh,
-   aabb.x+aabb.hw,aabb.y+aabb.hh
+  aabb.x-aabb.hw,aabb.y-aabb.hh,
+  aabb.x+aabb.hw,aabb.y+aabb.hh
 
  for p in all{{x1,y1},{x2,y1},{x2,y2},{x1,y2}} do
   local mapx,mapy=flr(p[1]/8),flr(p[2]/8)
@@ -94,10 +90,7 @@ end
 
 function haslos(_x1,_y1,_x2,_y2)
  local dx,dy,x,y,xinc,yinc=
-   abs(_x2-_x1),abs(_y2-_y1),
-   _x1,_y1,
-   sgn(_x2-_x1),sgn(_y2-_y1)
-
+  abs(_x2-_x1),abs(_y2-_y1),_x1,_y1,sgn(_x2-_x1),sgn(_y2-_y1)
  local n,err=1+dx+dy,dx-dy
  dx*=2
  dy*=2
@@ -151,9 +144,7 @@ function findflr(_x,_y)
  repeat
   a+=0.05
   d+=0.02
-  x,y=
-    mid(1,flr(_x/8+cos(a)*2),14),
-    mid(1,flr(_y/8+sin(a)*2),14)
+  x,y=mid(1,flr(_x/8+cos(a)*2),14),mid(1,flr(_y/8+sin(a)*2),14)
  until walls[y] and walls[y][x] == 0
  return x*8+4,y*8+4
 end
@@ -687,38 +678,43 @@ function newdemonboss(x,y)
 end
 
 -- items
-slots={'weapon','offhand','armor','helmet','boots','amulet','book'}
-comcols2=pfn'-1,-1,-1,-1,2,'
+slots,comcols2={'weapon','offhand','armor','helmet','boots','amulet','book'},pfn'-1,-1,-1,-1,2,'
 
 function createitem(_itemclass,_prefix,_suffix)
  local itemclass=itemclasses[_itemclass]
- local itemname,armor,spdfactor,_att_spd_dec,prefixt,sprite=
+ local itemname,armor,spdfactor,_att_spd_dec,prefixt,col,col2,sprite=
    itemclass.name,itemclass.armor or 0,itemclass.spdfactor or 0,0,
    itemclass.prefix or prefix
 
- if _suffix != 0 then
-  _suffix=suffix[_suffix]
+ _suffix=suffix[_suffix]
+ if _suffix then
   itemname=itemname.._suffix.name
-  armor+=(_suffix.armor or 0)
-  spdfactor+=(_suffix.spdfactor or 0)
-  _att_spd_dec+=(_suffix.att_spd_dec or 0)
-  col,col2,sprite=_suffix.cols and _suffix.cols[_itemclass],_suffix.cols2 and _suffix.cols2[_itemclass],_suffix.sprites[_itemclass]
- else
-  _suffix=nil
  end
 
- if _prefix != 0 then
-  _prefix=prefixt[_prefix]
+ if _itemclass >=8 and _prefix == 1 and _suffix then
+  col,col2,sprite=_suffix.cols[_itemclass] or _suffix.col,
+   _suffix.cols2 and _suffix.cols2[_itemclass],
+   _suffix.sprite
+ end
+
+ _prefix=prefixt[_prefix]
+ if _prefix then
   itemname=_prefix.name..itemname
-  armor+=(_prefix.armor or 0)
-  spdfactor+=(_prefix.spdfactor or 0)
-  col,col2,sprite=_prefix.cols and _prefix.cols[_itemclass] or _prefix.col,_prefix.cols2 and _prefix.cols2[_itemclass],_prefix.sprites[_itemclass]
- else
-  _prefix=nil
  end
 
  if not (_prefix or _suffix) then
   itemname='useless '..itemname
+ end
+
+ for _affix in all{_prefix,_suffix} do
+  if _affix then
+   armor+=(_affix.armor or 0)
+   spdfactor+=(_affix.spdfactor or 0)
+   _att_spd_dec+=(_affix.att_spd_dec or 0)
+   col,col2,sprite=col or _affix.cols and _affix.cols[_itemclass] or _affix.col,
+    col2 or _affix.cols2 and _affix.cols2[_itemclass] or itemclass.col2,
+    sprite or _affix.sprites[_itemclass]
+  end
  end
 
  return {
@@ -947,10 +943,9 @@ function mapinit()
   nexttheme+=1
  end
 
- -- door
- basemap[cury][curx],basemap[avatary][avatarx]=10,15
-
  -- reset
+ basemap[cury][curx],
+ basemap[avatary][avatarx],
  curenemyi,
  tick,
  walls,
@@ -961,6 +956,7 @@ function mapinit()
  interactables,
  isdoorspawned,
  boss=
+  10,15,
   1,0,{},{},{},{},{},{}
 
  for _y=0xffff,16 do
@@ -969,9 +965,8 @@ function mapinit()
    local _col,ax,ay=basemap[_y][_x],_x*8+4,_y*8+4
 
    if _col == 15 then
-    avatar=actfact(avatar)
+    avatar=add(actors,actfact(avatar))
     avatar.x,avatar.y,avatar.armor=ax,ay,avatar.startarmor
-    add(actors,avatar)
     add(interactables,{
      x=avatar.x,y=avatar.y,
      hw=4,hh=2.5,
@@ -1040,13 +1035,8 @@ function dungeonupdate()
   avatar.dx,avatar.dy=0,0
  end
 
- -- consider skill button input
- skillbuttondown=nil
- if btn(5) then
-  skillbuttondown=1
- elseif btn(4) then
-  skillbuttondown=2
- end
+ -- button input
+ skillbuttondown=btn(5) and 1 or btn(4) and 2 or nil
 
  if skillbuttondown and
     (avatar.state == 'idling' or
