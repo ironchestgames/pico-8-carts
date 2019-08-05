@@ -21,6 +21,18 @@ All swords, bows and magic does 1 damage. There are 2 exceptions:
 1. Sharp swords do 2 damage
 2. Ice will only do damage if the enemy is already frozen. (This also applies to you)
 
+### How much damage can I take?
+
+You start with 3 life points. Lose them all and you die.
+
+There are 2 ways to regain life:
+ - Have a _Skull_ amulet equipped when losing your last point, you'll then get another 3 life points
+ - Kill the last boss
+
+If you have armor, 1 armor will save 1 hit. Armor is replenished before each level.
+
+All enemies do 1 damage per attack. _Samael_ (\~level 8 boss) is the only exception.
+
 ### I want to start over!
 
 Ok!
@@ -58,13 +70,14 @@ From there you can unequip the book and continue playing.
 ### Item suffix
 
 - _of Haste_ +10% speed
+- _of Concentration_ faster attack (-3 Attack Frames)
 - _of Phasing_ Gain passive skill 'Phase away on hit'
 - _of Firebolt_ Gain active skill 'Firebolt'
 - _of Icebolt_ Gain active skill 'Icebolt'
 
 ### Skills
 
-There are active skills and passive skills. Active skills you have to assign to a button (buttons) to use. Passive skills happens automatically, without your input.
+There are active skills and passive skills. Active skills you have to assign to a button (image of buttons) to use. Passive skills happens automatically, without your input.
 
 #### Active Skills
 
@@ -79,3 +92,9 @@ There are active skills and passive skills. Active skills you have to assign to 
 - Cannot be burned. If you get hit with a fire attack you take 1 damage and (e.g. troll casters or firebats) you will lose control until you've stopped burning. But with this skill you will not start to burn, you'll still receive 1 damage though.
 - Cannot be frozen. If you get hit with an ice attack you take 1 damage and (e.g. demon casters) you will freeze until you've thawed. But with this skill you will not freeze, you'll still receive 1 damage though.
 
+## Known issues
+
+ - Standing on door when clearing level might send you directly to next level (and miss looting those delicious chests, my condolances.)
+ - Sometimes the hero fail to spawn (work-around for now is to reset cart, you'll lose your inventory but not equipped items.)
+ - Taking longer than 9 minutes on one level will halt the game (or waiting on splash screen or inventory), open the cart menu if you plan to leave the game for any extended periods of time.
+ - 
