@@ -524,6 +524,7 @@ newfirebatenemy=batfactory(pfn'0,0,0,0,8,',14,'fire',120)
 function newvampireboss(x,y)
  boss=actfact{
   name='samael',
+  isghost=true,
   x=x,y=y,
   hw=1.5,hh=2,
   spd=0.75,
@@ -828,7 +829,7 @@ suffix={
   cols=pfn'13,6,-1,12,12,12,-1,7,12,',cols2=pfn'-1,-1,-1,-1,1,',skill=boltskillfactory(
   'ice',7,12,12,12,13,14,'icebolt')},
  {name=' of concentration',sprites=pfn'244,245,159,175,191,249,216,247,215,',
-  cols=pfn'4,13,-1,2,3,4,-1,15,3,',cols2=pfn'-1,-1,-1,-1,1,',att_spd_dec=3}
+  cols=pfn'4,13,-1,2,3,6,-1,15,3,',cols2=pfn'-1,-1,-1,-1,1,',att_spd_dec=3}
 }
 
 cloakidling,shieldidling,swordidling,bowidling
