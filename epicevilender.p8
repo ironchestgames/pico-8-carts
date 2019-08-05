@@ -6,6 +6,10 @@ __lua__
 
 cartdata'ironchestgames_vvoe_v1_dev12'
 
+function _sfx(_s)
+ sfx(tonum(_s))
+end
+
 function has(_t,_v)
  for k,v in pairs(_t) do
   if v == _v then
@@ -276,7 +280,7 @@ function swordattackskillfactory(
    frame[6]+=y
    add(vfxs,{frame})
 
-   sfx(4)
+   _sfx'4'
   end
  }
 end
@@ -310,7 +314,7 @@ function bowattackskillfactory(
    frame[6]+=y
    add(vfxs,{frame})
 
-   sfx(5)
+   _sfx'5'
   end
  }
 end
@@ -338,7 +342,7 @@ function boltskillfactory(
     poffsets=pfn'-2,0.5,2,0.5,',
     pcol1=castpemcol1,pcol2=castpemcol2
    })
-   sfx(9)
+   _sfx'9'
   end,
   perform=function(_a)
    local x,y=getskillxy(_a)
@@ -366,7 +370,7 @@ function boltskillfactory(
     dy=pfn'0,0,',
     pcol1=boltpemcol1,pcol2=boltpemcol2
    })
-   sfx(32)
+   _sfx'32'
   end
  }
 end
@@ -398,7 +402,7 @@ function performenemymelee(_a)
  f[5]+=_x
  f[6]+=_y
  add(vfxs,{f})
- sfx(4)
+ _sfx'4'
 end
 
 function performenemybow(_a)
@@ -411,7 +415,7 @@ function performenemybow(_a)
   frame=clone(arrowframes[a]),
   col=2
  })
- sfx(5)
+ _sfx'5'
 end
 
 -- enemy factories
@@ -551,7 +555,7 @@ function newvampireboss(x,y)
    f[5]+=_x
    f[6]+=_y
    add(vfxs,{f})
-   sfx(4)
+   _sfx'4'
   end,
   idling={pfn'82,91,5,5,-3,-3,'},
   moving={animspd=0.21,pfn'96,91,3,3,-1.5,-1.5,',pfn'99,91,3,3,-1.5,-1.5,'},
@@ -603,7 +607,7 @@ function newskeleking(x,y)
    typ='knockback',
    knocka=_a.a,
   })
-  sfx(4)
+  _sfx'4'
  end
 
  function setupmagic(_a)
@@ -632,7 +636,7 @@ function newskeleking(x,y)
    poffsets=pfn'-2,0.5,1,0.5,',
    pcol1=11,pcol2=3
   })
-  sfx(9)
+  _sfx'9'
  end
 
  function performmagic(_a)
@@ -779,7 +783,7 @@ amuletprefix={
        break
       end
      end
-     sfx(21)
+     _sfx'21'
     end
    end
   }
@@ -1154,7 +1158,6 @@ function dungeonupdate()
  end
  enemy=actors[curenemyi]
  if enemy and enemy != avatar and not enemy.removeme then
-
   enemy.att_range=enemy.att_range or 7
 
   -- aggression vars
@@ -1226,9 +1229,7 @@ function dungeonupdate()
  -- update the next-position
  for actor in all(actors) do
   local spdfactor=actor.spdfactor or 1
-  actor.dx,actor.dy=
-    actor.dx*(actor.spd*spdfactor),
-    actor.dy*(actor.spd*spdfactor)
+  actor.dx,actor.dy=actor.dx*(actor.spd*spdfactor),actor.dy*(actor.spd*spdfactor)
   -- note: after this deltas should not change by input
  end
 
@@ -1253,8 +1254,7 @@ function dungeonupdate()
  for attack in all(attacks) do
   attack.tar_c=attack.tar_c or 1
   for _a in all(actors) do
-   if (not attack.removeme) and
-      (not _a.removeme) and
+   if (not attack.removeme) and (not _a.removeme) and
       attack.isavatar != _a.isavatar and
       isaabbscolliding(attack,_a) then
     attack.tar_c-=1
@@ -1269,7 +1269,7 @@ function dungeonupdate()
 
     -- special case if ice and already frozen
     if attack.typ == 'ice' and not (_a.effect and
-        _a.effect.func == freezeeffect) then
+      _a.effect.func == freezeeffect) then
      dmg=0
     end
 
@@ -1283,18 +1283,16 @@ function dungeonupdate()
     else
      _a.hp-=dmg
     end
-
-    -- go into recovering
     _a.state='recovering'
     _a.state_c=attack.recovertime or 0
 
-    -- check if _a dead
+    -- check if actor is dead
     if _a.hp <= 0 then
      _a.removeme,hitsfx=true,3
      kills+=1
 
      -- add chest
-     local isbosschest=_a == boss or theme == 4 and boss
+     isbosschest=_a == boss or theme == 4 and boss
      if kills % (6-theme) <= 0 or isbosschest then
       sprite,kills=isbosschest and 73 or 22,0
       add(interactables,{
@@ -1308,25 +1306,24 @@ function dungeonupdate()
          i.isopen,i.sprite,i.text=
            true,i.sprite+1,''
 
-         local _itemclassn,_n,_m=
+         _itemclassn,_n,_m=
           flrrnd(9)+1,1,0
-
          if theme == 4 and boss then
           _n,_m=0,1
          end
 
-         local itemclass=itemclasses[_itemclassn]
-         local _prefix=itemclass.prefix or prefix
-         local _prefixn,_suffixn=_itemclassn == 7 and 0 or
+         itemclass=itemclasses[_itemclassn]
+         _prefix=itemclass.prefix or prefix
+         _prefixn,_suffixn=_itemclassn == 7 and 0 or
           flrrnd(#_prefix+_n)+_m,
           flrrnd(5+_n)+_m
 
          _suffixn=i.isbosschest and _suffixn or 0
-         sfx(20)
-
+         _prefixn=_itemclassn >= 8 and _suffix != 0 and _prefixn == 0 and 1 or _prefixn
+         _sfx'20'
          add(avatar.inventory,createitem(_itemclassn,_prefixn,_suffixn))
         else
-         sfx(30)
+         _sfx'30'
         end
        end
       })
@@ -1335,25 +1332,20 @@ function dungeonupdate()
 
     -- effects
     _a.dmgfx_col,_a.dmgfx_c=8,20
-
     if attack.typ == 'knockback' and not _a.isbig then
      _a.dx,_a.dy=cos(attack.knocka)*5,sin(attack.knocka)*5
-
     elseif attack.typ == 'fire' then
      _a.effect={func=burningeffect}
-
     elseif attack.typ == 'ice' then
      _a.effect,_a.dmgfx_col={func=freezeeffect},12
     end
-
     sfx(hitsfx)
 
     -- hit flash
     local x,y=_a.x+_a.dx/2,_a.y+_a.dy/2
     add(vfxs,{
      {42,20,5,5,x-2.5,y-2.5,c=4,col=_a.dmgfx_col},
-     {42,20,5,5,x-2.5,y-2.5,c=5,col=7},
-    })
+     {42,20,5,5,x-2.5,y-2.5,c=5,col=7}})
 
     -- on hit handling
     for skill in all(_a.passiveskills) do
@@ -1361,7 +1353,6 @@ function dungeonupdate()
       skill.onhit(_a)
      end
     end
-
     attack.removeme=attack.tar_c <= 0
    end
   end
@@ -1396,16 +1387,13 @@ function dungeonupdate()
 
  -- movement check against walls
  for _a in all(actors) do
-  local _dx,_dy=collideaabbs(
-    isinsidewall,_a,nil,_a.dx,_a.dy)
-
+  local _dx,_dy=collideaabbs(isinsidewall,_a,nil,_a.dx,_a.dy)
   if _a != avatar then
    _a.wallcollisiondx,_a.wallcollisiondy=nil
    if _dx != _a.dx or _dy != _a.dy then
     _a.wallcollisiondx,_a.wallcollisiondy=_dx,_dy
    end
   end
-
   _a.x+=_dx
   _a.y+=_dy
   _a.dx,_a.dy=0,0
@@ -1441,8 +1429,7 @@ function dungeonupdate()
  -- update actor animation frames
  for _a in all(actors) do
   local stateframes=_a[_a.state]
-  animspd=stateframes.animspd or 0.25
-  _a.curframe+=animspd*_a.spd
+  _a.curframe+=(stateframes.animspd or 0.25)*_a.spd
   if _a.curframe >= #stateframes+1 then
    _a.curframe=1
   end
@@ -1454,10 +1441,7 @@ function dungeonupdate()
   if vfx[1].c <= 0 then
    del(vfx,vfx[1])
   end
-
-  if not(#vfx > 0) then
-   vfx.removeme=true
-  end
+  vfx.removeme=#vfx <= 0
  end
 
  -- update pemitters
@@ -1528,26 +1512,28 @@ function dungeonupdate()
  if avatar.hp <= 0 then
   music(0xffff)
   deathts=tick
-  sfx(2)
+  _sfx'2'
  end
 end
 
 
 function dungeondraw()
  cls(0)
- local spr1=176+theme*16
+ local spr1,offset=176+theme*16,0
 
  -- draw walls
  for _y=0,#walls do
   for _x=0,#walls[_y] do
    if walls[_y][_x] != 0 then
+    _x8=_x*8
+    _y8=_y*8
     if _y == #walls or walls[_y+1] and walls[_y+1][_x] != 0 then
-     spr(spr1+2,_x*8,_y*8)
+     spr(spr1+2,_x8,_y8)
     else
      if (_y + _x) % 7 == 0 then
-      spr(spr1+1,_x*8,_y*8)
+      spr(spr1+1,_x8,_y8)
      else
-      spr(spr1,_x*8,_y*8)
+      spr(spr1,_x8,_y8)
      end
     end
    end
@@ -1606,38 +1592,27 @@ function dungeondraw()
   sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
 
   -- draw cloak
-  if _a == avatar and
-     avatar.items.armor and
+  if _a == avatar and avatar.items.armor and
      avatar.items.armor.iscloak then
    item=avatar.items.armor
-   local stateframes=item[state]
-   local f=stateframes[min(
-     flr(item.curframe),
-     #stateframes)]
+   local f=item[state][min(flr(item.curframe),#item[state])]
    pal(1,item.col,0)
    pal(3,item.col2,0)
    sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
   end
 
   -- draw weapon
-  if _a == avatar and
-     avatar.items.weapon then
+  if _a == avatar and avatar.items.weapon then
    item=avatar.items.weapon
-   local stateframes=item[state]
-   local f=stateframes[min(
-     flr(item.curframe),
-     #stateframes)]
+   local f=item[state][min(flr(item.curframe),#item[state])]
    pal(6,item.col,0)
    sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
   end
 
   -- draw offhand
-  if _a == avatar and
-     avatar.items.offhand then
+  if _a == avatar and avatar.items.offhand then
    item=avatar.items.offhand
-   local f=item[state][min(
-     flr(item.curframe),
-     #item[state])]
+   local f=item[state][min(flr(item.curframe),#item[state])]
    pal(6,item.col,0)
    sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
   end
@@ -1679,7 +1654,6 @@ function dungeondraw()
  end
 
  -- draw gui
- offset=0
  for _i=0,avatar.hp-1 do
   print('\x87',121-_i*6,1,8)
   offset=(_i+1)*6-1
@@ -1730,10 +1704,7 @@ function equipinit()
 end
 
 function equipupdate()
-
- local btnp0,btnp1,btnp4,btnp5=btnp(0),btnp(1),btnp(4),btnp(5)
-
- -- init equipped items
+ btnp0,btnp1,btnp4,btnp5,
  avatar.startarmor,
  avatar.spdfactor,
  avatar.att_spd_dec,
@@ -1742,7 +1713,10 @@ function equipupdate()
  equipped,
  avatar.passiveskills,
  availableskills=
+  btnp(0),btnp(1),btnp(4),btnp(5),
   0,1,0,avatar.items,0,{},{},{}
+
+  -- init equipped items
  for _,item in pairs(avatar_items) do
   add(equipped,item)
   if item.armor then
@@ -1787,7 +1761,7 @@ function equipupdate()
  _d=btnp(2) and 1 or btnp(3) and 0xffff or nil
  if _d then
   sectioncur=mid(1,sectioncur-_d,4)
-  sfx(7)
+  _sfx'7'
  end
 
  -- init inventory
@@ -1798,15 +1772,16 @@ function equipupdate()
  end
 
  -- inventory
+ inventoryn=#avatar.inventory
  if sectioncur == 1 then
   _d=btnp0 and 1 or btnp1 and 0xffff
   if _d then
-   inventorycur=mid(1,inventorycur-_d,#avatar.inventory)
+   inventorycur=mid(1,inventorycur-_d,inventoryn)
    sellcur=nil
-   sfx(7)
+   _sfx'7'
   end
 
-  if #avatar.inventory > 0 then
+  if inventoryn > 0 then
    if btnp5 then
     selecteditem,avatar.skill1,avatar.skill2=avatar.inventory[inventorycur]
 
@@ -1826,14 +1801,15 @@ function equipupdate()
      add(avatar.inventory,avatar_items.weapon)
      avatar_items.weapon=nil
     end
-    inventorycur=mid(1,inventorycur,#avatar.inventory-1)
-    sfx(8)
+    inventorycur=mid(1,inventorycur,inventoryn-1)
+    _sfx'8'
 
    elseif btnp4 then
     if sellcur then
      del(avatar.inventory,avatar.inventory[sellcur])
      sellcur,avatar.skill1,avatar.skill2=nil
-     sfx(29)
+     inventorycur=min(inventorycur,inventoryn-1)
+     _sfx'29'
     else
      sellcur=inventorycur
     end
@@ -1846,19 +1822,19 @@ function equipupdate()
   _d=btnp0 and 1 or btnp1 and 0xffff or nil
   if _d then
    equippedcur=mid(1,equippedcur-_d,#slots)
-   sfx(7)
+   _sfx'7'
   end
 
   if btnp5 then
    if #avatar.inventory >= 10 then
-    sfx(6)
+    _sfx'6'
    else
     local selecteditem=avatar_items[slots[equippedcur]]
     if selecteditem then
      avatar_items[selecteditem.slot],avatar.skill1,avatar.skill2=nil
      add(avatar.inventory,selecteditem)
     end
-    sfx(8)
+    _sfx'8'
    end
   end
 
@@ -1867,7 +1843,7 @@ function equipupdate()
   _d=btnp0 and 1 or btnp1 and 0xffff or nil
   if _d then
    availableskillscur=mid(1,availableskillscur-_d,#availableskills)
-   sfx(7)
+   _sfx'7'
   end
 
   local selectedskill=availableskills[availableskillscur]
@@ -1878,9 +1854,9 @@ function equipupdate()
      if avatar.skill2 == avatar.skill1 then
       avatar.skill2=nil
      end
-     sfx(8)
+     _sfx'8'
     else
-     sfx(6)
+     _sfx'6'
     end
    end
    if btnp4 then
@@ -1889,9 +1865,9 @@ function equipupdate()
      if avatar.skill1 == avatar.skill2 then
       avatar.skill1=nil
      end
-     sfx(8)
+     _sfx'8'
     else
-     sfx(6)
+     _sfx'6'
     end
    end
   end
@@ -1918,7 +1894,7 @@ function equipupdate()
     end
    else
     sectioncur=3
-    sfx(6)
+    _sfx'6'
    end
   end
  end
@@ -1926,13 +1902,13 @@ end
 
 function equipdraw()
  cls(0)
- -- fillp(0b1010000110000101)
- -- rectfill(0,0,128,3,1)
- -- fillp()
+ fillp(0b1010000110000101)
+ rectfill(0,0,128,3,1)
+ fillp()
 
  -- draw inventory section
  local offsetx,i=0,1
- print('saddlebags',4,17-9,sectioncur == 1 and 10 or 4)
+ print('saddlebags',4,8,sectioncur == 1 and 10 or 4)
  for item in all(avatar.inventory) do
   spr(item.sprite,6+offsetx,17)
   if sectioncur == 1 and i == inventorycur then
@@ -1956,10 +1932,10 @@ function equipdraw()
  end
  for k,v in pairs(slots) do
   local item=avatar.items[v]
-  if not item then
-   spr(k,6+offsetx,52)
-  else
+  if item then
    spr(item.sprite,6+offsetx,52)
+  else
+   spr(k,6+offsetx,52)
   end
   if sectioncur == 2 and k == equippedcur then
    rect(4+offsetx,50,15+offsetx,61,10)
@@ -2337,8 +2313,13 @@ __sfx__
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-016000000e5300e5350e714115341053010535107141353411530115351171415534135301653116532165350e5300e5350e7141153410530105350f7140f5340e5300e5350c5000d5340e5300e5320e53500515
+016000000e5300e5350e714115341053010535107141353411530115351171415534135301652116522165250e5300e5350e7141153410530105350f7140f5240e5200e5250c5000d5340e5300e5220e52500515
 01c00010027350000004735000000573500000077350a735027350000004735000000273501735027350000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+012400000e755020550e755000000e755020550e755000000d755010550d755000000d755010550d755000000e755020550e755000000e755020550e755000001174505055117550000011755040551075500055
+012400000e755020550e755000050e755020550e7550475511755050551175500000147450805514755000001374507055137550000013745070551375509755167450a055167550000014745080551175505745
+012400000e755020550e755000000e755020550e755000000d755010550d755000000d745010550d755000000e745020550e745000000e735020350e725000000e72600000017160000001715000000171300000
 __music__
 03 1a6e4344
 00 23244344
@@ -2351,10 +2332,10 @@ __music__
 02 6c424344
 00 65674344
 00 114b4344
-01 16184344
-02 17194344
-00 706e4344
-00 706e4344
+01 3c584344
+00 3c584344
+00 3d584344
+02 3e6e4344
 00 67674344
 00 706e4344
 00 706e4344
@@ -2365,6 +2346,16 @@ __music__
 00 6e6e4344
 00 6c6e4344
 00 706e4344
+00 41424344
+00 41424344
+00 41424344
+00 41424344
+00 41424344
+00 114b4344
+01 16184344
+02 17194344
+00 6c6e4344
+00 41424344
 00 41424344
 00 41424344
 00 41424344
