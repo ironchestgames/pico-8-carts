@@ -4,7 +4,7 @@ __lua__
 -- virtuous vanquisher of evil 1.0
 -- by ironchest games
 
-cartdata'ironchestgames_vvoe_v1_dev12'
+cartdata'ironchestgames_vvoe_v1'
 
 function _sfx(_s)
  sfx(tonum(_s))

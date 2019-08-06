@@ -1,4 +1,4 @@
-# Manual for Virtuous Vanquisher of Evil
+# Manual for Virtuous Vanquisher of Evil (v1.0)
 
 ## Where are my Quality of Life features?!
 
