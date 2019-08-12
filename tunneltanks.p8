@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 16
+version 18
 __lua__
 -- tunnel tanks
 -- by ironchest games
@@ -24,22 +24,22 @@ function isoutinopen(_gamemap,_tankx,_tanky)
 
  -- test upper left
  if gamemap[flr((_tanky-1)/8)][flr((_tankx-1)/8)] != 2 then
-  return false
+  return
  end
 
  -- test upper right
  if gamemap[flr((_tanky-1)/8)][flr((_tankx+8)/8)] != 2 then
-  return false
+  return
  end
  
  -- test lower right
  if gamemap[flr((_tanky+8)/8)][flr((_tankx+8)/8)] != 2 then
-  return false
+  return
  end
 
  -- test lower left
  if gamemap[flr((_tanky+8)/8)][flr((_tankx-1)/8)] != 2 then
-  return false
+  return
  end
 
  -- ... there's floor all around
@@ -47,13 +47,7 @@ function isoutinopen(_gamemap,_tankx,_tanky)
 end
 
 function getsurroundingfloor(_gamemap,_tankx,_tanky)
- local _result={
-  [0]=false,
-  [1]=false,
-  [2]=false,
-  [3]=false,
-  floorcount=0,
- }
+ local _result={floorcount=0}
 
  -- test left
  if gamemap[flr((_tanky)/8)][flr((_tankx-1)/8)] == 2 and
@@ -80,7 +74,7 @@ function getsurroundingfloor(_gamemap,_tankx,_tanky)
  end
 
  -- count surrounding floors
- for i=0,#_result do
+ for i=0,3 do
   if _result[i] == true then
    _result.floorcount+=1
   end
@@ -185,46 +179,46 @@ gamemap={}
 bullets={}
 particles={}
 
-keystatuses={
- [0]=false,
- [1]=false,
- [2]=false,
- [3]=false,
+players={
+ {keystatuses={}},
+ {keystatuses={}},
+ {keystatuses={}},
+ {keystatuses={}}
 }
-tank1keydir=nil
+
 keydowns={
- [0]=function ()
-  tank1keydir=0
+ [0]=function (player)
+  player.keydir=0
  end,
- [1]=function ()
-  tank1keydir=1
+ [1]=function (player)
+  player.keydir=1
  end,
- [2]=function ()
-  tank1keydir=2
+ [2]=function (player)
+  player.keydir=2
  end,
- [3]=function ()
-  tank1keydir=3
+ [3]=function (player)
+  player.keydir=3
  end,
 }
 keyups={
- [0]=function ()
-  if tank1keydir == 0 then
-   tank1keydir=nil
+ [0]=function (player)
+  if player.keydir == 0 then
+   player.keydir=nil
   end
  end,
- [1]=function ()
-  if tank1keydir == 1 then
-   tank1keydir=nil
+ [1]=function (player)
+  if player.keydir == 1 then
+   player.keydir=nil
   end
  end,
- [2]=function ()
-  if tank1keydir == 2 then
-   tank1keydir=nil
+ [2]=function (player)
+  if player.keydir == 2 then
+   player.keydir=nil
   end
  end,
- [3]=function ()
-  if tank1keydir == 3 then
-   tank1keydir=nil
+ [3]=function (player)
+  if player.keydir == 3 then
+   player.keydir=nil
   end
  end,
 }
@@ -244,6 +238,12 @@ function _init()
    if _col != 1 and _col != 2 then
     if _col == 8 then -- add red tank
      add(tanks,newtank(1,_x*8,_y*8))
+    elseif _col == 10 then -- add yellow tank
+     add(tanks,newtank(2,_x*8,_y*8))
+    elseif _col == 11 then -- add green tank
+     add(tanks,newtank(3,_x*8,_y*8))
+    elseif _col == 12 then -- add blue tank
+     add(tanks,newtank(4,_x*8,_y*8))
     end
     _col=2 -- note: make tile ground
    end
@@ -259,159 +259,162 @@ function _update60()
  -- reset
  local _spd=0.5
 
- -- todo: loop this
- local tank=tanks[1]
+ for _playerindex,tank in pairs(tanks) do
 
- -- fire bullet
- if btnp(4) then
-  add(bullets,firebullet(tank))
- end
+  local player=players[_playerindex]
+  local keystatuses=player.keystatuses
 
- -- decelration
- tank.spd=max(0,tank.spd*0.9)
-
- local _direction=nil
-
- for i=0,3 do
-  if btn(i) and keystatuses[i] == false then
-   keystatuses[i]=true
-   keydowns[i]()
+  -- fire bullet
+  if btnp(4,_playerindex-1) then
+   add(bullets,firebullet(tank))
   end
 
-  if btn(i) == false and keystatuses[i] == true then
-   keystatuses[i]=false
-   keyups[i]()
-  end
- end
+  -- decelration
+  tank.spd=max(0,tank.spd*0.9)
 
- -- get surrouning floors
- local surroundingfloor=getsurroundingfloor(gamemap,tank.x,tank.y)
+  local _direction=nil
 
- -- special input handling when not near any walls
- if surroundingfloor.floorcount == 4 and
-    (isoutinopen(gamemap,tank.x-1,tank.y-1) or
-    isoutinopen(gamemap,tank.x+1,tank.y-1) or
-    isoutinopen(gamemap,tank.x+1,tank.y+1) or
-    isoutinopen(gamemap,tank.x-1,tank.y+1)) then
+  for i=0,3 do
+   if btn(i,_playerindex-1) and keystatuses[i] == nil then
+    keystatuses[i]=true
+    keydowns[i](player)
+   end
 
-  local _keycount=0
-  local _onlykey=nil
-  for i=0,#keystatuses do
-   if keystatuses[i] == true then
-    _keycount+=1
-    _onlykey=i
+   if btn(i,_playerindex-1) == false and keystatuses[i] then
+    keystatuses[i]=nil
+    keyups[i](player)
    end
   end
 
-  if _keycount == 1 then
-   tank1keydir=_onlykey
-  end
+  -- get surrouning floors
+  local surroundingfloor=getsurroundingfloor(gamemap,tank.x,tank.y)
 
-  _direction=tank1keydir
+  -- special input handling when not near any walls
+  if surroundingfloor.floorcount == 4 and
+     (isoutinopen(gamemap,tank.x-1,tank.y-1) or
+     isoutinopen(gamemap,tank.x+1,tank.y-1) or
+     isoutinopen(gamemap,tank.x+1,tank.y+1) or
+     isoutinopen(gamemap,tank.x-1,tank.y+1)) then
 
- -- input handling near walls
- else
+   local _keycount=0
+   local _onlykey=nil
+   for i=0,3 do
+    if keystatuses[i] then
+     _keycount+=1
+     _onlykey=i
+    end
+   end
 
-   -- reset dirs
-  tank.primarydir=nil
-  tank.secondarydir=nil
+   if _keycount == 1 then
+    player.keydir=_onlykey
+   end
 
-  -- get input
-  if btn(0) then
-   if tank.direction == 0 then
-    tank.primarydir=0
-   else
-    tank.secondarydir=0
+   _direction=player.keydir
+
+  -- input handling near walls
+  else
+
+    -- reset dirs
+   tank.primarydir=nil
+   tank.secondarydir=nil
+
+   -- get input
+   if btn(0,_playerindex-1) then
+    if tank.direction == 0 then
+     tank.primarydir=0
+    else
+     tank.secondarydir=0
+    end
+   end
+
+   if btn(1,_playerindex-1) then
+    if tank.direction == 1 then
+     tank.primarydir=1
+    else
+     tank.secondarydir=1
+    end
+   end
+
+   if btn(2,_playerindex-1) then
+    if tank.direction == 2 then
+     tank.primarydir=2
+    else
+     tank.secondarydir=2
+    end
+   end
+
+   if btn(3,_playerindex-1) then
+    if tank.direction == 3 then
+     tank.primarydir=3
+    else
+     tank.secondarydir=3
+    end
+   end
+
+   -- prioritize secondary direction
+   -- so if there is a turn available and
+   -- we're pressing it, we're going to turn
+   _direction=tank.primarydir
+
+   if tank.secondarydir == nil then
+    tank.secondarydir=tank.primarydir
+   end
+
+   if tank.secondarydir == 0 and surroundingfloor[0] then
+    _direction=0
+   elseif tank.secondarydir == 1 and surroundingfloor[1] then
+    _direction=1
+   elseif tank.secondarydir == 2 and surroundingfloor[2] then
+    _direction=2
+   elseif tank.secondarydir == 3 and surroundingfloor[3] then
+    _direction=3
    end
   end
 
-  if btn(1) then
+  -- consider the input
+  if _direction == 0 then
    if tank.direction == 1 then
-    tank.primarydir=1
-   else
-    tank.secondarydir=1
+    tank.isreversing=not tank.isreversing
    end
+   tank.direction=0
+   tank.spd=_spd
   end
 
-  if btn(2) then
-   if tank.direction == 2 then
-    tank.primarydir=2
-   else
-    tank.secondarydir=2
+  if _direction == 1 then
+   if tank.direction == 0 then
+    tank.isreversing=not tank.isreversing
    end
+   tank.direction=1
+   tank.spd=_spd
   end
 
-  if btn(3) then
+  if _direction == 2 then
    if tank.direction == 3 then
-    tank.primarydir=3
-   else
-    tank.secondarydir=3
+    tank.isreversing=not tank.isreversing
    end
+   tank.direction=2
+   tank.spd=_spd
   end
 
-  -- prioritize secondary direction
-  -- so if there is a turn available and
-  -- we're pressing it, we're going to turn
-  _direction=tank.primarydir
-
-  if tank.secondarydir == nil then
-   tank.secondarydir=tank.primarydir
+  if _direction == 3 then
+   if tank.direction == 2 then
+    tank.isreversing=not tank.isreversing
+   end
+   tank.direction=3
+   tank.spd=_spd
   end
 
-  if tank.secondarydir == 0 and surroundingfloor[0] then
-   _direction=0
-  elseif tank.secondarydir == 1 and surroundingfloor[1] then
-   _direction=1
-  elseif tank.secondarydir == 2 and surroundingfloor[2] then
-   _direction=2
-  elseif tank.secondarydir == 3 and surroundingfloor[3] then
-   _direction=3
+  -- move tank
+  local _movement=directionmap[tank.direction]
+  local _nextx=tank.x+_movement[1]*tank.spd
+  local _nexty=tank.y+_movement[2]*tank.spd
+
+  -- test if next is on floor
+  -- todo: or if collision with other tank
+  if positionisonfloor(gamemap,_nextx,_nexty) then
+   tank.x=_nextx
+   tank.y=_nexty
   end
- end
-
- -- consider the input
- if _direction == 0 then
-  if tank.direction == 1 then
-   tank.isreversing=not tank.isreversing
-  end
-  tank.direction=0
-  tank.spd=_spd
- end
-
- if _direction == 1 then
-  if tank.direction == 0 then
-   tank.isreversing=not tank.isreversing
-  end
-  tank.direction=1
-  tank.spd=_spd
- end
-
- if _direction == 2 then
-  if tank.direction == 3 then
-   tank.isreversing=not tank.isreversing
-  end
-  tank.direction=2
-  tank.spd=_spd
- end
-
- if _direction == 3 then
-  if tank.direction == 2 then
-   tank.isreversing=not tank.isreversing
-  end
-  tank.direction=3
-  tank.spd=_spd
- end
-
- -- move tank
- local _movement=directionmap[tank.direction]
- local _nextx=tank.x+_movement[1]*tank.spd
- local _nexty=tank.y+_movement[2]*tank.spd
-
- -- test if next is on floor
- -- todo: or if collision with other tank
- if positionisonfloor(gamemap,_nextx,_nexty) then
-  tank.x=_nextx
-  tank.y=_nexty
  end
 
  -- move bullets
@@ -472,7 +475,7 @@ function _draw()
  end
 
  -- draw tanks
- for tank in all(tanks) do
+ for _tankidx,tank in pairs(tanks) do
   local _flippedh=true
   local _flippedv=false
   local _frame=0
@@ -506,7 +509,7 @@ function _draw()
    _driveframeoff=1
   end
 
-  spr(_frame+_driveframeoff,tank.x,tank.y,1,1,_flippedh)
+  spr(_frame+_driveframeoff+(_tankidx*4)-4,tank.x,tank.y,1,1,_flippedh)
 
   -- draw tank weapon
   spr(
@@ -622,7 +625,7 @@ __gfx__
 11111111112111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 11111111112111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 11111112122111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-1182222222222d110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+1182222222222c110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 11121212111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 11122212222222210000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 11111112111222110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
