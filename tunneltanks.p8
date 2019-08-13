@@ -14,6 +14,25 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  printh(result,'debug',false)
 end
 
+function isobjectscolliding(a,b)
+ return a.x < b.x+7 and
+        a.x+7 > b.x and
+        a.y < b.y+7 and
+        a.y+7 > b.y and b
+end
+
+function getoppositedirection(_d)
+ if _d == 0 then
+  return 1
+ elseif _d == 1 then
+  return 0
+ elseif _d == 2 then
+  return 3
+ elseif _d == 3 then
+  return 2
+ end
+end
+
 function getgamemapvaluefromscreenpos(_gamemap,_x,_y)
  return _gamemap[flr(_y/8)][flr(_x/8)]
 end
@@ -75,7 +94,7 @@ function getsurroundingfloor(_gamemap,_tankx,_tanky)
 
  -- count surrounding floors
  for i=0,3 do
-  if _result[i] == true then
+  if _result[i] then
    _result.floorcount+=1
   end
  end
@@ -95,7 +114,7 @@ function firebullet(tank)
  local _offx=0
  local _offy=0
 
- if tank.isreversing == true then
+ if tank.isreversing then
   if _direction == 0 then
    _direction=1
   elseif _direction == 1 then
@@ -143,12 +162,7 @@ end
 function newwallexplosion(_x,_y)
  for i=1,1 do
   add(particles,newparticle(_x,_y,12,5,{
-   [0]=4,
-   [1]=9,
-   [2]=15,
-   [3]=7,
-   [4]=7,
-   [5]=7,
+   [0]=4,9,15,7,7,7
   }))
  end
 end
@@ -160,10 +174,9 @@ function newtank(id,x,y)
   id=id,
   spd=0,
   direction=1, -- note: direction currently going
-  isreversing=false,
-
-  primarydir=nil,
-  secondarydir=nil,
+  -- isreversing=false,
+  -- primarydir=nil,
+  -- secondarydir=nil,
  }
 end
 
@@ -280,7 +293,7 @@ function _update60()
     keydowns[i](player)
    end
 
-   if btn(i,_playerindex-1) == false and keystatuses[i] then
+   if (not btn(i,_playerindex-1)) and keystatuses[i] then
     keystatuses[i]=nil
     keyups[i](player)
    end
@@ -404,13 +417,19 @@ function _update60()
    tank.spd=_spd
   end
 
+  -- collision w other tanks
+  for other in all(tanks) do
+   if tank != other and isobjectscolliding(tank,other) then
+    _direction=getoppositedirection(_direction)
+   end
+  end
+
   -- move tank
   local _movement=directionmap[tank.direction]
   local _nextx=tank.x+_movement[1]*tank.spd
   local _nexty=tank.y+_movement[2]*tank.spd
 
   -- test if next is on floor
-  -- todo: or if collision with other tank
   if positionisonfloor(gamemap,_nextx,_nexty) then
    tank.x=_nextx
    tank.y=_nexty
