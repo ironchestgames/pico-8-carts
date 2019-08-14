@@ -63,6 +63,11 @@ function loaditem(_i)
    band(dat,0b111100000000)/256) or nil
 end
 
+function isinside(x,y,aabb)
+ return x > aabb.x-aabb.hw and x < aabb.x+aabb.hw and
+        y > aabb.y-aabb.hh and y < aabb.y+aabb.hh
+end
+
 function isaabbscolliding(a,b)
  return a.x-a.hw < b.x+b.hw and a.x+a.hw > b.x-b.hw and
   a.y-a.hh < b.y+b.hh and a.y+a.hh > b.y-b.hh and b
@@ -77,9 +82,14 @@ function haslos(_x1,_y1,_x2,_y2)
 
  while n > 0 do
   n-=1
-  if walls[flr(y/8)][flr(x/8)] == 1 then
-   return
+  for _p in all(props) do
+   if isinside(x,y,_p) then
+    return
+   end
   end
+  -- if walls[flr(y/8)][flr(x/8)] == 1 then
+  --  return
+  -- end
   if err > 0 then
    x+=xinc
    err-=dy
@@ -230,12 +240,12 @@ function swordattackskillfactory(
   preprfm=15,
   postprfm=28,
   perform=function(_a,skill)
-   local x,y=getskillxy(_a)
 
    add(attacks,{
     isavatar=true,
-    x=x,y=y,
-    hw=2,hh=2,
+    x=_a.flipx and _a.x-5 or _a.x+5,
+    y=_a.y-8-_a.yoff,
+    hw=6,hh=6,
     state_c=1,
     typ=typ,
     recovertime=recovertime or 0,
@@ -245,10 +255,10 @@ function swordattackskillfactory(
    })
 
    local _f=pfn'0,27,17,13, -5,-16,'
-   _f.flipx=_a.a >= 0.25 and _a.a <= 0.75
+   _f.flipx=_a.flipx
    _f.c,_f.col=15,attackcol
    _f[5]=_f.flipx and _a.x-_f[3]-_f[5] or _a.x+_f[5]
-   _f[6]+=_a.y
+   _f[6]+=_a.y-_a.yoff
    add(vfxs,{_f})
 
    _sfx'4'
@@ -350,29 +360,32 @@ end
 function actfact(_a)
  _a.state,_a.state_c,_a.curframe,_a.dx,_a.dy,
  _a.runspd,_a.dmgfx_c,_a.comfydist,_a.toocloseto,_a.a,_a.hh
-   ='idling',0,1,0,0,_a.spd,0,_a.comfydist or 1,{},0,2
+   ='idling',0,1,0,0,_a.spd,0,_a.comfydist or 1,{},0,5
  return _a
 end
 
 function performenemymelee(_a)
- _a.a=getvfxframei(atan2(_a.tarx-_a.x,_a.tary-_a.y))
+
  add(attacks,{
-  x=_a.x+cos(_a.a)*4,
-  y=_a.y+sin(_a.a)*4,
-  hw=att_siz or 2,
-  hh=att_siz or 2,
+  x=_a.flipx and _a.x-5 or _a.x+5,
+  y=_a.y-8-_a.yoff,
+  hw=6,hh=6,
   state_c=1,
-  typ=_a.att_typ or 'knockback',
-  recovertime=_a.att_recovertime,
+  typ='knockback',
+  recovertime=recovertime or 0,
   knocka=_a.a,
-  tar_c=1000,
+  tar_c=1,
+  dmg=1,
  })
- local f=clone(meleevfxframes[_a.a])
- f.c,f.col=10,_a.att_col or 7
- _x,_y=getskillxy(_a)
- f[5]+=_x
- f[6]+=_y
- add(vfxs,{f})
+
+ local _f=pfn'0,27,17,13, -8,-17,'
+ _f.flipx=_a.flipx
+ _f.c,_f.col=15,attackcol
+ _f[5]=_f.flipx and _a.x-_f[3]-_f[5] or _a.x+_f[5]
+ _f[6]+=_a.y-_a.yoff
+
+ add(vfxs,{_f})
+ 
  _sfx'4'
 end
 
@@ -393,16 +406,17 @@ end
 function newmeleetroll(x,y)
  return actfact{
   x=x,y=y,
-  hw=1.5,
+  hw=2,hh=4,
+  yoff=-5,
   spd=0.45,
   hp=2,
   att_preprfm=50,
   att_postprfm=20,
   prfmatt=performenemymelee,
-  idling={pfn'40,91,4,5,-2,-3,'},
-  moving={animspd=0.18,pfn'40,91,4,5,-2,-3,',pfn'44,91,4,5,-2,-3,'},
-  attacking={animspd=0,pfn'48,91,4,5,-2,-3,',pfn'51,91,6,5,-3,-3,'},
-  recovering={pfn'40,91,4,5,-2,-3,'}
+  idling={pfn'28,26,9,10, -3,-10,'},
+  moving={animspd=0.18,pfn'17,26,11,9, -5,-9,',pfn'28,26,9,10, -3,-10,'},
+  attacking={animspd=0,pfn'37,26,10,11, -7,-11,',pfn'47,26,13,8, -4,-8,'},
+  recovering={pfn'28,26,9,10, -3,-10,'}
  }
 end
 
@@ -849,7 +863,8 @@ idleframe=pfn'0,8,4 ,12, -2,-12,'
 avatar=actfact{
  isavatar=true,
  x=64,y=56,
- hw=1.5,
+ hw=2,
+ yoff=-6,
  spdfactor=1,
  spd=0.5,
  hp=3,
@@ -884,18 +899,27 @@ function dungeoninit()
  -- reset
  curenemyi,
  actors,
+ props,
  attacks,
  pemitters,
  vfxs,
  interactables,
  islevelcleared,
  boss=
-  1,{},{},{},{},{}
+  1,{},{},{},{},{},{}
 
  -- reset avatar
  avatar=add(actors,actfact(avatar))
  avatar.x=10
  avatar.y=64
+
+ add(actors,newmeleetroll(120,64))
+
+ add(props,{
+  x=64,y=64,
+  hw=4,hh=4,
+  sprite=80,
+ })
 
  music(theme*10,0,0b0011)
  if boss then
@@ -921,6 +945,10 @@ function dungeonupdate()
      avatar.state != 'attacking' then
    avatar.a,avatar.dx,avatar.dy,avatar.state,avatar.state_c=
     angle,norm(cos(angle)),norm(sin(angle)),'moving',2
+   btn0,btn1=btn(0),btn(1)
+   if btn0 or btn1 then
+    avatar.flipx=btn0
+   end
   end
  elseif avatar.state != 'recovering' then
   avatar.dx,avatar.dy=0,0
@@ -1059,6 +1087,8 @@ function dungeonupdate()
   disttoavatar,haslostoavatar=
    dist(enemy.x,enemy.y,avatar.x,avatar.y),
    haslos(enemy.x,enemy.y,avatar.x,avatar.y)
+
+  enemy.flipx=enemy.a > 0.25 and enemy.a < 0.75
 
   -- resolving effect
   if enemy.state=='recovering' then
@@ -1394,6 +1424,8 @@ end
 function dungeondraw()
  cls(5)
  palt(0,false)
+ palt(11,true)
+
  local spr1,offset=176+theme*16,0
 
  -- draw interactables
@@ -1404,25 +1436,27 @@ function dungeondraw()
  end
 
  -- draw attacks
- for attack in all(attacks) do
-  if attack.frame then
-   local f=attack.frame
-   if attack.col then
-    pal(2,attack.col,0)
+ for _att in all(attacks) do
+  if _att.frame then
+   local _f=_att.frame
+   if _att.col then
+    pal(7,_att.col,0)
    end
-   sspr(f[1],f[2],f[3],f[4],attack.x+f[5],attack.y+f[6],f[3],f[4])
-   pal(2,2,0)
+   sspr(_f[1],_f[2],_f[3],_f[4],_att.x+_f[5],_att.y+_f[6],_f[3],_f[4])
+   pal(7,7,0)
   end
  end
 
+ -- draw props
+ for _p in all(props) do
+  spr(_p.sprite,_p.x-4,_p.y-4)
+ end
+
  -- draw actors
- palt(11,true)
  for _a in all(actors) do
   local state=_a.state
   local _curframe=flr(_a.curframe)
-  local f,flipx=_a[state][_curframe],
-   _a.a and _a.a >= 0.25 and _a.a <= 0.75
-  local flipfactor=flipx and -1 or 1
+  local f=_a[state][_curframe]
 
   for k,v in pairs(_a.cols or {}) do
    pal(k,v,0)
@@ -1430,7 +1464,7 @@ function dungeondraw()
 
   -- draw dmg overlay color
   if _a.dmgfx_c > 0 then
-   for i=1,15 do
+   for i=0,15 do
     pal(i,_a.dmgfx_col,0)
    end
   end
@@ -1443,17 +1477,17 @@ function dungeondraw()
    sspr(
     f[1],f[2],
     f[3],f[4],
-    flipx and _a.x-f[3]-f[5] or _a.x+f[5],
-    _a.y+f[6],
-    f[3],f[4],flipx)
+    _a.flipx and _a.x-f[3]-f[5] or _a.x+f[5],
+    _a.y+f[6]-_a.yoff,
+    f[3],f[4],_a.flipx)
   end
 
   sspr(
    f[1],f[2],
    f[3],f[4],
-   flipx and _a.x-f[3]-f[5] or _a.x+f[5],
-   _a.y+f[6],
-   f[3],f[4],flipx)
+   _a.flipx and _a.x-f[3]-f[5] or _a.x+f[5],
+   _a.y+f[6]-_a.yoff,
+   f[3],f[4],_a.flipx)
 
   -- draw offhand
   if _a == avatar and avatar.items.offhand then
@@ -1464,10 +1498,16 @@ function dungeondraw()
   end
 
   -- reset colors
-  for i=1,15 do
+  for i=0,15 do
    pal(i,i,0)
   end
-
+  -- rect(
+  --  _a.x-_a.hw,
+  --  _a.y-_a.hh,
+  --  _a.x+_a.hw,
+  --  _a.y+_a.hh,
+  --  13
+  --  )
  end
 
  -- draw vfx
@@ -1505,8 +1545,8 @@ function dungeondraw()
 
  -- draw gui
  for _i=0,avatar.hp-1 do
-  print('\x87',121-_i*6,1,8)
-  offset=(_i+1)*6-1
+  sspr(17,35,7,6,2+_i*8,2)
+  -- offset=(_i+1)*6-1
  end
 
  for _i=0,avatar.startarmor-1 do
@@ -1877,28 +1917,28 @@ bbb060bbbbbb00bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 9060bb06666699666660bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 590bbbb000009900000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 0090bbbbbbbb00bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb77777777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b77bbb7777777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-7bbbbbbb777777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbb777777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbb77777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbb77777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbb77777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbb77777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbb77777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbb77777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbb77777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbb77777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbb7bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb0bbbbbbbbbbbbbbbbb000bbbbbb000bbbbbb000000bbbbbb000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb77777777bbbbbbbb03300bb0003300bb00022230000bbb03300bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b77bbb7777777bbbbbb03330b02003330b020b000003300b003330bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+7bbbbbbb777777bbbbb0330b020b0330b020bbbbbb03330033330000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbb777777bbb03330020bb0330020bbbbbbb0330bb003303322220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbb77777bb03033030bbb033030bbbbbbb03330bbb0330000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbb77777b0004400bbbb03400bbbbbbb030330bbb04440bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbb77777bbb04040bbbb0440bbbbbbbbb00440bb0330030bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbb77777bb030030bbbbb040bbbbbbbbbb04440bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbb77777b00b00bbbbbb030bbbbbbbbb040030bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbb777770880880bbbbbbbbbbbbbbbbb03000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbb777770888880bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbb77777b08880bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb7bb080bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb00bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb0660bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b06d60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b0ddd60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+06ddd60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+0d66dd60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+0ddddd60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
