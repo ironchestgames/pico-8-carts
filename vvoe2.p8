@@ -26,6 +26,26 @@ function clone(_t)
  return t
 end
 
+function concat(_ts)
+ local _result={}
+ for _t in all(_ts) do
+  for _v in all(_t) do
+   add(_result,_v)
+  end
+ end
+ return _result
+end
+
+function sortony(_t)
+ for _i=1,#_t do
+  local _j = _i
+  while _j > 1 and _t[_j-1].y > _t[_j].y do
+   _t[_j],_t[_j-1]=_t[_j-1],_t[_j]
+   _j=_j-1
+  end
+ end
+end
+
 function flrrnd(_n)
  return flr(rnd(_n))
 end
@@ -68,9 +88,15 @@ function isinside(x,y,aabb)
         y > aabb.y-aabb.hh and y < aabb.y+aabb.hh
 end
 
+function isaabbposinside(aabb,other)
+ return isinside(aabb.x,aabb.y,other) and other
+end
+
 function isaabbscolliding(a,b)
- return a.x-a.hw < b.x+b.hw and a.x+a.hw > b.x-b.hw and
-  a.y-a.hh < b.y+b.hh and a.y+a.hh > b.y-b.hh and b
+ return a.x-a.hw < b.x+b.hw and
+        a.x+a.hw > b.x-b.hw and
+        a.y-a.hh+(a.yoff or 0) < b.y+b.hh+(b.yoff or 0) and
+        a.y+a.hh+(a.yoff or 0) > b.y-b.hh+(b.yoff or 0) and b
 end
 
 function haslos(_x1,_y1,_x2,_y2)
@@ -244,7 +270,7 @@ function swordattackskillfactory(
    add(attacks,{
     isavatar=true,
     x=_a.flipx and _a.x-5 or _a.x+5,
-    y=_a.y-8-_a.yoff,
+    y=_a.y-8,
     hw=6,hh=6,
     state_c=1,
     typ=typ,
@@ -258,7 +284,7 @@ function swordattackskillfactory(
    _f.flipx=_a.flipx
    _f.c,_f.col=15,attackcol
    _f[5]=_f.flipx and _a.x-_f[3]-_f[5] or _a.x+_f[5]
-   _f[6]+=_a.y-_a.yoff
+   _f[6]+=_a.y
    add(vfxs,{_f})
 
    _sfx'4'
@@ -358,9 +384,29 @@ end
 
 -- actors
 function actfact(_a)
- _a.state,_a.state_c,_a.curframe,_a.dx,_a.dy,
- _a.runspd,_a.dmgfx_c,_a.comfydist,_a.toocloseto,_a.a,_a.hh
-   ='idling',0,1,0,0,_a.spd,0,_a.comfydist or 1,{},0,5
+ _a.state,
+ _a.state_c,
+ _a.curframe,
+ _a.dx,_a.dy,
+ _a.runspd,
+ _a.dmgfx_c,
+ _a.comfydist,
+ _a.toocloseto,
+ _a.a,
+ _a.hh,
+ _a.drawtype
+   =
+   'idling',
+   0,
+   1,
+   0,0,
+   _a.spd,
+   0,
+   _a.comfydist or 1,
+   {},
+   0,
+   5,
+   'actor'
  return _a
 end
 
@@ -368,7 +414,7 @@ function performenemymelee(_a)
 
  add(attacks,{
   x=_a.flipx and _a.x-5 or _a.x+5,
-  y=_a.y-8-_a.yoff,
+  y=_a.y-8,
   hw=6,hh=6,
   state_c=1,
   typ='knockback',
@@ -382,7 +428,7 @@ function performenemymelee(_a)
  _f.flipx=_a.flipx
  _f.c,_f.col=15,attackcol
  _f[5]=_f.flipx and _a.x-_f[3]-_f[5] or _a.x+_f[5]
- _f[6]+=_a.y-_a.yoff
+ _f[6]+=_a.y
 
  add(vfxs,{_f})
  
@@ -859,7 +905,7 @@ themes={
 }
 
 -- init avatar
-idleframe=pfn'0,8,4 ,12, -2,-12,'
+idleframe=pfn'0,8,4,12, -2,-12,'
 avatar=actfact{
  isavatar=true,
  x=64,y=56,
@@ -917,8 +963,17 @@ function dungeoninit()
 
  add(props,{
   x=64,y=64,
-  hw=4,hh=4,
+  hw=4,hh=3,
   sprite=80,
+  drawtype='prop',
+ })
+
+ add(props,{
+  x=34,y=104,
+  hw=4,hh=3,
+  istall=true,
+  sprite=96,
+  drawtype='prop',
  })
 
  music(theme*10,0,0b0011)
@@ -1084,9 +1139,15 @@ function dungeonupdate()
   enemy.att_range=enemy.att_range or 7
 
   -- aggression vars
-  disttoavatar,haslostoavatar=
-   dist(enemy.x,enemy.y,avatar.x,avatar.y),
-   haslos(enemy.x,enemy.y,avatar.x,avatar.y)
+  disttoavatar=dist(enemy.x,enemy.y,avatar.x,avatar.y)
+  ismovingoutofcollision=enemy.ismovingoutofcollision
+  withinattackdist=disttoavatar <= enemy.att_range
+  haslostoavatar=true
+  -- todo: positioned on y-axis
+  -- todo: colliding with bounds
+  -- todo: colliding with other
+  -- todo: colliding with avatar
+  -- todo: colliding with prop
 
   enemy.flipx=enemy.a > 0.25 and enemy.a < 0.75
 
@@ -1293,8 +1354,11 @@ function dungeonupdate()
  -- actor movement check against props
  for _a in all(actors) do
   for _p in all(props) do
+   local _tmp=clone(_a)
+   _tmp.hh=1
+   _tmp.hw=1
    _a.dx,_a.dy=collideaabbs(
-    isaabbscolliding,_a,_p,_a.dx,_a.dy)
+    isaabbscolliding,_tmp,_p,_tmp.dx,_tmp.dy)
   end
   _a.x+=_a.dx
   _a.y+=_a.dy
@@ -1315,10 +1379,6 @@ function dungeonupdate()
 
   if attack.x > 128 or attack.x < 0 or
      attack.y > 128 or attack.y < 0 then
-   attack.removeme=true
-  end
-
-  if false then
    attack.removeme=true
   end
  end
@@ -1401,7 +1461,7 @@ function dungeonupdate()
  -- remove attacks
  for attack in all(attacks) do
   if attack.removeme then
-   del(attacks,attack)
+   -- del(attacks,attack)
   end
  end
 
@@ -1445,69 +1505,93 @@ function dungeondraw()
    sspr(_f[1],_f[2],_f[3],_f[4],_att.x+_f[5],_att.y+_f[6],_f[3],_f[4])
    pal(7,7,0)
   end
+
+  -- rect(
+  --  _att.x-_att.hw,
+  --  _att.y-_att.hh,
+  --  _att.x+_att.hw,
+  --  _att.y+_att.hh,
+  --  15)
  end
 
- -- draw props
- for _p in all(props) do
-  spr(_p.sprite,_p.x-4,_p.y-4)
- end
+ -- draw actors, draw props
+ local _drawables=concat({actors,props})
+ sortony(_drawables)
 
- -- draw actors
- for _a in all(actors) do
-  local state=_a.state
-  local _curframe=flr(_a.curframe)
-  local f=_a[state][_curframe]
+ for _,_d in pairs(_drawables) do
+  if _d.drawtype == 'prop' then
+   local _p=_d
+   -- rect(
+   --  _p.x-_p.hw,
+   --  _p.y-_p.hh,
+   --  _p.x+_p.hw,
+   --  _p.y+_p.hh,
+   --  15)
 
-  for k,v in pairs(_a.cols or {}) do
-   pal(k,v,0)
-  end
-
-  -- draw dmg overlay color
-  if _a.dmgfx_c > 0 then
-   for i=0,15 do
-    pal(i,_a.dmgfx_col,0)
+   spr(_p.sprite,_p.x-4,_p.y-4)
+   if _p.istall then
+    spr(_p.sprite+1,_p.x-4,_p.y-4-8)
    end
-  end
 
-  -- draw weapon
-  if _a == avatar and avatar.items.weapon then
-   item=avatar.items.weapon
-   local f=item[state][_curframe]
-   pal(6,item.col,0)
+  elseif _d.drawtype == 'actor' then
+   local _a=_d
+   local state=_a.state
+   local _curframe=flr(_a.curframe)
+   local f=_a[state][_curframe]
+
+   for k,v in pairs(_a.cols or {}) do
+    pal(k,v,0)
+   end
+
+   -- draw dmg overlay color
+   if _a.dmgfx_c > 0 then
+    for i=1,15 do
+     pal(i,_a.dmgfx_col,0)
+    end
+   end
+
+   -- draw weapon
+   if _a == avatar and avatar.items.weapon then
+    item=avatar.items.weapon
+    local f=item[state][_curframe]
+    pal(6,item.col,0)
+    sspr(
+     f[1],f[2],
+     f[3],f[4],
+     _a.flipx and _a.x-f[3]-f[5] or _a.x+f[5],
+     _a.y+f[6],
+     f[3],f[4],_a.flipx)
+   end
+
    sspr(
     f[1],f[2],
     f[3],f[4],
     _a.flipx and _a.x-f[3]-f[5] or _a.x+f[5],
-    _a.y+f[6]-_a.yoff,
+    _a.y+f[6],
     f[3],f[4],_a.flipx)
-  end
 
-  sspr(
-   f[1],f[2],
-   f[3],f[4],
-   _a.flipx and _a.x-f[3]-f[5] or _a.x+f[5],
-   _a.y+f[6]-_a.yoff,
-   f[3],f[4],_a.flipx)
+   -- draw offhand
+   if _a == avatar and avatar.items.offhand then
+    item=avatar.items.offhand
+    local f=item[state][min(flr(item.curframe),#item[state])]
+    pal(6,item.col,0)
+    sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
+   end
 
-  -- draw offhand
-  if _a == avatar and avatar.items.offhand then
-   item=avatar.items.offhand
-   local f=item[state][min(flr(item.curframe),#item[state])]
-   pal(6,item.col,0)
-   sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
-  end
+   -- reset colors
+   for i=1,15 do
+    pal(i,i,0)
+   end
 
-  -- reset colors
-  for i=0,15 do
-   pal(i,i,0)
+   -- rect(
+   --  _a.x-_a.hw,
+   --  _a.y-_a.hh+_a.yoff,
+   --  _a.x+_a.hw,
+   --  _a.y+_a.hh+_a.yoff,
+   --  13)
+
+   -- circfill(_a.x,_a.y,1,14)
   end
-  -- rect(
-  --  _a.x-_a.hw,
-  --  _a.y-_a.hh,
-  --  _a.x+_a.hw,
-  --  _a.y+_a.hh,
-  --  13
-  --  )
  end
 
  -- draw vfx
@@ -1939,14 +2023,14 @@ b0ddd60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 06ddd60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 0d66dd60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 0ddddd60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb0200bb0b0bb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb0222002020020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb0200b0220b020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb020bb020bb020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb0220bbb020020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb0220bbb02020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb0220bbb02020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b022220bbb020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
