@@ -344,9 +344,9 @@ function boltskillfactory(
    add(pemitters,{
     follow=_a,
     life=life,
-    prate=pfn'2,4,',
+    prate=pfn'1,3,',
     plife=pfn'15,25,',
-    poffsets=pfn'-2,0.5,2,0.5,',
+    poffsets=pfn'-5,0,5,0,',
     pcol1=castpemcol1,pcol2=castpemcol2
    })
    _sfx'9'
@@ -356,11 +356,11 @@ function boltskillfactory(
 
    local attack={
     isavatar=_a.isavatar,
-    x=x,y=y,
+    x=x,y=y-6,
     hw=1,hh=1,
     state_c=1000,
-    dx=cos(_a.a)*1.2,
-    dy=sin(_a.a)*1.2,
+    dx=_a.flipx and -1.2 or 1.2,
+    dy=0,
     typ=typ,
     recovertime=120,
     frame=pfn'47,20,3,3,-0.5,-0.5,',
@@ -466,256 +466,257 @@ function newmeleetroll(x,y)
  }
 end
 
-function casterfactory(_hp,_cols,_idlef,_attackf,_boltskill)
- return function(x,y)
-  return actfact{
-   x=x,y=y,
-   hw=1.5,
-   spd=0.25*_hp,
-   hp=_hp,
-   att_preprfm=100,
-   att_postprfm=20,
-   att_range=60,
-   cols=_cols,
-   prfmatt=function(_a)
-    _a.a=atan2(_a.tarx-_a.x,_a.tary-_a.y)
-    _boltskill.perform(_a)
-   end,
-   comfydist=30,
-   idling={_idlef},
-   moving={animspd=0.18,_idlef},
-   attacking={animspd=0,_attackf,_idlef},
-   recovering={_idlef},
-   onpreprfm=_boltskill.startpemitter
-  }
- end
-end
-
-newtrollcaster=casterfactory(
- 1,pfn'3,4,2,5,9,',pfn'41,32,4,7,-2,-4.5,',pfn'45,32,4,7,-2,-4.5,',
- boltskillfactory('fire',14,8,14,14,8))
-
-newdemoncaster=casterfactory(
- 3,pfn'8,13,5,6,12,',pfn'41,32,4,8,-2,-5.5,',pfn'45,32,4,8,-2,-5.5,',
- boltskillfactory('ice',7,12,12,12,13))
-
-function newgianttroll(x,y)
- boss=actfact{
-  name='giant troll',
-  x=x,y=y,
-  hw=1.5,hh=3,
-  isbig=true,
-  spd=0.7,
-  hp=7,
-  att_preprfm=40,
-  att_postprfm=30,
-  prfmatt=performenemymelee,
-  idling={pfn'36,25,7,7,-4,-4,'},
-  moving={animspd=0.18,pfn'43,25,7,7,-4,-4,',pfn'50,25,7,7,-4,-4,'},
-  attacking={animspd=0,pfn'57,25,7,7,-4,-4,',pfn'64,25,8,7,-4,-4,'},
-  recovering={pfn'72,25,7,7,-4,-4,'}
- }
- return boss
-end
-
-function newmeleeskele(x,y)
- return actfact{
-  x=x,y=y,
-  hw=1.5,
-  spd=0.5,
-  hp=3,
-  att_preprfm=40,
-  att_postprfm=10,
-  prfmatt=performenemymelee,
-  idling={pfn'0,15,4,5,-2,-3,'},
-  moving={animspd=0.18,pfn'0,15,4,5,-2,-3,',pfn'4,15,4,5,-2,-3,'},
-  attacking={animspd=0,pfn'8,15,4,5,-2,-3,',pfn'11,15,6,5,-3,-3,'},
-  recovering={pfn'0,15,4,5,-2,-3,'}
- }
-end
-
-function batfactory(_cols,_att_col,_att_typ,_att_recovertime)
- return function(x,y)
-  return actfact{
-   isghost=true,
-   x=x,y=y,
-   hw=1.5,
-   spd=0.75,
-   hp=1,
-   att_preprfm=30,
-   att_postprfm=0,
-   att_col=_att_col,
-   att_typ=_att_typ,
-   att_recovertime=_att_recovertime,
-   cols=_cols,
-   prfmatt=performenemymelee,
-   idling={pfn'36,15,3,3,-1.5,-1.5,'},
-   moving={animspd=0.21,pfn'36,15,3,3,-1.5,-1.5,',pfn'39,15,3,3,-1.5,-1.5,'},
-   attacking={animspd=0.32,pfn'36,15,3,3,-1.5,-1.5,',pfn'39,15,3,3,-1.5,-1.5,'},
-   recovering={pfn'36,15,3,3,-1.5,-1.5,'}
-  }
- end
-end
-
-newbatenemy=batfactory()
-newfirebatenemy=batfactory(pfn'0,0,0,0,8,',14,'fire',120)
-
-function newvampireboss(x,y)
- boss=actfact{
-  name='samael',
-  isghost=true,
-  x=x,y=y,
-  hw=1.5,
-  spd=0.75,
-  hp=8,
-  att_preprfm=20,
-  att_postprfm=75,
-  att_siz=2,
-  prfmatt=function(_a)
-   _a.a=atan2(_a.tarx-_a.x,_a.tary-_a.y)
-   add(attacks,{
-    x=_a.x+cos(_a.a)*4,
-    y=_a.y+sin(_a.a)*4,
-    hw=2,hh=2,
-    state_c=1,
-    dmg=2
-   })
-   f=pfn'92,91,4,3,-2,-1.5,'
-   f.c=4
-   _x,_y=getskillxy(_a)
-   f[5]+=_x
-   f[6]+=_y
-   add(vfxs,{f})
-   _sfx'4'
-  end,
-  idling={pfn'82,91,5,5,-3,-3,'},
-  moving={animspd=0.21,pfn'96,91,3,3,-1.5,-1.5,',pfn'99,91,3,3,-1.5,-1.5,'},
-  attacking={animspd=0.3,pfn'87,91,5,5,-3,-3,',pfn'82,91,5,5,-3,-3,'},
-  recovering={pfn'82,91,5,5,-3,-3,'}
- }
- return boss
-end
-
 function newbowskele(x,y)
  return actfact{
   x=x,y=y,
-  hw=1.5,
+  hw=1.5,hh=5,
+  yoff=-6,
   spd=0.5,
   hp=2,
   att_preprfm=60,
-  att_postprfm=4,
-  att_range=40,
+  att_postprfm=40,
+  att_range=90,
   prfmatt=performenemybow,
-  comfydist=20,
-  idling={pfn'18,15,4,5,-2,-3,'},
-  moving={animspd=0.18,pfn'18,15,4,5,-2,-3,',pfn'22,15,4,5,-2,-3,'},
-  attacking={animspd=0,pfn'26,15,4,5,-2,-3,',pfn'31,15,4,5,-2,-3,'},
-  recovering={pfn'18,15,4,5,-2,-3,'}
+  comfydist=40,
+  idling={pfn'33,37,12,13,-3,-13,'},
+  moving={animspd=0.18,pfn'33,37,12,13,-3,-13,',pfn'45,37,13,12,-4,-13,'},
+  attacking={animspd=0,pfn'58,34,12,13,-4,-13,',pfn'70,34,10,13,-4,-13,'},
+  recovering={pfn'33,37,12,13,-3,-13,'}
  }
 end
 
-function newskeleking(x,y)
+-- function casterfactory(_hp,_cols,_idlef,_attackf,_boltskill)
+--  return function(x,y)
+--   return actfact{
+--    x=x,y=y,
+--    hw=1.5,
+--    spd=0.25*_hp,
+--    hp=_hp,
+--    att_preprfm=100,
+--    att_postprfm=20,
+--    att_range=60,
+--    cols=_cols,
+--    prfmatt=function(_a)
+--     _a.a=atan2(_a.tarx-_a.x,_a.tary-_a.y)
+--     _boltskill.perform(_a)
+--    end,
+--    comfydist=30,
+--    idling={_idlef},
+--    moving={animspd=0.18,_idlef},
+--    attacking={animspd=0,_attackf,_idlef},
+--    recovering={_idlef},
+--    onpreprfm=_boltskill.startpemitter
+--   }
+--  end
+-- end
 
- function setupmelee(_a)
-  _a.att_range,
-  _a.att_preprfm,
-  _a.att_postprfm,
-  _a.prfmatt,
-  _a.afterpostprfm,
-  _a.attacking,
-  _a.onpreprfm,
-  _a.nolos
-   =7,30,60,performmelee,setupmagic,
-   {animspd=0,pfn'0,40,15,18,-7,-13,',pfn'0,58,20,18,-10,-13,'}
- end
+-- newtrollcaster=casterfactory(
+--  1,pfn'3,4,2,5,9,',pfn'41,32,4,7,-2,-4.5,',pfn'45,32,4,7,-2,-4.5,',
+--  boltskillfactory('fire',14,8,14,14,8))
 
- function performmelee(_a)
-  add(attacks,{
-   throughwalls=true,
-   x=_a.x+cos(_a.a)*2,y=_a.y-3,
-   hw=7,hh=8,
-   state_c=2,
-   typ='knockback',
-   knocka=_a.a,
-  })
-  _sfx'4'
- end
+-- newdemoncaster=casterfactory(
+--  3,pfn'8,13,5,6,12,',pfn'41,32,4,8,-2,-5.5,',pfn'45,32,4,8,-2,-5.5,',
+--  boltskillfactory('ice',7,12,12,12,13))
 
- function setupmagic(_a)
-  _a.att_range,
-  _a.att_preprfm,
-  _a.att_postprfm,
-  _a.prfmatt,
-  _a.afterpostprfm,
-  _a.attacking,
-  _a.onpreprfm,
-  _a.nolos
-    =60,110,0,performmagic,setupmelee,{
-      animspd=0,
-      pfn'24,58,15,18,-7,-13,',
-      pfn'24,58,15,18,-7,-13,',
-     },magicpreprfm,true
- end
+-- function newgianttroll(x,y)
+--  boss=actfact{
+--   name='giant troll',
+--   x=x,y=y,
+--   hw=1.5,hh=3,
+--   isbig=true,
+--   spd=0.7,
+--   hp=7,
+--   att_preprfm=40,
+--   att_postprfm=30,
+--   prfmatt=performenemymelee,
+--   idling={pfn'36,25,7,7,-4,-4,'},
+--   moving={animspd=0.18,pfn'43,25,7,7,-4,-4,',pfn'50,25,7,7,-4,-4,'},
+--   attacking={animspd=0,pfn'57,25,7,7,-4,-4,',pfn'64,25,8,7,-4,-4,'},
+--   recovering={pfn'72,25,7,7,-4,-4,'}
+--  }
+--  return boss
+-- end
 
- function magicpreprfm(_a)
-  _a.att_x,_a.att_y=findflr(_a.x,_a.y)
-  add(pemitters,{
-   follow={x=_a.att_x,y=_a.att_y},
-   life=140,
-   prate=pfn'1,2,',
-   plife=pfn'10,15,',
-   poffsets=pfn'-2,0.5,1,0.5,',
-   pcol1=11,pcol2=3
-  })
-  _sfx'9'
- end
+-- function newmeleeskele(x,y)
+--  return actfact{
+--   x=x,y=y,
+--   hw=1.5,
+--   spd=0.5,
+--   hp=3,
+--   att_preprfm=40,
+--   att_postprfm=10,
+--   prfmatt=performenemymelee,
+--   idling={pfn'0,15,4,5,-2,-3,'},
+--   moving={animspd=0.18,pfn'0,15,4,5,-2,-3,',pfn'4,15,4,5,-2,-3,'},
+--   attacking={animspd=0,pfn'8,15,4,5,-2,-3,',pfn'11,15,6,5,-3,-3,'},
+--   recovering={pfn'0,15,4,5,-2,-3,'}
+--  }
+-- end
 
- function performmagic(_a)
-  local _e=newmeleeskele(_a.att_x,_a.att_y)
-  _e.state,_e.laststate,_e.state_c='recovering','recovering',50
-  add(actors,_e)
- end
+-- function batfactory(_cols,_att_col,_att_typ,_att_recovertime)
+--  return function(x,y)
+--   return actfact{
+--    isghost=true,
+--    x=x,y=y,
+--    hw=1.5,
+--    spd=0.75,
+--    hp=1,
+--    att_preprfm=30,
+--    att_postprfm=0,
+--    att_col=_att_col,
+--    att_typ=_att_typ,
+--    att_recovertime=_att_recovertime,
+--    cols=_cols,
+--    prfmatt=performenemymelee,
+--    idling={pfn'36,15,3,3,-1.5,-1.5,'},
+--    moving={animspd=0.21,pfn'36,15,3,3,-1.5,-1.5,',pfn'39,15,3,3,-1.5,-1.5,'},
+--    attacking={animspd=0.32,pfn'36,15,3,3,-1.5,-1.5,',pfn'39,15,3,3,-1.5,-1.5,'},
+--    recovering={pfn'36,15,3,3,-1.5,-1.5,'}
+--   }
+--  end
+-- end
 
- boss=actfact{
-  name='forgotten king',
-  isbig=true,
-  x=x,y=y,
-  hw=1.5,hh=3,
-  spd=0.4,
-  hp=10,
-  idling={pfn'0,40,15,18,-7,-13,'},
-  moving={animspd=0.24,pfn'16,40,15,18,-7,-13,',pfn'32,40,15,18,-7,-13,'},
-  recovering={pfn'0,40,15,18,-7,-13,'},
-  onroam=setupmagic
- }
- setupmagic(boss)
- return boss
-end
+-- newbatenemy=batfactory()
+-- newfirebatenemy=batfactory(pfn'0,0,0,0,8,',14,'fire',120)
 
-function newdemonboss(x,y)
- boss=actfact{
-  name='the evil',
-  isbig=true,
-  x=x,y=y,
-  hw=3.5,hh=3.5,
-  spd=0.75,
-  hp=20,
-  att_preprfm=30,
-  att_postprfm=50,
-  att_range=10,
-  att_siz=12,
-  att_col=0,
-  att_typ='fire',
-  att_recovertime=90,
-  prfmatt=performenemymelee,
-  passiveskills={{immune='fire'},{immune='ice'}},
-  idling={pfn'77,71,19,18,-10,-15,'},
-  moving={animspd=0.24,pfn'41,71,19,18,-10,-15,',pfn'59,71,19,18,-10,-15,'},
-  attacking={animspd=0,pfn'79,45,31,24,-15,-20,',pfn'48,45,31,24,-15,-20,'},
-  recovering={pfn'95,71,19,18,-10,-15,'}
- }
- return boss
-end
+-- function newvampireboss(x,y)
+--  boss=actfact{
+--   name='samael',
+--   isghost=true,
+--   x=x,y=y,
+--   hw=1.5,
+--   spd=0.75,
+--   hp=8,
+--   att_preprfm=20,
+--   att_postprfm=75,
+--   att_siz=2,
+--   prfmatt=function(_a)
+--    _a.a=atan2(_a.tarx-_a.x,_a.tary-_a.y)
+--    add(attacks,{
+--     x=_a.x+cos(_a.a)*4,
+--     y=_a.y+sin(_a.a)*4,
+--     hw=2,hh=2,
+--     state_c=1,
+--     dmg=2
+--    })
+--    f=pfn'92,91,4,3,-2,-1.5,'
+--    f.c=4
+--    _x,_y=getskillxy(_a)
+--    f[5]+=_x
+--    f[6]+=_y
+--    add(vfxs,{f})
+--    _sfx'4'
+--   end,
+--   idling={pfn'82,91,5,5,-3,-3,'},
+--   moving={animspd=0.21,pfn'96,91,3,3,-1.5,-1.5,',pfn'99,91,3,3,-1.5,-1.5,'},
+--   attacking={animspd=0.3,pfn'87,91,5,5,-3,-3,',pfn'82,91,5,5,-3,-3,'},
+--   recovering={pfn'82,91,5,5,-3,-3,'}
+--  }
+--  return boss
+-- end
+
+-- function newskeleking(x,y)
+
+--  function setupmelee(_a)
+--   _a.att_range,
+--   _a.att_preprfm,
+--   _a.att_postprfm,
+--   _a.prfmatt,
+--   _a.afterpostprfm,
+--   _a.attacking,
+--   _a.onpreprfm,
+--   _a.nolos
+--    =7,30,60,performmelee,setupmagic,
+--    {animspd=0,pfn'0,40,15,18,-7,-13,',pfn'0,58,20,18,-10,-13,'}
+--  end
+
+--  function performmelee(_a)
+--   add(attacks,{
+--    throughwalls=true,
+--    x=_a.x+cos(_a.a)*2,y=_a.y-3,
+--    hw=7,hh=8,
+--    state_c=2,
+--    typ='knockback',
+--    knocka=_a.a,
+--   })
+--   _sfx'4'
+--  end
+
+--  function setupmagic(_a)
+--   _a.att_range,
+--   _a.att_preprfm,
+--   _a.att_postprfm,
+--   _a.prfmatt,
+--   _a.afterpostprfm,
+--   _a.attacking,
+--   _a.onpreprfm,
+--   _a.nolos
+--     =60,110,0,performmagic,setupmelee,{
+--       animspd=0,
+--       pfn'24,58,15,18,-7,-13,',
+--       pfn'24,58,15,18,-7,-13,',
+--      },magicpreprfm,true
+--  end
+
+--  function magicpreprfm(_a)
+--   _a.att_x,_a.att_y=findflr(_a.x,_a.y)
+--   add(pemitters,{
+--    follow={x=_a.att_x,y=_a.att_y},
+--    life=140,
+--    prate=pfn'1,2,',
+--    plife=pfn'10,15,',
+--    poffsets=pfn'-2,0.5,1,0.5,',
+--    pcol1=11,pcol2=3
+--   })
+--   _sfx'9'
+--  end
+
+--  function performmagic(_a)
+--   local _e=newmeleeskele(_a.att_x,_a.att_y)
+--   _e.state,_e.laststate,_e.state_c='recovering','recovering',50
+--   add(actors,_e)
+--  end
+
+--  boss=actfact{
+--   name='forgotten king',
+--   isbig=true,
+--   x=x,y=y,
+--   hw=1.5,hh=3,
+--   spd=0.4,
+--   hp=10,
+--   idling={pfn'0,40,15,18,-7,-13,'},
+--   moving={animspd=0.24,pfn'16,40,15,18,-7,-13,',pfn'32,40,15,18,-7,-13,'},
+--   recovering={pfn'0,40,15,18,-7,-13,'},
+--   onroam=setupmagic
+--  }
+--  setupmagic(boss)
+--  return boss
+-- end
+
+-- function newdemonboss(x,y)
+--  boss=actfact{
+--   name='the evil',
+--   isbig=true,
+--   x=x,y=y,
+--   hw=3.5,hh=3.5,
+--   spd=0.75,
+--   hp=20,
+--   att_preprfm=30,
+--   att_postprfm=50,
+--   att_range=10,
+--   att_siz=12,
+--   att_col=0,
+--   att_typ='fire',
+--   att_recovertime=90,
+--   prfmatt=performenemymelee,
+--   passiveskills={{immune='fire'},{immune='ice'}},
+--   idling={pfn'77,71,19,18,-10,-15,'},
+--   moving={animspd=0.24,pfn'41,71,19,18,-10,-15,',pfn'59,71,19,18,-10,-15,'},
+--   attacking={animspd=0,pfn'79,45,31,24,-15,-20,',pfn'48,45,31,24,-15,-20,'},
+--   recovering={pfn'95,71,19,18,-10,-15,'}
+--  }
+--  return boss
+-- end
 
 -- items
 slots,comcols2={'weapon','offhand','armor','helmet','boots','amulet','book'},pfn'-1,-1,-1,-1,2,'
@@ -921,6 +922,7 @@ avatar=actfact{
   [1]=createitem(8,1,2),
  },
  skill1=swordattackskillfactory(7),
+ skill2=boltskillfactory('fire',14,8,14,14,8,15,'firebolt'),
  inventory={},
  passiveskills={},
  idling={idleframe},
@@ -960,17 +962,18 @@ function dungeoninit()
  avatar.y=64
 
  add(actors,newmeleetroll(120,64))
+ add(actors,newbowskele(120,100))
 
  add(props,{
   x=64,y=64,
-  hw=4,hh=3,
+  hw=4,hh=2,
   sprite=80,
   drawtype='prop',
  })
 
  add(props,{
   x=34,y=104,
-  hw=4,hh=3,
+  hw=4,hh=2,
   istall=true,
   sprite=96,
   drawtype='prop',
@@ -1136,12 +1139,13 @@ function dungeonupdate()
  end
  enemy=actors[curenemyi]
  if enemy and enemy != avatar and not enemy.removeme then
-  enemy.att_range=enemy.att_range or 7
+  enemy.att_range=enemy.att_range or 10
 
   -- aggression vars
   disttoavatar=dist(enemy.x,enemy.y,avatar.x,avatar.y)
   ismovingoutofcollision=enemy.ismovingoutofcollision
   withinattackdist=disttoavatar <= enemy.att_range
+  isonyaxis=abs(avatar.y-enemy.y) < 4
   haslostoavatar=true
   -- todo: positioned on y-axis
   -- todo: colliding with bounds
@@ -1317,10 +1321,21 @@ function dungeonupdate()
     sfx(hitsfx)
 
     -- hit flash
-    local x,y=_a.x+_a.dx/2,_a.y+_a.dy/2
+    local x,y=_a.x+_a.hw+_a.dx/2,_a.y+_a.dy/2-_a.hh
     add(vfxs,{
-     {42,20,5,5,x-2.5,y-2.5,c=4,col=_a.dmgfx_col},
-     {42,20,5,5,x-2.5,y-2.5,c=5,col=7}})
+     {
+      draw=function(f)
+       circfill(x,y,4,_a.dmgfx_col)
+      end,
+      c=4,
+     },
+     {
+      draw=function(f)
+       circfill(x,y,5,7)
+      end,
+      c=5,
+     },
+    })
 
     -- on hit handling
     for skill in all(_a.passiveskills) do
@@ -1353,15 +1368,19 @@ function dungeonupdate()
 
  -- actor movement check against props
  for _a in all(actors) do
+  local _dx,_dy=_a.dx,_a.dy
   for _p in all(props) do
    local _tmp=clone(_a)
    _tmp.hh=1
    _tmp.hw=1
-   _a.dx,_a.dy=collideaabbs(
-    isaabbscolliding,_tmp,_p,_tmp.dx,_tmp.dy)
+   _dx,_dy=collideaabbs(isaabbscolliding,_tmp,_p,_dx,_dy)
+   _a.wallcollisiondx,_a.wallcollisiondy=nil
+   if _dx != _a.dx or _dy != _a.dy then
+    _a.wallcollisiondx,_a.wallcollisiondy=_dx,_dy
+   end
   end
-  _a.x+=_a.dx
-  _a.y+=_a.dy
+  _a.x+=_dx
+  _a.y+=_dy
   _a.x=mid(0,_a.x,128)
   _a.y=mid(0,_a.y,128)
   _a.dx,_a.dy=0,0
@@ -1506,12 +1525,12 @@ function dungeondraw()
    pal(7,7,0)
   end
 
-  -- rect(
-  --  _att.x-_att.hw,
-  --  _att.y-_att.hh,
-  --  _att.x+_att.hw,
-  --  _att.y+_att.hh,
-  --  15)
+  rect(
+   _att.x-_att.hw,
+   _att.y-_att.hh,
+   _att.x+_att.hw,
+   _att.y+_att.hh,
+   15)
  end
 
  -- draw actors, draw props
@@ -1528,9 +1547,9 @@ function dungeondraw()
    --  _p.y+_p.hh,
    --  15)
 
-   spr(_p.sprite,_p.x-4,_p.y-4)
+   spr(_p.sprite,_p.x-4,_p.y-6)
    if _p.istall then
-    spr(_p.sprite+1,_p.x-4,_p.y-4-8)
+    spr(_p.sprite+1,_p.x-4,_p.y-6-8)
    end
 
   elseif _d.drawtype == 'actor' then
@@ -1600,13 +1619,13 @@ function dungeondraw()
   if f.draw then
    f.draw(f)
   else
-   -- pal(7,f.col,0)
+   pal(7,f.col or 7,0)
    sspr(
     f[1],f[2],
     f[3],f[4],
     f[5],f[6],
     f[3],f[4],f.flipx)
-   -- pal(7,7,0)
+   pal(7,7,0)
   end
  end
 
@@ -2009,22 +2028,22 @@ bbbbbbbbb777777bbb03330020bb0330020bbbbbbb0330bb003303322220bbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbb77777bb03033030bbb033030bbbbbbb03330bbb0330000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbb77777b0004400bbbb03400bbbbbbb030330bbb04440bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbb77777bbb04040bbbb0440bbbbbbbbb00440bb0330030bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbb77777bb030030bbbbb040bbbbbbbbbb04440bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbb77777b00b00bbbbbb030bbbbbbbbb040030bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbb777770880880bbbbbbbbbbbbbbbbb03000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbb777770888880bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbb77777b08880bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbb7bb080bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb00bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb0660bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b06d60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b0ddd60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-06ddd60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0d66dd60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0ddddd60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb0200bb0b0bb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb0222002020020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbb77777bb030030bbbbb040bbbbbbbbbb04440bbbbbbbbbbbbbbbb000bbbbbbbbb000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbb77777b00b00bbbbbb030bbbbbbbbb040030bbbbbbbbbbbbbb000520bbbbbb000520bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbb777770880880bbbbbbbbbbbbbbbbb03000bbbbbbbbbbbbbb06650020bbbb06605020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbb777770888880bbbbbbbbbbbbb000bbbbbbbbbb000bbbbbbb06500020bbbb06605020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbb77777b08880bbbbbbbbbbbb000520bbbbbbb000520bbbbb0056000200bb000605020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbb7bb080bbbbbbbbbbbb06605020bbbbb06605020bbb065d002260d0066d005060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbb00bbbbbb0bbbbbbbbbbbbb06650020bbbbb06650020bbbb0056000200bb006605020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb00bbbbbb0660bbbbbbbbbbbbbbbbbbbb065002000bbbb065002000bbb0d500020bbbb0d005020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb0660bbbb0dd60bbbbbbbbbbbbbbbbbb06d06dd602d0b06d06dd602d0bb06650020bbbb06605020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b06d60bbb0d6d60bbbbbbbbbbbbbbbbbbb0665002000bbb0665002000bbb0d00520bbbbb0d00520bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b0ddd60bb000dd60bbbbbbbbbbbbbbbbbb0d050020bbbbb0d050020bbbbb060d00bbbbbb060d00bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+06ddd60b00660d60bbbbbbbbbbbbbbbbbb06605020bbbbb06605020bbbbb06060bbbbbbb06060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+0d66dd600dd60060bbbbbbbbbbbbbbbbbb0d00520bbbbbb06d0520bbbbbb06060bbbbbbb06060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+0ddddd600ddd60d0bbbbbbbbbbbbbbbbbb060b00bbbbbb0606000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb0200bb0b0bb0bbbbbbbbbbbbbbbbbbb060bbbbbbbb060060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb0222002020020bbbbbbbbbbbbbbbbbb060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbb0200b0220b020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbb020bb020bb020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bb0220bbb020020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
