@@ -394,7 +394,7 @@ function actfact(_a)
  _a.toocloseto,
  _a.a,
  _a.hh,
- _a.drawtype
+ _a.yoff
    =
    'idling',
    0,
@@ -405,8 +405,8 @@ function actfact(_a)
    _a.comfydist or 1,
    {},
    0,
-   5,
-   'actor'
+   _a.hh or 5,
+   _a.yoff or 0
  return _a
 end
 
@@ -963,20 +963,23 @@ function dungeoninit()
  add(actors,newmeleetroll(120,64))
  add(actors,newbowskele(120,100))
 
- add(props,{
-  x=64,y=64,
+ add(props,actfact({
+  x=64,y=60,
   hw=4,hh=2,
-  sprite=80,
-  drawtype='prop',
- })
+  idling={pfn'0,41,8,7, -4,-4,'},
+ }))
 
- add(props,{
+ add(props,actfact({
+  x=84,y=18,
+  hw=4,hh=2,
+  idling={pfn'8,40,8,8, -4,-5,'},
+ }))
+
+ add(props,actfact({
   x=34,y=104,
   hw=4,hh=2,
-  istall=true,
-  sprite=96,
-  drawtype='prop',
- })
+  idling={pfn'0,48,8,16, -4,-14,'},
+ }))
 
  music(theme*10,0,0b0011)
  if boss then
@@ -1537,79 +1540,63 @@ function dungeondraw()
  sortony(_drawables)
 
  for _,_d in pairs(_drawables) do
-  if _d.drawtype == 'prop' then
-   local _p=_d
-   -- rect(
-   --  _p.x-_p.hw,
-   --  _p.y-_p.hh,
-   --  _p.x+_p.hw,
-   --  _p.y+_p.hh,
-   --  15)
+  local _a=_d
+  local state=_a.state
+  local _curframe=flr(_a.curframe)
+  local f=_a[state][_curframe]
 
-   spr(_p.sprite,_p.x-4,_p.y-6)
-   if _p.istall then
-    spr(_p.sprite+1,_p.x-4,_p.y-6-8)
+  for k,v in pairs(_a.cols or {}) do
+   pal(k,v,0)
+  end
+
+  -- draw dmg overlay color
+  if _a.dmgfx_c > 0 then
+   for i=1,15 do
+    pal(i,_a.dmgfx_col,0)
    end
+  end
 
-  elseif _d.drawtype == 'actor' then
-   local _a=_d
-   local state=_a.state
-   local _curframe=flr(_a.curframe)
-   local f=_a[state][_curframe]
-
-   for k,v in pairs(_a.cols or {}) do
-    pal(k,v,0)
-   end
-
-   -- draw dmg overlay color
-   if _a.dmgfx_c > 0 then
-    for i=1,15 do
-     pal(i,_a.dmgfx_col,0)
-    end
-   end
-
-   -- draw weapon
-   if _a == avatar and avatar.items.weapon then
-    item=avatar.items.weapon
-    local f=item[state][_curframe]
-    pal(6,item.col,0)
-    sspr(
-     f[1],f[2],
-     f[3],f[4],
-     _a.flipx and _a.x-f[3]-f[5] or _a.x+f[5],
-     _a.y+f[6],
-     f[3],f[4],_a.flipx)
-   end
-
+  -- draw weapon
+  if _a == avatar and avatar.items.weapon then
+   item=avatar.items.weapon
+   local f=item[state][_curframe]
+   pal(6,item.col,0)
    sspr(
     f[1],f[2],
     f[3],f[4],
     _a.flipx and _a.x-f[3]-f[5] or _a.x+f[5],
     _a.y+f[6],
     f[3],f[4],_a.flipx)
-
-   -- draw offhand
-   if _a == avatar and avatar.items.offhand then
-    item=avatar.items.offhand
-    local f=item[state][min(flr(item.curframe),#item[state])]
-    pal(6,item.col,0)
-    sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
-   end
-
-   -- reset colors
-   for i=1,15 do
-    pal(i,i,0)
-   end
-
-   -- rect(
-   --  _a.x-_a.hw,
-   --  _a.y-_a.hh+_a.yoff,
-   --  _a.x+_a.hw,
-   --  _a.y+_a.hh+_a.yoff,
-   --  13)
-
-   -- circfill(_a.x,_a.y,1,14)
   end
+
+  sspr(
+   f[1],f[2],
+   f[3],f[4],
+   _a.flipx and _a.x-f[3]-f[5] or _a.x+f[5],
+   _a.y+f[6],
+   f[3],f[4],_a.flipx)
+
+  -- draw offhand
+  if _a == avatar and avatar.items.offhand then
+   item=avatar.items.offhand
+   local f=item[state][min(flr(item.curframe),#item[state])]
+   pal(6,item.col,0)
+   sspr(f[1],f[2],f[3],f[4],_a.x+f[5],_a.y+f[6],f[3],f[4],flipx)
+  end
+
+  -- reset colors
+  for i=1,15 do
+   pal(i,i,0)
+  end
+
+  -- rect(
+  --  _a.x-_a.hw,
+  --  _a.y-_a.hh+_a.yoff,
+  --  _a.x+_a.hw,
+  --  _a.y+_a.hh+_a.yoff,
+  --  13)
+
+  -- circfill(_a.x,_a.y,1,14)
  end
 
  -- draw vfx
@@ -2041,22 +2028,22 @@ b0ddd60bb000dd60bbbbbbbbbbbbbbbbbb0d050020bbbbb0d050020bbbbb060d00bbbbbb060d00bb
 06ddd60b00660d60bbbbbbbbbbbbbbbbbb06605020bbbbb06605020bbbbb06060bbbbbbb06060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 0d66dd600dd60060bbbbbbbbbbbbbbbbbb0d00520bbbbbb06d0520bbbbbb06060bbbbbbb06060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 0ddddd600ddd60d0bbbbbbbbbbbbbbbbbb060b00bbbbbb0606000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb0200bb0b0bb0bbbbbbbbbbbbbbbbbbb060bbbbbbbb060060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb0222002020020bbbbbbbbbbbbbbbbbb060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb0200b0220b020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb020bb020bb020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb0220bbb020020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb0220bbb02020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb0220bbb02020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b022220bbb020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b0b0bb0bbbbbbbbbbbbbbbbbbbbbbbbbbb060bbbbbbbb060060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+02020020bbbbbbbbbbbbbbbbbbbbbbbbbb060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+0220b020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+020bb020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b020020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b02020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b02020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb0200bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb02220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb0200bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb0220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb0220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb0220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b022220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
