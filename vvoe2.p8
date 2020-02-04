@@ -210,15 +210,15 @@ bowvfxframes=aframes{
 }
 
 arrowframes=aframes{
- '50,20,2,1,-1,-0.5,', -- right
- '52,20,2,2,-1,-1,', -- right/up
- '54,20,1,2,-0.5,-1,', -- up
- '55,20,2,2,-1,-1,', -- up/left
- '50,20,2,1,-1,-0.5,', -- left
- '52,20,2,2,-1,-1,', -- left/down
- '54,20,1,2,-0.5,-1,', -- down
- '55,20,2,2,-1,-1,', -- down/right
- '50,20,2,1,-1,-0.5,' -- right (wrapped)
+ '13,26,4,1,-1,0,', -- right
+ '13,26,4,1,-1,0,', -- right/up
+ '13,26,4,1,-1,0,', -- up
+ '13,26,4,1,-1,0,', -- up/left
+ '13,26,4,1,-1,0,', -- left
+ '13,26,4,1,-1,0,', -- left/down
+ '13,26,4,1,-1,0,', -- down
+ '13,26,4,1,-1,0,', -- down/right
+ '13,26,4,1,-1,0,', -- right (wrapped)
 }
 
 function getvfxframei(a)
@@ -438,12 +438,11 @@ end
 function performenemybow(_a)
  _a.a=getvfxframei(atan2(_a.tarx-_a.x,_a.tary-_a.y))
  add(attacks,{
-  x=_a.x-0.5,y=_a.y-0.5,
+  x=_a.x-0.5,y=_a.y-8,
   hw=1,hh=1,
   state_c=1000,
   dx=cos(_a.a)*1.6,dy=sin(_a.a)*1.6,
-  frame=clone(arrowframes[_a.a]),
-  col=2
+  frame=clone(arrowframes[_a.a])
  })
  _sfx'5'
 end
@@ -1480,7 +1479,7 @@ function dungeonupdate()
  -- remove attacks
  for attack in all(attacks) do
   if attack.removeme then
-   -- del(attacks,attack)
+   del(attacks,attack)
   end
  end
 
@@ -2020,7 +2019,7 @@ bbb060bbbbbb00bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 9060bb06666699666660bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 590bbbb000009900000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 0090bbbbbbbb00bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb0bbbbbbbbbbbbbbbbb000bbbbbb000bbbbbb000000bbbbbb000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb0bbbbbbbbbb7777bbb000bbbbbb000bbbbbb000000bbbbbb000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbb77777777bbbbbbbb03300bb0003300bb00022230000bbb03300bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 b77bbb7777777bbbbbb03330b02003330b020b000003300b003330bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 7bbbbbbb777777bbbbb0330b020b0330b020bbbbbb03330033330000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
