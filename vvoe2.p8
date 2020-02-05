@@ -10,6 +10,12 @@ function _sfx(_s)
  sfx(tonum(_s))
 end
 
+function curryright(f,a)
+ return function(b)
+  f(b,a)
+ end
+end
+
 function has(_t,_v)
  for k,v in pairs(_t) do
   if v == _v then
@@ -1037,15 +1043,22 @@ function dungeonupdate()
 
   local skill=avatar['skill'..skillbuttondown]
   if skill then
-   avatar.state,avatar.currentskill,avatar.ispreprfm,
-   avatar.state_c,avatar.curframe=
-    'attacking',skill,true,max(1,skill.preprfm-avatar.att_spd_dec),1
+   avatar.state,
+   avatar.ispreprfm,
+   avatar.att_preprfm,
+   avatar.att_postprfm,
+   avatar.curframe,
+   avatar.prfmatt=
+    'attacking',
+    true,
+    max(1,skill.preprfm-avatar.att_spd_dec),
+    skill.postprfm,
+    1,
+    curryright(skill.perform,skill)
    if avatar.items.weapon then
     avatar.items.weapon.curframe=1
    end
-   if avatar.currentskill.startpemitter then
-    avatar.currentskill.startpemitter(avatar,skill.preprfm)
-   end
+   avatar.onpreprfm=skill.startpemitter
   end
  end
 
@@ -1062,48 +1075,32 @@ function dungeonupdate()
    actor.tarx,actor.tary,actor.ismovingoutofcollision=nil -- reset enemy vars
 
   elseif actor.state == 'attacking' then
-   if actor == avatar then
-    if avatar.state_c <= 0 then
-     if avatar.ispreprfm then
-      avatar.currentskill.perform(avatar,avatar.currentskill)
+   if actor.laststate != 'attacking' then
+    actor.ispreprfm,
+    actor.curframe,
+    actor.state_c=
+     true,
+     1,
+     actor.att_preprfm
 
-      avatar.state_c,avatar.curframe,avatar.ispreprfm=
-       max(1,avatar.currentskill.postprfm-avatar.att_spd_dec),2
-
-      if avatar.items.weapon then
-       avatar.items.weapon.curframe=2
-      end
-
-     else
-      avatar.state='idling'
-      if avatar.items.weapon then
-       avatar.items.weapon.curframe=1
-      end
-     end
+    if actor.onpreprfm then
+     actor.onpreprfm(actor,actor.att_preprfm)
     end
+   end
 
-   else -- enemies
+   if actor.ispreprfm and actor.state_c <= 0 then
+    actor.prfmatt(actor)
+    actor.state_c,
+    actor.curframe,
+    actor.ispreprfm=
+     actor.att_postprfm,
+     2
 
-    if actor.laststate != 'attacking' then
-     actor.ispreprfm,actor.curframe,actor.state_c=
-      true,1,actor.att_preprfm
-
-     if actor.onpreprfm then
-      actor.onpreprfm(actor,actor.att_preprfm)
-     end
+   elseif actor.state_c <= 0 then
+    if actor.afterpostprfm then
+     actor.afterpostprfm(actor)
     end
-
-    if actor.ispreprfm and actor.state_c <= 0 then
-     actor.prfmatt(actor)
-     actor.state_c,actor.curframe,actor.ispreprfm=
-      actor.att_postprfm,2
-
-    elseif actor.state_c <= 0 then
-     if actor.afterpostprfm then
-      actor.afterpostprfm(actor)
-     end
-     actor.state='idling'
-    end
+    actor.state='idling'
    end
 
   elseif actor.state == 'recovering' then
@@ -1128,7 +1125,7 @@ function dungeonupdate()
   end
 
   if actor == avatar and actor.state_c <= 0 then
-   actor.state,actor.currentskill='idling'
+   actor.state='idling'
   end
 
   actor.laststate=actor.state
