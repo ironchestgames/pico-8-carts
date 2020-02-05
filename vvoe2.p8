@@ -1527,12 +1527,12 @@ function dungeondraw()
    pal(7,7,0)
   end
 
-  rect(
-   _att.x-_att.hw,
-   _att.y-_att.hh,
-   _att.x+_att.hw,
-   _att.y+_att.hh,
-   15)
+  -- rect(
+  --  _att.x-_att.hw,
+  --  _att.y-_att.hh,
+  --  _att.x+_att.hw,
+  --  _att.y+_att.hh,
+  --  15)
  end
 
  -- draw actors, draw props
