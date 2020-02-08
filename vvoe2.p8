@@ -265,16 +265,16 @@ function getskillxy(_a)
 end
 
 function swordattackskillfactory(
-  attackcol,typ,recovertime,dmg)
+ offsets,attackcol,typ,recovertime,dmg)
  return {
   sprite=12,
   desc='sword attack',
   preprfm=15,
   postprfm=28,
-  perform=function(_a,skill)
+  perform=function(_a)
 
    add(attacks,{
-    isavatar=true,
+    isavatar=_a.isavatar,
     x=_a.flipx and _a.x-5 or _a.x+5,
     y=_a.y-8,
     hw=6,hh=6,
@@ -283,10 +283,10 @@ function swordattackskillfactory(
     recovertime=recovertime or 0,
     knocka=_a.a,
     tar_c=1000,
-    dmg=dmg,
+    dmg=dmg or 1,
    })
 
-   local _f=pfn'0,27,17,13, -5,-16,'
+   local _f=pfn('0,27,17,13,'..offsets)
    _f.flipx=_a.flipx
    _f.c,_f.col=15,attackcol
    _f[5]=_f.flipx and _a.x-_f[3]-_f[5] or _a.x+_f[5]
@@ -299,33 +299,27 @@ function swordattackskillfactory(
 end
 
 function bowattackskillfactory(
-  preprfm,attackcol,arrowcol,typ,recovertime)
+  offsets,attackcol,arrowcol,typ,recovertime)
  return {
   sprite=13,
   desc='bow attack',
-  preprfm=preprfm,
+  preprfm=26,
   postprfm=6,
-  perform=function(_a,skill)
-   local x,y=getskillxy(_a)
+  perform=function(_a)
+   a=getvfxframei(_a.a)
 
    add(attacks,{
-    isavatar=true,
-    x=x-0.5,y=y-0.5,
+    isavatar=_a.isavatar,
+    x=_a.x-0.5,y=_a.y-8,
     hw=1,hh=1,
     state_c=1000,
-    dx=cos(_a.a)*1.6,
-    dy=sin(_a.a)*1.6,
+    dx=cos(a)*1.6,
+    dy=sin(a)*1.6,
     typ=typ,
-    recovertime=recovertime,
-    frame=clone(arrowframes[_a.a]),
+    recovertime=recovertime or 0,
+    frame=clone(arrowframes[a]),
     col=arrowcol,
    })
-
-   local frame=clone(bowvfxframes[getvfxframei(_a.a)])
-   frame.c,frame.col=6,attackcol
-   frame[5]+=x
-   frame[6]+=y
-   add(vfxs,{frame})
 
    _sfx'5'
   end
@@ -416,43 +410,6 @@ function actfact(_a)
  return _a
 end
 
-function performenemymelee(_a)
-
- add(attacks,{
-  x=_a.flipx and _a.x-5 or _a.x+5,
-  y=_a.y-8,
-  hw=6,hh=6,
-  state_c=1,
-  typ='knockback',
-  recovertime=recovertime or 0,
-  knocka=_a.a,
-  tar_c=1,
-  dmg=1,
- })
-
- local _f=pfn'0,27,17,13, -8,-17,'
- _f.flipx=_a.flipx
- _f.c,_f.col=15,attackcol
- _f[5]=_f.flipx and _a.x-_f[3]-_f[5] or _a.x+_f[5]
- _f[6]+=_a.y
-
- add(vfxs,{_f})
- 
- _sfx'4'
-end
-
-function performenemybow(_a)
- _a.a=getvfxframei(atan2(_a.tarx-_a.x,_a.tary-_a.y))
- add(attacks,{
-  x=_a.x-0.5,y=_a.y-8,
-  hw=1,hh=1,
-  state_c=1000,
-  dx=cos(_a.a)*1.6,dy=sin(_a.a)*1.6,
-  frame=clone(arrowframes[_a.a])
- })
- _sfx'5'
-end
-
 -- enemy factories
 function newmeleetroll(x,y)
  return actfact{
@@ -463,7 +420,11 @@ function newmeleetroll(x,y)
   hp=2,
   att_preprfm=50,
   att_postprfm=20,
-  prfmatt=performenemymelee,
+  prfmatt=swordattackskillfactory(
+   '-8,-17,',
+   7,
+   'knockback'
+   ).perform,
   idling={pfn'28,26,9,10, -3,-10,'},
   moving={animspd=0.18,pfn'17,26,11,9, -5,-9,',pfn'28,26,9,10, -3,-10,'},
   attacking={animspd=0,pfn'37,26,10,11, -7,-11,',pfn'47,26,13,8, -4,-8,'},
@@ -481,7 +442,7 @@ function newbowskele(x,y)
   att_preprfm=60,
   att_postprfm=40,
   att_range=90,
-  prfmatt=performenemybow,
+  prfmatt=bowattackskillfactory().perform,
   comfydist=40,
   idling={pfn'33,37,12,13,-3,-13,'},
   moving={animspd=0.18,pfn'33,37,12,13,-3,-13,',pfn'45,37,13,12,-4,-13,'},
@@ -926,7 +887,7 @@ avatar=actfact{
  items={
   [1]=createitem(8,1,2),
  },
- skill1=swordattackskillfactory(7),
+ skill1=swordattackskillfactory('-5,-16,'),
  skill2=boltskillfactory('fire',14,8,14,14,8,15,'firebolt'),
  inventory={},
  passiveskills={},
