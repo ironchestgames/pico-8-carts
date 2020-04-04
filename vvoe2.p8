@@ -134,8 +134,8 @@ function haslos(_x1,_y1,_x2,_y2)
 end
 
 function dist(x1,y1,x2,y2)
- local dx,dy=x2-x1,y2-y1
- return sqrt(dx*dx+dy*dy)
+ local dx,dy=(x2-x1)*0.1,(y2-y1)*0.1
+ return sqrt(dx*dx+dy*dy)*10
 end
 
 function norm(n)
@@ -321,6 +321,13 @@ function bowattackskillfactory(
     col=arrowcol,
    })
 
+   local _f=pfn('16,41,11,5,'..offsets)
+   _f.flipx=_a.flipx
+   _f.c,_f.col=4,attackcol
+   _f[5]=_f.flipx and _a.x-_f[3]-_f[5] or _a.x+_f[5]
+   _f[6]+=_a.y
+   add(vfxs,{_f})
+
    _sfx'5'
   end
  }
@@ -442,7 +449,10 @@ function newbowskele(x,y)
   att_preprfm=60,
   att_postprfm=40,
   att_range=90,
-  prfmatt=bowattackskillfactory().perform,
+  prfmatt=bowattackskillfactory(
+   '-2,-10,',
+   7
+   ).perform,
   comfydist=40,
   idling={pfn'33,37,12,13,-3,-13,'},
   moving={animspd=0.18,pfn'33,37,12,13,-3,-13,',pfn'45,37,13,12,-4,-13,'},
@@ -1051,6 +1061,7 @@ function dungeonupdate()
 
    if actor.ispreprfm and actor.state_c <= 0 then
     actor.prfmatt(actor)
+
     actor.state_c,
     actor.curframe,
     actor.ispreprfm=
@@ -1100,20 +1111,19 @@ function dungeonupdate()
  enemy=actors[curenemyi]
  if enemy and enemy != avatar and not enemy.removeme then
   enemy.att_range=enemy.att_range or 10
+  enemy.flipx=enemy.a > 0.25 and enemy.a < 0.75
 
   -- aggression vars
   disttoavatar=dist(enemy.x,enemy.y,avatar.x,avatar.y)
   ismovingoutofcollision=enemy.ismovingoutofcollision
   withinattackdist=disttoavatar <= enemy.att_range
-  isonyaxis=abs(avatar.y-enemy.y) < 4
+  isinvertical=abs(avatar.y-enemy.y) < 4
   haslostoavatar=true
-  -- todo: positioned on y-axis
   -- todo: colliding with bounds
   -- todo: colliding with other
   -- todo: colliding with avatar
   -- todo: colliding with prop
 
-  enemy.flipx=enemy.a > 0.25 and enemy.a < 0.75
 
   -- resolving effect
   if enemy.state=='recovering' then
@@ -1131,17 +1141,17 @@ function dungeonupdate()
     'moving',enemy.x+cos(enemy.a)*10,enemy.y+sin(enemy.a)*10,true,60,enemy.runspd
 
   -- attack
-  elseif enemy.state == 'attacking' or disttoavatar <= enemy.att_range and
-        (haslostoavatar or enemy.nolos) then
-   if enemy.laststate != 'attacking' then
-    enemy.curframe=1
-   end
+  elseif (enemy.att_range <= 10 or isinvertical) and
+        (enemy.state == 'attacking' or disttoavatar <= enemy.att_range and
+        (haslostoavatar or enemy.nolos)) then
    enemy.state,enemy.tarx,enemy.tary='attacking',avatar.x,avatar.y
+   enemy.a=atan2(enemy.tarx-enemy.x,enemy.tary-enemy.y)
+   enemy.flipx=avatar.x-enemy.x < 0 -- todo
 
   -- colliding w wall, move out of
   elseif enemy.wallcollisiondx then
    enemy.a=atan2(
-     enemy.x+enemy.wallcollisiondx-enemy.x,
+     enemy.x+enemy.wallcollisiondx-enemy.x, -- todo: remove silly math
      enemy.y+enemy.wallcollisiondy-enemy.y)+rnd(0.2)-0.1
    enemy.state,enemy.tarx,enemy.tary,enemy.ismovingoutofcollision,enemy.state_c,enemy.spd=
     'moving',enemy.x+cos(enemy.a)*10,enemy.y+sin(enemy.a)*10,true,60,enemy.runspd
@@ -1154,6 +1164,20 @@ function dungeonupdate()
      collidedwith.y-enemy.y)+0.5 -- note: go the other way
    enemy.state,enemy.tarx,enemy.tary,enemy.ismovingoutofcollision,enemy.state_c,enemy.spd=
     'moving',enemy.x+cos(enemy.a)*10,enemy.y+sin(enemy.a)*10,true,60,enemy.runspd
+
+  -- moving vertical to get into range on vertical axis
+  elseif withinattackdist and enemy.att_range > 10 and not isinvertical then
+   enemy.state,
+   enemy.state_c,
+   enemy.ismovingoutofcollision,
+   enemy.tarx,
+   enemy.tary=
+    'moving',
+    30,
+    true,
+    enemy.x+rnd(8)-4,
+    avatar.y
+   enemy.flipx=avatar.x-enemy.x < 0 -- todo
 
   -- set avatar position as tar, move there
   elseif haslostoavatar then
@@ -1170,9 +1194,9 @@ function dungeonupdate()
    enemy.a=rnd()
    enemy.state,enemy.tarx,enemy.tary,enemy.spd=
     'moving',enemy.x+cos(enemy.a)*10,enemy.y+sin(enemy.a)*10,enemy.runspd*0.5
-   if enemy.onroam then
-    enemy.onroam(enemy)
-   end
+   -- if enemy.onroam then
+   --  enemy.onroam(enemy)
+   -- end
   end
  end
 
@@ -1342,7 +1366,7 @@ function dungeonupdate()
   _a.x+=_dx
   _a.y+=_dy
   _a.x=mid(0,_a.x,128)
-  _a.y=mid(0,_a.y,128)
+  _a.y=mid(10,_a.y,128)
   _a.dx,_a.dy=0,0
  end
 
@@ -1979,11 +2003,11 @@ bbbbbbbbbbbb777770888880bbbbbbbbbbbbb000bbbbbbbbbb000bbbbbbb06500020bbbb06605020
 bbbbbbbbbbbb77777b08880bbbbbbbbbbbb000520bbbbbbb000520bbbbb0056000200bb000605020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbb7bb080bbbbbbbbbbbb06605020bbbbb06605020bbb065d002260d0066d005060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbb00bbbbbb0bbbbbbbbbbbbb06650020bbbbb06650020bbbb0056000200bb006605020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb00bbbbbb0660bbbbbbbbbbbbbbbbbbbb065002000bbbb065002000bbb0d500020bbbb0d005020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb0660bbbb0dd60bbbbbbbbbbbbbbbbbb06d06dd602d0b06d06dd602d0bb06650020bbbb06605020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b06d60bbb0d6d60bbbbbbbbbbbbbbbbbbb0665002000bbb0665002000bbb0d00520bbbbb0d00520bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b0ddd60bb000dd60bbbbbbbbbbbbbbbbbb0d050020bbbbb0d050020bbbbb060d00bbbbbb060d00bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-06ddd60b00660d60bbbbbbbbbbbbbbbbbb06605020bbbbb06605020bbbbb06060bbbbbbb06060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb00bbbbbb0660bbbbb777bbbbbbbbbbbb065002000bbbb065002000bbb0d500020bbbb0d005020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb0660bbbb0dd60bbb7777777bbbbbbbb06d06dd602d0b06d06dd602d0bb06650020bbbb06605020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b06d60bbb0d6d60b77777777777bbbbbbb0665002000bbb0665002000bbb0d00520bbbbb0d00520bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b0ddd60bb000dd60bbb7777777bbbbbbbb0d050020bbbbb0d050020bbbbb060d00bbbbbb060d00bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+06ddd60b00660d60bbbbb777bbbbbbbbbb06605020bbbbb06605020bbbbb06060bbbbbbb06060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 0d66dd600dd60060bbbbbbbbbbbbbbbbbb0d00520bbbbbb06d0520bbbbbb06060bbbbbbb06060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 0ddddd600ddd60d0bbbbbbbbbbbbbbbbbb060b00bbbbbb0606000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 b0b0bb0bbbbbbbbbbbbbbbbbbbbbbbbbbb060bbbbbbbb060060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
