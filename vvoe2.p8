@@ -921,6 +921,8 @@ function dungeoninit()
   1,1,3,10,64
  
  -- reset
+ mapw,
+ camx,
  curenemyi,
  actors,
  props,
@@ -930,7 +932,7 @@ function dungeoninit()
  interactables,
  islevelcleared,
  boss=
-  1,{},{},{},{},{},{}
+  256,0,1,{},{},{},{},{},{}
 
  -- reset avatar
  avatar=add(actors,actfact(avatar))
@@ -948,6 +950,12 @@ function dungeoninit()
 
  add(props,actfact({
   x=84,y=18,
+  hw=4,hh=2,
+  idling={pfn'8,40,8,8, -4,-5,'},
+ }))
+
+ add(props,actfact({
+  x=222,y=18,
   hw=4,hh=2,
   idling={pfn'8,40,8,8, -4,-5,'},
  }))
@@ -1365,10 +1373,14 @@ function dungeonupdate()
   end
   _a.x+=_dx
   _a.y+=_dy
-  _a.x=mid(0,_a.x,128)
+  _a.x=mid(0,_a.x,mapw)
   _a.y=mid(10,_a.y,128)
   _a.dx,_a.dy=0,0
  end
+
+ -- update camera
+ camx=mid(0,avatar.x-64,mapw-128)
+ camera(camx)
 
  -- update attacks
  for attack in all(attacks) do
@@ -1380,7 +1392,7 @@ function dungeonupdate()
   attack.x+=(attack.dx or 0)
   attack.y+=(attack.dy or 0)
 
-  if attack.x > 128 or attack.x < 0 or
+  if attack.x > mapw or attack.x < 0 or
      attack.y > 128 or attack.y < 0 then
    attack.removeme=true
   end
@@ -1615,14 +1627,16 @@ function dungeondraw()
  end
 
  -- draw gui
+ cursor(camx)
+
  for _i=0,avatar.hp-1 do
-  sspr(17,35,7,6,2+_i*8,2)
+  sspr(17,35,7,6,camx+2+_i*8,2)
   -- offset=(_i+1)*6-1
  end
 
  for _i=0,avatar.startarmor-1 do
   x=_i >= avatar.armor and 53 or 48
-  sspr(x,40,5,5,121-offset-_i*6,1)
+  sspr(x,40,5,5,camx+121-offset-_i*6,1)
  end
 
  -- if dungeonlvl > 0 then
@@ -1643,6 +1657,8 @@ function dungeondraw()
   rectfill(64-hw,123,64+hw,125,8)
   print(boss.name,64-#boss.name*2,122,15)
  end
+
+ cursor()
 
 end
 
