@@ -4,6 +4,16 @@ __lua__
 -- virtuous vanquisher of evil 2.0
 -- by ironchest games
 
+printh('debug started','debug',true)
+function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
+ local ss={_s2,_s3,_s4,_s5,_s6,_s7,_s8}
+ local result=tostr(_s1)
+ for s in all(ss) do
+  result=result..', '..tostr(s)
+ end
+ printh(result,'debug',false)
+end
+
 cartdata'ironchestgames_vvoe2_v1_dev1'
 
 function _sfx(_s)
@@ -182,50 +192,7 @@ btnmasktoa={
  [0x000a]=0.875, -- down/right
 }
 
-function aframes(_fs)
- local t,j={},1
- for i=0,1,0.125 do
-  t[i]=pfn(_fs[j])
-  j+=1
- end
- return t
-end
-
-meleevfxframes=aframes{
- '0,20,4,7,-1,-5,', -- right
- '8,20,6,4,-3,-2,', -- right/up
- '20,20,9,3,-3,-1,', -- up
- '14,20,6,4,-2,-2,', -- up/left
- '4,20,4,7,-2,-5,', -- left
- '29,20,4,7,-3,-6,', -- left/down
- '20,23,9,3,-4,-2,', -- down
- '33,20,4,7,0,-6,', -- down/right
- '0,20,4,7,-1,-5,' -- right (wrapped)
-}
-
-bowvfxframes=aframes{
- '0,27,6,7,-3,-5,', -- right
- '17,32,7,7,-4,-3,', -- right/up
- '10,31,7,6,-3,-3,', -- up
- '34,32,7,7,-3,-3,', -- up/left
- '4,27,6,7, -2,-5,', -- left
- '22,27,7,7,-2,-5,', -- left/down
- '10,27,7,6,-3,-4,', -- down
- '29,27,7,7,-4,-4,', -- down/right
- '0,27,6,7,-3,-5,' -- right (wrapped)
-}
-
-arrowframes=aframes{
- '13,26,4,1,-1,0,', -- right
- '13,26,4,1,-1,0,', -- right/up
- '13,26,4,1,-1,0,', -- up
- '13,26,4,1,-1,0,', -- up/left
- '13,26,4,1,-1,0,', -- left
- '13,26,4,1,-1,0,', -- left/down
- '13,26,4,1,-1,0,', -- down
- '13,26,4,1,-1,0,', -- down/right
- '13,26,4,1,-1,0,', -- right (wrapped)
-}
+arrowframe=pfn'13,26,4,1,-1,0,'
 
 function getvfxframei(a)
  return min(flr((a+0.0625)*8)/8,1)
@@ -314,10 +281,10 @@ function bowattackskillfactory(
     hw=1,hh=1,
     state_c=1000,
     dx=cos(a)*1.6,
-    dy=sin(a)*1.6,
+    dy=0,
     typ=typ,
     recovertime=recovertime or 0,
-    frame=clone(arrowframes[a]),
+    frame=clone(arrowframe),
     col=arrowcol,
    })
 
@@ -370,7 +337,7 @@ function boltskillfactory(
     dy=0,
     typ=typ,
     recovertime=120,
-    frame=pfn'47,20,3,3,-0.5,-0.5,',
+    frame=pfn'28,41,4,4,-1,-1,',
     col=attackcol,
    }
    add(attacks,attack)
@@ -378,9 +345,9 @@ function boltskillfactory(
    add(pemitters,{
     follow=attack,
     life=1000,
-    prate=pfn'0,1,',
-    plife=pfn'3,5,',
-    poffsets=pfn'-1,-1,1,1,',
+    prate=pfn'0,0,',
+    plife=pfn'3,18,',
+    poffsets=pfn'-1,-1,1,2,',
     dy=pfn'0,0,',
     pcol1=boltpemcol1,pcol2=boltpemcol2
    })
@@ -435,7 +402,7 @@ function newmeleetroll(x,y)
   idling={pfn'28,26,9,10, -3,-10,'},
   moving={animspd=0.18,pfn'17,26,11,9, -5,-9,',pfn'28,26,9,10, -3,-10,'},
   attacking={animspd=0,pfn'37,26,10,11, -7,-11,',pfn'47,26,13,8, -4,-8,'},
-  recovering={pfn'28,26,9,10, -3,-10,'}
+  recovering={pfn'47,26,13,8, -4,-8,'}
  }
 end
 
@@ -457,7 +424,7 @@ function newbowskele(x,y)
   idling={pfn'33,37,12,13,-3,-13,'},
   moving={animspd=0.18,pfn'33,37,12,13,-3,-13,',pfn'45,37,13,12,-4,-13,'},
   attacking={animspd=0,pfn'58,34,12,13,-4,-13,',pfn'70,34,10,13,-4,-13,'},
-  recovering={pfn'33,37,12,13,-3,-13,'}
+  recovering={pfn'45,37,13,12,-4,-13,'}
  }
 end
 
@@ -874,11 +841,10 @@ itemclasses={
   recovering=bowidling}
 }
 
+
 themes={
- {newmeleetroll,newmeleetroll,newtrollcaster,newgianttroll},
- {newbatenemy,newbatenemy,newbatenemy,newvampireboss},
- {newbatenemy,newmeleeskele,newbowskele,newskeleking},
- {newfirebatenemy,newdemoncaster,newdemoncaster,newdemonboss}
+ {{newmeleetroll,newbowskele},
+  {pfn'0,41,8,7, -4,-4,',pfn'8,40,8,8, -4,-5,',pfn'0,48,8,16, -4,-14,'}},
 }
 
 -- init avatar
@@ -898,7 +864,7 @@ avatar=actfact{
   [1]=createitem(8,1,2),
  },
  skill1=swordattackskillfactory('-5,-16,'),
- skill2=boltskillfactory('fire',14,8,14,14,8,15,'firebolt'),
+ skill2=boltskillfactory('fire',14,8,14,8,2,15,'firebolt'),
  inventory={},
  passiveskills={},
  idling={idleframe},
@@ -932,44 +898,37 @@ function dungeoninit()
  interactables,
  islevelcleared,
  boss=
-  256,0,1,{},{},{},{},{},{}
+  512,0,1,{},{},{},{},{},{}
 
  -- reset avatar
  avatar=add(actors,actfact(avatar))
  avatar.x=10
  avatar.y=64
 
- add(actors,newmeleetroll(120,64))
- add(actors,newbowskele(120,100))
+ -- init map
+ mapname='barren plains'
 
- add(props,actfact({
-  x=64,y=60,
-  hw=4,hh=2,
-  idling={pfn'0,41,8,7, -4,-4,'},
- }))
-
- add(props,actfact({
-  x=84,y=18,
-  hw=4,hh=2,
-  idling={pfn'8,40,8,8, -4,-5,'},
- }))
-
- add(props,actfact({
-  x=222,y=18,
-  hw=4,hh=2,
-  idling={pfn'8,40,8,8, -4,-5,'},
- }))
-
- add(props,actfact({
-  x=34,y=104,
-  hw=4,hh=2,
-  idling={pfn'0,48,8,16, -4,-14,'},
- }))
+ local _th=themes[theme]
+ local _x=-10
+ local nme=false
+ while _x<mapw do
+  _x=_x+flrrnd(24)+12
+  local _y=flrrnd(112)+16
+  if nme then
+   local _e=_th[1][flrrnd(#_th[1])+1]
+   add(actors,_e(_x,_y))
+  else
+   local _f=_th[2][flrrnd(#_th[2])+1]
+   add(props,actfact({x=_x,y=_y,hw=4,hh=2,idling={_f}}))
+  end
+  nme=not nme
+  if (_x<120) nme=false
+ end
 
  music(theme*10,0,0b0011)
- if boss then
-  music(1,0,0b0011)
- end
+ -- if boss then
+ --  music(1,0,0b0011)
+ -- end
 end
 
 kills,curenemyi=0,1
@@ -1126,7 +1085,7 @@ function dungeonupdate()
   ismovingoutofcollision=enemy.ismovingoutofcollision
   withinattackdist=disttoavatar <= enemy.att_range
   isinvertical=abs(avatar.y-enemy.y) < 4
-  haslostoavatar=true
+  haslostoavatar=disttoavatar < 100
   -- todo: colliding with bounds
   -- todo: colliding with other
   -- todo: colliding with avatar
@@ -1307,6 +1266,7 @@ function dungeonupdate()
      _a.dx,_a.dy=cos(attack.knocka)*5,sin(attack.knocka)*5
     elseif attack.typ == 'fire' then
      _a.effect={func=burningeffect}
+     _a.dmgfx_c=48
     elseif attack.typ == 'ice' then
      _a.effect,_a.dmgfx_col={func=freezeeffect},12
     end
@@ -1373,28 +1333,58 @@ function dungeonupdate()
   end
   _a.x+=_dx
   _a.y+=_dy
-  _a.x=mid(0,_a.x,mapw)
+  if boss then
+   _a.x=mid(mapw-128,_a.x,mapw)
+  else
+   _a.x=mid(0,_a.x,mapw)
+  end
   _a.y=mid(10,_a.y,128)
   _a.dx,_a.dy=0,0
  end
 
  -- update camera
- camx=mid(0,avatar.x-64,mapw-128)
+ if boss then
+  camx=mapw-128
+ else
+  camx=mid(0,avatar.x-64,mapw-128)
+ end
  camera(camx)
 
  -- update attacks
- for attack in all(attacks) do
-  if attack.state_c and not attack.removeme then
-   attack.state_c-=1
-   attack.removeme=attack.state_c <= 0
+ for _a in all(attacks) do
+  if _a.state_c and not _a.removeme then
+   _a.state_c-=1
+   _a.removeme=_a.state_c <= 0
   end
 
-  attack.x+=(attack.dx or 0)
-  attack.y+=(attack.dy or 0)
+  _a.x+=(_a.dx or 0)
+  _a.y+=(_a.dy or 0)
 
-  if attack.x > mapw or attack.x < 0 or
-     attack.y > 128 or attack.y < 0 then
-   attack.removeme=true
+  if _a.x > mapw or _a.x < 0 or
+     _a.y > 128 or _a.y < 0 then
+   _a.removeme=true
+  end
+
+  for _p in all(props) do
+   if _a.dx and isaabbscolliding(_a,_p) then
+    -- hit flash
+    local x,y=_a.x+_a.hw+_a.dx/2,_a.y+_a.dy/2-_a.hh
+    add(vfxs,{
+     {
+      draw=function(f)
+       circfill(x,y,2,_a.dmgfx_col)
+      end,
+      c=4,
+     },
+     {
+      draw=function(f)
+       circfill(x,y,3,7)
+      end,
+      c=5,
+     },
+    })
+    _a.removeme=true
+   end
   end
  end
 
@@ -1544,7 +1534,7 @@ function dungeondraw()
   end
 
   -- draw dmg overlay color
-  if _a.dmgfx_c > 0 then
+  if _a.dmgfx_c % 8 >= 4 then
    for i=1,15 do
     pal(i,_a.dmgfx_col,0)
    end
@@ -1627,8 +1617,6 @@ function dungeondraw()
  end
 
  -- draw gui
- cursor(camx)
-
  for _i=0,avatar.hp-1 do
   sspr(17,35,7,6,camx+2+_i*8,2)
   -- offset=(_i+1)*6-1
@@ -1639,10 +1627,6 @@ function dungeondraw()
   sspr(x,40,5,5,camx+121-offset-_i*6,1)
  end
 
- -- if dungeonlvl > 0 then
- --  print('level '..dungeonlvl,3,1,6)
- -- end
-
  if avatar.hp <= 0 then
   print('a deadly blow',40,60,8)
   -- if tick-deathts > 150 then
@@ -1652,13 +1636,16 @@ function dungeondraw()
  end
 
  -- draw boss hp
- if boss and boss.hp > 0 then
+ if boss then
   local hw=boss.hp*6/2
-  rectfill(64-hw,123,64+hw,125,8)
-  print(boss.name,64-#boss.name*2,122,15)
+  rectfill(camx+64-hw,123,camx+64+hw,125,8)
+  print(boss.name,camx+64-#boss.name*2,122,15)
+ else
+  local pos=min(120*(avatar.x/(mapw-64)),123)
+  rectfill(camx+3,123,camx+123,125,1)
+  rectfill(camx+3,123,camx+pos,125,12)
+  print(mapname,camx+64-#mapname*2,122,7)
  end
-
- cursor()
 
 end
 
@@ -2019,10 +2006,10 @@ bbbbbbbbbbbb777770888880bbbbbbbbbbbbb000bbbbbbbbbb000bbbbbbb06500020bbbb06605020
 bbbbbbbbbbbb77777b08880bbbbbbbbbbbb000520bbbbbbb000520bbbbb0056000200bb000605020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbb7bb080bbbbbbbbbbbb06605020bbbbb06605020bbb065d002260d0066d005060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbb00bbbbbb0bbbbbbbbbbbbb06650020bbbbb06650020bbbb0056000200bb006605020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb00bbbbbb0660bbbbb777bbbbbbbbbbbb065002000bbbb065002000bbb0d500020bbbb0d005020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb0660bbbb0dd60bbb7777777bbbbbbbb06d06dd602d0b06d06dd602d0bb06650020bbbb06605020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b06d60bbb0d6d60b77777777777bbbbbbb0665002000bbb0665002000bbb0d00520bbbbb0d00520bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b0ddd60bb000dd60bbb7777777bbbbbbbb0d050020bbbbb0d050020bbbbb060d00bbbbbb060d00bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb00bbbbbb0660bbbbb777bbbbbb77bbbb065002000bbbb065002000bbb0d500020bbbb0d005020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb0660bbbb0dd60bbb7777777bbb7777b06d06dd602d0b06d06dd602d0bb06650020bbbb06605020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b06d60bbb0d6d60b77777777777b7777bb0665002000bbb0665002000bbb0d00520bbbbb0d00520bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b0ddd60bb000dd60bbb7777777bbb77bbb0d050020bbbbb0d050020bbbbb060d00bbbbbb060d00bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 06ddd60b00660d60bbbbb777bbbbbbbbbb06605020bbbbb06605020bbbbb06060bbbbbbb06060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 0d66dd600dd60060bbbbbbbbbbbbbbbbbb0d00520bbbbbb06d0520bbbbbb06060bbbbbbb06060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 0ddddd600ddd60d0bbbbbbbbbbbbbbbbbb060b00bbbbbb0606000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
