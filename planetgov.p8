@@ -26,10 +26,6 @@ function asin(y)
  return atan2(sqrt(1-y*y),-y)
 end
 
-function lookupfrommap(u,v)
- return sget(u,v)
-end
-
 function flrrnd(x)
  return flr(rnd(x))
 end
@@ -95,11 +91,17 @@ mapheight=32
 mapheight_h=mapheight/2
 mapheight_2=mapheight*2
 rotationspeed=0.1
+planetname=''
 
 _update=function()
  t=t+1
 
- if btnp(4) then
+ if btnp(1) then
+  seed=seed+1
+  _init()
+ end
+ if btnp(0) then
+  seed=seed-1
   _init()
  end
 
@@ -111,8 +113,7 @@ _update=function()
   star[1]=star[1]+star[3]
   if star[1] < 0 then
    star[1]=128
-  end
-  if star[1] > 128 then
+  elseif star[1] > 128 then
    star[1]=0
   end
  end
@@ -131,44 +132,77 @@ _draw=function()
 
    -- convert pixel position into a vector relative to the center,
    -- normalized into the range -1...1
-   local px=(x-left)*2/discsize-1
-   local py=(y-top)*2/discsize-1
+   local px=(x-left)*discsize_2d-1
+   local py=(y-top)*discsize_2d-1
    local pypy=py*py
 
-   -- get the squared magnitude of this vector
-   local magsq=px*px+pypy
-
    -- if we're outside the circle, draw black/background and skip ahead
-   if magsq > 1 then
-    pset(x,y,0)
-   else
+   if px*px+pypy <= 1 then
 
     -- warp our local offset vector px py to imitate 3d bulge
     widthatheight=sqrt(1-pypy)
     px=asin(px/widthatheight)*4
 
     -- convert our local offsets into lookup coordinates into our map texture
-    u=t*rotationspeed+(px+1)*(mapheight/2) 
-    v=(py+1)*(mapheight/2)
+    u=t*rotationspeed+(px+1)*mapheight_h
+    v=(py+1)*mapheight_h
     -- wrap the horizontal coordinate around our map when it goes off the edge
-    u=u%(2*mapheight)
+    u=u%mapheight_2
 
     -- look up the corresponding colour from the map texture & plot it
-    c=lookupfrommap(u,v)
+    c=sget(u,v)
+
+    -- shade it
     if dist(x+discsize_h,y+discsize_h,shadeleft,shadetop) > shadesize then
      c=colshade[c]
     end
+
     pset(x,y,c)
    end
   end
  end
 
- sspr(0,0,64,32,32,96)
+ -- sspr(0,0,64,32,32,96)
 
- print(stat(2),0,0,7) -- note: cpu usage
+ -- print(stat(2),0,0,7) -- note: cpu usage
+
+ print(planetname,64-#planetname*2,96,7)
+ print('\x8b',10,98,10)
+ print('\x91',111,98,10)
 end
 
+seed=rnd()
 _init=function()
+ srand(seed)
+
+ planetname=''
+ local namelen=flrrnd(4)+3
+ vocs='\97\101\105\111\117\121'
+ cons='\98\99\100\102\103\104\106\107\108\109\110\112\114\115\116\118\119\120\122'
+ while #planetname <= namelen do
+  local cpos=flrrnd(#cons)+1
+  local vpos=flrrnd(#vocs)+1
+  local l=sub(cons,cpos,cpos)
+  if #planetname%2 == 0 then
+   l=sub(vocs,vpos,vpos)
+  end
+  planetname=planetname..l
+ end
+ if rnd() > 0.25 then
+  local n=planetname
+  planetname=''
+  for l=#n,1,-1 do
+   planetname=planetname..sub(n,l,l)
+  end
+ end
+ if rnd() > 0.65 then
+  planetname=planetname..'-'..flrrnd(12)+1
+  if rnd() > 0.15 then
+   local cpos=flrrnd(#cons)+1
+   planetname=planetname..sub(cons,cpos,cpos)
+  end
+ end
+
  local c=20
  local starspeed=max(0.03,rnd(0.3))
  while c > 0 do
@@ -176,11 +210,12 @@ _init=function()
   c=c-1
  end
 
- cls()
  genmap(64,32)
 
  discsize=flr((flrrnd(22)+22)/2)*2+1
+ -- discsize=32 -- 0.4326
  discsize_h=discsize/2
+ discsize_2d=2/discsize
  left=64-discsize_h
  top=left
  shadeleft=64+discsize_h-discsize_h/8
