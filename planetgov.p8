@@ -203,21 +203,37 @@ drawstarsplanet=function()
  end
 end
 
+pop=1000
+projects={}
+
+function updategame()
+ for p in all(projects) do
+  -- todo
+ end
+end
+
 seed=rnd()
 t=0
 stars={}
 colshade={1,1,1,2,1,13,6,2,4,4,3,13,1,2,4}
 
+selcols={13,13,13}
+
 planetupdate=function()
  t=t+1
+
+ selcols[sel]=13
+ if btnp(2) then
+  sel=min(sel-1,3)
+ elseif btnp(3) then
+  sel=max(sel+1,1)
+ end
  if btnp(4) then
-  --todo: surfaceinit
+  if sel == 1 then
+   surfaceinit()
+  end
  end
- if btnp(0) then
-  sel=min(sel+1,2)
- elseif btnp(1) then
-  sel=max(sel-1,1)
- end
+ selcols[sel]=7
  
  updatestars()
 end
@@ -228,17 +244,49 @@ planetdraw=function()
  drawstarsplanet()
  print(planetname,64-#planetname*2,2,5)
 
- 
- if sel == 1 then
-  rect(left-selmar,top-selmar,left+discsize+selmar,top+discsize+selmar,10)
- elseif sel == 2 then
-  rect(8,48,32,56,10)
- end
+ print('> surface',8,16,selcols[1])
+ print('> ambassador',8,16+7,selcols[2])
+ print('> war fleet',8,16+14,selcols[3])
 end
 
 planetinit=function()
  _update,_draw,sel,selt=planetupdate,planetdraw,1,75
 end
+
+
+surfaceupdate=function()
+ selcols[sel]=13
+ if btnp(2) then
+  sel=min(sel-1,3)
+ elseif btnp(3) then
+  sel=max(sel+1,1)
+ end
+ if btnp(4) then
+  if sel == 3 then
+   planetinit()
+  end
+ end
+ selcols[sel]=7
+end
+
+surfacedraw=function()
+ cls(1)
+
+ print(planetname,64-#planetname*2,2,13)
+ rect(mapx-1,12-1,mapx+mapheight_2,mapheight+12,0)
+ sspr(0,0,mapheight_2,mapheight,mapx,12)
+ local offy=mapheight+12+6
+ print('> start project',34,offy,selcols[1])
+ print('> overview',34,offy+7,selcols[2])
+ print('> cancel',34,offy+14,selcols[3])
+end
+
+surfaceinit=function()
+ _update,_draw=surfaceupdate,surfacedraw
+ mapx=(128-mapheight_2)/2
+ sel=1
+end
+
 
 startupdate=function()
  t=t+1
@@ -265,8 +313,6 @@ startdraw=function()
  cls()
 
  drawstarsplanet()
-
- -- sspr(0,0,mapheight_2,mapheight,0,0)
 
  if dev then
   print('cpu: '..stat(2),0,0,11) -- note: cpu usage
