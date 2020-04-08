@@ -2,6 +2,9 @@ pico-8 cartridge // http://www.pico-8.com
 version 18
 __lua__
 
+dev=false
+menuitem(1, 'debug', function() dev=not dev end)
+
 printh('debug started','debug',true)
 function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  local ss={_s2,_s3,_s4,_s5,_s6,_s7,_s8}
@@ -84,123 +87,11 @@ function genmap(z,w)
  if (u>7) goto o
 end
 
--- newflashy=function(draw,c1,c2)
---  local f
---  local d=function()
---   if f.t > 0 and f.t%4 > 1 then
---    pal(c1,c2,0)
---   end
---   draw()
---   pal()
---  end
---  f={c1,c2,draw=d,t=0,p=function() f.t=10 end}
---  add(flashys,f)
---  return f
--- end
-
-flashys={}
--- leftb=newflashy(function() print('\x8b',10,98,9) end,9,10)
--- rightb=newflashy(function() print('\x91',111,98,9) end,9,10)
-stars={}
-t=0
-colshade={1,1,1,2,1,13,6,2,4,4,3,13,1,2,4}
-rotationspeed=0.1
 vocs='\97\101\105\111\117\121'
 cons='\98\99\100\102\103\104\106\107\108\109\110\112\114\115\116\118\119\120\122'
-planetname=''
-leftd=false
-rightd=false
 
-_update=function()
- t=t+1
-
- rightd=btn(1)
- leftd=btn(0)
-
- if btnp(1) then
-  seed=seed+1
-  _init()
- end
- if btnp(0) then
-  seed=seed-1
-  _init()
- end
-
- if btnp(5) then
-  sset(flrrnd(64),flrrnd(32),5)
- end
-
- -- for flashy in all(flashys) do
- --  if flashy.t >= 0 then
- --   flashy.t=flashy.t-1
- --  end
- -- end
-
- for star in all(stars) do
-  star[1]=star[1]+star[3]
-  if star[1] < 0 then
-   star[1]=128
-  elseif star[1] > 128 then
-   star[1]=0
-  end
- end
-end
-
-_draw=function()
- cls()
-
- for star in all(stars) do
-  pset(star[1],star[2],1)
- end
-
- -- iterate over each pixel in the discsize x discsize bounding square
- for x=left,left_ds do
-  for y=top,top_ds do
-
-   -- convert pixel position into a vector relative to the center,
-   -- normalized into the range -1...1
-   local px=(x-left)*discsize_2d-1
-   local py=(y-top)*discsize_2d-1
-   local pypy=py*py
-
-   -- if we're outside the circle, draw black/background and skip ahead
-   if px*px+pypy <= 1 then
-
-    -- warp our local offset vector px py to imitate 3d bulge
-    widthatheight=sqrt(1-pypy)
-    px=asin(px/widthatheight)*4
-
-    -- convert our local offsets into lookup coordinates into our map texture
-    u=t*rotationspeed+(px+1)*mapheight_h
-    v=(py+1)*mapheight_h
-    -- wrap the horizontal coordinate around our map when it goes off the edge
-    u=u%mapheight_2
-
-    -- look up the corresponding colour from the map texture & plot it
-    c=sget(u,v)
-
-    -- shade it
-    if dist(x+discsize_h,y+discsize_h,shadeleft,shadetop) > shadesize then
-     c=colshade[c]
-    end
-
-    pset(x,y,c)
-   end
-  end
- end
-
- -- sspr(0,0,mapheight_2,mapheight,0,0)
-
- print(stat(2),0,0,7) -- note: cpu usage
-
- print(planetname,64-#planetname*2,96,7)
- print('\x8b',10,62,({[false]=6,[true]=7})[leftd])
- print('\x91',111,62,({[false]=6,[true]=7})[rightd])
-end
-
-seed=rnd()
-_init=function()
- srand(seed)
+newplanet=function(_seed)
+ srand(_seed)
 
  planetname=''
  local namelen=flrrnd(5)+2
@@ -243,6 +134,7 @@ _init=function()
  -- discsize=32 -- 0.4326
  discsize_h=discsize/2
  discsize_2d=2/discsize
+ rotationspeed=rnd(0.11)+0.04
  left=64-discsize_h
  top=left
  shadeleft=64+discsize_h-discsize_h/8
@@ -256,5 +148,142 @@ _init=function()
  mapheight_2=mapheight*2
 
  genmap(mapheight_2,mapheight)
+end
+
+updatestars=function()
+ for star in all(stars) do
+  star[1]=star[1]+star[3]
+  if star[1] < 0 then
+   star[1]=128
+  elseif star[1] > 128 then
+   star[1]=0
+  end
+ end
+end
+
+drawstarsplanet=function()
+ for star in all(stars) do
+  pset(star[1],star[2],1)
+ end
+
+ -- iterate over each pixel in the discsize x discsize bounding square
+ for x=left,left_ds do
+  for y=top,top_ds do
+
+   -- convert pixel position into a vector relative to the center,
+   -- normalized into the range -1...1
+   local px=(x-left)*discsize_2d-1
+   local py=(y-top)*discsize_2d-1
+   local pypy=py*py
+
+   -- if we're outside the circle, draw black/background and skip ahead
+   if px*px+pypy <= 1 then
+
+    -- warp our local offset vector px py to imitate 3d bulge
+    widthatheight=sqrt(1-pypy)
+    px=asin(px/widthatheight)*4
+
+    -- convert our local offsets into lookup coordinates into our map texture
+    u=t*rotationspeed+(px+1)*mapheight_h
+    v=(py+1)*mapheight_h
+    -- wrap the horizontal coordinate around our map when it goes off the edge
+    u=u%mapheight_2
+
+    -- look up the corresponding colour from the map texture & plot it
+    c=sget(u,v)
+
+    -- shade it
+    if dist(x+discsize_h,y+discsize_h,shadeleft,shadetop) > shadesize then
+     c=colshade[c]
+    end
+
+    pset(x,y,c)
+   end
+  end
+ end
+end
+
+seed=rnd()
+t=0
+stars={}
+colshade={1,1,1,2,1,13,6,2,4,4,3,13,1,2,4}
+
+planetupdate=function()
+ t=t+1
+ if btnp(4) then
+  --todo: surfaceinit
+ end
+ if btnp(0) then
+  sel=min(sel+1,2)
+ elseif btnp(1) then
+  sel=max(sel-1,1)
+ end
+ 
+ updatestars()
+end
+
+selmar=8
+planetdraw=function()
+ cls()
+ drawstarsplanet()
+ print(planetname,64-#planetname*2,2,5)
+
+ 
+ if sel == 1 then
+  rect(left-selmar,top-selmar,left+discsize+selmar,top+discsize+selmar,10)
+ elseif sel == 2 then
+  rect(8,48,32,56,10)
+ end
+end
+
+planetinit=function()
+ _update,_draw,sel,selt=planetupdate,planetdraw,1,75
+end
+
+startupdate=function()
+ t=t+1
+
+ rightd=btn(1)
+ leftd=btn(0)
+
+ if btnp(1) then
+  seed=seed+1
+  newplanet(seed)
+ end
+ if btnp(0) then
+  seed=seed-1
+  newplanet(seed)
+ end
+ if btnp(4) or btnp(5) then
+  planetinit()
+ end
+
+ updatestars()
+end
+
+startdraw=function()
+ cls()
+
+ drawstarsplanet()
+
+ -- sspr(0,0,mapheight_2,mapheight,0,0)
+
+ if dev then
+  print('cpu: '..stat(2),0,0,11) -- note: cpu usage
+ end
+
+ print(planetname,64-#planetname*2,16,7)
+ print('\x8b',10,62,({[false]=6,[true]=7})[leftd])
+ print('\x91',111,62,({[false]=6,[true]=7})[rightd])
+ print('')
+end
+
+startinit=function()
+ newplanet(seed)
+ _update,_draw=startupdate,startdraw
+end
+
+_init=function()
+ startinit()
 end
 
