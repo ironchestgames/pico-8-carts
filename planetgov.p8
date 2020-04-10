@@ -15,6 +15,20 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  printh(result,'debug',false)
 end
 
+function curry(f,a)
+ return function()
+  f(a)
+ end
+end
+
+function clone(_t)
+ local t={}
+ for k,v in pairs(_t) do
+  t[k]=v
+ end
+ return t
+end
+
 function dist(x1,y1,x2,y2)
  local dx=(x2-x1)*0.1
  local dy=(y2-y1)*0.1
@@ -94,26 +108,26 @@ newplanet=function(_seed)
  srand(_seed)
 
  planetname=''
- local namelen=flrrnd(5)+2
- while #planetname <= namelen do
+ local length=flrrnd(5)+2
+ while #planetname <= length do
   local cpos=flrrnd(#cons)+1
   local vpos=flrrnd(#vocs)+1
-  local l=sub(cons,cpos,cpos)
+  local _l=sub(cons,cpos,cpos)
   if #planetname%2 == 0 then
-   l=sub(vocs,vpos,vpos)
+   _l=sub(vocs,vpos,vpos)
   end
-  planetname=planetname..l
+  planetname=planetname.._l
  end
  if rnd() > 0.25 then
   local n=planetname
   planetname=''
-  for l=#n,1,-1 do
-   planetname=planetname..sub(n,l,l)
+  for _l=#n,1,-1 do
+   planetname=planetname..sub(n,_l,_l)
   end
  end
- if rnd() > 0.8 then
-  local l=flrrnd(#planetname-1)+1
-  planetname=sub(planetname,1,l-1)..sub(planetname,l+1,#planetname)
+ if rnd() > 0.9 then
+  local _l=flrrnd(#planetname-1)+1
+  planetname=sub(planetname,1,_l-1)..sub(planetname,_l+1,#planetname)
  end
  if rnd() > 0.65 then
   planetname=planetname..'-'..flrrnd(12)+1
@@ -123,11 +137,11 @@ newplanet=function(_seed)
   end
  end
 
- local c=20
+ local starc=20
  local starspeed=max(0.03,rnd(0.3))
- while c > 0 do
-  stars[c]={flr(rnd(128)),rnd(128),starspeed}
-  c=c-1
+ while starc > 0 do
+  stars[starc]={flr(rnd(128)),rnd(128),starspeed}
+  starc=starc-1
  end
 
  discsize=flr((flrrnd(22)+22)/2)*2+1
@@ -151,12 +165,12 @@ newplanet=function(_seed)
 end
 
 updatestars=function()
- for star in all(stars) do
-  star[1]=star[1]+star[3]
-  if star[1] < 0 then
-   star[1]=128
-  elseif star[1] > 128 then
-   star[1]=0
+ for _s in all(stars) do
+  _s[1]=_s[1]+_s[3]
+  if _s[1] < 0 then
+   _s[1]=128
+  elseif _s[1] > 128 then
+   _s[1]=0
   end
  end
 end
@@ -167,48 +181,76 @@ drawstarsplanet=function()
  end
 
  -- iterate over each pixel in the discsize x discsize bounding square
- for x=left,left_ds do
-  for y=top,top_ds do
+ for _x=left,left_ds do
+  for _y=top,top_ds do
 
    -- convert pixel position into a vector relative to the center,
    -- normalized into the range -1...1
-   local px=(x-left)*discsize_2d-1
-   local py=(y-top)*discsize_2d-1
-   local pypy=py*py
+   local _px=(_x-left)*discsize_2d-1
+   local _py=(_y-top)*discsize_2d-1
+   local _pypy=_py*_py
 
    -- if we're outside the circle, draw black/background and skip ahead
-   if px*px+pypy <= 1 then
+   if _px*_px+_pypy <= 1 then
 
-    -- warp our local offset vector px py to imitate 3d bulge
-    widthatheight=sqrt(1-pypy)
-    px=asin(px/widthatheight)*4
+    -- warp our local offset vector _px _py to imitate 3d bulge
+    widthatheight=sqrt(1-_pypy)
+    _px=asin(_px/widthatheight)*4
 
     -- convert our local offsets into lookup coordinates into our map texture
-    u=t*rotationspeed+(px+1)*mapheight_h
-    v=(py+1)*mapheight_h
+    _u=t*rotationspeed+(_px+1)*mapheight_h
+    _v=(_py+1)*mapheight_h
     -- wrap the horizontal coordinate around our map when it goes off the edge
-    u=u%mapheight_2
+    _u=_u%mapheight_2
 
     -- look up the corresponding colour from the map texture & plot it
-    c=sget(u,v)
+    _c=sget(_u,_v)
 
     -- shade it
-    if dist(x+discsize_h,y+discsize_h,shadeleft,shadetop) > shadesize then
-     c=colshade[c]
+    if dist(_x+discsize_h,_y+discsize_h,shadeleft,shadetop) > shadesize then
+     _c=colshade[_c]
     end
 
-    pset(x,y,c)
+    pset(_x,_y,_c)
    end
   end
  end
 end
 
+projectconfs={
+ {
+  'pr campaign',
+  t=120,
+  update=function(p)
+   if p.t <= 0 then
+    pop=pop+10 -- todo: change
+    p.removeme=true
+   end
+  end,
+ }
+}
+
 pop=1000
 projects={}
 
+function startproject(_pconf)
+ add(projects,clone(_pconf))
+ surfaceinit()
+end
+
 function updategame()
- for p in all(projects) do
-  -- todo
+ for _p in all(projects) do
+  if _p.hasproblem then
+   -- todo
+  else
+   _p.t=_p.t-1
+   _p.update(_p)
+  end
+ end
+ for _p in all(projects) do
+  if _p.removeme then
+   del(projects,_p)
+  end
  end
 end
 
@@ -217,23 +259,71 @@ t=0
 stars={}
 colshade={1,1,1,2,1,13,6,2,4,4,3,13,1,2,4}
 
-selcols={13,13,13}
+surfaceupdate=function()
+ selitems[sel][3]=nil
+ if btnp(2) then
+  sel=max(sel-1,1)
+ elseif btnp(3) then
+  sel=min(sel+1,#selitems)
+ end
+ if btnp(4) then
+  selitems[sel][2]()
+ end
+ selitems[sel][3]=7
+
+ updategame()
+end
+
+surfacedraw=function()
+ cls(1)
+ print(planetname,64-#planetname*2,6,14-1)
+ rect(mapx-1,14-1,mapx+mapheight_2,mapheight+14,0)
+ sspr(0,0,mapheight_2,mapheight,mapx,14)
+ local offy=mapheight+14+6
+ for selitem in all(selitems) do
+  print(selitem[1],34,offy,selitem[3] or 13)
+  offy=offy+7
+ end
+end
+
+surfaceinit=function()
+ _update,_draw=surfaceupdate,surfacedraw
+ mapx=(128-mapheight_2)/2
+ sel=1
+ selitems={
+  {'> start project',function()
+   sel=1
+   selitems={
+    {'> pr campaign',curry(startproject,projectconfs[1])},
+    {'< back',surfaceinit},
+   }
+  end},
+  {'> overview',function()
+   sel=1
+   selitems={}
+   for p in all(projects) do
+    add(selitems,p)
+   end
+   add(selitems,{'< back',surfaceinit})
+  end},
+  {'< back',planetinit},
+ }
+end
+
 
 planetupdate=function()
  t=t+1
 
- selcols[sel]=13
+ selitems[sel][3]=nil
  if btnp(2) then
-  sel=min(sel-1,3)
+  sel=max(sel-1,1)
  elseif btnp(3) then
-  sel=max(sel+1,1)
+  sel=min(sel+1,#selitems)
  end
  if btnp(4) then
-  if sel == 1 then
-   surfaceinit()
-  end
+  selitems[sel][2]()
  end
- selcols[sel]=7
+ selitems[sel][3]=7
  
  updatestars()
 end
@@ -244,47 +334,19 @@ planetdraw=function()
  drawstarsplanet()
  print(planetname,64-#planetname*2,2,5)
 
- print('> surface',8,16,selcols[1])
- print('> ambassador',8,16+7,selcols[2])
- print('> war fleet',8,16+14,selcols[3])
+ local offy=16
+ for selitem in all(selitems) do
+  print(selitem[1],6,offy,selitem[3] or nil)
+  offy=offy+7
+ end
 end
 
 planetinit=function()
- _update,_draw,sel,selt=planetupdate,planetdraw,1,75
-end
-
-
-surfaceupdate=function()
- selcols[sel]=13
- if btnp(2) then
-  sel=min(sel-1,3)
- elseif btnp(3) then
-  sel=max(sel+1,1)
- end
- if btnp(4) then
-  if sel == 3 then
-   planetinit()
-  end
- end
- selcols[sel]=7
-end
-
-surfacedraw=function()
- cls(1)
-
- print(planetname,64-#planetname*2,2,13)
- rect(mapx-1,12-1,mapx+mapheight_2,mapheight+12,0)
- sspr(0,0,mapheight_2,mapheight,mapx,12)
- local offy=mapheight+12+6
- print('> start project',34,offy,selcols[1])
- print('> overview',34,offy+7,selcols[2])
- print('> cancel',34,offy+14,selcols[3])
-end
-
-surfaceinit=function()
- _update,_draw=surfaceupdate,surfacedraw
- mapx=(128-mapheight_2)/2
+ _update,_draw=planetupdate,planetdraw
  sel=1
+ selitems={
+  {'> surface',surfaceinit},
+ }
 end
 
 
