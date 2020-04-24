@@ -47,6 +47,15 @@ function flrrnd(x)
  return flr(rnd(x))
 end
 
+function getnormdist()
+ return (rnd()+rnd()+rnd())/3
+end
+
+function getsgn(_a)
+ if (_a >= 0) return '+'
+ return '-'
+end
+
 function genmap(z,w)
  ::o::
  q=rnd(1)
@@ -54,7 +63,8 @@ function genmap(z,w)
  v=rnd(1)
  j=100+rnd(250)
  h={}
- for x=0,w*2 do
+ w2=w*2
+ for x=0,w2 do
   for y=0,w do
    h[x+y*z]=0
   end
@@ -65,7 +75,7 @@ function genmap(z,w)
   h[x+y*z]=1
  end
  for i=0,d do
-  x=1+flrrnd((w*2)-1)
+  x=1+flrrnd((w2)-1)
   y=1+flrrnd(w-1)
   p=y+1
   k=y-1   
@@ -85,13 +95,13 @@ function genmap(z,w)
  end
  u=0
  u+=1
- k=mid(3,flrrnd(6),6)
+ k=mid(3,flrrnd(5),5)
  c={}
  while k > 0 do
-  c[k]=flrrnd(15)+1
-  k=k-1
+  c[k]=flrrnd(14)+2
+  k-=1
  end
- for x=0,w*2 do
+ for x=0,w2 do
   for y=0,w do
   i=mid(1,flr(h[x+y*z])+1,#c)
   col=c[i]
@@ -104,7 +114,7 @@ end
 vocs='\97\101\105\111\117\121'
 cons='\98\99\100\102\103\104\106\107\108\109\110\112\114\115\116\118\119\120\122'
 
-newplanet=function(_seed)
+function newplanet(_seed)
  srand(_seed)
 
  planetname=''
@@ -140,20 +150,20 @@ newplanet=function(_seed)
  local starc=20
  local starspeed=max(0.03,rnd(0.3))
  while starc > 0 do
-  stars[starc]={flr(rnd(128)),rnd(128),starspeed}
-  starc=starc-1
+  stars[starc]={x=flr(rnd(128)),y=rnd(128),dx=starspeed}
+  starc-=1
  end
 
  discsize=flr((flrrnd(22)+22)/2)*2+1
- -- discsize=32 -- 0.4326
+ -- discsize=32 -- 0.4326, 0.4187
  discsize_h=discsize/2
  discsize_2d=2/discsize
  rotationspeed=rnd(0.11)+0.04
  left=64-discsize_h
  top=left
- shadeleft=64+discsize_h-discsize_h/8
- shadetop=shadeleft
- shadesize=discsize_h-discsize_h/12
+ shadeleft=64-discsize_h*0.4
+ shadetop=64
+ shadesize=discsize*0.58
  left_ds=left+discsize
  top_ds=top+discsize
 
@@ -164,20 +174,20 @@ newplanet=function(_seed)
  genmap(mapheight_2,mapheight)
 end
 
-updatestars=function()
+function updatestars()
  for _s in all(stars) do
-  _s[1]=_s[1]+_s[3]
-  if _s[1] < 0 then
-   _s[1]=128
-  elseif _s[1] > 128 then
-   _s[1]=0
+  _s.x+=_s.dx
+  if _s.x < 0 then
+   _s.x=128
+  elseif _s.x > 128 then
+   _s.x=0
   end
  end
 end
 
-drawstarsplanet=function()
- for star in all(stars) do
-  pset(star[1],star[2],1)
+function drawstarsplanet()
+ for _s in all(stars) do
+  pset(_s.x,_s.y,1)
  end
 
  -- iterate over each pixel in the discsize x discsize bounding square
@@ -207,7 +217,7 @@ drawstarsplanet=function()
     _c=sget(_u,_v)
 
     -- shade it
-    if dist(_x+discsize_h,_y+discsize_h,shadeleft,shadetop) > shadesize then
+    if dist(_x,_y,shadeleft,shadetop) > shadesize then
      _c=colshade[_c]
     end
 
@@ -215,15 +225,51 @@ drawstarsplanet=function()
    end
   end
  end
+
+ if dev then
+  pset(shadeleft,shadetop,9)
+  circ(shadeleft,shadetop,shadesize,10)
+ end
+end
+
+printc_c='0123456789abcdef'
+function printc(t,x,y)
+ local l,s,o,i,n=x,7,1,1,#t+1
+ while i <=n  do
+  local c=sub(t,i,i)
+  if c == '^' or c == '' then
+   i+=1
+   local p=sub(t,o,i-2)
+   print(p,l,y,s)
+   l+=4*#p
+   o=i+1
+   c=sub(t,i,i)
+   if c=='l' then
+    l=x
+    y+=6
+   else
+    for k=1,16 do
+     if c==sub(printc_c,k,k) then
+      s=k-1
+      break
+     end
+    end
+   end
+  end
+  i+=1
+ end
 end
 
 projectconfs={
  {
-  'pr campaign',
-  t=120,
+  'social services ',
+  t=5,
   update=function(p)
-   if p.t <= 0 then
-    pop=pop+10 -- todo: change
+   if p.t >= 0 then
+    local v=flr(max(1,pop*0.001))
+    p[2]=getsgn(v)..abs(v)..' pop'
+    pop_agr+=v
+   else
     p.removeme=true
    end
   end,
@@ -231,6 +277,8 @@ projectconfs={
 }
 
 pop=1000
+pop_gr=0
+pop_agr=0
 projects={}
 
 function startproject(_pconf)
@@ -239,11 +287,22 @@ function startproject(_pconf)
 end
 
 function updategame()
+ t+=1
+ if t % 30 != 0 then
+  return
+ end
+
+ -- organic pop growth
+ pop+=pop_gr+pop_agr
+ pop_gr=flr((getnormdist()-0.49)*max(1,pop*0.006)+0.5)
+ pop_agr=0
+
+ -- update projects
  for _p in all(projects) do
   if _p.hasproblem then
    -- todo
   else
-   _p.t=_p.t-1
+   _p.t-=1
    _p.update(_p)
   end
  end
@@ -259,7 +318,56 @@ t=0
 stars={}
 colshade={1,1,1,2,1,13,6,2,4,4,3,13,1,2,4}
 
-surfaceupdate=function()
+function overviewupdate()
+ selitems[sel][3]=nil
+ if btnp(2) then
+  sel=max(sel-1,1)
+ elseif btnp(3) then
+  sel=min(sel+1,#selitems)
+ end
+ if btnp(4) then
+  selitems[sel][2]()
+ end
+ selitems[sel][3]=7
+
+ selitems={}
+ for _p in all(projects) do
+
+ end
+ add(selitems,{'< back',surfaceinit})
+
+ updategame()
+end
+
+function overviewdraw()
+ cls(1)
+ print(planetname,64-#planetname*2,6,14-1)
+ local offy=16
+ local s='pop: '..tostr(pop)..' '..getsgn(pop_gr)..tostr(abs(pop_gr))
+ print(s,4,offy,13)
+ print(' '..getsgn(pop_agr)..tostr(abs(pop_agr)),4+#s*4,offy,6)
+
+ offy+=12
+ for _p in all(projects) do
+  print(_p[1],4,offy,13)
+  print(_p[2],4+#_p[1]*4,offy,6)
+  offy+=7
+ end
+
+ offy=121
+ for selitem in all(selitems) do
+  print(selitem[1],4,offy,selitem[3] or 13)
+  offy+=7
+ end
+end
+
+function overviewinit()
+ _update,_draw=overviewupdate,overviewdraw
+ sel=1
+ selitems={{}}
+end
+
+function surfaceupdate()
  selitems[sel][3]=nil
  if btnp(2) then
   sel=max(sel-1,1)
@@ -274,7 +382,7 @@ surfaceupdate=function()
  updategame()
 end
 
-surfacedraw=function()
+function surfacedraw()
  cls(1)
  print(planetname,64-#planetname*2,6,14-1)
  rect(mapx-1,14-1,mapx+mapheight_2,mapheight+14,0)
@@ -282,11 +390,11 @@ surfacedraw=function()
  local offy=mapheight+14+6
  for selitem in all(selitems) do
   print(selitem[1],34,offy,selitem[3] or 13)
-  offy=offy+7
+  offy+=7
  end
 end
 
-surfaceinit=function()
+function surfaceinit()
  _update,_draw=surfaceupdate,surfacedraw
  mapx=(128-mapheight_2)/2
  sel=1
@@ -294,74 +402,77 @@ surfaceinit=function()
   {'> start project',function()
    sel=1
    selitems={
-    {'> pr campaign',curry(startproject,projectconfs[1])},
+    {'> '..projectconfs[1][1],curry(startproject,projectconfs[1])},
     {'< back',surfaceinit},
    }
   end},
-  {'> overview',function()
-   sel=1
-   selitems={}
-   for p in all(projects) do
-    add(selitems,p)
-   end
-   add(selitems,{'< back',surfaceinit})
-  end},
+  {'> overview',overviewinit},
   {'< back',planetinit},
  }
 end
 
 
-planetupdate=function()
- t=t+1
-
- selitems[sel][3]=nil
+function planetupdate()
+ selitems[max(sel,1)][5]=13
  if btnp(2) then
-  sel=max(sel-1,1)
+  sel=max(sel-2,0)
  elseif btnp(3) then
-  sel=min(sel+1,#selitems)
+  sel=min(sel+2,5)
+ end
+ if btnp(0) then
+  sel=flr(sel/2)*2
+ elseif btnp(1) then
+  sel=flr(sel/2)*2+1
  end
  if btnp(4) then
-  selitems[sel][2]()
+  selitems[max(sel,1)][2]()
  end
- selitems[sel][3]=7
+ selitems[max(sel,1)][5]=7
  
+ updategame()
  updatestars()
 end
 
 selmar=8
-planetdraw=function()
+function planetdraw()
  cls()
  drawstarsplanet()
  print(planetname,64-#planetname*2,2,5)
 
- local offy=16
  for selitem in all(selitems) do
-  print(selitem[1],6,offy,selitem[3] or nil)
-  offy=offy+7
+  print(selitem[1],selitem[2],selitem[3],selitem[5] or 13)
+ end
+
+ if dev then
+  print('cpu: '..stat(2),0,0,11) -- note: cpu usage
  end
 end
 
-planetinit=function()
+function planetinit()
  _update,_draw=planetupdate,planetdraw
  sel=1
  selitems={
-  {'> surface',surfaceinit},
+  {'surface',51,25,surfaceinit},
+  {'ambassador',4,47,function() end},
+  {'war fleet',88,47,function() end},
+  {'updates',8,120,function() end},
+  {'problems',74,120,function() end},
  }
 end
 
 
-startupdate=function()
- t=t+1
+function startupdate()
+ t+=1
 
  rightd=btn(1)
  leftd=btn(0)
 
  if btnp(1) then
-  seed=seed+1
+  seed+=1
   newplanet(seed)
  end
  if btnp(0) then
-  seed=seed-1
+  seed-=1
   newplanet(seed)
  end
  if btnp(4) or btnp(5) then
@@ -371,7 +482,7 @@ startupdate=function()
  updatestars()
 end
 
-startdraw=function()
+function startdraw()
  cls()
 
  drawstarsplanet()
@@ -383,10 +494,10 @@ startdraw=function()
  print(planetname,64-#planetname*2,16,7)
  print('\x8b',10,62,({[false]=6,[true]=7})[leftd])
  print('\x91',111,62,({[false]=6,[true]=7})[rightd])
- print('')
 end
 
-startinit=function()
+function startinit()
+ t=0
  newplanet(seed)
  _update,_draw=startupdate,startdraw
 end
@@ -394,4 +505,3 @@ end
 _init=function()
  startinit()
 end
-
