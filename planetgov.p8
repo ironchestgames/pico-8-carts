@@ -15,6 +15,23 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  printh(result,'debug',false)
 end
 
+function s2t(s)
+ local t,i,_s={},1,''
+ while #s > 0 do
+  local d=sub(s,1,1)
+  s=sub(s,2)
+  if d != ';' then
+   _s=_s..d
+  else
+   t[i]=tonum(_s) or _s
+   if (_s == '') t[i]=nil
+   i+=1
+   _s=''
+  end
+ end
+ return t
+end
+
 function curry(f,a)
  return function()
   f(a)
@@ -56,6 +73,7 @@ function getsgn(_a)
  return '-'
 end
 
+surfacecols=s2t'2;3;5;6;7;8;9;10;11;12;13;14;15;'
 function genmap(z,w)
  ::o::
  q=rnd(1)
@@ -97,9 +115,8 @@ function genmap(z,w)
  u+=1
  k=mid(3,flrrnd(5),5)
  c={}
- cols={2,3,5,6,7,8,9,10,11,12,13,14,15}
  repeat
-  c[k]=cols[flrrnd(#cols)+1]
+  c[k]=surfacecols[flrrnd(#surfacecols)+1]
   k-=1
  until k == 0
  for x=0,w2 do
@@ -317,7 +334,7 @@ end
 seed=rnd()
 t=0
 stars={}
-colshade={1,1,1,2,1,13,6,2,4,4,3,13,1,2,4}
+colshade=s2t'1;1;1;2;1;13;6;2;4;4;3;13;1;2;4;'
 
 function overviewupdate()
  selitems[sel][3]=nil
