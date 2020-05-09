@@ -97,10 +97,11 @@ function genmap(z,w)
  u+=1
  k=mid(3,flrrnd(5),5)
  c={}
- while k > 0 do
-  c[k]=flrrnd(14)+2
+ cols={2,3,5,6,7,8,9,10,11,12,13,14,15}
+ repeat
+  c[k]=cols[flrrnd(#cols)+1]
   k-=1
- end
+ until k == 0
  for x=0,w2 do
   for y=0,w do
   i=mid(1,flr(h[x+y*z])+1,#c)
@@ -412,22 +413,33 @@ function surfaceinit()
 end
 
 
+sel=nil
+function perfsel(cur,items)
+ local _closestd=999
+ local _closest=nil
+ for _i in all(items) do
+  if _i != cur then
+   local _a=atan2(_i[2]-cur[2],_i[3]-cur[3])%1
+   local _d=dist(_i[2],_i[3],cur[2],cur[3])
+   if (btnp(3)) debug(_a,_d,_closestd)
+   if _d < _closestd and
+      ((btnp(0) and _a >= 0.375 and _a <= 0.625) or
+       (btnp(1) and (_a >= 0.875 or _a <= 0.125)) or
+       (btnp(3) and _a >= 0.55 and _a <= 0.95) or
+       (btnp(2) and _a >= 0.05 and _a <= 0.45)) then
+    _closestd=_d
+    _closest=_i
+   end
+  end
+ end
+ return _closest or cur
+end
+
 function planetupdate()
- selitems[max(sel,1)][5]=13
- if btnp(2) then
-  sel=max(sel-2,0)
- elseif btnp(3) then
-  sel=min(sel+2,5)
- end
- if btnp(0) then
-  sel=flr(sel/2)*2
- elseif btnp(1) then
-  sel=flr(sel/2)*2+1
- end
+ sel=perfsel(sel,selitems)
  if btnp(4) then
-  selitems[max(sel,1)][2]()
+  sel[4]()
  end
- selitems[max(sel,1)][5]=7
  
  updategame()
  updatestars()
@@ -439,8 +451,24 @@ function planetdraw()
  drawstarsplanet()
  print(planetname,64-#planetname*2,2,5)
 
- for selitem in all(selitems) do
-  print(selitem[1],selitem[2],selitem[3],selitem[5] or 13)
+ for _i in all(selitems) do
+  local _c=13
+  if (sel==_i) _c=7
+  print(_i[1],_i[2]-#_i[1]*2,_i[3],_c)
+
+  -- debug draw
+  -- pset(_i[2],_i[3],12)
+
+  -- local h=64
+  -- local _a=0.05
+  -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,11)
+  -- _a=0.45
+  -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,11)
+
+  -- _a=0.55
+  -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,10)
+  -- _a=0.95
+  -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,10)
  end
 
  if dev then
@@ -450,14 +478,14 @@ end
 
 function planetinit()
  _update,_draw=planetupdate,planetdraw
- sel=1
  selitems={
-  {'surface',51,25,surfaceinit},
-  {'ambassador',4,47,function() end},
-  {'war fleet',88,47,function() end},
-  {'updates',8,120,function() end},
-  {'problems',74,120,function() end},
+  {'surface',64,25,surfaceinit},
+  {'ambassador',22,47,function() end},
+  {'war fleet',105,47,function() end},
+  {'updates',24,120,function() end},
+  {'problems',98,120,function() end},
  }
+ sel=selitems[1]
 end
 
 
