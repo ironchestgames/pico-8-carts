@@ -15,21 +15,29 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  printh(result,'debug',false)
 end
 
+-- s2t usage:
+-- t=s2t'1;2;3;4;5;6;7;hej pa dig din gamle gries;'
+-- t=s2t'.x;1;.y;2;'
 function s2t(s)
- local t,i,_s={},1,''
- while #s > 0 do
-  local d=sub(s,1,1)
-  s=sub(s,2)
-  if d != ';' then
-   _s=_s..d
+ local _t,_i,_s,_d={},1,''
+ repeat
+  _d,s=sub(s,1,1),sub(s,2)
+  if _d != ';' then
+   _s=_s.._d
   else
-   t[i]=tonum(_s) or _s
-   if (_s == '') t[i]=nil
-   i+=1
+   _t[_i]=tonum(_s) or _s
+   if (_s == '') _t[_i]=nil
+   _i+=1
    _s=''
   end
+ until #s == 0
+ for _i=2,#_t,2 do
+  local _tib=_t[_i-1]
+  if sub(tostr(_tib),1,1) == '.' then
+   _t[sub(_tib,2)],_t[_i-1],_t[_i]=_t[_i]
+  end
  end
- return t
+ return _t
 end
 
 function curry(f,a)
@@ -39,11 +47,11 @@ function curry(f,a)
 end
 
 function clone(_t)
- local t={}
- for k,v in pairs(_t) do
-  t[k]=v
+ local _tc={}
+ for _k,_v in pairs(_t) do
+  _tc[_k]=_v
  end
- return t
+ return _tc
 end
 
 function dist(x1,y1,x2,y2)
@@ -74,102 +82,102 @@ function getsgn(_a)
 end
 
 surfacecols=s2t'2;3;5;6;7;8;9;10;11;12;13;14;15;'
-function genmap(z,w)
- ::o::
- q=rnd(1)
- d=1500+rnd(2000)
- v=rnd(1)
- j=100+rnd(250)
- h={}
- w2=w*2
- for x=0,w2 do
-  for y=0,w do
-   h[x+y*z]=0
+function genmap(_z,_w)
+ local _q=rnd(1)
+ local _d=1500+rnd(2000)
+ local _v=rnd(1)
+ local _j=100+rnd(250)
+ local _h={}
+ local _w2=_w*2
+ for _x=0,_w2 do
+  for _y=0,_w do
+   _h[_x+_y*_z]=0
   end
  end
- for i=0,j do
-  x=flrrnd(z)
-  y=flrrnd(z)
-  h[x+y*z]=1
+ for _i=0,_j do
+  local _x=flrrnd(_z)
+  local _y=flrrnd(_z)
+  _h[_x+_y*_z]=1
  end
- for i=0,d do
-  x=1+flrrnd((w2)-1)
-  y=1+flrrnd(w-1)
-  p=y+1
-  k=y-1   
-  m=x+1
-  n=x-1
-  if h[x+y*z] > 0 then
-   h[x+y*z]+=v
-   h[n+y*z]+=q
-   h[m+y*z]+=q
-   h[x+k*z]+=q
-   h[x+p*z]+=q
-   h[m+p*z]+=q
-   h[m+k*z]+=q
-   h[n+p*z]+=q
-   h[n+k*z]+=q
+ for _i=0,_d do
+  local _x,y=1+flrrnd((_w2)-1),1+flrrnd(_w-1)
+  local _m=_x+1
+  local _n=_x-1
+  local _yz=y*_z
+  local _kz=(y-1)*_z
+  local _pz=(y+1)*_z
+  if _h[_x+_yz] > 0 then
+   _h[_x+_yz]+=_v
+   _h[_n+_yz]+=_q
+   _h[_m+_yz]+=_q
+   _h[_x+_kz]+=_q
+   _h[_x+_pz]+=_q
+   _h[_m+_pz]+=_q
+   _h[_m+_kz]+=_q
+   _h[_n+_pz]+=_q
+   _h[_n+_kz]+=_q
   end
  end
- u=0
- u+=1
- k=mid(3,flrrnd(5),5)
- c={}
+ local _k=mid(3,flrrnd(5),5)
+ local _c={}
  repeat
-  c[k]=surfacecols[flrrnd(#surfacecols)+1]
-  k-=1
- until k == 0
- for x=0,w2 do
-  for y=0,w do
-  i=mid(1,flr(h[x+y*z])+1,#c)
-  col=c[i]
-  sset(x,y,col)
+  _c[_k]=surfacecols[flrrnd(#surfacecols)+1]
+  _k-=1
+ until _k == 0
+ for _x=0,_w2 do
+  for _y=0,_w do
+   local _i=mid(1,flr(_h[_x+_y*_z])+1,#_c)
+   local _col=_c[_i]
+   sset(_x,_y,_col)
   end
  end
- if (u>7) goto o
 end
 
 vocs='\97\101\105\111\117\121'
 cons='\98\99\100\102\103\104\106\107\108\109\110\112\114\115\116\118\119\120\122'
+function newplanetname(_seed)
+ srand(_seed)
+ local _pname=''
+ local _l=flrrnd(5)+2
+ while #_pname <= _l do
+  local _cpos,_vpos=flrrnd(#cons)+1,flrrnd(#vocs)+1
+  local _l=sub(cons,_cpos,_cpos)
+  if #_pname%2 == 0 then
+   _l=sub(vocs,_vpos,_vpos)
+  end
+  _pname=_pname.._l
+ end
+ if rnd() > 0.25 then
+  local _n=_pname
+  _pname=''
+  for _l=#_n,1,-1 do
+   _pname=_pname..sub(_n,_l,_l)
+  end
+ end
+ if rnd() > 0.9 then
+  local _l=flrrnd(#_pname-1)+1
+  _pname=sub(_pname,1,_l-1)..sub(_pname,_l+1,#_pname)
+ end
+ if rnd() > 0.65 then
+  _pname=_pname..'-'..flrrnd(12)+1
+  if rnd() > 0.8 then
+   local _cpos=flrrnd(#cons)+1
+   _pname=_pname..sub(cons,_cpos,_cpos)
+  end
+ end
+ return _pname
+end
 
 function newplanet(_seed)
  srand(_seed)
 
- planetname=''
- local length=flrrnd(5)+2
- while #planetname <= length do
-  local cpos=flrrnd(#cons)+1
-  local vpos=flrrnd(#vocs)+1
-  local _l=sub(cons,cpos,cpos)
-  if #planetname%2 == 0 then
-   _l=sub(vocs,vpos,vpos)
-  end
-  planetname=planetname.._l
- end
- if rnd() > 0.25 then
-  local n=planetname
-  planetname=''
-  for _l=#n,1,-1 do
-   planetname=planetname..sub(n,_l,_l)
-  end
- end
- if rnd() > 0.9 then
-  local _l=flrrnd(#planetname-1)+1
-  planetname=sub(planetname,1,_l-1)..sub(planetname,_l+1,#planetname)
- end
- if rnd() > 0.65 then
-  planetname=planetname..'-'..flrrnd(12)+1
-  if rnd() > 0.8 then
-   local cpos=flrrnd(#cons)+1
-   planetname=planetname..sub(cons,cpos,cpos)
-  end
- end
+ planetname=newplanetname(_seed)
 
- local starc=20
- local starspeed=max(0.03,rnd(0.3))
- while starc > 0 do
-  stars[starc]={x=flr(rnd(128)),y=rnd(128),dx=starspeed}
-  starc-=1
+ local _starc=20
+ local _starspeed=max(0.04,rnd(0.32))
+ while _starc > 0 do
+  stars[_starc]={x=flr(rnd(128)),y=rnd(128),dx=_starspeed}
+  _starc-=1
  end
 
  discsize=flr((flrrnd(22)+22)/2)*2+1
@@ -335,55 +343,6 @@ seed=rnd()
 t=0
 stars={}
 colshade=s2t'1;1;1;2;1;13;6;2;4;4;3;13;1;2;4;'
-
-function overviewupdate()
- selitems[sel][3]=nil
- if btnp(2) then
-  sel=max(sel-1,1)
- elseif btnp(3) then
-  sel=min(sel+1,#selitems)
- end
- if btnp(4) then
-  selitems[sel][2]()
- end
- selitems[sel][3]=7
-
- selitems={}
- for _p in all(projects) do
-
- end
- add(selitems,{'< back',surfaceinit})
-
- updategame()
-end
-
-function overviewdraw()
- cls(1)
- print(planetname,64-#planetname*2,6,14-1)
- local offy=16
- local s='pop: '..tostr(pop)..' '..getsgn(pop_gr)..tostr(abs(pop_gr))
- print(s,4,offy,13)
- print(' '..getsgn(pop_agr)..tostr(abs(pop_agr)),4+#s*4,offy,6)
-
- offy+=12
- for _p in all(projects) do
-  print(_p[1],4,offy,13)
-  print(_p[2],4+#_p[1]*4,offy,6)
-  offy+=7
- end
-
- offy=121
- for selitem in all(selitems) do
-  print(selitem[1],4,offy,selitem[3] or 13)
-  offy+=7
- end
-end
-
-function overviewinit()
- _update,_draw=overviewupdate,overviewdraw
- sel=1
- selitems={{}}
-end
 
 function surfaceupdate()
  selitems[sel][3]=nil
