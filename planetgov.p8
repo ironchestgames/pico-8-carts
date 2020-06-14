@@ -81,12 +81,15 @@ function getsgn(_a)
  return '-'
 end
 
-surfacecols=s2t'2;3;5;6;7;8;9;10;11;12;13;14;15;'
+surfacecols=s2t'2;3;6;7;8;9;10;11;12;13;14;15;'
+-- 1 is only shadows
+-- 4 is pollution
+-- 5 is buildings
 function genmap(_z,_w)
  local _q=rnd(1)
  local _d=1500+rnd(2000)
  local _v=rnd(1)
- local _j=100+rnd(250)
+ local _j=100+rnd(200)
  local _h={}
  local _w2=_w*2
  for _x=0,_w2 do
@@ -182,6 +185,7 @@ function newplanet(_seed)
 
  discsize=flr((flrrnd(22)+22)/2)*2+1
  -- discsize=32 -- 0.4326, 0.4187
+ -- discsize=45 -- biggest
  discsize_h=discsize/2
  discsize_2d=2/discsize
  rotationspeed=rnd(0.11)+0.04
