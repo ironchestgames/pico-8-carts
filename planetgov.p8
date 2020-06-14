@@ -55,7 +55,7 @@ function clone(_t)
 end
 
 function shift(_t)
- local t1=_t[1]
+ local _t1=_t[1]
  del(_t,_t1)
  return _t1
 end
@@ -364,7 +364,7 @@ comingevents={
   text='ambassador from _\nis kindly inviting you to\nbuy waste products to\nprevent climate catastrophe',
   effects={
    {t='wealth',v=0.05,text='^b+5% wealth'},
-   {t='sup_pollution',v=-1,text='^c-1 support'},
+   {t='sup_pollution',v=-1,text='^4-1 support'},
    {t='favors',v=1,text='^f+1 favors'},
   }
  }
@@ -428,34 +428,30 @@ dialogs={
    printc(_s,123-4-(#_s-10)*4,_yoff)
 
    _yoff+=5+4
-   local _mans={values.man_wealth,values.man_poverty,values.man_pollution,values.man_leftism,values.man_rightism}
-   local _sups={values.sup_wealth,values.sup_poverty,values.sup_pollution,values.sup_leftism,values.sup_rightism}
-   local _cols={11,9,4,8,12}
-   local _col=nil
-   local _manc=-1
+   local _man=values.man_wealth
+   local _mans={values.man_poverty,values.man_pollution,values.man_leftism,values.man_rightism,10}
+   local _sup=values.sup_wealth
+   local _sups={values.sup_poverty,values.sup_pollution,values.sup_leftism,values.sup_rightism,0}
+   local _col=11
+   local _cols={9,4,8,12,5}
    for _i=1,33 do
     local _i1=_i-1
     local _x,_y=123-38+flr(_i1/3)*3,_yoff+(_i1%3)*3
 
-    local _v=0
-    for _j=1,#_mans do
-     _v+=_mans[_j]
-     if _i <= _v then
-      if _manc < 0 then
-       _manc=_sups[_j]
-      end
-      _col=_cols[_j]
-      break
-     end
+    if _man <= 0 then
+     _man=shift(_mans)
+     _sup=shift(_sups)
+     _col=shift(_cols)
     end
 
-    if _manc > 0 then
+    if _sup > 0 then
      rectfill(_x-1,_y-1,_x+1,_y+1,13)
     end
+
     pset(_x,_y,_col)
 
-    _col=5
-    _manc-=1
+    _man-=1
+    _sup-=1
    end
 
    _yoff+=11
