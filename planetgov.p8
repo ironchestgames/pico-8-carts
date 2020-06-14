@@ -54,6 +54,12 @@ function clone(_t)
  return _tc
 end
 
+function shift(_t)
+ local t1=_t[1]
+ del(_t,_t1)
+ return _t1
+end
+
 function dist(x1,y1,x2,y2)
  local dx=(x2-x1)*0.1
  local dy=(y2-y1)*0.1
@@ -201,10 +207,18 @@ function newplanet(_seed)
  mapheight_h=mapheight/2
  mapheight_2=mapheight*2
 
+ tyear=mapheight_2/rotationspeed
+
  genmap(mapheight_2,mapheight)
 end
 
+t=0
+seed=rnd()
+stars={}
+colshade=s2t'1;1;1;2;1;13;6;2;4;4;3;13;1;2;4;'
+
 function updatestars()
+
  for _s in all(stars) do
   _s.x+=_s.dx
   if _s.x < 0 then
@@ -290,110 +304,6 @@ function printc(t,x,y)
  end
 end
 
-projectconfs={
- {
-  'social services ',
-  t=5,
-  update=function(p)
-   if p.t >= 0 then
-    local v=flr(max(1,pop*0.001))
-    p[2]=getsgn(v)..abs(v)..' pop'
-    pop_agr+=v
-   else
-    p.removeme=true
-   end
-  end,
- }
-}
-
-pop=1000
-pop_gr=0
-pop_agr=0
-projects={}
-
-function startproject(_pconf)
- add(projects,clone(_pconf))
- surfaceinit()
-end
-
-function updategame()
- t+=1
- if t % 30 != 0 then
-  return
- end
-
- -- organic pop growth
- pop+=pop_gr+pop_agr
- pop_gr=flr((getnormdist()-0.49)*max(1,pop*0.006)+0.5)
- pop_agr=0
-
- -- update projects
- for _p in all(projects) do
-  if _p.hasproblem then
-   -- todo
-  else
-   _p.t-=1
-   _p.update(_p)
-  end
- end
- for _p in all(projects) do
-  if _p.removeme then
-   del(projects,_p)
-  end
- end
-end
-
-seed=rnd()
-t=0
-stars={}
-colshade=s2t'1;1;1;2;1;13;6;2;4;4;3;13;1;2;4;'
-
-function surfaceupdate()
- selitems[sel][3]=nil
- if btnp(2) then
-  sel=max(sel-1,1)
- elseif btnp(3) then
-  sel=min(sel+1,#selitems)
- end
- if btnp(4) then
-  selitems[sel][2]()
- end
- selitems[sel][3]=7
-
- updategame()
-end
-
-function surfacedraw()
- cls(1)
- print(planetname,64-#planetname*2,6,14-1)
- rect(mapx-1,14-1,mapx+mapheight_2,mapheight+14,0)
- sspr(0,0,mapheight_2,mapheight,mapx,14)
- local offy=mapheight+14+6
- for selitem in all(selitems) do
-  print(selitem[1],34,offy,selitem[3] or 13)
-  offy+=7
- end
-end
-
-function surfaceinit()
- _update,_draw=surfaceupdate,surfacedraw
- mapx=(128-mapheight_2)/2
- sel=1
- selitems={
-  {'> start project',function()
-   sel=1
-   selitems={
-    {'> '..projectconfs[1][1],curry(startproject,projectconfs[1])},
-    {'< back',surfaceinit},
-   }
-  end},
-  {'> overview',overviewinit},
-  {'< back',planetinit},
- }
-end
-
-
-sel=nil
 function perfsel(cur,items)
  local _closestd=999
  local _closest=nil
@@ -401,7 +311,7 @@ function perfsel(cur,items)
   if _i != cur then
    local _a=atan2(_i[2]-cur[2],_i[3]-cur[3])%1
    local _d=dist(_i[2],_i[3],cur[2],cur[3])
-   if (btnp(3)) debug(_a,_d,_closestd)
+   -- if (btnp(3)) debug(_a,_d,_closestd)
    if _d < _closestd and
       ((btnp(0) and _a >= 0.375 and _a <= 0.625) or
        (btnp(1) and (_a >= 0.875 or _a <= 0.125)) or
@@ -415,40 +325,305 @@ function perfsel(cur,items)
  return _closest or cur
 end
 
-function planetupdate()
- sel=perfsel(sel,selitems)
- if btnp(4) then
-  sel[4]()
- end
- 
- updategame()
- updatestars()
+values={
+ wealth=0.1,
+ man_wealth=6,
+ sup_wealth=0,
+ poverty=0.1,
+ man_poverty=6,
+ sup_poverty=5,
+ pollution=0.1,
+ man_pollution=6,
+ sup_pollution=5,
+ leftism=0.1,
+ man_leftism=6,
+ sup_leftism=0,
+ rightism=0.1,
+ man_rightism=6,
+ sup_rightism=0,
+ favors=0,
+}
+
+year=0
+quart=1
+
+comingevents={
+ -- {
+ --  q=2,
+ --  t='ambassador',
+ --  text='ambassador from _\nis kindly inviting you to\ncontribute to relief efforts\nfrom climate catastrophe.',
+ --  effects={
+ --   {t='wealth',v=0.05,text='^b+5% wealth'},
+ --   {t='sup_rightism',v=-1,text='^c-1 support'},
+ --   {t='favors',v=1,text='^f+1 favors'},
+ --  }
+ -- }
+ {
+  q=1,
+  t='ambassador',
+  text='ambassador from _\nis kindly inviting you to\nbuy waste products to\nprevent climate catastrophe',
+  effects={
+   {t='wealth',v=0.05,text='^b+5% wealth'},
+   {t='sup_pollution',v=-1,text='^c-1 support'},
+   {t='favors',v=1,text='^f+1 favors'},
+  }
+ }
+}
+
+ships={}
+
+function drawbar(_xoff,_yoff,_col,_val)
+ rect(_xoff,_yoff,_xoff+36,_yoff+4,_col)
+ rectfill(_xoff,_yoff,_xoff+36*_val,_yoff+4,_col)
 end
 
-selmar=8
-function planetdraw()
+function drawextrem(_xoff,_yoff,_leftism,_rightism)
+ rect(_xoff,_yoff,_xoff+17,_yoff+4,8)
+ rectfill(_xoff,_yoff,_xoff+17*_leftism,_yoff+4,8)
+
+ rect(_xoff+19,_yoff,_xoff+20+16,_yoff+4,12)
+ rectfill(_xoff+19,_yoff,_xoff+20+16*_rightism,_yoff+4,12)
+end
+
+dialogs={
+ planet={
+  name='planet',
+  selitems={
+   {function() setdialog('overview') end,0,1,'overview'},
+   {function() debug('new project') end,0,2,'new project'},
+   {function() debug('projects') end,0,3,'projects'},
+   {function() debug('relations') end,0,4,'relations'},
+   {function() debug('budget') end,0,5,'budget'},
+  },
+  r={5,41,58,83},
+ },
+ overview={
+  name='overview',
+  selitems={},
+  r={4,16,123,123},
+  draw=function(_dialog)
+   local _yoff=3+_dialog.r[2]
+   print(planetname,64-#planetname*2,_yoff,13)
+   
+   _yoff+=5+7
+   _xoff=123-5-37
+   print('wealth',4+3,_yoff,13)
+   drawbar(_xoff,_yoff,11,values.wealth)
+   
+   _yoff+=5+3
+   print('poverty',4+3,_yoff,13)
+   drawbar(_xoff,_yoff,9,values.poverty)
+
+   _yoff+=5+3
+   print('pollution',4+3,_yoff,13)
+   drawbar(_xoff,_yoff,4,values.pollution)
+
+   _yoff+=5+3
+   print('extremism',4+3,_yoff,13)
+   drawextrem(_xoff,_yoff,values.leftism,values.rightism)
+
+   _yoff+=5+3
+   print('congress',4+3,_yoff,13)
+   local _s='^b'..values.sup_wealth..' ^9'..values.sup_poverty..' ^4'..values.sup_pollution..' ^8'..values.sup_leftism..' ^c'..values.sup_rightism
+   printc(_s,123-4-(#_s-10)*4,_yoff)
+
+   _yoff+=5+4
+   local _mans={values.man_wealth,values.man_poverty,values.man_pollution,values.man_leftism,values.man_rightism}
+   local _sups={values.sup_wealth,values.sup_poverty,values.sup_pollution,values.sup_leftism,values.sup_rightism}
+   local _cols={11,9,4,8,12}
+   local _col=nil
+   local _manc=-1
+   for _i=1,33 do
+    local _i1=_i-1
+    local _x,_y=123-38+flr(_i1/3)*3,_yoff+(_i1%3)*3
+
+    local _v=0
+    for _j=1,#_mans do
+     _v+=_mans[_j]
+     if _i <= _v then
+      if _manc < 0 then
+       _manc=_sups[_j]
+      end
+      _col=_cols[_j]
+      break
+     end
+    end
+
+    if _manc > 0 then
+     rectfill(_x-1,_y-1,_x+1,_y+1,13)
+    end
+    pset(_x,_y,_col)
+
+    _col=5
+    _manc-=1
+   end
+
+   _yoff+=11
+   print('favors',4+3,_yoff,13)
+   print(values.favors,_xoff,_yoff,15)
+
+   _yoff+=5+3
+   print('military',4+3,_yoff,13)
+   -- draw military icons
+  end,
+ },
+ ambassador={
+  name='ambassador',
+  selitems={
+   {function(_dialog)
+     for _i=1,#_dialog.obj.effects do
+      local _e=_dialog.obj.effects[_i]
+      values[_e.t]+=_e.v
+     end
+    end,0,1,'agree'},
+   {function() debug('refuse') end,0,2,'refuse'},
+  },
+  r={4,16,123,123},
+  draw=function(_dialog)
+   local _yoff=3+_dialog.r[2]
+   print(_dialog.obj.text,4+3,_yoff,13)
+   
+   _yoff+=23+7
+   for _i=1,#_dialog.obj.effects do
+    local _e=_dialog.obj.effects[_i]
+    printc(_e.text,4+3,_yoff)
+    -- local _prefix=sub(_e,1,3)
+    -- if _prefix != 'sup' then
+    --  drawbar(_xoff,_yoff,11,_e.v)
+    -- end
+
+    _yoff+=5+3
+   end
+
+  end,
+ }
+}
+
+dialog=nil
+
+function setdialog(name,obj)
+ dialog=dialogs[name]
+ dialog.sel=dialog.selitems[1]
+ dialog.obj=obj
+end
+
+sel=nil
+function gameupdate()
+ if dialog then
+  if dialog.sel then
+   dialog.sel=perfsel(dialog.sel,dialog.selitems)
+   if btnp(4) then
+    dialog.sel[1](dialog)
+   end
+  end
+  if btnp(5) then
+   dialog=nil
+  end
+ else
+  sel=perfsel(sel,selitems)
+  if btnp(4) then
+   sel[4]()
+  end
+  -- todo: x to quick-select planet?
+ end
+
+ if ispaused then
+  return
+ end
+ updatestars()
+
+ t+=1
+ t=t%tyear
+
+ if t <= 1 then
+  year+=1
+  if year%4 == 0 then
+   local _b8=values.wealth+values.poverty+values.pollution+values.leftism+values.rightism
+   local _mandates=function(_max, _value) return max(_max,flr(_value/_b8*33)) end
+
+   values.man_wealth=_mandates(1,values.wealth)
+   values.sup_wealth=flr(values.man_wealth*values.wealth)
+
+   values.man_poverty=_mandates(1,values.poverty)
+   values.sup_poverty=flr(values.man_poverty*(1-values.poverty))
+
+   values.man_pollution=_mandates(1,values.pollution)
+   values.sup_pollution=flr(values.man_pollution*(1-values.pollution))
+
+   values.man_leftism=_mandates(2,values.leftism)
+   values.sup_leftism=flr(values.man_leftism*values.leftism)
+
+   values.man_rightism=_mandates(2,values.rightism)
+   values.sup_rightism=flr(values.man_rightism*values.rightism)
+
+   -- todo: open new-budget dialog
+   
+   -- ispaused=true
+  end
+ end
+ quart=ceil((t%tyear)/(tyear/4))
+
+ local _event
+ for _e in all(comingevents) do
+  if _e.q == quart then
+   del(comingevents,_e)
+   if _e.t == 'ambassador' then
+    _e[1]=6
+    _e[2]=16
+    _e[3]=30
+    _e[4]=function() setdialog('ambassador',_e) end
+    add(ships,_e)
+    add(selitems,_e)
+   end
+
+   break -- only one event each quart
+  end
+ end
+ 
+end
+
+function gamedraw()
  cls()
  drawstarsplanet()
- print(planetname,64-#planetname*2,2,5)
 
- for _i in all(selitems) do
-  local _c=13
-  if (sel==_i) _c=7
-  print(_i[1],_i[2]-#_i[1]*2,_i[3],_c)
+ printc('^dy^6'..year..'^dq^6'..quart,2,1)
+ local _s='^b'..values.sup_wealth..' ^9'..values.sup_poverty..' ^4'..values.sup_pollution..' ^8'..values.sup_leftism..' ^c'..values.sup_rightism..' ^f'..values.favors
+ printc(_s,127-(#_s-12)*4,1)
+    
+ circ(sel[2],sel[3],sel[1],7)
 
-  -- debug draw
-  -- pset(_i[2],_i[3],12)
+ if dialog then
+  print('\x97',dialog.r[1],dialog.r[2]-6,13)
+  rectfill(dialog.r[1],dialog.r[2],dialog.r[3],dialog.r[4],1)
 
-  -- local h=64
-  -- local _a=0.05
-  -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,11)
-  -- _a=0.45
-  -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,11)
+  if dialog.draw then
+   dialog.draw(dialog)
+  end
 
-  -- _a=0.55
-  -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,10)
-  -- _a=0.95
-  -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,10)
+  for _i in all(dialog.selitems) do
+   local _c=13
+   local y=dialog.r[4]-(#dialog.selitems-_i[3]+1)*8+1
+   if dialog.sel==_i then
+    rectfill(dialog.r[1]+3,y-1,dialog.r[3]-3,y+5,_c)
+    _c=7
+   end
+   print(_i[4],10+_i[2],y,_c)
+
+
+   -- debug draw
+   -- pset(_i[2],_i[3],12)
+
+   -- local h=64
+   -- local _a=0.05
+   -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,11)
+   -- _a=0.45
+   -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,11)
+
+   -- _a=0.55
+   -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,10)
+   -- _a=0.95
+   -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,10)
+  end
  end
 
  if dev then
@@ -456,14 +631,11 @@ function planetdraw()
  end
 end
 
-function planetinit()
- _update,_draw=planetupdate,planetdraw
+function gameinit()
+ t=0
+ _update,_draw=gameupdate,gamedraw
  selitems={
-  {'surface',64,25,surfaceinit},
-  {'ambassador',22,47,function() end},
-  {'war fleet',105,47,function() end},
-  {'updates',24,120,function() end},
-  {'problems',98,120,function() end},
+  {discsize_h,left_ds-discsize_h,top_ds-discsize_h,curry(setdialog,'planet')},
  }
  sel=selitems[1]
 end
@@ -484,7 +656,7 @@ function startupdate()
   newplanet(seed)
  end
  if btnp(4) or btnp(5) then
-  planetinit()
+  gameinit()
  end
 
  updatestars()
@@ -500,8 +672,9 @@ function startdraw()
  end
 
  print(planetname,64-#planetname*2,16,7)
- print('\x8b',10,62,({[false]=6,[true]=7})[leftd])
- print('\x91',111,62,({[false]=6,[true]=7})[rightd])
+ local _cols={[false]=6,[true]=7}
+ print('\x8b',10,62,_cols[leftd])
+ print('\x91',111,62,_cols[rightd])
 end
 
 function startinit()
