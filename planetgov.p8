@@ -206,6 +206,7 @@ function newplanet(_seed)
  mapheight=discsize
  mapheight_h=mapheight/2
  mapheight_2=mapheight*2
+ mapx=64-mapheight_2/2
 
  tyear=mapheight_2/rotationspeed
 
@@ -370,6 +371,30 @@ comingevents={
  }
 }
 
+opportunites={
+ {
+  name='rare earth mining complex',
+  effects={
+   {t='wealth',v=0.03,text='^b+3% wealth'},
+   {t='pollution',v=0.04,text='^4+4% pollution'},
+   {t='sup_pollution',v=-2,text='^4-2 support'},
+  },
+ },
+}
+
+projects={
+ {
+  [1]=10, -- todo: add place hq dialog
+  [2]=10,
+  name='rare earth mining complex',
+  effects={
+   {t='wealth',v=0.03,text='^b+3% wealth'},
+   {t='pollution',v=0.04,text='^4+4% pollution'},
+   {t='sup_pollution',v=-2,text='^4-2 support'},
+  },
+ },
+}
+
 armadas={}
 
 shipsprites={
@@ -429,17 +454,63 @@ function drawextrem(_xoff,_yoff,_leftism,_rightism)
  rectfill(_xoff+19,_yoff,_xoff+20+16*_rightism,_yoff+4,12)
 end
 
+function draweffect(_e,_y)
+ printc(_e.text,4+3,_y)
+ -- local _prefix=sub(_o,1,3)
+ -- if _prefix != 'sup' then
+ --  drawbar(_xoff,_yoff,11,_o.v)
+ -- end
+end
+
+function drawmenu(_dialog)
+ for _i in all(_dialog.selitems) do
+   local _c=13
+   local _y=_dialog.r[4]-(#_dialog.selitems-_i[2]+1)*8+1
+   if _dialog.sel==_i then
+    rectfill(_dialog.r[1]+3,_y-1,_dialog.r[3]-3,_y+5,_c)
+    _c=7
+   end
+   print(_i[3],10+_i[1],_y,_c)
+
+
+   -- debug draw
+   -- pset(_i[2],_i[3],12)
+
+   -- local h=64
+   -- local _a=0.05
+   -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,11)
+   -- _a=0.45
+   -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,11)
+
+   -- _a=0.55
+   -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,10)
+   -- _a=0.95
+   -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,10)
+  end
+end
+
 dialogs={
  planet={
   name='planet',
   selitems={
    {0,1,'overview', onp=function() setdialog('overview') end},
-   {0,2,'new project', onp=function() debug('new project') end},
-   {0,3,'projects', onp=function() debug('projects') end},
+   {0,2,'new project', onp=function()
+    local _t={}
+    for _i=1,#opportunites do
+     add(_t,{_i,0})
+    end
+    dialogs['new project'].selitems=_t
+    setdialog('new project')
+   end},
+   {0,3,'projects', onp=function()
+    dialogs['projects'].selitems=projects
+    setdialog('projects')
+   end},
    {0,4,'relations', onp=function() debug('relations') end},
    {0,5,'budget', onp=function() debug('budget') end},
   },
   r={5,41,58,83},
+  draw=drawmenu,
  },
  overview={
   name='overview',
@@ -502,7 +573,7 @@ dialogs={
 
    _yoff+=5+3
    print('military',_x1off,_yoff,13)
-   -- draw military icons
+   -- todo: draw military icons
   end,
  },
  ambassador={
@@ -516,7 +587,7 @@ dialogs={
     end},
    {0,2,'refuse',onp=function() debug('refuse') end},
   },
-  r={4,16,123,123},
+  r={4,22,123,118},
   draw=function(_dialog)
    local _yoff=3+_dialog.r[2]
    print(_dialog.obj.text,4+3,_yoff,13)
@@ -524,17 +595,89 @@ dialogs={
    _yoff+=23+7
    for _i=1,#_dialog.obj.effects do
     local _e=_dialog.obj.effects[_i]
-    printc(_e.text,4+3,_yoff)
-    -- local _prefix=sub(_e,1,3)
-    -- if _prefix != 'sup' then
-    --  drawbar(_xoff,_yoff,11,_e.v)
-    -- end
+    draweffect(_e,_yoff)
+    _yoff+=5+3
+   end
+
+   drawmenu(_dialog)
+  end,
+ },
+ ['new project']={
+  name='new project',
+  -- note: selitems in menu onp
+  r={4,16,123,123},
+  draw=function(_dialog)
+   local _yoff=3+_dialog.r[2]
+   print('new project opportunites',4+3,_yoff,13)
+
+   _yoff+=11
+   spr(240,7,_yoff)
+   spr(241,113,_yoff)
+
+   local _xoff=20
+   _yoff+=1
+   for _i=1,#opportunites do
+    local _x=_xoff+(_i-1)*12
+    print(_i,_x,_yoff,13)
+    if _dialog.sel[1] == _i then
+     rectfill(_x-4,_yoff-1,_x+6,_yoff+5,13)
+     print(_i,_x,_yoff,7)
+    end
+   end
+
+   _yoff+=5+8
+   local _o=opportunites[_dialog.sel[1]]
+   print(_o.name,4+3,_yoff,13)
+
+   _yoff+=18
+   print('yearly effects:',4+3,_yoff,13)
+
+   _yoff+=5+3
+   for _i=1,#_o.effects do
+    local _e=_o.effects[_i]
+    draweffect(_e,_yoff)
+    -- todo: draw extremism
 
     _yoff+=5+3
    end
 
   end,
- }
+ },
+ projects={
+  name='projects',
+  r={4,16,123,126},
+  draw=function(_dialog)
+   local _yoff=3+_dialog.r[2]
+   print('implemented projects',25,_yoff,13)
+
+   _yoff+=3+5+1
+   rect(mapx-1,_yoff-1,mapx+mapheight_2,mapheight+_yoff,0)
+   sspr(0,0,mapheight_2,mapheight,mapx,_yoff)
+
+   for _p in all(_dialog.selitems) do
+    pset(mapx+_p[1],_yoff+_p[2],5)
+   end
+
+   pset(mapx+_dialog.sel[1],_yoff-1,7)
+   pset(mapx-1,_yoff+_dialog.sel[2],7)
+   if t % 8 > 4 then
+    pset(mapx+_dialog.sel[1],_yoff+_dialog.sel[2],7)
+   end
+
+   _yoff+=mapheight+4
+   print(_dialog.sel.name,4+3,_yoff,13)
+
+   _yoff+=19
+   for _i=1,#_dialog.sel.effects do
+    local _e=_dialog.sel.effects[_i]
+    draweffect(_e,_yoff)
+    -- todo: draw extremism
+
+    _yoff+=5+3
+   end
+
+  end,
+ },
 }
 
 dialog=nil
@@ -625,7 +768,7 @@ function gameupdate()
     add(selitems,_e)
    end
 
-   break -- only one event each quart
+   break -- note: only one event each quart
   end
  end
  
@@ -654,31 +797,6 @@ function gamedraw()
 
   if dialog.draw then
    dialog.draw(dialog)
-  end
-
-  for _i in all(dialog.selitems) do
-   local _c=13
-   local y=dialog.r[4]-(#dialog.selitems-_i[2]+1)*8+1
-   if dialog.sel==_i then
-    rectfill(dialog.r[1]+3,y-1,dialog.r[3]-3,y+5,_c)
-    _c=7
-   end
-   print(_i[3],10+_i[1],y,_c)
-
-
-   -- debug draw
-   -- pset(_i[2],_i[3],12)
-
-   -- local h=64
-   -- local _a=0.05
-   -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,11)
-   -- _a=0.45
-   -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,11)
-
-   -- _a=0.55
-   -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,10)
-   -- _a=0.95
-   -- line(_i[2],_i[3],_i[2]+cos(_a)*h,_i[3]-sin(_a)*h,10)
   end
  end
 
@@ -863,11 +981,11 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fff00000000000000000000000000000000
-000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fffffff00ff00ff00f000f0000000000000
-000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fffffffffffffff0f0fff0f0fff0f000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fff00fff0ff000f00ff000f0fff0fffff0
+ddddddd0ddddddd00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+dddd7dd0dd7dddd00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ddd7ddd0ddd7ddd00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+dd7dddd0dddd7dd000000000000000000000000000000000000000000000000000000000000000000000000000000fff00000000000000000000000000000000
+ddd7ddd0ddd7ddd000000000000000000000000000000000000000000000000000000000000000000000000000000fffffff00ff00ff00f000f0000000000000
+dddd7dd0dd7dddd000000000000000000000000000000000000000000000000000000000000000000000000000000fffffffffffffff0f0fff0f0fff0f000000
+ddddddd0ddddddd0000000000000000000000000000000000000000000000000000000000000000000000000000000fff00fff0ff000f00ff000f0fff0fffff0
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff000ff00f000f000f000f000f00f0f00f
