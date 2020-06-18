@@ -457,15 +457,29 @@ function draweffect(_e,_y)
  -- end
 end
 
+function drawmenuopt(_t,_r1,_r3,_y,_selected)
+ local _pre='^d   '
+ if _selected then
+  rectfill(_r1+3,_y-1,_r3-3,_y+5,13)
+  _pre='^7\x8e '
+ end
+ printc(_pre.._t,_r1+5,_y)
+end
+
 function drawmenu(_dialog)
  for _i in all(_dialog.selitems) do
-   local _c=13
    local _y=_dialog.r[4]-(#_dialog.selitems-_i[2]+1)*8+1
-   if _dialog.sel==_i then
-    rectfill(_dialog.r[1]+3,_y-1,_dialog.r[3]-3,_y+5,_c)
-    _c=7
-   end
-   print(_i[3],10+_i[1],_y,_c)
+   drawmenuopt(
+    _i[3],
+    dialog.r[1],
+    dialog.r[3],
+    _y,
+    _dialog.sel==_i)
+   -- if _dialog.sel==_i then
+   --  rectfill(_dialog.r[1]+3,_y-1,_dialog.r[3]-3,_y+5,13)
+   --  _pre='^7\x8e '
+   -- end
+   -- printc(_pre.._i[3],10+_i[1],_y)
 
 
    -- debug draw
@@ -489,7 +503,7 @@ dialogs={
   name='planet',
   selitems={
    {0,1,'overview', onp=function() setdialog('overview') end},
-   {0,2,'newproject', onp=function()
+   {0,2,'new project', onp=function()
     local _t={}
     for _i=1,#opportunites do
      add(_t,{_i,0,onp=function()
@@ -531,7 +545,7 @@ dialogs={
    {0,4,'relations', onp=function() debug('relations') end},
    {0,5,'budget', onp=function() debug('budget') end},
   },
-  r={5,41,58,83},
+  r={5,41,69,83},
   draw=drawmenu,
  },
  overview={
@@ -676,6 +690,13 @@ dialogs={
 
     _yoff+=5+3
    end
+
+   drawmenuopt(
+    'place project hq',
+    _dialog.r[1],
+    _dialog.r[3],
+    _dialog.r[4]-7,
+    true)
 
   end,
  },
