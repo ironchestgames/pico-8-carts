@@ -756,10 +756,13 @@ function setdialog(name)
 end
 
 sel=nil
+
 function gameupdate()
  if dialog then
   if dialog.sel then
-   dialog.sel=perfsel(dialog.sel,dialog.selitems)
+   if band(btnp(),0b1111) != 0 then
+    dialog.sel=perfsel(dialog.sel,dialog.selitems)
+   end
    if btnp(4) and dialog.sel.onp then
     dialog.sel.onp(dialog)
    end
@@ -778,6 +781,7 @@ function gameupdate()
  if ispaused then
   return
  end
+
  updatestars()
 
  for _an in all(animating) do
