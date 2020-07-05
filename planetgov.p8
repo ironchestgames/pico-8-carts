@@ -15,6 +15,14 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  printh(result,'debug',false)
 end
 
+function inspect(_t)
+ local _s='{\n'
+ for _k,_v in pairs(_t) do
+  _s=_s..'  '.._k..'='..tostr(_v)..',\n'
+ end
+ debug(_s..'}')
+end
+
 -- s2t usage:
 -- t=s2t'1;2;3;4;5;6;7;hej pa dig din gamle gries;'
 -- t=s2t'.x;1;.y;2;'
@@ -326,6 +334,25 @@ function perfsel(cur,items)
  return _closest or cur
 end
 
+valcols={
+ wealth=11,
+ man_wealth=11,
+ sup_wealth=11,
+ poverty=9,
+ man_poverty=9,
+ sup_poverty=9,
+ pollution=4,
+ man_pollution=4,
+ sup_pollution=4,
+ leftism=8,
+ man_leftism=8,
+ sup_leftism=8,
+ rightism=12,
+ man_rightism=12,
+ sup_rightism=12,
+ favors=15,
+}
+
 values={
  wealth=0.1,
  man_wealth=6,
@@ -345,35 +372,74 @@ values={
  favors=0,
 }
 
+function hassupp(_e)
+ for _v in all(_e) do
+  if (_v.t == 'sup_wealth' and _v.v + values.sup_wealth < 0) or
+     (_v.t == 'sup_poverty' and _v.v + values.sup_poverty < 0) or
+     (_v.t == 'sup_pollution' and _v.v + values.sup_pollution < 0) or
+     (_v.t == 'sup_leftism' and _v.v + values.sup_leftism < 0) or
+     (_v.t == 'sup_rightism' and _v.v + values.sup_rightism < 0) then
+   return
+  end
+ end
+ return true
+end
+
 year=0
 quart=1
 
 comingevents={
  --  text='ambassador from _\nis kindly inviting you to\ncontribute to relief efforts\nfrom climate catastrophe.',
  {
-  ships={{0,0,5},{4,4,1},{-6,-8,1},col=6},
   q=1,
   t='ambassador',
-  text='ambassador from _\nis kindly inviting you to\nrelieve his planet of some\nnuclear waste products',
-  effects={
-   {t='wealth',v=0.05,text='^b+5% wealth'},
-   {t='pollution',v=0.02,text='^4+2% pollution'},
-   {t='sup_pollution',v=-2,text='^4-2 support'},
-   {t='favors',v=1,text='^f+1 favors'},
+  data={
+   ships={{0,0,5},{4,4,1},{-6,-8,1},col=6},
+   planet='klendathu',
+   text='\nis kindly inviting you to\nrelieve his planet of some\nnuclear waste products',
+   effects={
+    {t='wealth',v=0.05,text='^b+5% wealth'},
+    {t='pollution',v=0.02,text='^4+2% pollution'},
+    {t='sup_pollution',v=-2,text='^4-2 support'},
+    {t='favors',v=1,text='^f+1 favors'},
+   },
   },
- }
+ },
+ {
+  t='project',
+  q=4,
+  data={
+   name='interplanetary trading center',
+   effects={
+    wealth={v=0.01,text='^b+1% wealth'},
+    leftism={v=0.01,text='^8+1% leftism'},
+   },
+   cost={
+    {t='sup_leftism',v=-1,text='^8-1 support'},
+   },
+   cancelcost={
+    {t='sup_wealth',v=-3,text='^b-3 support'},
+    {t='sup_rightism',v=-2,text='^c-2 support'},
+   },
+  },
+ },
 }
 
 opportunites={
  {
+  t='project',
   name='rare earth mining complex',
   effects={
-   {t='wealth',v=0.03,text='^b+3% wealth'},
-   {t='pollution',v=0.04,text='^4+4% pollution'},
+   wealth={v=0.03,text='^b+3% wealth'},
+   pollution={v=0.04,text='^4+4% pollution'},
   },
   cost={
    {t='sup_pollution',v=-4,text='^4-4 support'},
-  }
+  },
+  cancelcost={
+   {t='sup_wealth',v=-4,text='^b-4 support'},
+   {t='sup_rightism',v=-1,text='^c-1 support'},
+  },
  },
 }
 
@@ -436,25 +502,59 @@ function drawship(_xoff,_yoff,_a,_s,_col)
  pal()
 end
 
-function drawbar(_xoff,_yoff,_col,_val)
+function drawbar(_xoff,_yoff,_t,_inc)
+ local _val=values[_t]
+ local _col=valcols[_t]
+ local _x2=_xoff+36*_val
  rect(_xoff,_yoff,_xoff+36,_yoff+4,_col)
- rectfill(_xoff,_yoff,_xoff+36*_val,_yoff+4,_col)
+ rectfill(_xoff,_yoff,_x2,_yoff+4,_col)
+ if _inc > 0 then
+  rectfill(_x2+1,_yoff+1,max(_x2+1,_x2+36*_inc),_yoff+3,7)
+  print('+',_xoff+32,_yoff,6)
+ elseif _inc < 0 then
+  rectfill(min(_x2,_x2+36*_inc),_yoff+1,_x2,_yoff+3,7)
+  print('-',_xoff+2,_yoff,6)
+ end
 end
 
-function drawextrem(_xoff,_yoff,_leftism,_rightism)
- rect(_xoff,_yoff,_xoff+17,_yoff+4,8)
- rectfill(_xoff,_yoff,_xoff+17*_leftism,_yoff+4,8)
+function drawextrem(_xoff,_yoff,_leftinc,_rightinc)
+ -- todo: do more accurate
+ local _lxoff=_xoff+16
+ local _x2=_lxoff-16*values.leftism
+ rect(_lxoff-16,_yoff,_lxoff+1,_yoff+4,8)
+ rectfill(_x2,_yoff,_lxoff,_yoff+4,8)
+ if _leftinc > 0 then
+  rectfill(min(_x2,_x2-16*_leftinc)-1,_yoff+1,_x2-1,_yoff+3,7)
+  print('+',_lxoff-14,_yoff,6)
+ elseif _leftinc < 0 then
+  rectfill(_x2,_yoff+1,max(_x2,_x2-16*_leftinc),_yoff+2,7)
+  print('-',_xoff+11,_yoff,6)
+ end
 
- rect(_xoff+19,_yoff,_xoff+20+16,_yoff+4,12)
- rectfill(_xoff+19,_yoff,_xoff+20+16*_rightism,_yoff+4,12)
+ _xoff+=19
+ _x2=_xoff+16*values.rightism
+ rect(_xoff,_yoff,_xoff+17,_yoff+4,12)
+ rectfill(_xoff+1,_yoff,_x2,_yoff+4,12)
+ if _rightinc > 0 then
+  rectfill(_x2+1,_yoff+1,max(_x2+1,_x2+16*_rightinc),_yoff+3,7)
+  print('+',_xoff+13,_yoff,6)
+ elseif _rightinc < 0 then
+  rectfill(min(_x2,_x2+16*_rightinc),_yoff+1,_x2,_yoff+3,7)
+  print('-',_xoff+2,_yoff,6)
+ end
+
+ -- rect(_xoff,_yoff,_xoff+17,_yoff+4,8)
+ -- rectfill(_xoff,_yoff,_xoff+17*_leftism,_yoff+4,8)
+
+ -- rect(_xoff+19,_yoff,_xoff+20+16,_yoff+4,12)
+ -- rectfill(_xoff+19,_yoff,_xoff+20+16*_rightism,_yoff+4,12)
 end
 
-function draweffect(_e,_y)
- printc(_e.text,4+3,_y)
- -- local _prefix=sub(_o,1,3)
- -- if _prefix != 'sup' then
- --  drawbar(_xoff,_yoff,11,_o.v)
- -- end
+function draweffects(_e,_yoff)
+ drawbar(7,_yoff,'wealth',_e.wealth and _e.wealth.v or 0)
+ drawbar(7,_yoff+8,'poverty',_e.poverty and _e.poverty.v or 0)
+ drawbar(48 ,_yoff,'pollution',_e.pollution and _e.pollution.v or 0)
+ drawextrem(48,_yoff+8,_e.leftism and _e.leftism.v or 0,_e.rightism and _e.rightism.v or 0)
 end
 
 function drawmenuopt(_t,_r1,_r3,_y,_selected)
@@ -469,6 +569,7 @@ end
 function drawmenu(_dialog)
  for _i in all(_dialog.selitems) do
    local _y=_dialog.r[4]-(#_dialog.selitems-_i[2]+1)*8+1
+   -- debug(_i[1],_i[2],_i[3])
    drawmenuopt(
     _i[3],
     dialog.r[1],
@@ -499,14 +600,23 @@ function drawmenu(_dialog)
 end
 
 dialogs={
+
  planet={
-  name='planet',
   selitems={
    {0,1,'overview', onp=function() setdialog('overview') end},
    {0,2,'new project', onp=function()
     local _t={}
     for _i=1,#opportunites do
-     add(_t,{_i,0,onp=function()
+     add(_t,{_i,0,onp=function(_dialog)
+      local _sel=opportunites[_dialog.sel[1]]
+      if not hassupp(_sel.cost) then
+       debug('not enough support')
+       return
+      end
+      for _i=1,#_sel.cost do
+       local _e=_sel.cost[_i]
+       values[_e.t]+=_e.v
+      end
       local _selitems={}
       for _x=0,mapheight_2-1 do
        for _y=0,mapheight-1 do
@@ -524,6 +634,11 @@ dialogs={
           _o[2]=_y
           sset(_x,_y,5)
           del(opportunites,_o)
+          _o.onp=function(_dialog) -- note: selitems in projects
+           del(projects,_o)
+           sset(_x,_y,sget(_x,_y+mapheight))
+           dialog=nil 
+          end
           add(projects,_o)
           dialog=nil
          end})
@@ -548,31 +663,51 @@ dialogs={
   r={5,41,69,83},
   draw=drawmenu,
  },
+
  overview={
-  name='overview',
   selitems={},
   r={4,16,123,123},
   draw=function(_dialog)
    local _yoff=3+_dialog.r[2]
    print(planetname,64-#planetname*2,_yoff,13)
+
+   local _weainc,_povinc,_polinc,_lefinc,_riginc=0,0,0,0,0
+
+   for _p in all(projects) do
+    if _p.effects.wealth then
+     _weainc+=_p.effects.wealth.v
+    end
+    if _p.effects.poverty then
+     _povinc+=_p.effects.poverty.v
+    end
+    if _p.effects.pollution then
+     _polinc+=_p.effects.pollution.v
+    end
+    if _p.effects.leftism then
+     _lefinc+=_p.effects.leftism.v
+    end
+    if _p.effects.rightism then
+     _riginc+=_p.effects.rightism.v
+    end
+   end
    
    _yoff+=5+7
    _x1off=4+3
    _x2off=123-5-37
    print('wealth',_x1off,_yoff,13)
-   drawbar(_x2off,_yoff,11,values.wealth)
+   drawbar(_x2off,_yoff,'wealth',_weainc)
    
    _yoff+=5+3
    print('poverty',_x1off,_yoff,13)
-   drawbar(_x2off,_yoff,9,values.poverty)
+   drawbar(_x2off,_yoff,'poverty',_povinc)
 
    _yoff+=5+3
    print('pollution',_x1off,_yoff,13)
-   drawbar(_x2off,_yoff,4,values.pollution)
+   drawbar(_x2off,_yoff,'pollution',_polinc)
 
    _yoff+=5+3
    print('extremism',_x1off,_yoff,13)
-   drawextrem(_x2off,_yoff,values.leftism,values.rightism)
+   drawextrem(_x2off,_yoff,_lefinc,_riginc)
 
    _yoff+=5+3
    print('congress support',_x1off,_yoff,13)
@@ -612,10 +747,14 @@ dialogs={
    -- todo: draw military icons
   end,
  },
+
  ambassador={
-  name='ambassador',
   selitems={
    {0,1,'agree',onp=function(_dialog)
+     if not hassupp(sel.effects) then
+      debug('not enough support')
+      return
+     end
      for _i=1,#sel.effects do
       local _e=sel.effects[_i]
       values[_e.t]+=_e.v
@@ -633,20 +772,20 @@ dialogs={
   r={4,22,123,118},
   draw=function(_dialog)
    local _yoff=3+_dialog.r[2]
-   print(sel.text,4+3,_yoff,13)
+   print('ambassador from '..sel.planet..sel.text,4+3,_yoff,13)
    
    _yoff+=23+7
    for _i=1,#sel.effects do
     local _e=sel.effects[_i]
-    draweffect(_e,_yoff)
+    printc(_e.text,4+3,_yoff)
     _yoff+=5+3
    end
 
    drawmenu(_dialog)
   end,
  },
+
  newproject={
-  name='newproject',
   -- note: selitems in menu onp
   r={4,16,123,123},
   draw=function(_dialog)
@@ -673,21 +812,24 @@ dialogs={
    print(_o.name,4+3,_yoff,13)
 
    _yoff+=5+7
+   local _tmp=_yoff
    print('one-time cost:',4+3,_yoff,13)
-   _yoff+=5+3
    for _i=1,#_o.cost do
     local _c=_o.cost[_i]
-    draweffect(_c,_yoff)
+    printc(_c.text,72,_yoff)
     _yoff+=5+3
    end
-   print('yearly effects:',4+3,_yoff,13)
+   _yoff=_tmp+16
+
+   print('effects (yearly):',4+3,_yoff,13)
 
    _yoff+=5+3
-   for _i=1,#_o.effects do
-    local _e=_o.effects[_i]
-    draweffect(_e,_yoff)
-    -- todo: draw extremism
+   draweffects(_o.effects,_yoff)
 
+   _yoff+=16
+   print('cost to cancel:',4+3,_yoff,13)
+   for _k,_c in pairs(_o.cancelcost) do
+    printc(_c.text,72,_yoff)
     _yoff+=5+3
    end
 
@@ -700,8 +842,8 @@ dialogs={
 
   end,
  },
+
  projects={
-  name='projects',
   r={4,16,123,126},
   draw=function(_dialog)
    local _yoff=3+_dialog.r[2]
@@ -721,14 +863,22 @@ dialogs={
     _yoff+=mapheight+4
     print(_dialog.sel.name,4+3,_yoff,13)
 
-    _yoff+=19
-    for _i=1,#_dialog.sel.effects do
-     local _e=_dialog.sel.effects[_i]
-     draweffect(_e,_yoff)
-     -- todo: draw extremism
+    _yoff+=5+3
+    draweffects(_dialog.sel.effects,_yoff)
 
+    _yoff+=16
+    print('cost to cancel:',4+3,_yoff,13)
+    for _k,_c in pairs(_dialog.sel.cancelcost) do
+     printc(_c.text,72,_yoff)
      _yoff+=5+3
     end
+
+    drawmenuopt(
+     'cancel project',
+     _dialog.r[1],
+     _dialog.r[3],
+     _dialog.r[4]-7,
+     true)
 
    else
     print('(no projects)',38,_yoff+mapheight+4,13)
@@ -736,8 +886,8 @@ dialogs={
 
   end,
  },
+
  placehq={
-  name='placehq',
   r={4,16,123,126},
   draw=function(_dialog)
    local _yoff=3+_dialog.r[2]
@@ -820,8 +970,8 @@ function gameupdate()
   year+=1
 
   for _p in all(projects) do
-   for _e in all(_p.effects) do
-    values[_e.t]+=_e.v
+   for _k,_e in pairs(_p.effects) do
+    values[_k]=mid(0.1,_e.v+values[_k],0.9)
    end
   end
 
@@ -833,10 +983,10 @@ function gameupdate()
    values.sup_wealth=flr(values.man_wealth*values.wealth)
 
    values.man_poverty=_mandates(1,values.poverty)
-   values.sup_poverty=flr(values.man_poverty*(1-values.poverty))
+   values.sup_poverty=max(0,flr(values.man_poverty*(0.8-values.poverty)))
 
    values.man_pollution=_mandates(1,values.pollution)
-   values.sup_pollution=flr(values.man_pollution*(1-values.pollution))
+   values.sup_pollution=max(0,flr(values.man_pollution*(0.8-values.pollution)))
 
    values.man_leftism=_mandates(2,values.leftism)
    values.sup_leftism=flr(values.man_leftism*values.leftism)
@@ -856,23 +1006,27 @@ function gameupdate()
   if _e.q == quart then
    del(comingevents,_e)
    if _e.t == 'ambassador' then
+    local _a=_e.data
     local _cx,_cy,_m=0,0,0
-    for _s in all(_e.ships) do
+    for _s in all(_a.ships) do
      _cx+=_s[1]
      _cy+=_s[2]
     end
-    _cx=_cx/#_e.ships
-    _cy=_cy/#_e.ships
-    for _s in all(_e.ships) do
+    _cx=_cx/#_a.ships
+    _cy=_cy/#_a.ships
+    for _s in all(_a.ships) do
      local _sw=shipsprites[_s[3]][3]*2
      _m=max(_m,max(abs(_s[1]-_cx)+_sw,abs(_s[2]-_cy)+_sw))
     end
-    _e[1]=_cx+36
-    _e[2]=_cy+36
-    _e[3]=_m
-    _e[4]=function() setdialog('ambassador',_e) end
-    add(armadas,_e)
-    add(selitems,_e)
+    _a[1]=_cx+36
+    _a[2]=_cy+36
+    _a[3]=_m
+    _a[4]=function() setdialog('ambassador',_a) end
+    add(armadas,_a)
+    add(selitems,_a)
+
+   elseif _e.t == 'project' then
+    add(opportunites,_e.data)
    end
 
    break -- note: only one event each quart
