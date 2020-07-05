@@ -222,7 +222,8 @@ function newplanet(_seed)
  genmap(mapheight_2,mapheight)
 end
 
-t=0
+ts=0
+uits=0
 seed=rnd()
 stars={}
 colshade=s2t'1;1;1;2;1;13;6;2;4;4;3;13;1;2;4;'
@@ -262,7 +263,7 @@ function drawstarsplanet()
     _px=asin(_px/widthatheight)*4
 
     -- convert our local offsets into lookup coordinates into our map texture
-    _u=t*rotationspeed+(_px+1)*mapheight_h
+    _u=ts*rotationspeed+(_px+1)*mapheight_h
     _v=(_py+1)*mapheight_h
     -- wrap the horizontal coordinate around our map when it goes off the edge
     _u=_u%mapheight_2
@@ -287,20 +288,20 @@ function drawstarsplanet()
 end
 
 printc_c='0123456789abcdef'
-function printc(t,x,y)
- local l,s,o,i,n=x,7,1,1,#t+1
+function printc(_t,_x,_y)
+ local l,s,o,i,n=_x,7,1,1,#_t+1
  while i <=n  do
-  local c=sub(t,i,i)
+  local c=sub(_t,i,i)
   if c == '^' or c == '' then
    i+=1
-   local p=sub(t,o,i-2)
-   print(p,l,y,s)
+   local p=sub(_t,o,i-2)
+   print(p,l,_y,s)
    l+=4*#p
    o=i+1
-   c=sub(t,i,i)
+   c=sub(_t,i,i)
    if c=='l' then
-    l=x
-    y+=6
+    l=_x
+    _y+=6
    else
     for k=1,16 do
      if c==sub(printc_c,k,k) then
@@ -602,6 +603,7 @@ end
 dialogs={
 
  planet={
+  isplay=true,
   selitems={
    {0,1,'overview', onp=function() setdialog('overview') end},
    {0,2,'new project', onp=function()
@@ -637,7 +639,7 @@ dialogs={
           _o.onp=function(_dialog) -- note: selitems in projects
            del(projects,_o)
            sset(_x,_y,sget(_x,_y+mapheight))
-           dialog=nil 
+           dialog=nil
           end
           add(projects,_o)
           dialog=nil
@@ -665,6 +667,7 @@ dialogs={
  },
 
  overview={
+  isplay=true,
   selitems={},
   r={4,16,123,123},
   draw=function(_dialog)
@@ -856,7 +859,7 @@ dialogs={
    if #projects > 0 then
     pset(mapx+_dialog.sel[1],_yoff-1,7)
     pset(mapx-1,_yoff+_dialog.sel[2],7)
-    if t % 8 > 4 then
+    if uits % 8 > 4 then
      pset(mapx+_dialog.sel[1],_yoff+_dialog.sel[2],7)
     end
 
@@ -902,7 +905,7 @@ dialogs={
    pset(mapx+_dialog.sel[1],_yoff-1,7)
    pset(mapx-1,_yoff+_dialog.sel[2],7)
    local _col=5
-   if t % 8 > 4 then
+   if uits % 8 > 4 then
     _col=7
    end
    pset(mapx+_dialog.sel[1],_yoff+_dialog.sel[2],_col)
@@ -924,11 +927,17 @@ dialog=nil
 function setdialog(name)
  dialog=dialogs[name]
  dialog.sel=dialog.selitems[1]
+ dialog.q=quart
 end
 
 sel=nil
 
 function gameupdate()
+ uits+=1
+ if uits > 32000 then
+  uits=0
+ end
+
  if dialog then
   if dialog.sel then
    if band(btnp(),0b1111) != 0 then
@@ -963,10 +972,17 @@ function gameupdate()
   end
  end
 
- t+=1
- t=t%tyear
+ local _nextquart=ceil(((ts+1)%tyear)/(tyear/4))
 
- if t <= 1 then
+ if dialog and (not dialog.isplay) and _nextquart != dialog.q then
+  -- note: never start a new quart if inside dialog.isplay=false/nil
+  return
+ end
+
+ ts+=1
+ ts=ts%tyear
+
+ if ts <= 1 then
   year+=1
 
   for _p in all(projects) do
@@ -999,7 +1015,7 @@ function gameupdate()
    -- ispaused=true
   end
  end
- quart=ceil((t%tyear)/(tyear/4))
+ quart=ceil((ts%tyear)/(tyear/4))
 
  local _event
  for _e in all(comingevents) do
@@ -1080,7 +1096,7 @@ function gamedraw()
 end
 
 function gameinit()
- t=0
+ ts=0
  _update,_draw=gameupdate,gamedraw
  selitems={
   {left_ds-discsize_h,top_ds-discsize_h,discsize_h,curry(setdialog,'planet')},
@@ -1090,7 +1106,7 @@ end
 
 
 function startupdate()
- t+=1
+ ts+=1
 
  rightd=btn(1)
  leftd=btn(0)
@@ -1126,7 +1142,7 @@ function startdraw()
 end
 
 function startinit()
- t=0
+ ts=0
  newplanet(seed)
  _update,_draw=startupdate,startdraw
 end
