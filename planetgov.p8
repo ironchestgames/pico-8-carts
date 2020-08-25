@@ -373,17 +373,13 @@ values={
  favors=0,
 }
 
-function hassupp(_e)
+function canpay(_e)
+ local _vtot,_costtot=0,0
  for _v in all(_e) do
-  if (_v.t == 'sup_wealth' and _v.v + values.sup_wealth < 0) or
-     (_v.t == 'sup_poverty' and _v.v + values.sup_poverty < 0) or
-     (_v.t == 'sup_pollution' and _v.v + values.sup_pollution < 0) or
-     (_v.t == 'sup_leftism' and _v.v + values.sup_leftism < 0) or
-     (_v.t == 'sup_rightism' and _v.v + values.sup_rightism < 0) then
-   return
-  end
+  _vtot+=values[_v.t]
+  _costtot+=_v.v
  end
- return true
+ return _vtot+values.favors+_costtot >= 0
 end
 
 year=0
@@ -558,13 +554,18 @@ function draweffects(_e,_yoff)
  drawextrem(48,_yoff+8,_e.leftism and _e.leftism.v or 0,_e.rightism and _e.rightism.v or 0)
 end
 
-function drawmenuopt(_t,_r1,_r3,_y,_selected)
- local _pre='^d   '
- if _selected then
-  rectfill(_r1+3,_y-1,_r3-3,_y+5,13)
-  _pre='^7\x8e '
+function drawmenuopt(_t,_r1,_r3,_y,_selected,_disabled)
+ local _precol,_pre,_fillcol,_selcol='^d','   ',13,'^7'
+ if _disabled then
+  _fillcol=5
+  _selcol='^1'
  end
- printc(_pre.._t,_r1+5,_y)
+ if _selected then
+  rectfill(_r1+3,_y-1,_r3-3,_y+5,_fillcol)
+  _precol=_selcol
+  _pre='\x8e '
+ end
+ printc(_precol.._pre.._t,_r1+5,_y)
 end
 
 function drawmenu(_dialog)
@@ -609,15 +610,17 @@ dialogs={
    {0,2,'new project', onp=function()
     local _t={}
     for _i=1,#opportunites do
-     add(_t,{_i,0,onp=function(_dialog)
+     local _tmp={_i,0,onp=function(_dialog)
       local _sel=opportunites[_dialog.sel[1]]
-      if not hassupp(_sel.cost) then
-       debug('not enough support')
-       return
-      end
       for _i=1,#_sel.cost do
        local _e=_sel.cost[_i]
-       values[_e.t]+=_e.v
+       local _d=values[_e.t]+_e.v
+       if _d < 0 then
+        values.favors+=_d
+        values[_e.t]=0
+       else
+        values[_e.t]+=_e.v
+       end
       end
       local _selitems={}
       for _x=0,mapheight_2-1 do
@@ -650,7 +653,13 @@ dialogs={
       dialogs.placehq.selitems=_selitems
       setdialog('placehq')
       dialog.sel=dialog.selitems[flr(#dialog.selitems/3)]
-     end})
+     end}
+     _tmp.iscantpay=nil
+     if not canpay(opportunites[_i].cost) then
+      _tmp.iscantpay=true
+      _tmp.onp=function()end
+     end
+     add(_t,_tmp)
     end
     dialogs.newproject.selitems=_t
     setdialog('newproject')
@@ -754,7 +763,7 @@ dialogs={
  ambassador={
   selitems={
    {0,1,'agree',onp=function(_dialog)
-     if not hassupp(sel.effects) then
+     if not canpay(sel.effects) then
       debug('not enough support')
       return
      end
@@ -794,6 +803,10 @@ dialogs={
   draw=function(_dialog)
    local _yoff=3+_dialog.r[2]
    print('new project opportunites',4+3,_yoff,13)
+   if #opportunites == 0 then
+    print('(no opportunites available)',4+3,_yoff+16,13)
+    return
+   end
 
    _yoff+=11
    spr(240,7,_yoff)
@@ -836,12 +849,18 @@ dialogs={
     _yoff+=5+3
    end
 
+   local _s='place project hq'
+   if _dialog.sel.iscantpay then
+    _s='(not enough support)'
+   end
+
    drawmenuopt(
-    'place project hq',
+    _s,
     _dialog.r[1],
     _dialog.r[3],
     _dialog.r[4]-7,
-    true)
+    true,
+    _dialog.sel.iscantpay)
 
   end,
  },
@@ -891,6 +910,7 @@ dialogs={
  },
 
  placehq={
+  ismandatory=true,
   r={4,16,123,126},
   draw=function(_dialog)
    local _yoff=3+_dialog.r[2]
@@ -919,7 +939,7 @@ dialogs={
    drawmenu(_tmpdialog)
 
   end,
- }
+ },
 }
 
 dialog=nil
@@ -947,7 +967,7 @@ function gameupdate()
     dialog.sel.onp(dialog)
    end
   end
-  if btnp(5) then
+  if btnp(5) and not dialog.ismandatory then
    dialog=nil
   end
  else
@@ -962,8 +982,6 @@ function gameupdate()
   return
  end
 
- updatestars()
-
  for _an in all(animating) do
   _an.animate(_an)
   _an.at-=1
@@ -974,10 +992,12 @@ function gameupdate()
 
  local _nextquart=ceil(((ts+1)%tyear)/(tyear/4))
 
- if dialog and (not dialog.isplay) and _nextquart != dialog.q then
+ if dialog and (not dialog.isplay) then
   -- note: never start a new quart if inside dialog.isplay=false/nil
   return
  end
+
+ updatestars()
 
  ts+=1
  ts=ts%tyear
@@ -1011,8 +1031,7 @@ function gameupdate()
    values.sup_rightism=flr(values.man_rightism*values.rightism)
 
    -- todo: open new-budget dialog
-   
-   -- ispaused=true
+
   end
  end
  quart=ceil((ts%tyear)/(tyear/4))
@@ -1075,14 +1094,21 @@ function gamedraw()
   end
  end
 
- printc('^dy^6'..year..'^dq^6'..quart,2,1)
+ if dialog and (not dialog.isplay) then
+  print('y'..year..'q'..quart,2,1,5)
+ else
+  printc('^dy^6'..year..'^dq^6'..quart,2,1)
+ end
+ 
  local _s='^b'..values.sup_wealth..' ^9'..values.sup_poverty..' ^4'..values.sup_pollution..' ^8'..values.sup_leftism..' ^c'..values.sup_rightism..' ^f'..values.favors
  printc(_s,127-(#_s-12)*4,1)
     
  circ(sel[1],sel[2],sel[3],7)
 
  if dialog then
-  print('\x97',dialog.r[1],dialog.r[2]-6,13)
+  if not dialog.ismandatory then
+   print('\x97',dialog.r[1],dialog.r[2]-6,13)
+  end
   rectfill(dialog.r[1],dialog.r[2],dialog.r[3],dialog.r[4],1)
 
   if dialog.draw then
