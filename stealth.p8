@@ -50,15 +50,16 @@ for y=1,32 do
 end
 
 players={
- {x=16,y=19,},
- {x=22,y=19,},
+ {x=16,y=19,state=0},
+ {x=22,y=19,state=0},
 }
 
 -- guard states:
 -- 0 - standing
 -- 1 - walking
 -- 2 - turning
--- 3 - suspicious (heard something)
+-- 3 - holding suspect
+-- 4 - suspicious (heard something)
 
 guards={
  {
@@ -118,26 +119,37 @@ function _update()
    debug('player left premises',i)
   else
    local tile=lvlmap[nexty][nextx]
-   if tile == 0 or tile == 1 then
+   if _p.state != 3 and (tile == 0 or tile == 1) then
     _p.x,_p.y=nextx,nexty
    end
   end
 
-  -- any input near a guard makes noise and they get suspicious
-  if _isinput then
-   for _g in all(guards) do
-    local _dx=_p.x-_g.x
-    local _dy=_p.y-_g.y
-    local _h=sqrt(_dx*_dx+_dy*_dy)
-    if _h <= 5 then
-     sfx(0)
-     _g.state=3
-     _g.state_c=7
-     _g.state_c2=3
-     add(msgs,{x=_g.x*4+1,y=_g.y*4-13,s='?',t=4})
-    end
+  -- if one square from guard, get caught
+  for _g in all(guards) do
+   local _dx=_p.x-_g.x
+   local _dy=_p.y-_g.y
+   if _p.state != 3 and abs(_dx) <= 1 and abs(_dy) <= 1 then
+    _p.state=3
+    _g.state=3
+    add(msgs,{x=_g.x*4+1,y=_g.y*4-13,s='suspect caught!',t=4})
    end
   end
+
+  -- any input near a guard makes noise and they get suspicious
+  -- if _isinput then
+  --  for _g in all(guards) do
+  --   local _dx=_p.x-_g.x
+  --   local _dy=_p.y-_g.y
+  --   local _h=sqrt(_dx*_dx+_dy*_dy)
+  --   if _g.state != 3 and _h <= 5 then
+  --    sfx(0)
+  --    _g.state=4
+  --    _g.state_c=7
+  --    _g.state_c2=3
+  --    add(msgs,{x=_g.x*4+1,y=_g.y*4-13,s='?',t=4})
+  --   end
+  --  end
+  -- end
  end
 
  if t <= 0 then
@@ -175,6 +187,9 @@ function _update()
     _g.state=1
 
    elseif _g.state == 3 then
+    -- is holding suspect
+
+   elseif _g.state == 4 then
     _g.state_c-=1
     _g.state_c2-=1
 
@@ -196,7 +211,6 @@ function _update()
     if _g.state_c <= 0 then
      _g.state=2
     end
-
    end
 
    -- set up next state
@@ -213,6 +227,7 @@ function _update()
    end
   end
 
+  -- set new tick
   if alertlvl == 1 then
    t=24
   elseif alertlvl == 2 then
@@ -229,7 +244,29 @@ function _update()
 
  -- shine guards flashlights
  for _g in all(guards) do
-  if _g.dx != 0 then
+  if _g.state == 3 then
+   light[_g.y-2][_g.x-1]=1
+   light[_g.y-2][_g.x]=1
+   light[_g.y-2][_g.x+1]=1
+   light[_g.y-1][_g.x-2]=1
+   light[_g.y-1][_g.x-1]=1
+   light[_g.y-1][_g.x]=1
+   light[_g.y-1][_g.x+1]=1
+   light[_g.y-1][_g.x+2]=1
+   light[_g.y][_g.x-2]=1
+   light[_g.y][_g.x-1]=1
+   light[_g.y][_g.x]=1
+   light[_g.y][_g.x+1]=1
+   light[_g.y][_g.x+2]=1
+   light[_g.y+1][_g.x-2]=1
+   light[_g.y+1][_g.x-1]=1
+   light[_g.y+1][_g.x]=1
+   light[_g.y+1][_g.x+1]=1
+   light[_g.y+1][_g.x+2]=1
+   light[_g.y+2][_g.x-1]=1
+   light[_g.y+2][_g.x]=1
+   light[_g.y+2][_g.x+1]=1
+  elseif _g.dx != 0 then
    local _x,_y=_g.x+_g.dx,_g.y+_g.dy
    local _l=32
    while lvlmap[_y][_x] != 2 do
@@ -261,6 +298,7 @@ function _update()
     _l=_c-1
     _x+=_g.dx
    end
+
   elseif _g.dy != 0 then
    local _x,_y=_g.x+_g.dx,_g.y+_g.dy
    local _l=32
@@ -312,10 +350,10 @@ function _update()
     -- todo: start police countdown
     alertlvl=2
     for _g in all(guards) do
+     add(msgs,{x=_g.x*4,y=_g.y*4-13,s='intruder alert!',t=4})
      _g.state=1
     end
     t=60
-    add(msgs,{x=64,y=64,s='intruder alert!',t=4})
    end
   end
  end
@@ -333,165 +371,68 @@ function _update()
 
  -- remove fog
  for _p in all(players) do
-  local _x,_y=_p.x,_p.y
-  local _l=32
-  while lvlmap[_y][_x] != 2 do
-   local _c=0
-   local _bx=_x
-   local _by=_y
-   while lvlmap[_by][_bx] != 2 and _c <= _l do
-    fog[_by][_bx]=0
-    _bx+=1
-    _by+=1
-    _c+=1
+  if _p.state == 3 then
+   -- do nothing
+  else
+   local _dirs={
+    {x=1,y=0,dx=1,dy=1},
+    {x=1,y=0,dx=1,dy=-1},
+    {x=-1,y=0,dx=-1,dy=1},
+    {x=-1,y=0,dx=-1,dy=-1},
+    {x=0,y=1,dx=1,dy=1},
+    {x=0,y=1,dx=-1,dy=1},
+    {x=0,y=-1,dx=1,dy=-1},
+    {x=0,y=-1,dx=-1,dy=-1},
+   }
+   for _d in all(_dirs) do
+    local _x,_y=_p.x,_p.y
+    local _l=32
+    while lvlmap[_y][_x] != 2 do
+     local _c=0
+     local _bx=_x
+     local _by=_y
+     while lvlmap[_by][_bx] != 2 and _c <= _l do
+      fog[_by][_bx]=0
+      _bx+=_d.dx
+      _by+=_d.dy
+      _c+=1
+     end
+     fog[_by][_bx]=0
+     _bx+=_d.dx
+     _by+=_d.dy
+     _l=_c
+     _x+=_d.x
+     _y+=_d.y
+     fog[_y][_x]=0
+    end
    end
-   fog[_by][_bx]=0
-   _bx+=1
-   _by+=1
-   _l=_c
-   _x+=1
-   fog[_y][_x]=0
   end
+ end
 
-
-  _x,_y=_p.x,_p.y
-  _l=32
-  while lvlmap[_y][_x] != 2 do
-   local _c=0
-   local _bx=_x
-   local _by=_y
-   while lvlmap[_by][_bx] != 2 and _c <= _l do
-    fog[_by][_bx]=0
-    _bx+=1
-    _by-=1
-    _c+=1
-   end
-   fog[_by][_bx]=0
-   _bx+=1
-   _by-=1
-   _l=_c
-   _x+=1
-   fog[_y][_x]=0
-  end
-
-  _x,_y=_p.x,_p.y
-  _l=32
-  while lvlmap[_y][_x] != 2 do
-   local _c=0
-   local _bx=_x
-   local _by=_y
-   while lvlmap[_by][_bx] != 2 and _c <= _l do
-    fog[_by][_bx]=0
-    _bx-=1
-    _by+=1
-    _c+=1
-   end
-   fog[_by][_bx]=0
-   _bx-=1
-   _by+=1
-   _l=_c
-   _x-=1
-   fog[_y][_x]=0
-  end
-
-  _x,_y=_p.x,_p.y
-  _l=32
-  while lvlmap[_y][_x] != 2 do
-   local _c=0
-   local _bx=_x
-   local _by=_y
-   while lvlmap[_by][_bx] != 2 and _c <= _l do
-    fog[_by][_bx]=0
-    _bx-=1
-    _by-=1
-    _c+=1
-   end
-   fog[_by][_bx]=0
-   _bx-=1
-   _by-=1
-   _l=_c
-   _x-=1
-   fog[_y][_x]=0
-  end
-
-  _x,_y=_p.x,_p.y
-  _l=32
-  while lvlmap[_y][_x] != 2 do
-   local _c=0
-   local _bx=_x
-   local _by=_y
-   while lvlmap[_by][_bx] != 2 and _c <= _l do
-    fog[_by][_bx]=0
-    _bx+=1
-    _by+=1
-    _c+=1
-   end
-   fog[_by][_bx]=0
-   _bx+=1
-   _by+=1
-   _l=_c
-   _y+=1
-   fog[_y][_x]=0
-  end
-
-  _x,_y=_p.x,_p.y
-  _l=32
-  while lvlmap[_y][_x] != 2 do
-   local _c=0
-   local _bx=_x
-   local _by=_y
-   while lvlmap[_by][_bx] != 2 and _c <= _l do
-    fog[_by][_bx]=0
-    _bx-=1
-    _by+=1
-    _c+=1
-   end
-   fog[_by][_bx]=0
-   _bx-=1
-   _by+=1
-   _l=_c
-   _y+=1
-   fog[_y][_x]=0
-  end
-
-  _x,_y=_p.x,_p.y
-  _l=32
-  while lvlmap[_y][_x] != 2 do
-   local _c=0
-   local _bx=_x
-   local _by=_y
-   while lvlmap[_by][_bx] != 2 and _c <= _l do
-    fog[_by][_bx]=0
-    _bx+=1
-    _by-=1
-    _c+=1
-   end
-   fog[_by][_bx]=0
-   _bx+=1
-   _by-=1
-   _l=_c
-   _y-=1
-   fog[_y][_x]=0
-  end
-
-  _x,_y=_p.x,_p.y
-  _l=32
-  while lvlmap[_y][_x] != 2 do
-   local _c=0
-   local _bx=_x
-   local _by=_y
-   while lvlmap[_by][_bx] != 2 and _c <= _l do
-    fog[_by][_bx]=0
-    _bx-=1
-    _by-=1
-    _c+=1
-   end
-   fog[_by][_bx]=0
-   _bx-=1
-   _by-=1
-   _l=_c
-   _y-=1
-   fog[_y][_x]=0
+ -- remove fog from holding guards
+ for _g in all(guards) do
+  if _g.state == 3 then
+   fog[_g.y-2][_g.x-1]=0
+   fog[_g.y-2][_g.x]=0
+   fog[_g.y-2][_g.x+1]=0
+   fog[_g.y-1][_g.x-2]=0
+   fog[_g.y-1][_g.x-1]=0
+   fog[_g.y-1][_g.x]=0
+   fog[_g.y-1][_g.x+1]=0
+   fog[_g.y-1][_g.x+2]=0
+   fog[_g.y][_g.x-2]=0
+   fog[_g.y][_g.x-1]=0
+   fog[_g.y][_g.x]=0
+   fog[_g.y][_g.x+1]=0
+   fog[_g.y][_g.x+2]=0
+   fog[_g.y+1][_g.x-2]=0
+   fog[_g.y+1][_g.x-1]=0
+   fog[_g.y+1][_g.x]=0
+   fog[_g.y+1][_g.x+1]=0
+   fog[_g.y+1][_g.x+2]=0
+   fog[_g.y+2][_g.x-1]=0
+   fog[_g.y+2][_g.x]=0
+   fog[_g.y+2][_g.x+1]=0
   end
  end
 
@@ -548,8 +489,12 @@ function _draw()
  -- draw players
  for _p in all(players) do
   -- rectfill(_p.x*4-4,_p.y*4-4-4,_p.x*4-4+3,_p.y*4-4+3,12)
-  local _l=light[_p.y][_p.x]
-  sspr(0,16+_l*9,6,9,_p.x*4-4,_p.y*4-9)
+  if _p.state == 3 then
+   sspr(0,34,6,9,_p.x*4-4,_p.y*4-9)
+  else
+   local _l=light[_p.y][_p.x]
+   sspr(0,16+_l*9,6,9,_p.x*4-4,_p.y*4-9)
+  end
  end
 
  -- draw guards
@@ -624,15 +569,15 @@ f111ff00000000000000000000000000000000000000000000000000000000000000000000000000
 f1f1ff00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 f1f1ff00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 f1f1ff00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ffffff00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ff1fff00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f1e1ff00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+11111f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+15151f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f151ff00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f1f1ff00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f1f1ff00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+f1f1ff00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
