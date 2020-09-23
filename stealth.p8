@@ -83,8 +83,8 @@ end
 -- 3 - caught
 
 players={
- {x=15,y=20,state=0},
- -- {x=22,y=19,state=0},
+ {x=15,y=20,state='standing'},
+ {x=22,y=19,state='standing'},
 }
 
 -- guard states:
@@ -99,20 +99,21 @@ guards={
  {
   x=14,y=5,
   dx=1,dy=0,
-  state=1,
+  state='walking',
   state_c=0,
   state_c2=0,
  },
  {
   x=7,y=15,
-  dx=0,dy=-1,
-  state=1,
+  dx=1,dy=0,
+  state='walking',
   state_c=0,
   state_c2=0,
  },
 }
 
 alertlvl=1
+alertlvls={24,8} -- note: only tick time
 
 objs={
  {x=11,y=14,typ=0,light={}},
@@ -122,7 +123,7 @@ objs={
 
 msgs={}
 
-t=20
+t=0
 
 function iswallclose(_x,_y,_dx,_dy)
  local _c=0
@@ -158,13 +159,12 @@ function _update()
    -- todo: leave premises
    debug('player left premises',i)
   else
-   local _f=floor[nexty][nextx]
    for _o in all(objs) do
     if nextx == _o.x and nexty == _o.y then
      nextx,nexty=_p.x,_p.y
     end
    end 
-   if _p.state != 3 and (_f == 0 or _f == 1) then
+   if _p.state != 'caught' and floor[nexty][nextx] != 2 then
     _p.x,_p.y=nextx,nexty
    end
   end
@@ -182,16 +182,16 @@ function _update()
    end
   end
   if _hiding == nil then
-   _p.state=0
+   _p.state='standing'
   end
 
   -- if one square from guard, get caught
   for _g in all(guards) do
    local _dx=_p.x-_g.x
    local _dy=_p.y-_g.y
-   if (_p.state != 'hiding' or light[_p.y][_p.x] == 1) and _p.state != 3 and abs(_dx) <= 1 and abs(_dy) <= 1 then
-    _p.state=3
-    _g.state=3
+   if (_p.state != 'hiding' or light[_p.y][_p.x] == 1) and _p.state != 'caught' and abs(_dx) <= 1 and abs(_dy) <= 1 then
+    _p.state='caught'
+    _g.state='holding'
     add(msgs,{x=_g.x*4+1,y=_g.y*4-13,s='suspect caught!',t=4})
    end
   end
@@ -202,9 +202,9 @@ function _update()
   --   local _dx=_p.x-_g.x
   --   local _dy=_p.y-_g.y
   --   local _h=sqrt(_dx*_dx+_dy*_dy)
-  --   if _g.state != 3 and _h <= 5 then
+  --   if _g.state != 'holding' and _h <= 5 then
   --    sfx(0)
-  --    _g.state=4
+  --    _g.state='listening'
   --    _g.state_c=7
   --    _g.state_c2=3
   --    add(msgs,{x=_g.x*4+1,y=_g.y*4-13,s='?',t=4})
@@ -219,19 +219,30 @@ function _update()
   for _g in all(guards) do
 
    -- handle state
-   if _g.state == 0 then
+   if _g.state == 'standing' then
     _g.state_c-=1
     -- set to walking
     if _g.state_c <= 0 then
-     _g.state=1
+     _g.state='walking'
     end
 
-   elseif _g.state == 1 then
+   elseif _g.state == 'walking' then
     -- move
-    _g.x+=_g.dx
-    _g.y+=_g.dy
+    local _gwa=walladjacency({x=_g.x+_g.dx,y=_g.y+_g.dy})
+    if _gwa == 0 then
+     _g.x+=1
+    elseif _gwa == 1 then
+     _g.x-=1
+    elseif _gwa == 2 then
+     _g.y+=1
+    elseif _gwa == 3 then
+     _g.y-=1
+    else
+     _g.x+=_g.dx
+     _g.y+=_g.dy
+    end
 
-   elseif _g.state == 2 then
+   elseif _g.state == 'turning' then
     -- turn and set to standing
     local _turns=shuffle{
      {dx=_g.dy,dy=_g.dx},
@@ -245,12 +256,12 @@ function _update()
       break
      end
     end
-    _g.state=1
+    _g.state='walking'
 
-   elseif _g.state == 3 then
+   elseif _g.state == 'holding' then
     -- is holding suspect
 
-   elseif _g.state == 4 then
+   elseif _g.state == 'listening' then
     _g.state_c-=1
     _g.state_c2-=1
 
@@ -270,13 +281,13 @@ function _update()
 
     -- set to walking
     if _g.state_c <= 0 then
-     _g.state=2
+     _g.state='turning'
     end
    end
 
    -- set up next state
    if iswallclose(_g.x,_g.y,_g.dx,_g.dy) then
-    _g.state=2
+    _g.state='turning'
    end
   end
 
@@ -289,11 +300,7 @@ function _update()
   end
 
   -- set new tick
-  if alertlvl == 1 then
-   t=24
-  elseif alertlvl == 2 then
-   t=8
-  end
+  t=alertlvls[alertlvl]
  end
 
  -- clear objects light
@@ -310,7 +317,7 @@ function _update()
 
  -- shine guards flashlights
  for _g in all(guards) do
-  if _g.state == 3 then
+  if _g.state == 'holding' then
    light[_g.y-2][_g.x-1]=1
    light[_g.y-2][_g.x]=1
    light[_g.y-2][_g.x+1]=1
@@ -453,7 +460,7 @@ function _update()
     alertlvl=2
     for _g in all(guards) do
      add(msgs,{x=_g.x*4,y=_g.y*4-13,s='intruder alert!',t=4})
-     _g.state=1
+     _g.state='walking'
     end
     t=60
    end
@@ -473,7 +480,7 @@ function _update()
 
  -- remove fog
  for _p in all(players) do
-  if _p.state == 3 then
+  if _p.state == 'caught' then
    -- do nothing
   else
    local _dirs={
@@ -513,7 +520,7 @@ function _update()
 
  -- remove fog from holding guards
  for _g in all(guards) do
-  if _g.state == 3 then
+  if _g.state == 'holding' then
    fog[_g.y-2][_g.x-1]=0
    fog[_g.y-2][_g.x]=0
    fog[_g.y-2][_g.x+1]=0
@@ -588,8 +595,8 @@ function _draw()
   end
  end
 
- -- draw players, objects, guards
  for _y=1,32 do
+  -- draw objs
   for _o in all(objs) do
    if _o.y == _y then
     local _l=light[_o.y][_o.x]
@@ -597,6 +604,7 @@ function _draw()
    end
   end
 
+  -- draw players
   for _p in all(players) do
    if _p.y == _y then
     -- rectfill(_p.x*4-4,_p.y*4-4-4,_p.x*4-4+3,_p.y*4-4+3,12)
@@ -610,7 +618,7 @@ function _draw()
      elseif _p.adjacency == 3 then
       sspr(17,16,3,9,_p.x*4-4,_p.y*4-9)
      end
-    elseif _p.state == 3 then
+    elseif _p.state == 'caught' then
      sspr(0,34,6,9,_p.x*4-4,_p.y*4-9)
     else
      local _l=light[_p.y][_p.x]
@@ -619,9 +627,30 @@ function _draw()
    end
   end
 
+  -- draw guards
   for _g in all(guards) do
    if _g.y == _y then
-    rectfill(_g.x*4-4,_g.y*4-4-4,_g.x*4-4+3,_g.y*4-4+3,4)
+    if _g.state == 'walking' or _g.state == 'turning' then
+     local _dir=0
+     if _g.dx == 1 then
+      _dir=1
+     elseif _g.dy == -1 then
+      _dir=2
+     elseif _g.dy == 1 then
+      _dir=3
+     end
+     local _frame=0
+     if _g.state == 'walking' or _g.state == 'turning' then
+      _frame=1
+      if t < alertlvls[alertlvl]/2 then
+       _frame=2
+      end
+     end
+     sspr(0+_dir*27+_frame*9,45,9,11,_g.x*4-6,_g.y*4-11)
+
+    elseif _g.state == 'holding' then
+     sspr(108,45,9,11,_g.x*4-6,_g.y*4-11)
+    end
    end
   end
  end
@@ -653,7 +682,7 @@ end
 
 
 function _init()
- t=20
+ t=0
  alertlvl=1
 end
 
@@ -704,17 +733,17 @@ f1f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 f1f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+fffff4ffffffff4fffffffffffffff4ffffffff4ffffffffffffffffff4ffffffff4fffffffffffffffff4ffffffff4fffffffffffffffff4fffffffffffffff
+ffff44fffffff44ffffffff4ffffff44fffffff44fffffff4ffffffff44fffffff44ffffffff4ffffffff44fffffff44fffffff4ffffffff44ffffffffffffff
+fffff9ffffffff9fffffff44ffffff9ffffffff9ffffffff44ffffffff9ffffffff9fffffff44ffffffff9ffffffff9ffffffff44fffffff9fffffffffffffff
+fffff9ffffffff9ffffffff9ffffff9ffffffff9ffffffff9fffffffff9ffffffff9ffffffff9ffffffff9ffffffff9ffffffff9ffffffff9fffffffffffffff
+ffff444ffffff444fffffff9fffff444ffffff444fffffff9ffffffff444ffffff444fffffff9fffffff444ffffff444fffffff9fffffff444ffffffffffffff
+fff44444ffff44444fffff444fff44444ffff44444fffff444ffffff44444ffff44444fffff444fffff44444ffff44444fffff444fffff44444fffffffffffff
+759f5554f759f555f4fff44444ff4555f9574f555f957f44444fffff45554ffff4555f9fff44444ffff95554ffff9555f9fff44444fff4f555f9ffffffffffff
+ffff4449fffff444f9759f5594ff9444ffff9f444fffff4955f957fff4449fffff444fffff45554ffff54449ffff5444fffff95559fff9f444ffffffffffffff
+ffff4f4ffffff4f4ffffff444ffff4f4ffffff4f4ffffff444fffffff4f4ffffff4f4ffffff444fffff74f4fffff74f4fffff5444ffffff4f4ffffffffffffff
+ffff4f4ffffff444ffffff4f44fff4f4ffffff444fffff44f4fffffff4f4ffffff4ffffffff4f4ffffff4f4ffffffff4fffff74f4ffffff4f4ffffffffffffff
+ffff4f4ffffffff4ffffff4ffffff4f4ffffff4ffffffffff4fffffff4f4ffffff4ffffffffff4ffffff4f4ffffffff4ffffff4ffffffff4f4ffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
