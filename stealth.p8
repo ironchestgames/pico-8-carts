@@ -809,18 +809,15 @@ function _draw()
  palt(15,true)
 
  -- draw floor
+ local _lightcols={[0]=1,13,2}
  for _y=1,32 do
   for _x=1,32 do
    local _tile=floor[_y][_x]
-   local _l=light[_y][_x]*4
-   local _sx,_sy=_x*4-4,_y*4-4
-   if _tile == 0 then
-    sspr(8,0+_l,4,4,_sx,_sy)
-   elseif _tile == 1 then
-    sspr(12,0+_l,4,4,_sx,_sy)
-   elseif _tile == 2 then
-    sspr(16,0+_l,4,4,_sx,_sy)
+   local _l=light[_y][_x]
+   if _l == 1 then
+    _tile=_lightcols[_tile]
    end
+   rectfill(_x*4-4,_y*4-4,_x*4,_y*4,_tile)
   end
  end
 
@@ -922,7 +919,7 @@ function _draw()
   for _y=1,32 do
    for _x=1,32 do
     if fog[_y][_x] == 1 then
-     sspr(0,10,4,4,_x*4-4,_y*4-4)
+     rectfill(_x*4-4,_y*4-4,_x*4,_y*4,_col)
     elseif fog[_y][_x] == 2 then
      sspr(4,10,4,4,_x*4-4,_y*4-4)
     end
@@ -940,13 +937,26 @@ function _draw()
  end
 
  if devvalues then
-  print('mem: '..stat(0),0,122,11) -- note: memory
-  print('cyc: '..stat(1),0,122-6,11) -- note: lua calls
-  print('sys: '..stat(2),0,122-12,11) -- note: system calls
-  print('fps: '..stat(7),0,122-18,11) -- note: system calls
+  print('fps: '..stat(7),0,122-42,11) -- note: fps
+  print(' min '..gfps,0,122-36,11) -- note: fps min
+  print('sys: '..stat(2),0,122-30,11) -- note: system calls
+  print(' max '..gsys,0,122-24,11) -- note: system calls max
+  print('cyc: '..stat(1),0,122-18,11) -- note: lua calls
+  print(' max '..gcyc,0,122-12,11) -- note: lua calls max
+  print('mem: '..stat(0),0,122-6,11) -- note: memory
+  print(' max '..gmem,0,122,11) -- note: memory max
+
+  gmem=max(gmem,stat(0))
+  gcyc=max(gcyc,stat(1))
+  gsys=max(gsys,stat(2))
+  gfps=min(gfps,stat(7))
  end
 end
 
+gmem=0
+gcyc=0
+gsys=0
+gfps=30
 
 function _init()
  t=0
