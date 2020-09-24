@@ -18,6 +18,12 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  printh(result,'debug',false)
 end
 
+function curry3(_f,_a,_b,_c)
+ return function()
+  _f(_a,_b,_c)
+ end
+end
+
 function shuffle(_l)
  for _i=#_l,2,-1 do
   local _j=flr(rnd(_i))+1
@@ -52,6 +58,8 @@ function walladjacency(_a)
  return nil
 end
 
+diropposites={[0]=1,0,3,2,}
+
 floor={}
 for y=1,32 do
  floor[y]={}
@@ -81,10 +89,11 @@ end
 -- 1 - walking
 -- 2 - hiding
 -- 3 - caught
+-- hacking
 
 players={
- {x=25,y=27,state='standing'},
- -- {x=22,y=19,state='standing'},
+ {i=0,x=25,y=27,state='standing'},
+ -- {i=1,x=22,y=19,state='standing'},
 }
 
 -- guard states:
@@ -115,8 +124,69 @@ guards={
 alertlvl=1
 alertlvls={24,8} -- note: only tick time
 
-function computer(_o)
- debug('computer!')
+function computer(_p,_o,_tmp)
+ if _tmp.action_c == nil then
+  _tmp.action_c=0
+  _tmp.state='booting'
+  sfx(11)
+  _tmp.seq={0,1,2,1,0,2,1,0,1,2,0}
+  _o.draw=function()
+   if _tmp.state == 'booting' then
+    sspr(0,102,4,3,_o.x*4-4,_o.y*4-7)
+
+   elseif _tmp.state == 'success' then
+    sspr(0,114,4,3,_o.x*4-4,_o.y*4-7)
+
+   elseif _tmp.state == 'fail' then
+    sspr(0,117,4,3,_o.x*4-4,_o.y*4-7)
+
+   else
+    sspr(0,105+_tmp.seq[1]*3,4,3,_o.x*4-4,_o.y*4-7)
+   end
+  end
+ end
+
+ _tmp.action_c+=1
+
+ if _tmp.action_c == 120 then
+  _tmp.state='ready'
+  sfx(12)
+ end
+
+ if _tmp.state == 'ready' then
+  local _input=nil
+  if btnp(0,_p.i) then
+   _input=0
+  elseif btnp(1,_p.i) then
+   _input=1
+  elseif btnp(2,_p.i) then
+   _input=2
+  end
+
+  if _input != nil then
+   if _input == _tmp.seq[1] then
+    del(_tmp.seq,_input)
+    if #_tmp.seq == 0 then
+     _tmp.state='success'
+     sfx(10)
+     -- todo: add whatever the hacking did
+    end
+   else
+    _tmp.state='fail'
+    sfx(9)
+   end
+  end
+ end
+
+ if btnp(3,_p.i) then
+  -- reset player
+  _p.action=nil
+  _p.state='standing'
+  _p.y+=1
+
+  -- reset obj
+  _o.draw=nil
+ end
 end
 
 objs={
@@ -145,55 +215,63 @@ end
 function _update()
  t-=1
 
- for i=1,#players do
-  local _p=players[i]
-  local nextx,nexty=_p.x,_p.y
-  local _isinput=false
-  if btnp(0,i-1) then
-   nextx-=1
-   _isinput=true
-  elseif btnp(1,i-1) then
-   nextx+=1
-   _isinput=true
-  elseif btnp(2,i-1) then
-   nexty-=1
-   _isinput=true
-  elseif btnp(3,i-1) then
-   nexty+=1
-   _isinput=true
-  end
-  if nextx > 32 or nextx < 1 or nexty > 32 or nexty < 1 then
-   -- todo: leave premises
-   debug('player left premises',i)
+ for _p in all(players) do
+
+  if _p.state == 'hacking' then
+   _p.action()
+
   else
-   for _o in all(objs) do
-    if nextx == _o.x and nexty == _o.y then
-     nextx,nexty=_p.x,_p.y
-     local _a=adjacency(_o,_p)
-     if _o.action and _o.action[_a] then
-      _o.action[_a](_o)
+   local nextx,nexty=_p.x,_p.y
+   local _isinput=false
+   if btnp(0,_p.i) then
+    nextx-=1
+    _isinput=true
+   elseif btnp(1,_p.i) then
+    nextx+=1
+    _isinput=true
+   elseif btnp(2,_p.i) then
+    nexty-=1
+    _isinput=true
+   elseif btnp(3,_p.i) then
+    nexty+=1
+    _isinput=true
+   end
+   if nextx > 32 or nextx < 1 or nexty > 32 or nexty < 1 then
+    -- todo: leave premises
+    debug('player left premises',_p.i)
+   else
+    for _o in all(objs) do
+     if nextx == _o.x and nexty == _o.y then
+      nextx,nexty=_p.x,_p.y
+      local _a=adjacency(_o,_p)
+      if _o.action and _o.action[_a] then
+       _p.state='hacking'
+       _p.action=curry3(_o.action[_a],_p,_o,{})
+      end
+     end
+    end 
+    if _p.state != 'caught' and floor[nexty][nextx] != 2 then
+     _p.x,_p.y=nextx,nexty
+
+     -- hide behind object
+     if _p.state != 'hacking' then
+      local _hiding=nil
+      local _pwa=walladjacency(_p)
+      for _o in all(objs) do
+       local _a=adjacency(_p,_o)
+       local _owa=walladjacency(_o)
+       if _owa != nil and _pwa != nil and _a != nil and light[_p.y][_p.x] == 0 then
+        _p.state='hiding'
+        _p.adjacency=_a
+        _hiding=true
+       end
+      end
+      if _hiding == nil then
+       _p.state='standing'
+      end
      end
     end
-   end 
-   if _p.state != 'caught' and floor[nexty][nextx] != 2 then
-    _p.x,_p.y=nextx,nexty
    end
-  end
-
-  -- hide behind object
-  local _hiding=nil
-  local _pwa=walladjacency(_p)
-  for _o in all(objs) do
-   local _a=adjacency(_p,_o)
-   local _owa=walladjacency(_o)
-   if _owa != nil and _pwa != nil and _a != nil and light[_p.y][_p.x] == 0 then
-    _p.state='hiding'
-    _p.adjacency=_a
-    _hiding=true
-   end
-  end
-  if _hiding == nil then
-   _p.state='standing'
   end
 
   -- if one square from guard, get caught
@@ -621,6 +699,9 @@ function _draw()
    if _o.y == _y then
     local _l=light[_o.y][_o.x]
     sspr(40+_o.typ*4,0+_l*13,4,13,_o.x*4-4,_o.y*4-9)
+    if _o.draw then
+     _o.draw()
+    end
    end
   end
 
@@ -638,6 +719,8 @@ function _draw()
      elseif _p.adjacency == 3 then
       sspr(17,16,3,9,_p.x*4-4,_p.y*4-9)
      end
+    elseif _p.state == 'hacking' then
+     sspr(20,16,6,9,_p.x*4-4,_p.y*4-9)
     elseif _p.state == 'caught' then
      sspr(0,34,6,9,_p.x*4-4,_p.y*4-9)
     else
@@ -724,15 +807,15 @@ dddd22021111dddd0000fffffffffffffffffffff5ff6d66252511115222ffffffffffffffffffff
 00002020000000000000fffffffffffffffffffff3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 00000000000000000000fffffffffffffffffffff3f3ccccfff555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 00000000000000000000ffffffffffffffffffffff3fc7cc3ff511115fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ff0fffffffffffffff0ffffffffffffffffffffff3ffccccf3f511115fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ff0ffffffffffffff000fffffffffffffffffffff3ffcc7c434511115444ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f000fffff00ffffff000ffffffffffffffffffff4444fccf464555555444ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-00000ffff00ffffff000ffffffffffffffffffff6666555544456d6d5444ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-0000f0ff0000fff0f000ffffffffffffffffffff666655554445d6d65454ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f000ffff0000fff0f0f0ffffffffffffffffffff44445ff5444555555444ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f0f0fff000000f000fffffffffffffffffffffffffffffff2ffffffffff2ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f0f0fff000000f000fffffffffffffffffffffffffffffff2ffffffffff2ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f0f0ff00f00f00000fffffffffffffffffffffffffffffff2ffffffffff2ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ff0fffffffffffffff0fff0ffffffffffffffffff3ffccccf3f511115fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ff0ffffffffffffff000ff0ffffffffffffffffff3ffcc7c434511115444ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f000fffff00ffffff000f000ffffffffffffffff4444fccf464555555444ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+00000ffff00ffffff000f0000fffffffffffffff6666555544456d6d5444ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+0000f0ff0000fff0f000f000ffffffffffffffff666655554445d6d65454ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f000ffff0000fff0f0f0f000ffffffffffffffff44445ff5444555555444ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f0f0fff000000f000ffff0f0ffffffffffffffffffffffff2ffffffffff2ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f0f0fff000000f000ffff0f0ffffffffffffffffffffffff2ffffffffff2ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f0f0ff00f00f00000ffff0f0ffffffffffffffffffffffff2ffffffffff2ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ff1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 f111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
@@ -816,18 +899,18 @@ ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
 b333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
 3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111122222222111112222222222222
-3bb3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111122222222111112222222222222
-3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
-3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
-3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
+3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111122222222111112222222222222
 333bffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
+3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
+3bb3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
+3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
 3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff22222222222222111111111111111112
-8888ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff22222222222222111111111111111112
+bbbbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff22222222222222111111111111111112
+bbbbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021112111112111111111111111112
+bbbbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021112111112111111111111111112
 8888ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021112111112111111111111111112
-8888ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021112111112111111111111111112
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021112111112111111111111111112
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021112111112111112222222222222
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021112111112111112222222222222
+8888ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021112111112111112222222222222
+8888ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021112111112111112222222222222
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021112111112111111111111111112
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021112111112111111111111111112
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021112222222111111111111111112
@@ -838,3 +921,15 @@ ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00022222222222222222222222222222
 __sfx__
 000100000c030110200c0100201010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0001000018030190200c0100201010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+002900001405013050110000f000070001b0001800016000160001300016000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000d0000050200a0300f030180301f0302e0301f00030030000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001300000f0300f0000f00000000000000f0000f0000f0000f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000002703000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
