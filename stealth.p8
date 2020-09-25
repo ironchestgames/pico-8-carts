@@ -23,6 +23,15 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  printh(result,'debug',false)
 end
 
+-- function convert(value)
+--  local binary = ""
+--  for i=1,32 do
+--   binary=band(shl(value,16),1)..binary
+--   value=shr(value,1)
+--  end
+--  return ''..value..' = '..binary
+-- end
+
 function curry3(_f,_a,_b,_c)
  return function()
   _f(_a,_b,_c)
@@ -804,35 +813,33 @@ function _update()
 end
 
 function _draw()
- cls(0)
- palt(0,false)
- palt(15,true)
+ gupd=stat(1)
+ gupdmax=max(gupd,gupdmax)
 
- -- draw floor
  local _lightcols={[0]=1,13,2}
- for _y=1,32 do
+ for _y=32,1,-1 do
   for _x=1,32 do
+
+   -- draw floor
    local _tile=floor[_y][_x]
    local _l=light[_y][_x]
-   if _l == 1 then
-    _tile=_lightcols[_tile]
-   end
-   rectfill(_x*4-4,_y*4-4,_x*4,_y*4,_tile)
-  end
- end
+   local _sx,_sy=_x*4-4,_y*4-4
 
- -- draw walls
- for y=1,32 do
-  for x=1,32 do
-   local tile=floor[y][x]
-   local l=light[y][x]*5
-   local sx,sy=x*4-4,y*4-4
-   if tile == 2 then
-    if y < 32 then
-     if floor[y+1][x] == 0 then
-      sspr(4,0+l,4,5,sx,sy)
-     elseif floor[y+1][x] == 1 then
-      sspr(0,0+l,4,5,sx,sy)
+   local _col=_tile
+   if _l == 1 then
+    _col=_lightcols[_col]
+   end
+   rectfill(_sx,_sy,_sx+3,_sy+3,_col)
+  
+   -- draw walls
+   local _y1=_y+1
+   if _tile == 2 then
+    if _y < 32 then
+     local _tilebelow=floor[_y1][_x]
+     if _tilebelow == 0 then
+      sspr(4,0+_l*5,4,5,_sx,_sy)
+     elseif _tilebelow == 1 then
+      rectfill(_sx,_sy,_sx+3,_sy+4,13-7*_l)
      end
     end
    end
@@ -864,7 +871,6 @@ function _draw()
   -- draw players
   for _p in all(players) do
    if _p.y == _y then
-    -- rectfill(_p.x*4-4,_p.y*4-4-4,_p.x*4-4+3,_p.y*4-4+3,12)
     if _p.state == 'hiding' then
      if _p.adjacency == 0 then
       sspr(6,16,4,9,_p.x*4-4,_p.y*4-9)
@@ -937,22 +943,27 @@ function _draw()
  end
 
  if devvalues then
-  print('fps: '..stat(7),0,122-42,11) -- note: fps
-  print(' min '..gfps,0,122-36,11) -- note: fps min
-  print('sys: '..stat(2),0,122-30,11) -- note: system calls
-  print(' max '..gsys,0,122-24,11) -- note: system calls max
+
+  print('upd: '..gupd,0,122-54,11)
+  print(' max '..gupdmax,0,122-48,11)
+  -- print('fps: '..stat(7),0,122-42,11) -- note: fps
+  -- print(' min '..gfps,0,122-36,11) -- note: fps min
+  -- print('sys: '..stat(2),0,122-30,11) -- note: system calls
+  -- print(' max '..gsys,0,122-24,11) -- note: system calls max
   print('cyc: '..stat(1),0,122-18,11) -- note: lua calls
   print(' max '..gcyc,0,122-12,11) -- note: lua calls max
-  print('mem: '..stat(0),0,122-6,11) -- note: memory
-  print(' max '..gmem,0,122,11) -- note: memory max
+  -- print('mem: '..stat(0),0,122-6,11) -- note: memory
+  -- print(' max '..gmem,0,122,11) -- note: memory max
 
-  gmem=max(gmem,stat(0))
+  -- gfps=min(gfps,stat(7))
+  -- gsys=max(gsys,stat(2))
   gcyc=max(gcyc,stat(1))
-  gsys=max(gsys,stat(2))
-  gfps=min(gfps,stat(7))
+  -- gmem=max(gmem,stat(0))
  end
 end
 
+gupd=0
+gupdmax=0
 gmem=0
 gcyc=0
 gsys=0
@@ -961,6 +972,8 @@ gfps=30
 function _init()
  t=0
  alertlvl=1
+ palt(0,false)
+ palt(15,true)
 end
 
 
