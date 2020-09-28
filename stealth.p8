@@ -12,6 +12,7 @@ devvalues=true
 
 menuitem(1, 'devfog', function() devfog=not devfog end)
 menuitem(2, 'devghost', function() devghost=not devghost end)
+menuitem(3, 'devvalues', function() devvalues=not devvalues end)
 
 printh('debug started','debug',true)
 function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
@@ -152,7 +153,8 @@ local alertlvls={24,8} -- note: only tick time
 -- states:
 -- 0 - off
 -- 1 - on
--- 2 - selected (on)
+-- 2 - selected/on (camcontrol)
+-- 3 - system alarm (camcontrol)
 local cameras={ -- note: camcontrol will crash with more than 4
  {i=1,x=30,y=24,state=1,},
  {i=2,x=1,y=7,state=1,},
@@ -299,7 +301,7 @@ local function camcontrol(_p,_o,_tmp)
    _tmp.pos[3].state=3
    _tmp.pos[4].state=3
    sfx(13)
-   -- todo: call police
+   -- todo: intruder alert
   end
  end
 
@@ -353,6 +355,15 @@ local t=0
 
 function gameupdate()
  t-=1
+
+ -- reset fog
+ for _i=0,arslen do
+  -- if floor[_i] == 2 then
+   -- fog[_i]=2
+  -- else
+   fog[_i]=1
+  -- end
+ end
 
  for _p in all(players) do
 
@@ -531,7 +542,7 @@ function gameupdate()
   t=alertlvls[alertlvl]
  end
 
- -- -- clear objects light
+ -- clear objects light
  for _o in all(objs) do
   _o.light={} -- todo: optimize
  end
@@ -561,6 +572,12 @@ function gameupdate()
       end
      end
      light[_bydown*32+_bx]=1
+     if _c.state == 2 then
+      fog[_bydown*32+_bx]=0
+      if _by == _y then
+       fog[(_bydown-1)*32+_bx]=0
+      end
+     end
      _bydown+=1
      _bldown+=1
     end
@@ -570,6 +587,12 @@ function gameupdate()
      for _o in all(objs) do
       if (_o.x == _bxside and _o.y == _by) then
        add(_o.light,{x=-_dx,y=0})
+      end
+     end
+     if _c.state == 2 then
+      fog[_by*32+_bxside]=0
+      if _by == _y then
+       fog[(_by-1)*32+_bxside]=0
       end
      end
      light[_by*32+_bxside]=1
@@ -746,15 +769,6 @@ function gameupdate()
   end
  end
 
- -- reset fog
- for _i=0,arslen do
-  -- if floor[_i] == 2 then
-   -- fog[_i]=2
-  -- else
-   fog[_i]=1
-  -- end
- end
-
  -- -- remove fog
  for _p in all(players) do
   if _p.state == 'caught' then
@@ -795,7 +809,7 @@ function gameupdate()
   end
  end
 
- -- -- remove fog from holding guards
+ -- remove fog from holding guards
  for _g in all(guards) do
   if _g.state == 'holding' then
    fog[(_g.y-2)*32+_g.x-1]=0
@@ -823,9 +837,9 @@ function gameupdate()
  end
 
  -- remove fog from walls
- for _i=33,32*32 do
-   if floor[_i] == 2 and floor[_i-32] == 2 and fog[_i] == 0 then
-    fog[_i-32]=0
+ for _i=0,arslen do
+   if fog[_i+32] == 0 and floor[_i] == 2 and floor[_i+32] == 2 then
+    fog[_i]=0
    end
  end
 
