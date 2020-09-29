@@ -108,7 +108,9 @@ local function walladjacency(_a)
 end
 
 local msgs={}
+local msgcols={{6,13},{9,10}}
 
+local escapedplayers={}
 local playerinventory={}
 
 local function playerloots(_p,_o)
@@ -144,7 +146,7 @@ end
 
 
 local players={
- {x=8,y=30},
+ {x=2,y=30},
  {x=6,y=29},
 }
 
@@ -467,6 +469,11 @@ end
 
 local t=0
 
+
+
+
+
+
 function gameupdate()
  t-=1
 
@@ -504,8 +511,10 @@ function gameupdate()
     _isinput=true
    end
    if nextx > 31 or nextx < 0 or nexty > 31 or nexty < 0 then
-    -- todo: leave premises
-    debug('player left premises',_p.i)
+    add(escapedplayers,_p)
+    del(players,_p)
+    add(msgs,{x=_p.x,y=_p.y,s='escaped',t=2})
+    -- todo: add warning
    else
     for _o in all(objs) do
      if nextx == _o.x and nexty == _o.y then
@@ -728,7 +737,7 @@ function gameupdate()
   end
  end
 
- -- -- shine guards flashlights
+ -- shine guards flashlights
  for _g in all(guards) do
   if _g.state == 'holding' then
    light[(_g.y-2)*32+_g.x-1]=1
@@ -880,7 +889,7 @@ function gameupdate()
     -- todo: start police countdown
     alertlvl=2
     for _g in all(guards) do
-     add(msgs,{x=_g.x,y=_g.y,s='intruder alert!',t=4})
+     add(msgs,{x=_g.x,y=_g.y,s='intruder alert!',t=4,colset=2})
      _g.state='patrolling'
     end
     t=60
@@ -888,7 +897,7 @@ function gameupdate()
   end
  end
 
- -- -- remove fog
+ -- remove fog
  for _p in all(players) do
   if _p.state == 'caught' then
    -- do nothing
@@ -906,23 +915,27 @@ function gameupdate()
    for _d in all(_dirs) do
     local _x,_y=_p.x,_p.y
     local _l=32
-    while floor[_y*32+_x] != 2 do
+    while floor[_y*32+_x] != 2 and floor[_y*32+_x] != nil do
      local _c=0
      local _bx=_x
      local _by=_y
-     while floor[_by*32+_bx] != 2 and _c <= _l do
+     while floor[_by*32+_bx] != 2 and floor[_by*32+_bx] != nil and _c <= _l do
       fog[_by*32+_bx]=0
       _bx+=_d.dx
       _by+=_d.dy
       _c+=1
      end
-     fog[_by*32+_bx]=0
+     if _by < 32 and _by >= 0 and _bx < 32 and _bx >= 0 then
+      fog[_by*32+_bx]=0
+     end
      _bx+=_d.dx
      _by+=_d.dy
      _l=_c
      _x+=_d.x
      _y+=_d.y
-     fog[_y*32+_x]=0
+     if _y < 32 and _y >= 0 and _x < 32 and _x >= 0 then
+      fog[_y*32+_x]=0
+     end
     end
    end
   end
@@ -1030,12 +1043,12 @@ function _draw()
    if _p.y == _y then
     local _l=light[_p.y*32+_p.x]
     if _p.state == 'hiding' then
-     sspr(12+_p.adjacency*4,72,4,9,_p.x*4,_p.y*4-5)
+     sspr(24+_p.adjacency*4,72,4,9,_p.x*4,_p.y*4-5)
     elseif _p.state == 'working' then
      if _p.workingstate == 'hacking' then
-      sspr(27,72+_l*9,5,9,_p.x*4,_p.y*4-5)
+      sspr(40,72+_l*9,5,9,_p.x*4,_p.y*4-5)
      elseif _p.workingstate == 'cracking' then
-      sspr(32,72+_l*9,5,9,_p.x*4,_p.y*4-5)
+      sspr(45,72+_l*9,5,9,_p.x*4,_p.y*4-5)
      end
      if #_p.loot > 0 then
       sspr(5,91+_l*4,8,4,_p.x*4,_p.y*4)
@@ -1043,14 +1056,15 @@ function _draw()
     elseif _p.state == 'caught' then
      sspr(0,90,6,9,_p.x*4,_p.y*4-5)
     else
+     local _floor=floor[_p.y*32+_p.x]
      local _flipx=false
      if _p.dir == 1 then
       _flipx=true
      end
      if #_p.loot > 0 then
-      sspr(6,72+_l*9,6,9,_p.x*4,_p.y*4-5,6,9,_flipx)
+      sspr(6+_floor*12,72+_l*9,6,9,_p.x*4-_p.dir*2,_p.y*4-5,6,9,_flipx)
      else
-      sspr(0,72+_l*9,6,9,_p.x*4,_p.y*4-5,6,9,_flipx)
+      sspr(0+_floor*12,72+_l*9,6,9,_p.x*4-_p.dir*2,_p.y*4-5,6,9,_flipx)
      end
     end
    end
@@ -1098,14 +1112,15 @@ function _draw()
  end
 
  -- draw messages
- local _col=10
+ local _coli=1
  if t%8 >= 4 then
-  _col=9
+  _coli=2
  end
  for _m in all(msgs) do
   local _hw=#_m.s*2
   local _x=max(min(_m.x*4-_hw,127-_hw*2),0)
   local _y=max(_m.y*4-13,0)
+  local _col=msgcols[_m.colset or 1][_coli]
   print(_m.s,_x,_y,_col)
  end
 
@@ -1217,24 +1232,24 @@ ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ff0fffff0ffffffffffffffffffff0ffff0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ff0fffff0ffffffffffffffff0fff0ffff0f0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f000fff0000ffff00fffffff000f000ff000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-00000f000000fff00fffffff000f0000f00fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-0000f0000000ff0000ffff0f000f000ff00fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f000fff00000ff0000ffff0f000f000ff000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f0f0fff0f0fff000000ff0000f0f0f0f00f0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f0f0fff0f0fff000000ff000ffff0f0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f0f0fff0f0ff00f00f00f000ffff0f0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-fffffffffffffffffffffffffffff1ffff1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ff1fffff1ffffffffffffffff1fffeffffef9fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f1e1fff1e22ffff11fffffff1e1f111ff111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-11111f111922fffeefffffff111f1119f11fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-1911f9191122ff1111ffff1f919f111ff11fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f111fff11122ff1111ffffef111f111ff111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f1f1fff1f1fff111111ff1111f1f1f1f11f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f1f1fff1f1fff111111ff111ffff1f1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f1f1fff1f1ff11f99f11f111ffff1f1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ff1fffff1fffff0fffff0ffffffffffffffffffff0fffff0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ff1fffff1fffff0fffff0ffffffffffffffff0fff0fffff0f0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f111fff1111ff000fff0000ffff00fffffff000f000fff000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+11111f11111100000f000000fff00fffffff000f0000ff00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+1111f11111110000f0000000ff0000ffff0f000f000fff00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f111fff11111f000fff00000ff0000ffff0f000f000fff000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f1f1fff1f1fff0f0fff0f0fff000000ff0000f0f0f0ff00f0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f1f1fff1f1fff0f0fff0f0fff000000ff000ffff0f0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f1f1fff1f1fff0f0fff0f0ff00f00f00f000ffff0f0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+fffffffffffffffffffffffffffffffffffffffff1fffff1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ff1fffff1fffff1fffff1ffffffffffffffff1fffefffffef9ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f1e1fff1e22ff1e1fff1e22ffff11fffffff1e1f111fff111fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+11111f11192211111f111922fffeefffffff111f1119ff11ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+1911f91911221911f9191122ff1111ffff1f919f111fff11ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f111fff11122f111fff11122ff1111ffffef111f111fff111fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f1f1fff1f1fff1f1fff1f1fff111111ff1111f1f1f1ff11f1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f1f1fff1f1fff1f1fff1f1fff111111ff111ffff1f1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f1f1fff1f1fff1f1fff1f1ff11f99f11f111ffff1f1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ff1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 f1e1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
