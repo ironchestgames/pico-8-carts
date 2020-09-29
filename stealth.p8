@@ -144,9 +144,18 @@ end
 
 
 local players={
- {i=0,x=8,y=30,state='standing',workingstate='hacking',loot={}},
- {i=1,x=6,y=29,state='standing',workingstate='hacking',loot={}},
+ {x=8,y=30},
+ {x=6,y=29},
 }
+
+for _i=1,#players do
+ local _p=players[_i]
+ _p.i=_i-1
+ _p.dir=1
+ _p.state='standing'
+ _p.workingstate='hacking'
+ _p.loot={}
+end
 
 local guards={
  {
@@ -481,9 +490,11 @@ function gameupdate()
    local _isinput
    if btnp(0,_p.i) then
     nextx-=1
+    _p.dir=0
     _isinput=true
    elseif btnp(1,_p.i) then
     nextx+=1
+    _p.dir=1
     _isinput=true
    elseif btnp(2,_p.i) then
     nexty-=1
@@ -1032,10 +1043,14 @@ function _draw()
     elseif _p.state == 'caught' then
      sspr(0,90,6,9,_p.x*4,_p.y*4-5)
     else
+     local _flipx=false
+     if _p.dir == 1 then
+      _flipx=true
+     end
      if #_p.loot > 0 then
-      sspr(6,72+_l*9,6,9,_p.x*4,_p.y*4-5)
+      sspr(6,72+_l*9,6,9,_p.x*4,_p.y*4-5,6,9,_flipx)
      else
-      sspr(0,72+_l*9,6,9,_p.x*4,_p.y*4-5)
+      sspr(0,72+_l*9,6,9,_p.x*4,_p.y*4-5,6,9,_flipx)
      end
     end
    end
