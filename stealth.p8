@@ -107,6 +107,8 @@ local function walladjacency(_a)
  return nil
 end
 
+local t=0
+
 local msgs={}
 local msgcols={{6,13},{9,10}}
 
@@ -161,8 +163,8 @@ end
 
 local guards={
  {
-  x=27,y=4,
-  dx=0,dy=1,
+  x=8,y=9,
+  dx=-1,dy=0,
   state='patrolling',
   state_c=0,
   state_c2=0,
@@ -178,6 +180,19 @@ local guards={
 
 local alertlvl=1
 local alertlvls={24,8} -- note: only tick time
+local policet=0
+
+local function setlalertlvl2()
+ if alertlvl == 1 then
+  alertlvl=2
+  t=60
+  for _g in all(guards) do
+   add(msgs,{x=_g.x,y=_g.y,s='intruder alert!',t=4,colset=2})
+   _g.state='patrolling'
+  end
+  policet=120
+ end
+end
 
 -- states:
 -- 0 - off
@@ -449,16 +464,25 @@ local function resetdoor(_p,_o)
  _p.state='standing'
 
  -- reset obj
- _o.draw=nil
  _o.typ-=2
 end
+
 local function doorfromunder(_p,_o,_tmp)
  if _tmp.inited == nil then
   _o.typ+=2
   _tmp.inited=true
  end
 
- fog[(_o.y-2)*32+_o.x]=0
+ if light[(_o.y-2)*32+_o.x] == 1 then
+  setlalertlvl2()
+ end
+
+ for _y=_o.y-2,0,-1 do
+  if floor[_y*32+_o.x] == 2 then
+   break
+  end
+  fog[_y*32+_o.x]=0
+ end
 
  if btnp(2,_p.i) then
   _p.y-=3
@@ -470,28 +494,78 @@ local function doorfromunder(_p,_o,_tmp)
  end
 end
 
+local function doorpeekfromunder(_p,_o)
+ fog[(_o.y-2)*32+_o.x]=0
+end
+
+local function doorfromabove(_p,_o,_tmp)
+ if _tmp.inited == nil then
+  _tmp.o2=objs[_o.i-1]
+  _tmp.o2.typ+=2
+  _tmp.inited=true
+ end
+
+ if light[(_o.y+2)*32+_o.x] == 1 then
+  setlalertlvl2()
+ end
+
+ fog[(_o.y+1)*32+_o.x]=0
+ for _y=_o.y+2,32 do
+  if floor[_y*32+_o.x] == 2 then
+   break
+  end
+  fog[_y*32+_o.x]=0
+ end
+
+ if btnp(2,_p.i) then
+  resetdoor(_p,_tmp.o2)
+ end
+
+ if btnp(3,_p.i) then
+  _p.y+=3
+  resetdoor(_p,_tmp.o2)
+ end
+end
+
+local function doorpeekfromabove(_p,_o)
+ fog[(_o.y+1)*32+_o.x]=0
+ fog[(_o.y+2)*32+_o.x]=0
+end
+
 
 objs={
- {x=10,y=13,typ=0,light={},shadow={[0]=true,true,true,true}},
+ {x=10,y=13,typ=0,shadow={[0]=true,true,true,true}},
 
- {x=14,y=18,typ=0,light={},shadow={[0]=true,true,true,true}},
+ {x=14,y=18,typ=0,shadow={[0]=true,true,true,true}},
 
- {x=20,y=21,typ=1,light={},shadow={[0]=true,true,true,true}},
+ {x=20,y=21,typ=1,shadow={[0]=true,true,true,true}},
 
- {x=24,y=24,typ=2,light={},shadow={[0]=true,nil,nil,nil}},
- {x=25,y=24,typ=3,light={},shadow={[0]=nil,nil,nil,nil},action={[2]=computer},loot={'door access code'}},
- {x=26,y=24,typ=4,light={},shadow={[0]=nil,true,nil,nil}},
+ {x=24,y=24,typ=2,shadow={[0]=true,nil,nil,nil}},
+ {x=25,y=24,typ=3,action={[2]=computer},loot={'door access code'}},
+ {x=26,y=24,typ=4,shadow={[0]=nil,true,nil,nil}},
 
- {x=6,y=19,typ=5,light={},shadow={[0]=true,nil,nil,nil}},
- {x=8,y=19,typ=7,light={},shadow={[0]=nil,true,nil,nil}},
- {x=7,y=19,typ=6,light={},shadow={[0]=nil,nil,nil,nil},action={[2]=camcontrol}}, -- note: draw last
+ {x=6,y=19,typ=5,shadow={[0]=true,nil,nil,nil}},
+ {x=8,y=19,typ=7,shadow={[0]=nil,true,nil,nil}},
+ {x=7,y=19,typ=6,action={[2]=camcontrol}}, -- note: draw last
 
- {x=11,y=28,typ=9,light={},shadow={[0]=nil,true,nil,nil}},
- {x=10,y=28,typ=8,light={},shadow={[0]=true,nil,nil,nil},action={[2]=safe},loot={'diamonds',14000}},
+ {x=11,y=28,typ=9,shadow={[0]=nil,true,nil,nil}},
+ {x=10,y=28,typ=8,shadow={[0]=true,nil,nil,nil},action={[2]=safe},loot={'diamonds',14000}},
 
- {x=4,y=18,typ=12,light={},shadow={[0]=nil,nil,nil,nil},action={[2]=doorfromunder}},
- {x=5,y=18,typ=13,light={},shadow={[0]=nil,nil,nil,nil}}, -- todo: maybe rewrite objects to be in arslen arr instead?
+ {x=4,y=18,typ=12,action={[2]=doorfromunder},adjaction={[2]=doorpeekfromunder}},
+ {x=4,y=17,action={[3]=doorfromabove},adjaction={[3]=doorpeekfromabove}},
+ {x=5,y=18,typ=13},
 }
+
+ -- todo: maybe rewrite objects to be in arslen arr instead?
+
+for _i=1,#objs do
+ local _o=objs[_i]
+ _o.i=_i
+ _o.light={}
+ if _o.shadow == nil then
+  _o.shadow={[0]=nil,nil,nil,nil}
+ end
+end
 
 local function iswallclose(_x,_y,_dx,_dy)
  local _c=0
@@ -502,8 +576,6 @@ local function iswallclose(_x,_y,_dx,_dy)
  end
  return _c <= 3
 end
-
-local t=0
 
 
 
@@ -556,13 +628,16 @@ function gameupdate()
    else
 
     for _o in all(objs) do
+     local _a=adjacency(_o.x,_o.y,_p.x,_p.y)
      if _nextx == _o.x and _nexty == _o.y then
       _nextx,_nexty=_p.x,_p.y
-      local _a=adjacency(_o.x,_o.y,_p.x,_p.y)
       if _o.action and _o.action[_a] then
        _p.state='working'
        _p.action=curry3(_o.action[_a],_p,_o,{})
       end
+
+     elseif _o.adjaction and _o.adjaction[_a] != nil then
+      _o.adjaction[_a](_p,_o)
      end
     end
 
@@ -703,6 +778,12 @@ function gameupdate()
 
   -- set new tick
   t=alertlvls[alertlvl]
+  if alertlvl == 2 and policet > 0 then
+   policet-=1
+   if policet <= 0 then
+    -- todo: get arrested
+   end
+  end
  end
 
  -- clear objects light
@@ -927,13 +1008,7 @@ function gameupdate()
  if devghost == false and alertlvl == 1 then
   for _p in all(players) do
    if light[_p.y*32+_p.x] == 1 then
-    -- todo: start police countdown
-    alertlvl=2
-    for _g in all(guards) do
-     add(msgs,{x=_g.x,y=_g.y,s='intruder alert!',t=4,colset=2})
-     _g.state='patrolling'
-    end
-    t=60
+    setlalertlvl2()
    end
   end
  end
@@ -1036,6 +1111,14 @@ function _draw()
  gupd=stat(1)
  gupdmax=max(gupd,gupdmax)
 
+ if alertlvl == 2 and policet <= 0 then
+  if t%24 >= 12 then
+   pal(0,8)
+  else
+   pal(0,12)
+  end
+ end
+
  local _lightcols={[0]=1,13,2}
  for _i=32*32,0,-1 do
 
@@ -1065,28 +1148,24 @@ function _draw()
   end
  end
 
- for _y=1,32 do
+ pal()
+ palt(0,false)
+ palt(15,true)
 
-  -- draw doors
-  -- for _d in all(doors) do
-  --  if _d.y == _y then
-  --   local _l=light[_d.y*32+_d.x]
-  --   sspr(0+_d.state*7,10+_l*10,6,9,_d.x*4-1,_d.y*4-3)
-  --  end
-  -- end
+ for _y=1,32 do
 
   -- draw cameras
   for _c in all(cameras) do
    local _sx=32
    if floor[_c.y*32+_c.x+1] == 2 then -- todo: make so cameras can be set anywhere on wall
-    _sx=26
+    _sx=36
    end 
    sspr(_sx,104+_c.state*3,4,3,_c.x*4,_c.y*4-4)
   end
 
   -- draw objs
   for _o in all(objs) do
-   if _o.y == _y then
+   if _o.typ != nil and _o.y == _y then
     local _l=light[_o.y*32+_o.x]
     sspr(_o.typ*4,_l*13,4,13,_o.x*4,_o.y*4-5)
     if _o.draw then
@@ -1211,8 +1290,6 @@ gfps=30
 function _init()
  t=0
  alertlvl=1
- palt(0,false)
- palt(15,true)
 end
 
 
