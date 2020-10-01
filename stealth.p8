@@ -78,14 +78,14 @@ local function shuffle(_l)
  return _l
 end
 
-local function adjacency(_a,_b)
- if _a.x == _b.x-1 and _a.y == _b.y then
+local function adjacency(_x1,_y1,_x2,_y2)
+ if _x1 == _x2-1 and _y1 == _y2 then
   return 0
- elseif _a.x == _b.x+1 and _a.y == _b.y then
+ elseif _x1 == _x2+1 and _y1 == _y2 then
   return 1
- elseif _a.x == _b.x and _a.y == _b.y-1 then
+ elseif _x1 == _x2 and _y1 == _y2-1 then
   return 2
- elseif _a.x == _b.x and _a.y == _b.y+1 then
+ elseif _x1 == _x2 and _y1 == _y2+1 then
   return 3
  end
  return nil
@@ -115,12 +115,12 @@ local playerinventory={}
 
 local function playerloots(_p,_o)
  if _o.loot == nil then
-  add(msgs,{x=_o.x,y=_o.y,s='(nothing)',t=2})
+  add(msgs,{x=_o.x,y=_o.y,s='(nothing)',t=3})
  elseif _o.loot[2] != nil then
-  add(msgs,{x=_o.x,y=_o.y,s=_o.loot[1],t=2})
+  add(msgs,{x=_o.x,y=_o.y,s=_o.loot[1],t=3})
   _p.loot[#_p.loot+1]=_o.loot
  else
-  add(msgs,{x=_o.x,y=_o.y,s=_o.loot[1],t=2})
+  add(msgs,{x=_o.x,y=_o.y,s=_o.loot[1],t=3})
   playerinventory[#playerinventory+1]=_o.loot
  end
  _o.loot=nil
@@ -146,8 +146,8 @@ end
 
 
 local players={
- {x=2,y=30},
- {x=6,y=29},
+ {x=6,y=26},
+ -- {x=6,y=29},
 }
 
 for _i=1,#players do
@@ -438,6 +438,39 @@ local function safe(_p,_o,_tmp)
 
 end
 
+-- states:
+-- 0 - closed
+-- 1 - open (player is going through)
+-- 2 - locked
+-- 3 - unlocked
+local function resetdoor(_p,_o)
+ -- reset player
+ _p.action=nil
+ _p.state='standing'
+
+ -- reset obj
+ _o.draw=nil
+ _o.typ-=2
+end
+local function doorfromunder(_p,_o,_tmp)
+ if _tmp.inited == nil then
+  _o.typ+=2
+  _tmp.inited=true
+ end
+
+ fog[(_o.y-2)*32+_o.x]=0
+
+ if btnp(2,_p.i) then
+  _p.y-=3
+  resetdoor(_p,_o)
+ end
+
+ if btnp(3,_p.i) then
+  resetdoor(_p,_o)
+ end
+end
+
+
 objs={
  {x=10,y=13,typ=0,light={},shadow={[0]=true,true,true,true}},
 
@@ -455,6 +488,9 @@ objs={
 
  {x=11,y=28,typ=9,light={},shadow={[0]=nil,true,nil,nil}},
  {x=10,y=28,typ=8,light={},shadow={[0]=true,nil,nil,nil},action={[2]=safe},loot={'diamonds',14000}},
+
+ {x=4,y=18,typ=12,light={},shadow={[0]=nil,nil,nil,nil},action={[2]=doorfromunder}},
+ {x=5,y=18,typ=13,light={},shadow={[0]=nil,nil,nil,nil}}, -- todo: maybe rewrite objects to be in arslen arr instead?
 }
 
 local function iswallclose(_x,_y,_dx,_dy)
@@ -486,6 +522,7 @@ function gameupdate()
   -- end
  end
 
+ -- update players
  for _p in all(players) do
 
   if _p.state == 'working' then
@@ -493,50 +530,54 @@ function gameupdate()
    _p.action()
 
   else
-   local nextx,nexty=_p.x,_p.y
    local _isinput
+   _p.dx=0
+   _p.dy=0
    if btnp(0,_p.i) then
-    nextx-=1
+    _p.dx=-1
     _p.dir=0
     _isinput=true
    elseif btnp(1,_p.i) then
-    nextx+=1
+    _p.dx=1
     _p.dir=1
     _isinput=true
    elseif btnp(2,_p.i) then
-    nexty-=1
+    _p.dy=-1
     _isinput=true
    elseif btnp(3,_p.i) then
-    nexty+=1
+    _p.dy=1
     _isinput=true
    end
-   if nextx > 31 or nextx < 0 or nexty > 31 or nexty < 0 then
+   local _nextx,_nexty=_p.x+_p.dx,_p.y+_p.dy
+   if _nextx > 31 or _nextx < 0 or _nexty > 31 or _nexty < 0 then
     add(escapedplayers,_p)
     del(players,_p)
     add(msgs,{x=_p.x,y=_p.y,s='escaped',t=2})
-    -- todo: add warning
    else
+
     for _o in all(objs) do
-     if nextx == _o.x and nexty == _o.y then
-      nextx,nexty=_p.x,_p.y
-      local _a=adjacency(_o,_p)
+     if _nextx == _o.x and _nexty == _o.y then
+      _nextx,_nexty=_p.x,_p.y
+      local _a=adjacency(_o.x,_o.y,_p.x,_p.y)
       if _o.action and _o.action[_a] then
        _p.state='working'
        _p.action=curry3(_o.action[_a],_p,_o,{})
       end
      end
-    end 
-    if _p.state != 'caught' and floor[nexty*32+nextx] != 2 then
-     _p.x,_p.y=nextx,nexty
+    end
+
+
+    if _p.state != 'caught' and floor[_nexty*32+_nextx] != 2 then
+     _p.x,_p.y=_nextx,_nexty
 
      -- hide behind object
      if _p.state != 'working' then
       local _hiding=nil
       local _pwa=walladjacency(_p)
       for _o in all(objs) do
-       local _a=adjacency(_p,_o)
+       local _a=adjacency(_p.x,_p.y,_o.x,_o.y)
        local _owa=walladjacency(_o)
-       if _owa != nil and _pwa != nil and _a != nil and light[_p.y*32+_p.x] == 0 then
+       if _o.shadow[_a] and _owa != nil and _pwa != nil and _a != nil and light[_p.y*32+_p.x] == 0 then
         _p.state='hiding'
         _p.adjacency=_a
         _hiding=true
@@ -557,7 +598,7 @@ function gameupdate()
    if (_p.state != 'hiding' or light[_p.y*32+_p.x] == 1) and _p.state != 'caught' and abs(_dx) <= 1 and abs(_dy) <= 1 then
     _p.state='caught'
     _g.state='holding'
-    add(msgs,{x=_g.x,y=_g.y,s='suspect caught!',t=4})
+    add(msgs,{x=_g.x,y=_g.y,s='suspect caught!',t=4,colset=2})
    end
   end
 
@@ -941,6 +982,14 @@ function gameupdate()
   end
  end
 
+ -- -- remove fog from open doors
+ -- for _d in all(doors) do
+ --  if _d.state == 1 then
+ --   fog[(_d.y+1)*32+_d.x]=0
+ --   fog[(_d.y-2)*32+_d.x]=0
+ --  end
+ -- end
+
  -- remove fog from holding guards
  for _g in all(guards) do
   if _g.state == 'holding' then
@@ -1002,13 +1051,13 @@ function _draw()
   end
   rectfill(_sx,_sy,_sx+3,_sy+3,_col)
   
-  -- -- draw walls
+  -- draw walls
   local _y1=_y+1
   if _tile == 2 then
    if _y < 32 then
     local _tilebelow=floor[_y1*32+_x]
-    if _tilebelow == 0 then
-     sspr(4,0+_l*5,4,5,_sx,_sy)
+    if _tilebelow == 0 then -- todo: maybe remove this, maybe it shouldn't be possible to have light outside
+     sspr(12,104+_l*5,4,5,_sx,_sy)
     elseif _tilebelow == 1 then
      rectfill(_sx,_sy,_sx+3,_sy+4,13-7*_l)
     end
@@ -1018,20 +1067,28 @@ function _draw()
 
  for _y=1,32 do
 
+  -- draw doors
+  -- for _d in all(doors) do
+  --  if _d.y == _y then
+  --   local _l=light[_d.y*32+_d.x]
+  --   sspr(0+_d.state*7,10+_l*10,6,9,_d.x*4-1,_d.y*4-3)
+  --  end
+  -- end
+
   -- draw cameras
   for _c in all(cameras) do
-   local _sx=24
+   local _sx=32
    if floor[_c.y*32+_c.x+1] == 2 then -- todo: make so cameras can be set anywhere on wall
-    _sx=28
+    _sx=26
    end 
-   sspr(_sx,0+_c.state*3,4,3,_c.x*4,_c.y*4-4)
+   sspr(_sx,104+_c.state*3,4,3,_c.x*4,_c.y*4-4)
   end
 
   -- draw objs
   for _o in all(objs) do
    if _o.y == _y then
     local _l=light[_o.y*32+_o.x]
-    sspr(40+_o.typ*4,0+_l*13,4,13,_o.x*4,_o.y*4-5)
+    sspr(_o.typ*4,_l*13,4,13,_o.x*4,_o.y*4-5)
     if _o.draw then
      _o.draw()
     end
@@ -1106,7 +1163,7 @@ function _draw()
     local _x,_y=_i&31,_i\32
     rectfill(_x*4,_y*4,_x*4+3,_y*4+3,0)
    elseif _f == 2 then
-    sspr(4,10,4,4,_x*4-4,_y*4-4)
+    sspr(28,104,4,4,_x*4-4,_y*4-4)
    end
   end
  end
@@ -1160,31 +1217,31 @@ end
 
 
 __gfx__
-dddd2220000011112222ffffff4ff4fffffffffff5ffffffffffffffffff5555555555555555555555555555ffffffffffffffffffffffffffffffffffffffff
-dddd0000000011112222fffff551155ffffffffff5f5ccccfff555555fff2511155111525111111551111125ffffffffffffffffffffffffffffffffffffffff
-dddd0222000011112222ffff5ffffff5ffffffffff5fcc1c5ff511115fff251115511152511d111551555225ffffffffffffffffffffffffffffffffffffffff
-dddd0000000011112222ffffff8ff8fffffffffff5ffcc1cf5f511115fff25555555555251111115555552d5ffffffffffffffffffffffffffffffffffffffff
-dddd22021111dddd0000fffff551155ffffffffff5ffc1cc25251111522225111551115251dd111551111225ffffffffffffffffffffffffffffffffffffffff
-666644451111dddd0000ffff5ffffff5ffffffff2222fccf2d255555522255111551115551d11115511112d5ffffffffffffffffffffffffffffffffffffffff
-666655551111dddd0000ffffffbffbffffffffffdddd55552225d5d552225555555555555111111551555225ffffffffffffffffffffffffffffffffffffffff
-666654441111dddd0000fffff551155fffffffffdddd522522255d5d52522255d15d55225555555555555255ffffffffffffffffffffffffffffffffffffffff
-66665555000000000000ffff5ffffff5ffffffff22225ff522255555522222255555522255ffff5555ffff55ffffffffffffffffffffffffffffffffffffffff
-66664454000000000000ffffffffffffffffffffffffffff5ffffffffff5552222222255ffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-00000202000000000000ffffffffffffffffffffffffffff5ffffffffff5ff52222225ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-00002020000000000000ffffffffffffffffffffffffffff5ffffffffff5fff555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-00000202000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-00002020000000000000fffffffffffffffffffff3ffffffffffffffffff5555555555555555555555555555ffffffffffffffffffffffffffffffffffffffff
-00000000000000000000fffffffffffffffffffff3f3ccccfff555555fffd5111551115d5222222551111125ffffffffffffffffffffffffffffffffffffffff
-00000000000000000000ffffffffffffffffffffff3fc7cc3ff511115fffd5111551115d5226222551444225ffffffffffffffffffffffffffffffffffffffff
-fffffffffffffffffffffffffffffffffffffffff3ffccccf3f511115fffd5555555555d5222222555555265ffffffffffffffffffffffffffffffffffffffff
-fffffffffffffffffffffffffffffffffffffffff3ffcc7c434511115444d5111551115d5266222551111225ffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffff4444fccf4645555554445511155111555262222551111265ffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffff6666555544456d6d54445555555555555222222551444225ffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffff666654454445d6d6545422556d5655225555555555555255ffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffff44445ff544455555544422255555522255ffff5555ffff55ffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffff2ffffffffff2552222222255ffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffff2ffffffffff2ff52222225ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffff2ffffffffff2fff555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f5ffffffffffffffffff5555555555555555555555555555ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f5f5ccccfff555555fff2511155111525111111551111125ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ff5fcc1c5ff511115fff251115511152511d111551555225222222ff222222ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f5ffcc1cf5f511115fff25555555555251111115555552d5255552ff211152ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f5ffc1cc25251111522225111551115251dd111551111225255552ff211552ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+2222fccf2d255555522255111551115551d11115511112d5255552ff211552ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+dddd55552225d5d552225555555555555111111551555225255552ff211552ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+dddd522522255d5d52522255d15d552255555555555552552d5552ff211552ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+22225ff522255555522222255555522255ffff5555ffff55255552ff211d52ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ffffffff5ffffffffff5552222222255ffffffffffffffff255552ff211552ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ffffffff5ffffffffff5ff52222225fffffffffffffffffffffffffffff5ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ffffffff5ffffffffff5fff555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f3ffffffffffffffffff5555555555555555555555555555ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f3f3ccccfff555555fffd5111551115d5222222551111125ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ff3fc7cc3ff511115fffd5111551115d5226222551444225222222ff222222ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f3ffccccf3f511115fffd5555555555d5222222555555265244442ff211142ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f3ffcc7c434511115444d5111551115d5266222551111225244442ff211442ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+4444fccf4645555554445511155111555262222551111265244442ff211442ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+6666555544456d6d54445555555555555222222551444225244442ff211442ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+666654454445d6d6545422556d5655225555555555555255294442ff211442ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+44445ff544455555544422255555522255ffff5555ffff55244442ff211942ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ffffffff2ffffffffff2552222222255ffffffffffffffff244442ff211442ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ffffffff2ffffffffff2ff52222225fffffffffffffffffffffffffffff4ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ffffffff2ffffffffff2fff555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
@@ -1264,16 +1321,16 @@ f1f1ffffff222fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 1111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff22222222222222222222221111111112
 3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff22222222222222222222221111111112
 3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
-3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
-3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
-b333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
-3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111122222222111112222222222222
-3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111122222222111112222222222222
-333bffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
-3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
-3bb3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
-3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
-3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff22222222222222111111111111111112
+3333ffffdddd22200000111122220202ff4ff4ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
+3333ffffdddd00000000111122222020f551155fffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
+b333ffffdddd022200001111222202025ffffff5ffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
+3333ffffdddd00000000111122222020ff8ff8ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111122222222111112222222222222
+3333ffffdddd22021111dddd0000fffff551155fffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111122222222111112222222222222
+333bffff666644451111dddd0000ffff5ffffff5ffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
+3333ffff666655551111dddd0000ffffffbffbffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
+3bb3ffff666654441111dddd0000fffff551155fffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
+3333ffff66665555ffffffffffffffff5ffffff5ffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
+3333ffff66664454ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff22222222222222111111111111111112
 bbbbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff22222222222222111111111111111112
 bbbbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021111112112111111111111111112
 bbbbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021111112112111111111111111112
