@@ -137,15 +137,16 @@ local escapedplayers={}
 local playerinventory={}
 
 local function playerloots(_p,_o)
- if _o.loot == nil then
-  add(msgs,{x=_o.x,y=_o.y,s='(nothing)',t=3})
- elseif _o.loot[2] != nil then
-  add(msgs,{x=_o.x,y=_o.y,s=_o.loot[1],t=3})
-  _p.loot[#_p.loot+1]=_o.loot
- else
-  add(msgs,{x=_o.x,y=_o.y,s=_o.loot[1],t=3})
-  playerinventory[#playerinventory+1]=_o.loot
+ local _m='(nothing)'
+ if _o.loot != nil then
+  _m=_o.loot[1]
+  if _o.loot[2] != nil then -- has value, then it's a thing, take it
+   _p.loot[#_p.loot+1]=_o.loot
+  else
+   playerinventory[#playerinventory+1]=_o.loot -- no value, it's information
+  end
  end
+ add(msgs,{x=_o.x,y=_o.y,s=_m,t=3})
  _o.loot=nil
 end
 
