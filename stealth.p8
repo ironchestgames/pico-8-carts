@@ -203,13 +203,13 @@ local alertlvl=1
 local alertlvls={24,8} -- note: only tick time
 local policet=0
 
-local function setlalertlvl2()
+local function setlalertlvl2(_m)
  if alertlvl == 1 then
   alertlvl=2
   t=60
   policet=120
   for _g in all(guards) do
-   add(msgs,{x=_g.x,y=_g.y,s='intruder alert!',t=4,colset=2})
+   add(msgs,{x=_g.x,y=_g.y,s=_m,t=4,colset=2})
    _g.state='patrolling'
   end
  end
@@ -378,7 +378,7 @@ local function camcontrol(_p,_o,_tmp)
    _tmp.pos[3].state=3
    _tmp.pos[4].state=3
    sfx(13)
-   -- todo: intruder alert
+   setlalertlvl2('cctv compromised!')
   end
  end
 
@@ -495,7 +495,7 @@ local function doorfromunder(_p,_o,_tmp)
  end
 
  if light[(_o.y-2)*32+_o.x] == 1 then
-  setlalertlvl2()
+  setlalertlvl2('intruder alert!')
  end
 
  for _y=_o.y-2,0,-1 do
@@ -527,7 +527,7 @@ local function doorfromabove(_p,_o,_tmp)
  end
 
  if light[(_o.y+2)*32+_o.x] == 1 then
-  setlalertlvl2()
+  setlalertlvl2('intruder alert!')
  end
 
  fog[(_o.y+1)*32+_o.x]=0
@@ -1043,12 +1043,12 @@ function gameupdate()
  if devghost == false and alertlvl == 1 then
   for _p in all(players) do
    if light[_p.y*32+_p.x] == 1 then
-    setlalertlvl2()
+    setlalertlvl2('intruder alert!')
    end
   end
   for _o in all(objs) do
    if _o.typ == 10 and light[_o.y*32+_o.x] == 1 then
-    setlalertlvl2() -- todo: add something more descriptive than intruder alert, like safe compromised
+    setlalertlvl2('safe\'s cracked!')
    end
   end
  end
