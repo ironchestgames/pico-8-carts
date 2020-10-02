@@ -6,6 +6,13 @@ __lua__
 --[[
 
 - locked doors
+ - sfx
+
+- fix fog wrapping bug 
+
+- fix generic loot sound
+ - play in player loots
+ - remove from action functions
 
 - filing drawers
  - search (up/down?)
@@ -215,8 +222,8 @@ end
 
 
 local players={
- {x=2,y=26},
- -- {x=6,y=29},
+ {x=21,y=26},
+ {x=1,y=30},
 }
 
 for _i=1,#players do
@@ -268,7 +275,7 @@ end
 -- 3 - system alarm (camcontrol)
 local cameras={ -- note: camcontrol will crash with more than 4
  {i=1,x=30,y=24,state=0,},
- {i=2,x=1,y=7,state=0,},
+ {i=2,x=1,y=8,state=0,},
  {i=3,x=30,y=2,state=0,},
 }
 
@@ -520,11 +527,8 @@ local function safe(_p,_o,_tmp)
 
 end
 
--- states:
--- 0 - closed
--- 1 - open (player is going through)
--- 2 - locked
--- 3 - unlocked
+
+
 local function resetdoor(_p,_o)
  -- reset player
  _p.action=nil
@@ -535,9 +539,9 @@ local function resetdoor(_p,_o)
 end
 
 local function doorfromunder(_p,_o,_tmp)
- if _tmp.inited == nil then
+ if _tmp.opened == nil then
   _o.typ+=2
-  _tmp.inited=true
+  _tmp.opened=true
  end
 
  if light[(_o.y-2)*32+_o.x] == 1 then
@@ -566,10 +570,10 @@ local function doorpeekfromunder(_p,_o)
 end
 
 local function doorfromabove(_p,_o,_tmp)
- if _tmp.inited == nil then
+ if _tmp.opened == nil then
   _tmp.o2=objs[_o.i-1]
   _tmp.o2.typ+=2
-  _tmp.inited=true
+  _tmp.opened=true
  end
 
  if light[(_o.y+2)*32+_o.x] == 1 then
@@ -598,6 +602,94 @@ local function doorpeekfromabove(_p,_o)
  fog[(_o.y+1)*32+_o.x]=0
  fog[(_o.y+2)*32+_o.x]=0
 end
+
+
+local function lockeddoorfrombelow(_p,_o,_tmp)
+ if _o.typ == 16 then
+  for _l in all(playerinventory) do
+   if _l[1] ==  'door access code' then
+    _o.typ+=2
+    _p.action=nil
+    _p.state='standing'
+    -- todo: sfx
+    return
+   end
+  end
+  _p.action=nil
+  _p.state='standing'
+  return
+ end
+
+ if _tmp.opened == nil then
+  _o.typ+=2
+  _tmp.opened=true
+ end
+
+ if light[(_o.y-2)*32+_o.x] == 1 then
+  setlalertlvl2('intruder alert!')
+ end
+
+ for _y=_o.y-2,0,-1 do
+  if floor[_y*32+_o.x] == 2 then
+   break
+  end
+  fog[_y*32+_o.x]=0
+ end
+
+ if btnp(2,_p.i) then
+  _p.y-=3
+  resetdoor(_p,_o)
+ end
+
+ if btnp(3,_p.i) then
+  resetdoor(_p,_o)
+ end
+end
+
+local function lockeddoorfromabove(_p,_o,_tmp)
+ local _o2=objs[_o.i-1]
+ if _o2.typ == 16 then
+  for _l in all(playerinventory) do
+   if _l[1] ==  'door access code' then
+    _o2.typ+=2
+    _p.action=nil
+    _p.state='standing'
+    -- todo: sfx
+    return
+   end
+  end
+  _p.action=nil
+  _p.state='standing'
+  return
+ end
+
+ if _tmp.opened == nil then
+  _o2.typ+=2
+  _tmp.opened=true
+ end
+
+ if light[(_o.y+2)*32+_o.x] == 1 then
+  setlalertlvl2('intruder alert!')
+ end
+
+ fog[(_o.y+1)*32+_o.x]=0
+ for _y=_o.y+2,32 do
+  if floor[_y*32+_o.x] == 2 then
+   break
+  end
+  fog[_y*32+_o.x]=0
+ end
+
+ if btnp(2,_p.i) then
+  resetdoor(_p,_o2)
+ end
+
+ if btnp(3,_p.i) then
+  _p.y+=3
+  resetdoor(_p,_o2)
+ end
+end
+
 
 local function windowpeekfromleft(_p,_o)
  for _x=_o.x+1,32 do
@@ -668,6 +760,10 @@ objs={
 
  {x=3,y=23,typ=22,action={[0]=breakwindowfromright,[1]=breakwindowfromleft},adjaction={[0]=windowpeekfromright,[1]=windowpeekfromleft}},
  {x=0,y=10,typ=22,action={[0]=breakwindowfromright,[1]=breakwindowfromleft},adjaction={[0]=windowpeekfromright,[1]=windowpeekfromleft}},
+
+ {x=28,y=23,typ=16,action={[2]=lockeddoorfrombelow},adjaction={[2]=doorpeekfromunder}},
+ {x=28,y=22,action={[3]=lockeddoorfromabove},adjaction={[3]=doorpeekfromabove}},
+ {x=29,y=23,typ=17},
 }
 
  -- todo: maybe rewrite objects to be in arslen arr instead?
@@ -1296,7 +1392,7 @@ function _draw()
  palt(0,false)
  palt(15,true)
 
- for _y=1,32 do
+ for _y=0,31 do
 
   -- draw cameras
   for _c in all(cameras) do
@@ -1588,9 +1684,9 @@ f1f1fffffff221f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 f1f1ffffff2221f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
 1111fffffffff1f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
 1111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
-1111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff22222222222222222222221111111112
+1111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
 3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff22222222222222222222221111111112
-3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
+3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff22222222222222222222221111111112
 3333ffffdddd22200000111122220202ff4ff4ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
 3333ffffdddd00000000111122222020f551155fffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
 b333ffffdddd022200001111222202025ffffff5ffffffffffffffffffffffffffffffffffffffffffffffffffffffff21111111111111111111111111111112
@@ -1611,10 +1707,10 @@ bbbbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 111fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021112222112111111111111111112
 777fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021112222222111111111111111112
 777fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021112222222111111111111111112
-bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021111111111111111111111111112
-bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021111111111111111111111111112
-888fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021111111111111111111111111112
-888fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00022222222222222222222222222222
+bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021111111111111112222222222222
+bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021111111111111112222222222222
+888fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00021111111111111112000000000000
+888fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00022222222222222222000000000000
 __sfx__
 000100000c030110200c0100201010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
