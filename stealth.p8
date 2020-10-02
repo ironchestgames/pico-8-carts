@@ -1,10 +1,60 @@
 pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
-
--- sneaky stealers
--- sneak n steal
 -- sneaky stealy
+
+--[[
+
+- locked doors
+
+- windows
+ - see through
+ - break
+ - go through
+
+- filing drawers
+ - search (up/down?)
+
+- map generation
+
+- map picker scene
+ - left/right scrolling blueprints
+ - up selects and enters the map
+ - see possible loot??
+
+- loot scene
+ - print out, row by row what the loot was
+ - add it up
+ - pressing next -> show total cash
+
+- guard behaviour
+ - go towards player if lighted
+
+- wantedness
+ - increase wantedness if spending too much time in light
+ - change number of officers in police scene
+ - if wantedness is more than 3, send armored truck, and game over
+
+- armed guards
+ - if player is within 10 squares in guard dir then he is caught, only horizontally
+
+- guard behaviour
+ - go towards player if lighted
+ - standing guard
+ - standing/listening
+ - changing dir if heard something
+
+- cabinet
+ - search (how? just open?)
+
+- table???
+ - hide under
+
+- busting out of jail???
+
+- window broken glass
+
+--]]
 
 devfog=false
 devghost=false
@@ -1049,7 +1099,7 @@ function gameupdate()
   end
   for _o in all(objs) do
    if _o.typ == 10 and light[_o.y*32+_o.x] == 1 then
-    setlalertlvl2('safe\'s cracked!')
+    setlalertlvl2('safe opened!')
    end
   end
  end
