@@ -5,15 +5,6 @@ __lua__
 
 --[[
 
-- locked doors
- - sfx
-
-- fix fog wrapping bug 
-
-- fix generic loot sound
- - play in player loots
- - remove from action functions
-
 - filing drawers
  - search (up/down?)
 
@@ -48,6 +39,13 @@ __lua__
 
 - cabinet
  - search (how? just open?)
+
+- fix generic loot sound
+ - play in player loots
+ - remove from action functions
+
+- locked doors
+ - sfx
 
 - table???
  - hide under
@@ -222,7 +220,7 @@ end
 
 
 local players={
- {x=21,y=26},
+ -- {x=21,y=26},
  {x=1,y=30},
 }
 
@@ -236,20 +234,20 @@ for _i=1,#players do
 end
 
 local guards={
- {
-  x=12,y=10,
-  dx=-1,dy=0,
-  state='patrolling',
-  state_c=0,
-  state_c2=0,
- },
- {
-  x=16,y=30,
-  dx=-1,dy=0,
-  state='patrolling',
-  state_c=0,
-  state_c2=0,
- },
+ -- {
+ --  x=12,y=10,
+ --  dx=-1,dy=0,
+ --  state='patrolling',
+ --  state_c=0,
+ --  state_c2=0,
+ -- },
+ -- {
+ --  x=16,y=30,
+ --  dx=-1,dy=0,
+ --  state='patrolling',
+ --  state_c=0,
+ --  state_c2=0,
+ -- },
 }
 
 local alertlvl=1
@@ -1275,7 +1273,7 @@ function gameupdate()
      local _c=0
      local _bx=_x
      local _by=_y
-     while floor[_by*32+_bx] != 2 and floor[_by*32+_bx] != nil and _c <= _l do
+     while _by < 32 and _by >= 0 and _bx < 32 and _bx >= 0 and floor[_by*32+_bx] != 2 and floor[_by*32+_bx] != nil and _c <= _l do
       fog[_by*32+_bx]=0
       _bx+=_d.dx
       _by+=_d.dy
