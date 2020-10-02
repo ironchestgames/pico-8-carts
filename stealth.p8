@@ -547,10 +547,10 @@ local function doorfromunder(_p,_o,_tmp)
  end
 
  for _y=_o.y-2,0,-1 do
+  fog[_y*32+_o.x]=0
   if floor[_y*32+_o.x] == 2 then
    break
   end
-  fog[_y*32+_o.x]=0
  end
 
  if btnp(2,_p.i) then
@@ -580,10 +580,10 @@ local function doorfromabove(_p,_o,_tmp)
 
  fog[(_o.y+1)*32+_o.x]=0
  for _y=_o.y+2,32 do
+  fog[_y*32+_o.x]=0
   if floor[_y*32+_o.x] == 2 then
    break
   end
-  fog[_y*32+_o.x]=0
  end
 
  if btnp(2,_p.i) then
@@ -628,10 +628,10 @@ local function lockeddoorfrombelow(_p,_o,_tmp)
  end
 
  for _y=_o.y-2,0,-1 do
+  fog[_y*32+_o.x]=0
   if floor[_y*32+_o.x] == 2 then
    break
   end
-  fog[_y*32+_o.x]=0
  end
 
  if btnp(2,_p.i) then
@@ -672,10 +672,10 @@ local function lockeddoorfromabove(_p,_o,_tmp)
 
  fog[(_o.y+1)*32+_o.x]=0
  for _y=_o.y+2,32 do
+  fog[_y*32+_o.x]=0
   if floor[_y*32+_o.x] == 2 then
    break
   end
-  fog[_y*32+_o.x]=0
  end
 
  if btnp(2,_p.i) then
