@@ -5,8 +5,6 @@ __lua__
 
 --[[
 
-- bug cameras not seeing walls
-
 - map generation
 
 - filing drawers
@@ -1045,6 +1043,21 @@ function gameupdate()
      -- remove fog if selected in camcontrol
      if _c.state == 2 then
       fog[_bydown*32+_bx]=0
+
+      local _i=(_bydown+1)*32+_bx
+      if floor[_i] == 2 then
+       fog[_i]=0
+      end
+
+      _i=_bydown*32+_bx+1
+      if floor[_i] == 2 then
+       fog[_i]=0
+      end
+
+      _i=_i-2
+      if floor[_i] == 2 then
+       fog[_i]=0
+      end
      end
 
      _bydown+=1
@@ -1063,9 +1076,20 @@ function gameupdate()
 
      -- remove fog if selected in camcontrol
      if _c.state == 2 then
-      fog[_by*32+_bxside]=0
       if _by == _y then
        fog[(_by-1)*32+_bxside]=0
+      end
+
+      fog[_by*32+_bxside]=0
+
+      local _i=(_by+1)*32+_bxside
+      if floor[_i] == 2 then
+       fog[_i]=0
+      end
+
+      _i=_by*32+_bxside+_dx
+      if floor[_i] == 2 then
+       fog[_i]=0
       end
      end
 
