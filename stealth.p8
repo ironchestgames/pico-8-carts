@@ -5,10 +5,12 @@ __lua__
 
 --[[
 
-- filing drawers
- - search (up/down?)
+- bug cameras not seeing walls
 
 - map generation
+
+- filing drawers
+ - search (up/down?)
 
 - map picker scene
  - left/right scrolling blueprints
@@ -74,7 +76,6 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  printh(result,'debug',false)
 end
 
-local initpolice
 
 function testme_calib(name, func, calibrate_func, ...)
  -- based on https://www.lexaloffle.com/bbs/?pid=60198#p
@@ -186,6 +187,8 @@ local msgcols={{6,13},{9,10}}
 local escapedplayers={}
 local playerinventory={}
 
+local initpolice
+
 local function playerloots(_p,_o)
  local _m='(nothing)'
  if _o.loot != nil then
@@ -221,7 +224,7 @@ end
 
 local players={
  -- {x=21,y=26},
- {x=1,y=30},
+ {x=7,y=20},
 }
 
 for _i=1,#players do
@@ -1042,14 +1045,12 @@ function gameupdate()
      -- remove fog if selected in camcontrol
      if _c.state == 2 then
       fog[_bydown*32+_bx]=0
-      if _by == _y then
-       fog[(_bydown-1)*32+_bx]=0
-      end
      end
 
      _bydown+=1
      _bldown+=1
     end
+
     local _bxside=_bx
     local _blside=1
     while floor[_by*32+_bxside] != 2 and _blside <= _lside do
@@ -1058,6 +1059,7 @@ function gameupdate()
        add(_o.light,{x=-_dx,y=0})
       end
      end
+     light[_by*32+_bxside]=1
 
      -- remove fog if selected in camcontrol
      if _c.state == 2 then
@@ -1067,7 +1069,6 @@ function gameupdate()
       end
      end
 
-     light[_by*32+_bxside]=1
      _bxside+=_dx
      _blside+=1
     end
