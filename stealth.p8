@@ -278,7 +278,7 @@ end
 -- 2 - selected/on (camcontrol)
 -- 3 - system alarm (camcontrol)
 local cameras={ -- note: camcontrol will crash with more than 4
- {i=1,x=14,y=4,state=1,},
+ -- {i=1,x=14,y=4,state=1,},
  -- {i=2,x=12,y=25,state=1,},
  -- {i=3,x=30,y=2,state=0,},
 }
@@ -749,9 +749,13 @@ local function iswallclose(_x,_y,_dx,_dy)
  return _c <= 3
 end
 
-
+local seed=flr(rnd()*10000)
+-- seed=5008
+-- seed=2685
+debug('seed',seed)
 
 function mapgen()
+ srand(seed)
  floor={}
  objs={}
 
@@ -802,7 +806,7 @@ function mapgen()
   -- add left window
   add(objs,{
    x=_xstart,
-   y=_ystart+1+flr(rnd(_h-4)),
+   y=_ystart+2+flr(rnd(_h-5)),
    typ=22,
    action={[0]=breakwindowfromright,[1]=breakwindowfromleft},
    adjaction={[0]=windowpeekfromright,[1]=windowpeekfromleft},
@@ -811,7 +815,7 @@ function mapgen()
   -- add right window
   add(objs,{
    x=_xstart+_w-1,
-   y=_ystart+1+flr(rnd(_h-4)),
+   y=_ystart+2+flr(rnd(_h-5)),
    typ=22,
    action={[0]=breakwindowfromright,[1]=breakwindowfromleft},
    adjaction={[0]=windowpeekfromright,[1]=windowpeekfromleft},
@@ -819,18 +823,31 @@ function mapgen()
 
   -- add top door
   add(objs,{
-   x=_xstart+1+flr(rnd(_w-3)),
+   x=_xstart+2+flr(rnd(_w-5)),
    y=_ystart,
    typ=12,
    action={[2]=doorfromunder},
    adjaction={[2]=doorpeekfromunder}
   })
 
+  -- add camera
+  local _c={x=_xstart+1,y=_ystart+1,state=1,}
+  if rnd() < 0.5 then
+   _c.x=_xstart+_w-2
+  end
+
+  if rnd() > 0.5 then
+   if rnd() > 0.8 then
+    _c.state=0
+   end
+   add(cameras,_c)
+  end
+
   _ystart+=_h-1
 
   -- add bottom door
   add(objs,{
-   x=_xstart+1+flr(rnd(_w-3)),
+   x=_xstart+2+flr(rnd(_w-5)),
    y=_ystart,
    typ=12,
    action={[2]=doorfromunder},
@@ -895,6 +912,27 @@ function mapgen()
 
  --  -- todo: maybe rewrite objects to be in arslen arr instead?
 
+ -- fix cameras
+ for _j=#cameras,1,-1 do
+  local _c=cameras[_j]
+  local _i=_c.y*32+_c.x
+  local _remove=false
+  for _o in all(objs) do
+   if adjacency(_o.x,_o.y,_c.x,_c.y) then
+    _remove=true
+    break
+   end
+  end
+  if _remove or floor[_i] == 2 or floor[_i-32] != 2 or not (floor[_i+1] == 2 or floor[_i-1] == 2) then
+   del(cameras,_c)
+  end
+ end
+
+ -- add i for cameras
+ for _i=1,#cameras do
+  cameras[_i].i=_i
+ end
+
  -- fix objs
  for _j=#objs,1,-1 do
   local _o=objs[_j]
@@ -909,7 +947,14 @@ function mapgen()
 
   -- fix doors
   if _o.typ == 12 then
-   if not (floor[_i] == 2 and floor[_i-1] == 2 and floor[_i+1] == 2 and floor[_i+32] != 2 and floor[_i-64] != 2) then
+   local _remove=false
+   for _other in all(objs) do
+    if _other != _o and _other.y == _o.y and abs(_other.x-_o.x) < 3 then
+     _remove=true
+     break
+    end
+   end
+   if _remove or not (floor[_i] == 2 and floor[_i-1] == 2 and floor[_i+1] == 2 and floor[_i+32] != 2 and floor[_i-64] != 2) then
     del(objs,_o)
    else
     add(objs,{x=_o.x,y=_o.y-1,action={[3]=doorfromabove},adjaction={[3]=doorpeekfromabove}},_j+1)
@@ -933,7 +978,7 @@ function mapgen()
   local _o=objs[_i]
   for _other in all(objs) do
    if _o != _other and _other.x == _o.x and _other.y == _o.y then
-    if _o.typ == 12 or _o.typ == 16 then -- todo: add locked door
+    if _o.typ == 12 or _o.typ == 16 then
      deli(objs,_i+2)
      deli(objs,_i+1)
      deli(objs,_i)
