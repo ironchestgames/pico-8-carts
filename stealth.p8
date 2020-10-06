@@ -1582,6 +1582,11 @@ function _draw()
   end
  end
 
+ -- add border of premises
+ fillp(0b1010010110100101)
+ rect(0,0,127,127,3)
+ fillp()
+
  pal()
  palt(0,false)
  palt(15,true)
