@@ -121,6 +121,9 @@ function testme(name, func, ...)
  -- return testme_calib(name, func, function() end, ...)
 end
 
+-- set auto-repeat delay for btnp
+poke(0x5f5c, 5)
+
 local function curry3(_f,_a,_b,_c)
  return function()
   _f(_a,_b,_c)
