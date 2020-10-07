@@ -786,7 +786,7 @@ end
 
 
 local seed=flr(rnd()*10000)
-seed=5008
+-- seed=5008
 -- seed=2685
 -- seed=227
 -- seed=9399
@@ -1538,16 +1538,16 @@ function gameupdate()
   end
  end
 
- -- light up walls
+
  for _i=0,arslen do
+
+  -- light up walls
   local _x,_y=_i&31,_i\32
   if light[(_y+1)*32+_x] == 1 and floor[_y*32+_x] == 2 and floor[(_y+1)*32+_x] != 2 then
    light[_y*32+_x]=1
   end
- end
 
- -- light up windows
- for _i=0,arslen do
+  -- light up windows
   local _o=objs[_i]
   if _o and (_o.typ == 22 or _o.typ == 23) and
      (light[_i-1] == 1 or light[_i+1] == 1) then
