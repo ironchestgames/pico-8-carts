@@ -62,13 +62,11 @@ __lua__
 
 --]]
 
-devfog=not false
-devghost=false
+devfog=false
 devvalues=false
 
 menuitem(1, 'devfog', function() devfog=not devfog end)
-menuitem(2, 'devghost', function() devghost=not devghost end)
-menuitem(3, 'devvalues', function() devvalues=not devvalues end)
+menuitem(2, 'devvalues', function() devvalues=not devvalues end)
 
 printh('debug started','debug',true)
 function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
@@ -81,48 +79,59 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
 end
 
 
-function testme_calib(name, func, calibrate_func, ...)
- -- based on https://www.lexaloffle.com/bbs/?pid=60198#p
- local n = 1024
- local nd = 128/n*256/60*256 
+-- function testme_calib(name, func, calibrate_func, ...)
+--  -- based on https://www.lexaloffle.com/bbs/?pid=60198#p
+--  local n = 1024
+--  local nd = 128/n*256/60*256 
 
- -- calibrate
- flip()
- local unused -- i am not sure why this helps give better results, but it does, so.
+--  -- calibrate
+--  flip()
+--  local unused -- i am not sure why this helps give better results, but it does, so.
 
- local x,t=stat(1),stat(2)
- for i=1,n do
-   calibrate_func(...)
- end
- local y,u=stat(1),stat(2)
+--  local x,t=stat(1),stat(2)
+--  for i=1,n do
+--    calibrate_func(...)
+--  end
+--  local y,u=stat(1),stat(2)
 
- -- measure
- for i=1,n do
-   func(...)
- end
- local z,v=stat(1),stat(2)
+--  -- measure
+--  for i=1,n do
+--    func(...)
+--  end
+--  local z,v=stat(1),stat(2)
 
- -- report
- local function c(t0,t1,t2)
-  return(t0+t2-2*t1)*nd*2 end -- *2 for 0.2.x
+--  -- report
+--  local function c(t0,t1,t2)
+--   return(t0+t2-2*t1)*nd*2 end -- *2 for 0.2.x
 
- local s=name.." :"
- local lc=c(x-t,y-u,z-v)
- if (lc != 0) s..=" lua="..lc
- local sc=c(t,u,v)
- if (sc != 0) s..=" sys="..sc
+--  local s=name.." :"
+--  local lc=c(x-t,y-u,z-v)
+--  if (lc != 0) s..=" lua="..lc
+--  local sc=c(t,u,v)
+--  if (sc != 0) s..=" sys="..sc
 
- print(s) -- no paging, so not very useful, but.
- debug(s)
-end
+--  print(s) -- no paging, so not very useful, but.
+--  debug(s)
+-- end
 
-function testme(name, func, ...)
- func()
- -- return testme_calib(name, func, function() end, ...)
-end
+-- function testme(name, func, ...)
+--  func()
+--  -- return testme_calib(name, func, function() end, ...)
+-- end
 
 -- set auto-repeat delay for btnp
 poke(0x5f5c, 5)
+
+local fogdirs={
+ {x=1,y=0,dx=1,dy=1},
+ {x=1,y=0,dx=1,dy=-1},
+ {x=-1,y=0,dx=-1,dy=1},
+ {x=-1,y=0,dx=-1,dy=-1},
+ {x=0,y=1,dx=1,dy=1},
+ {x=0,y=1,dx=-1,dy=1},
+ {x=0,y=-1,dx=1,dy=-1},
+ {x=0,y=-1,dx=-1,dy=-1},
+}
 
 local function curry3(_f,_a,_b,_c)
  return function()
@@ -167,7 +176,7 @@ local function adjacency(_x1,_y1,_x2,_y2)
  elseif _x1 == _x2 and _y1 == _y2+1 then
   return 3
  end
- return nil
+ -- return nil
 end
 
 local floor
@@ -184,7 +193,7 @@ local function walladjacency(_a)
  elseif floor[(_a.y+1)*32+_a.x] == 2 then
   return 3
  end
- return nil
+ -- return nil
 end
 
 local t=0
@@ -226,8 +235,8 @@ end
 
 
 local players={
- -- {x=0,y=31},
- {x=0,y=29},
+ {},
+ {},
 }
 
 for _i=1,#players do
@@ -274,6 +283,11 @@ local function setalertlvl2(_m)
   end
  end
 end
+
+
+
+
+
 
 -- states:
 -- 0 - off
@@ -362,7 +376,7 @@ end
 
 local function camcontrol(_p,_o,_tmp)
  _p.workingstate='hacking'
- if _tmp.sel == nil then
+ if not _tmp.sel then
   _tmp.sel=1
   _tmp.pos={
    {x=-2,y=-4},
@@ -752,15 +766,45 @@ local function iswallclose(_x,_y,_dx,_dy)
  return _c <= 3
 end
 
+
+
+
+
+
+
+
+
+
+
+
 local seed=flr(rnd()*10000)
 -- seed=5008
 -- seed=2685
+-- seed=227
+-- seed=9399
+-- seed=4199
+-- seed=4403
+-- seed=9737
+-- seed=7594
 debug('seed',seed)
 
 function mapgen()
  srand(seed)
  floor={}
  objs={}
+
+ local _r=rnd()
+ local _x,_y=30,30
+ if _r < 0.25 then
+  _x,_y=0,2
+ elseif _r < 0.5 then
+  _y=2
+ elseif _r < 0.75 then
+  _x=0
+ end
+ for _p in all(players) do
+  _p.x,_p.y=_x+_p.i,_y+_p.i
+ end
 
  for _i=0,arslen do
   local _x,_y=_i&31,_i\32
@@ -889,33 +933,7 @@ function mapgen()
   end
  end
 
- -- add objects
-
-
-
- -- objs={
- --  {x=12,y=4,typ=0,shadow={[0]=true,true,nil,nil}},
-
- --  {x=15,y=17,typ=0,shadow={[0]=true,true,nil,nil}},
-
- --  {x=26,y=18,typ=1,shadow={[0]=nil,nil,true,true}},
-
- --  -- {x=11,y=17,typ=2,shadow={[0]=true,nil,nil,nil}},
- --  -- {x=12,y=17,typ=3,action={[2]=computer},loot={'door access code'}},
- --  -- {x=13,y=17,typ=4,shadow={[0]=nil,true,nil,nil}},
-
- --  {x=11,y=17,typ=5,shadow={[0]=true,nil,nil,nil}},
- --  {x=13,y=17,typ=7,shadow={[0]=nil,true,nil,nil}},
- --  {x=12,y=17,typ=6,action={[2]=camcontrol}}, -- note: draw last
-
- --  {x=9,y=25,typ=9,shadow={[0]=nil,true,nil,nil}},
- --  {x=8,y=25,typ=8,shadow={[0]=true,nil,nil,nil},action={[2]=safe},loot={'diamonds',14000}},
-
- -- }
-
- --  -- todo: maybe rewrite objects to be in arslen arr instead?
-
- -- fix cameras
+  -- fix cameras
  for _j=#cameras,1,-1 do
   local _c=cameras[_j]
   local _i=_c.y*32+_c.x
@@ -935,6 +953,98 @@ function mapgen()
  for _i=1,#cameras do
   cameras[_i].i=_i
  end
+
+ -- add objects
+ local _pos={}
+ for _y=2,29 do
+  local _x=flr(rnd(4))+2
+  while _x < 29 do
+   local _i=_y*32+_x
+   local _remove=false
+   for _c in all(cameras) do
+    if _c.x == _x and _c.y == _y or adjacency(_c.x,_c.y,_x,_y) then
+     _remove=true
+     break
+    end
+   end
+   for _o in all(objs) do
+    if adjacency(_o.x,_o.y,_x-1,_y) or
+       adjacency(_o.x,_o.y,_x,_y) or
+       adjacency(_o.x,_o.y,_x+1,_y) or
+       adjacency(_o.x,_o.y,_x+2,_y) then
+     _remove=true
+     break
+    end
+   end
+   if _remove == false and
+      floor[_i-32] == 2 and
+      floor[_i-32+1] == 2 and
+      floor[_i-32+2] == 2 and
+      floor[_i] == 1 and
+      floor[_i+1] == 1 and
+      floor[_i+2] == 1 and
+      floor[_i+32] == 1 and
+      floor[_i+32+1] == 1 and
+      floor[_i+32+2] == 1 and
+      floor[_i+64] == 1 and
+      floor[_i+64+1] == 1 and
+      floor[_i+64+2] == 1 then
+    add(_pos,{x=_x,y=_y})
+    _x+=5
+   elseif _remove == true then
+    _x+=2
+   else
+    _x+=flr(rnd(6))+1
+   end
+  end
+ end
+
+ -- shuffle(_pos)
+
+ -- 0 - plant
+ -- 1 - watercooler
+ -- 2 - computer
+ -- 5 - camcontrol
+ -- 9 - safe
+
+ local _types={0,1,2,9}
+
+ if #cameras > 0 then
+  add(_types,5)
+ end
+
+ for _p in all(_pos) do
+  local _i=flr(rnd(#_types))+1
+  local _typ=_types[_i]
+  if _typ == 9 or _typ == 5 then
+   del(_types,_typ)
+  end
+
+  local _o={
+   x=_p.x,
+   y=_p.y,
+   typ=_typ,
+   shadow={[0]=true,true,nil,nil},
+  }
+  add(objs,_o)
+
+  if _typ == 2 then
+   add(objs,{x=_p.x+1,y=_p.y,typ=3,action={[2]=computer},loot={'door access code'}})
+   add(objs,{x=_p.x+2,y=_p.y,typ=4,shadow={[0]=nil,true,nil,nil}})
+
+  elseif _typ == 5 then
+   _o.shadow={[0]=true,nil,nil,nil}
+   add(objs,{x=_p.x+2,y=_p.y,typ=7,shadow={[0]=nil,true,nil,nil}})
+   add(objs,{x=_p.x+1,y=_p.y,typ=6,action={[2]=camcontrol}}) -- note: draw last
+
+  elseif _typ == 9 then
+   _o.shadow={[0]=nil,true,nil,nil}
+   _o.x+=1
+   add(objs,{x=_p.x,y=_p.y,typ=8,shadow={[0]=true,nil,nil,nil},action={[2]=safe},loot={'diamonds',14000}})
+  end
+ end
+
+ --  -- todo: maybe rewrite objects to be in arslen arr instead?
 
  -- fix objs
  for _j=#objs,1,-1 do
@@ -1482,7 +1592,7 @@ function gameupdate()
  end
 
  -- intruder alert
- if devghost == false and alertlvl == 1 then
+ if alertlvl == 1 then
   for _p in all(players) do
    if light[_p.y*32+_p.x] == 1 then
     setalertlvl2('intruder alert!')
@@ -1500,17 +1610,7 @@ function gameupdate()
   if _p.state == 'caught' then
    -- do nothing
   else
-   local _dirs={
-    {x=1,y=0,dx=1,dy=1},
-    {x=1,y=0,dx=1,dy=-1},
-    {x=-1,y=0,dx=-1,dy=1},
-    {x=-1,y=0,dx=-1,dy=-1},
-    {x=0,y=1,dx=1,dy=1},
-    {x=0,y=1,dx=-1,dy=1},
-    {x=0,y=-1,dx=1,dy=-1},
-    {x=0,y=-1,dx=-1,dy=-1},
-   }
-   for _d in all(_dirs) do
+   for _d in all(fogdirs) do
     local _x,_y=_p.x,_p.y
     local _l=32
     while floor[_y*32+_x] != 2 and floor[_y*32+_x] != nil do
@@ -1585,7 +1685,8 @@ end
 
 
 function _update()
- testme('gameupdate', gameupdate)
+ -- testme('gameupdate', gameupdate)
+ gameupdate()
 end
 
 
