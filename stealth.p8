@@ -66,7 +66,7 @@ __lua__
 --]]
 
 devfog=not false
-devvalues=false
+devvalues=not false
 
 menuitem(1, 'devfog', function() devfog=not devfog end)
 menuitem(2, 'devvalues', function() devvalues=not devvalues end)
@@ -82,45 +82,45 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
 end
 
 
--- function testme_calib(name, func, calibrate_func, ...)
---  -- based on https://www.lexaloffle.com/bbs/?pid=60198#p
---  local n = 1024
---  local nd = 128/n*256/60*256 
+function testme_calib(name, func, calibrate_func, ...)
+ -- based on https://www.lexaloffle.com/bbs/?pid=60198#p
+ local n = 1024
+ local nd = 128/n*256/60*256
 
---  -- calibrate
---  flip()
---  local unused -- i am not sure why this helps give better results, but it does, so.
+ -- calibrate
+ flip()
+ local unused -- i am not sure why this helps give better results, but it does, so.
 
---  local x,t=stat(1),stat(2)
---  for i=1,n do
---    calibrate_func(...)
---  end
---  local y,u=stat(1),stat(2)
+ local x,t=stat(1),stat(2)
+ for i=1,n do
+   calibrate_func(...)
+ end
+ local y,u=stat(1),stat(2)
 
---  -- measure
---  for i=1,n do
---    func(...)
---  end
---  local z,v=stat(1),stat(2)
+ -- measure
+ for i=1,n do
+   func(...)
+ end
+ local z,v=stat(1),stat(2)
 
---  -- report
---  local function c(t0,t1,t2)
---   return(t0+t2-2*t1)*nd*2 end -- *2 for 0.2.x
+ -- report
+ local function c(t0,t1,t2)
+  return(t0+t2-2*t1)*nd*2 end -- *2 for 0.2.x
 
---  local s=name.." :"
---  local lc=c(x-t,y-u,z-v)
---  if (lc != 0) s..=" lua="..lc
---  local sc=c(t,u,v)
---  if (sc != 0) s..=" sys="..sc
+ local s=name.." :"
+ local lc=c(x-t,y-u,z-v)
+ if (lc != 0) s..=" lua="..lc
+ local sc=c(t,u,v)
+ if (sc != 0) s..=" sys="..sc
 
---  print(s) -- no paging, so not very useful, but.
---  debug(s)
--- end
+ print(s) -- no paging, so not very useful, but.
+ debug(s)
+end
 
--- function testme(name, func, ...)
---  func()
---  -- return testme_calib(name, func, function() end, ...)
--- end
+function testme(name, func, ...)
+ func()
+ -- return testme_calib(name, func, function() end, ...)
+end
 
 -- set auto-repeat delay for btnp
 poke(0x5f5c, 5)
@@ -790,7 +790,7 @@ end
 
 
 local seed=flr(rnd()*10000)
--- seed=5008
+seed=5008
 -- seed=2685
 -- seed=227
 -- seed=9399
@@ -1612,64 +1612,44 @@ function gameupdate()
      _y+=_d.y
      if _y < 32 and _y >= 0 and _x < 32 and _x >= 0 then
       fog[_y*32+_x]=0
+     else
+      break
      end
     end
    end
   end
  end
 
- -- -- remove fog from open doors
- -- for _d in all(doors) do
- --  if _d.state == 1 then
- --   fog[(_d.y+1)*32+_d.x]=0
- --   fog[(_d.y-2)*32+_d.x]=0
- --  end
- -- end
-
  -- remove fog from holding guards
  for _g in all(guards) do
   if _g.state == 'holding' then
-   fog[(_g.y-2)*32+_g.x-1]=0
-   fog[(_g.y-2)*32+_g.x]=0
-   fog[(_g.y-2)*32+_g.x+1]=0
-   fog[(_g.y-1)*32+_g.x-2]=0
-   fog[(_g.y-1)*32+_g.x-1]=0
-   fog[(_g.y-1)*32+_g.x]=0
-   fog[(_g.y-1)*32+_g.x+1]=0
-   fog[(_g.y-1)*32+_g.x+2]=0
-   fog[_g.y*32+_g.x-2]=0
-   fog[_g.y*32+_g.x-1]=0
-   fog[_g.y*32+_g.x]=0
-   fog[_g.y*32+_g.x+1]=0
-   fog[_g.y*32+_g.x+2]=0
-   fog[(_g.y+1)*32+_g.x-2]=0
-   fog[(_g.y+1)*32+_g.x-1]=0
-   fog[(_g.y+1)*32+_g.x]=0
-   fog[(_g.y+1)*32+_g.x+1]=0
-   fog[(_g.y+1)*32+_g.x+2]=0
-   fog[(_g.y+2)*32+_g.x-1]=0
-   fog[(_g.y+2)*32+_g.x]=0
-   fog[(_g.y+2)*32+_g.x+1]=0
+   local _i=_g.y*32+_g.x
+   for _ghd in all(guardsholdingdeltas) do
+    fog[_i+_ghd]=0
+   end
   end
  end
 
  -- remove fog from walls
  for _i=0,arslen do
-   if fog[_i+32] == 0 and floor[_i] == 2 and floor[_i+32] == 2 then
-    fog[_i]=0
-   end
+  if fog[_i+32] == 0 and floor[_i] == 2 and floor[_i+32] == 2 then
+   fog[_i]=0
+  end
  end
 
 end
 
 
 function _update()
- -- testme('gameupdate', gameupdate)
- gameupdate()
+ testme('gameupdate', gameupdate)
+ -- gameupdate()
 end
 
-
 function _draw()
+ testme('gamedraw', gamedraw)
+end
+
+function gamedraw()
  gupd=stat(1)
  gupdmax=max(gupd,gupdmax)
 
@@ -1682,12 +1662,12 @@ function _draw()
  end
 
  local _lightcols={[0]=1,13,2}
- for _i=32*32,0,-1 do
+ for _i=arslen,0,-1 do
 
   -- draw floor
   local _tile=floor[_i]
+  local _l=light[_i]
   local _x,_y=_i&31,_i\32
-  local _l=light[_y*32+_x]
   local _sx,_sy=_x*4,_y*4
 
   local _col=_tile
@@ -1697,15 +1677,12 @@ function _draw()
   rectfill(_sx,_sy,_sx+3,_sy+3,_col)
   
   -- draw walls
-  local _y1=_y+1
   if _tile == 2 then
-   if _y < 32 then
-    local _tilebelow=floor[_y1*32+_x]
-    if _tilebelow == 0 then -- todo: maybe remove this, maybe it shouldn't be possible to have light outside
-     sspr(12,104+_l*5,4,5,_sx,_sy)
-    elseif _tilebelow == 1 then
-     rectfill(_sx,_sy,_sx+3,_sy+4,13-7*_l)
-    end
+   local _tilebelow=floor[_i+32]
+   if _tilebelow == 0 then -- todo: maybe remove this, maybe it shouldn't be possible to have light outside
+    sspr(12,104+_l*5,4,5,_sx,_sy)
+   elseif _tilebelow == 1 then
+    rectfill(_sx,_sy,_sx+3,_sy+4,13-7*_l)
    end
   end
  end
@@ -1727,11 +1704,7 @@ function _draw()
    local _l=light[_i]
    sspr(_o.typ*4,_l*13,4,13,_x*4,_y*4-5)
   end
- end
-
- -- objs.draw
- for _i=0,arslen do
-  local _o=objs[_i]
+  _o=objs[_i-1]
   if _o and _o.draw then
    _o.draw()
   end
@@ -1739,11 +1712,11 @@ function _draw()
 
  -- draw cameras
  for _c in all(cameras) do
-  local _sx=32
+  local _sx=8
   if floor[_c.y*32+_c.x+1] == 2 then -- todo: make so cameras can be set anywhere on wall
-   _sx=36
+   _sx=12
   end
-  sspr(_sx,104+_c.state*3,4,3,_c.x*4,_c.y*4-4)
+  sspr(_sx,116+_c.state*3,4,3,_c.x*4,_c.y*4-4)
  end
 
  for _y=0,31 do
@@ -1999,52 +1972,52 @@ f1f1fff1f1fff0f0fff0f0fff000000ff0000f0f0f0ff00f0fffffffffffffffffffffffffffffff
 f1f1fff1f1fff0f0fff0f0fff000000ff000ffff0f0fffffffffffffffffffffffffffffffffffffffffffffffff1111bbbbbbdddddddddddddd88ddddbbbbbb
 f1f1fff1f1fff0f0fff0f0ff00f00f00f000ffff0f0fffffffffffffffffffffffffffffffffffffffffffffffff19ddbbbbbbdddddddddddddd11ddd6dbbbbb
 fffffffffffffffffffffffffffffffffffffffff1fffff1ffffffffffffffffffffffffffffffffffffffffffffb111bbbbbbddddddddddddddddddd76dbbbb
-ff1fffff1fffff1fffff1ffffffffffffffff1fffefffffef9ffffffffffffffffffffffffffffffffffffffffffb1b1bbbbbb1dddddddddddddddddd676ddbb
+ff1fffff1fffff1fffff1ffffffffffffffff1fffefffffefeffffffffffffffffffffffffffffffffffffffffffb1b1bbbbbb1dddddddddddddddddd676ddbb
 f1e1fff1e22ff1e1fff1e22ffff11fffffff1e1f111fff111fffffffffffffffffffffffffffffffffffffffffffb1b1bbbbbb1111111111111111111677dddb
-11111f11192211111f111922fffeefffffff111f1119ff11ffffffffffffffffffffffffffffffffffffffffffffb1b1bbbbbb110101011010111d555167dddb
-1911f91911221911f9191122ff1111ffff1f919f111fff11ffffffffffffffffffffffffffffffffffffffffffffbbbbbbbbbb1101010110101115d55516dddb
-f111fff11122f111fff11122ff1111ffffef111f111fff111ffffffffffffffffffffffffffffffffbbbbbbbb9b9bb1bbbbbbb11010101101011155d5551ddd7
+11111f111e2211111f111e22fffeefffffff111f111eff11ffffffffffffffffffffffffffffffffffffffffffffb1b1bbbbbb110101011010111d555167dddb
+1e11fe1e11221e11fe1e1122ff1111ffff1fe1ef111fff11ffffffffffffffffffffffffffffffffffffffffffffbbbbbbbbbb1101010110101115d55516dddb
+f111fff11122f111fff11122ff1111ffffef111f111fff111ffffffffffffffffffffffffffffffffbbbbbbbbebebb1bbbbbbb11010101101011155d5551ddd7
 f1f1fff1f1fff1f1fff1f1fff111111ff1111f1f1f1ff11f1ffffffffffffffffffffffffffffffffbbbbbbbb1b1bb11bbbbb5110101011010111111111111d7
 f1f1fff1f1fff1f1fff1f1fff111111ff111ffff1f1ffffffffffffffffffffffffffffffffffffffbbbbbbbb111bb9bbbbbb511111111111111111111111115
-f1f1fff1f1fff1f1fff1f1ff11f99f11f111ffff1f1ffffffffffffffffffffffffffffffffffffffbbbbbbbb1e1bb9bbbbbb511110001111111111110001117
-fffffffffffff9f9fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbb111b111bbbbb581101110111111111101110117
+f1f1fff1f1fff1f1fff1f1ff11feef11f111ffff1f1ffffffffffffffffffffffffffffffffffffffbbbbbbbb1e1bb9bbbbbb511110001111111111110001117
+fffffffffffffefefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbb111b111bbbbb581101110111111111101110117
 ff1ffffffffff1f1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbb111b1111b5bb581110001111111111110001115
 f1e1fffffffff111fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbb111bdd119b5b511100000111111111100000115
 11111ffffff001e1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbb1b1b111bbbbbb5550010055555555550010055b
 15151fffff000111fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbb221b1b1bb1bbbbbbbb00001bbbbbbbbbb00001bbb
 f151fffffffff111fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbb2221b111bb1bbbbbbbbb111bbbbbbbbbbbb111bbbb
-f1f1fffffffff111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-f1f1fffffff221f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-f1f1ffffff2221f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-1111fffffffff1f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-1111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-1111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-3333ffffdddd22200000111122220202ff4ff4ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-3333ffffdddd00000000111122222020f551155fffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-b333ffffdddd022200001111222202025ffffff5ffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-3333ffffdddd00000000111122222020ff8ff8ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-3333ffffdddd22021111dddd0000fffff551155fffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-333bffff666644451111dddd0000ffff5ffffff5ffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-3333ffff666655551111dddd0000ffffffbffbffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-3bb3ffff666654441111dddd0000fffff551155fffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-3333ffff66665555ffffffffffffffff5ffffff5ffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-3333ffff66664454ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-bbbbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-bbbbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-bbbbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-8888ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-8888ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-8888ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-111fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-111fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-777fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-777fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-888fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
-888fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000
+f1f1fffffffff111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f1f1fffffff221f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f1f1ffffff2221f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+1111fffffffff1f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+1111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+1111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+3333ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+3333ffffdddd22200000111122220202ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+3333ffffdddd00000000111122222020ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+b333ffffdddd02220000111122220202ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+3333ffffdddd00000000111122222020ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+3333ffffdddd22021111dddd0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+333bffff666644451111dddd0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+3333ffff666655551111dddd0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+3bb3ffff666654441111dddd0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+3333ffff66665555ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+3333ffff66664454ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+bbbbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+bbbbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+bbbbffffff4ff4ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+8888fffff551155fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+8888ffff5ffffff5ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+8888ffffff8ff8ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+111ffffff551155fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+111fffff5ffffff5ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+777fffffffbffbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+777ffffff551155fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+bbbfffff5ffffff5ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+888fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+888fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 __sfx__
 000100000c030110200c0100201010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
