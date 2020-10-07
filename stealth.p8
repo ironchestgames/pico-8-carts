@@ -118,8 +118,8 @@ function testme_calib(name, func, calibrate_func, ...)
 end
 
 function testme(name, func, ...)
- -- func()
- return testme_calib(name, func, function() end, ...)
+ func()
+ -- return testme_calib(name, func, function() end, ...)
 end
 
 -- set auto-repeat delay for btnp
@@ -269,10 +269,6 @@ end
 
 for _i=0,arslen do
  light[_i]=0
-end
-
-for _i=0,arslen do
- fog[_i]=1
 end
 
 for _i=1,#players do
@@ -1107,13 +1103,7 @@ function gameupdate()
  tick-=1
 
  -- reset fog
- for _i=0,arslen do
-  -- if floor[_i] == 2 then
-   -- fog[_i]=2
-  -- else
-   fog[_i]=1
-  -- end
- end
+ fog={}
 
  -- update players
  for _p in all(players) do
@@ -1782,7 +1772,7 @@ function gamedraw()
  if devfog == false then
   for _i=0,arslen do
    local _f=fog[_i]
-   if _f == 1 then
+   if _f == nil then
     local _x,_y=_i&31,_i\32
     rectfill(_x*4,_y*4,_x*4+3,_y*4+3,0)
    end
