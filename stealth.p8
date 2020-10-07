@@ -62,7 +62,7 @@ __lua__
 
 --]]
 
-devfog=false
+devfog=not false
 devvalues=false
 
 menuitem(1, 'devfog', function() devfog=not devfog end)
@@ -132,6 +132,9 @@ local fogdirs={
  {x=0,y=-1,dx=1,dy=-1},
  {x=0,y=-1,dx=-1,dy=-1},
 }
+
+-- guards holding deltas
+local gholdingdeltas={-65,-64,-63,-34,-33,-32,-31,-30,-2,-1,0,1,2,30,31,32,33,34,63,64,65}
 
 local function curry3(_f,_a,_b,_c)
  return function()
@@ -249,13 +252,13 @@ for _i=1,#players do
 end
 
 local guards={
- -- {
- --  x=12,y=10,
- --  dx=-1,dy=0,
- --  state='patrolling',
- --  state_c=0,
- --  state_c2=0,
- -- },
+ {
+  x=12,y=7,
+  dx=-1,dy=0,
+  state='holding',
+  state_c=0,
+  state_c2=0,
+ },
  -- {
  --  x=16,y=30,
  --  dx=-1,dy=0,
@@ -786,6 +789,8 @@ local seed=flr(rnd()*10000)
 -- seed=4403
 -- seed=9737
 -- seed=7594
+-- seed=6590
+seed=210
 debug('seed',seed)
 
 function mapgen()
@@ -1268,7 +1273,7 @@ function gameupdate()
     end
 
     -- move
-    local _gwa=walladjacency({x=_g.x+_g.dx,y=_g.y+_g.dy})
+    local _gwa=walladjacency({x=_g.x+_g.dx,y=_g.y+_g.dy}) -- todo: do this better
     if _gwa == 0 then
      _g.x+=1
     elseif _gwa == 1 then
@@ -1438,27 +1443,10 @@ function gameupdate()
  -- shine guards flashlights
  for _g in all(guards) do
   if _g.state == 'holding' then
-   light[(_g.y-2)*32+_g.x-1]=1
-   light[(_g.y-2)*32+_g.x]=1
-   light[(_g.y-2)*32+_g.x+1]=1
-   light[(_g.y-1)*32+_g.x-2]=1
-   light[(_g.y-1)*32+_g.x-1]=1
-   light[(_g.y-1)*32+_g.x]=1
-   light[(_g.y-1)*32+_g.x+1]=1
-   light[(_g.y-1)*32+_g.x+2]=1
-   light[_g.y*32+_g.x-2]=1
-   light[_g.y*32+_g.x-1]=1
-   light[_g.y*32+_g.x]=1
-   light[_g.y*32+_g.x+1]=1
-   light[_g.y*32+_g.x+2]=1
-   light[(_g.y+1)*32+_g.x-2]=1
-   light[(_g.y+1)*32+_g.x-1]=1
-   light[(_g.y+1)*32+_g.x]=1
-   light[(_g.y+1)*32+_g.x+1]=1
-   light[(_g.y+1)*32+_g.x+2]=1
-   light[(_g.y+2)*32+_g.x-1]=1
-   light[(_g.y+2)*32+_g.x]=1
-   light[(_g.y+2)*32+_g.x+1]=1
+   local _i=_g.y*32+_g.x
+   for _ghd in all(gholdingdeltas) do
+    light[_i+_ghd]=1
+   end
 
   elseif _g.dx != 0 then
    local _x,_y=_g.x+_g.dx,_g.y+_g.dy
