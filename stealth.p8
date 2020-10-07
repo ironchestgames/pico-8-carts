@@ -65,7 +65,7 @@ __lua__
 
 --]]
 
-devfog=not false
+devfog=false
 devvalues=not false
 
 menuitem(1, 'devfog', function() devfog=not devfog end)
@@ -118,8 +118,8 @@ function testme_calib(name, func, calibrate_func, ...)
 end
 
 function testme(name, func, ...)
- func()
- -- return testme_calib(name, func, function() end, ...)
+ -- func()
+ return testme_calib(name, func, function() end, ...)
 end
 
 -- set auto-repeat delay for btnp
@@ -1178,10 +1178,12 @@ function gameupdate()
      if _p.state != 'working' then
       local _hiding=nil
       local _pwa=walladjacency(_p)
-      for _i=0,arslen do
-       local _o=objs[_i]
+      local _i=_p.y*32+_p.x
+      for _a=0,3 do
+       local _oi=_i+adjdeltas[_a]
+       local _o=objs[_oi]
        if _o then
-        local _ox,_oy=_i&31,_i\32
+        local _ox,_oy=_oi&31,_oi\32
         local _a=adjacency(_p.x,_p.y,_ox,_oy)
         local _owa=walladjacency({x=_ox,y=_oy})
         if _o.shadow and _o.shadow[_a] and _owa != nil and _pwa != nil and _a != nil and light[_p.y*32+_p.x] == 0 then
@@ -1195,6 +1197,7 @@ function gameupdate()
        _p.state='standing'
       end
      end
+
     end
    end
   end
@@ -1329,16 +1332,12 @@ function gameupdate()
   tick=alertlvls[alertlvl]
  end
 
- -- clear objects light
+ -- clear light
  for _i=0,arslen do
   local _o=objs[_i]
   if _o then
-   _o.light={} -- todo: optimize
+   _o.light={}
   end
- end
-
- -- clear light
- for _i=0,arslen do
   light[_i]=0
  end
 
