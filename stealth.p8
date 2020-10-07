@@ -1718,67 +1718,65 @@ function gamedraw()
   sspr(_sx,116+_c.state*3,4,3,_c.x*4,_c.y*4-4)
  end
 
- for _y=0,31 do
-
-  -- draw players
-  for _p in all(players) do
-   if _p.y == _y then
-    local _l=light[_p.y*32+_p.x]
-    if _p.state == 'hiding' then
-     sspr(24+_p.adjacency*4,72,4,9,_p.x*4,_p.y*4-5)
-    elseif _p.state == 'working' then
-     if _p.workingstate == 'hacking' then
-      sspr(40,72+_l*9,5,9,_p.x*4,_p.y*4-5)
-     elseif _p.workingstate == 'cracking' then
-      sspr(45,72+_l*9,5,9,_p.x*4,_p.y*4-5)
-     end
-     if #_p.loot > 0 then
-      sspr(5,91+_l*4,8,4,_p.x*4,_p.y*4)
-     end
-    elseif _p.state == 'caught' then
-     sspr(0,90,6,9,_p.x*4,_p.y*4-5)
-    else
-     local _floor=floor[_p.y*32+_p.x]
-     local _flipx=false
-     if _p.dir == 1 then
-      _flipx=true
-     end
-     if #_p.loot > 0 then
-      sspr(6+_floor*12,72+_l*9,6,9,_p.x*4-_p.dir*2,_p.y*4-5,6,9,_flipx)
-     else
-      sspr(0+_floor*12,72+_l*9,6,9,_p.x*4-_p.dir*2,_p.y*4-5,6,9,_flipx)
-     end
-    end
+ -- draw players
+ for _p in all(players) do
+  local _l=light[_p.y*32+_p.x]
+  if _p.state == 'hiding' then
+   sspr(24+_p.adjacency*4,72,4,9,_p.x*4,_p.y*4-5)
+  elseif _p.state == 'working' then
+   if _p.workingstate == 'hacking' then
+    sspr(40,72+_l*9,5,9,_p.x*4,_p.y*4-5)
+   elseif _p.workingstate == 'cracking' then
+    sspr(45,72+_l*9,5,9,_p.x*4,_p.y*4-5)
+   end
+   if #_p.loot > 0 then
+    sspr(5,91+_l*4,8,4,_p.x*4,_p.y*4)
+   end
+  elseif _p.state == 'caught' then
+   sspr(0,90,6,9,_p.x*4,_p.y*4-5)
+  else
+   local _floor=floor[_p.y*32+_p.x]
+   local _flipx=false
+   if _p.dir == 1 then
+    _flipx=true
+   end
+   if #_p.loot > 0 then
+    sspr(6+_floor*12,72+_l*9,6,9,_p.x*4-_p.dir*2,_p.y*4-5,6,9,_flipx)
+   else
+    sspr(0+_floor*12,72+_l*9,6,9,_p.x*4-_p.dir*2,_p.y*4-5,6,9,_flipx)
    end
   end
 
-  -- draw guards
-  for _g in all(guards) do
-   if _g.y == _y then
-    if _g.state == 'patrolling' then
-     local _dir=0
-     if _g.dx == 1 then
-      _dir=1
-     elseif _g.dy == -1 then
-      _dir=2
-     elseif _g.dy == 1 then
-      _dir=3
-     end
-     local _frame=0
-     if _g.state == 'patrolling' then
-      _frame=1
-      if tick < alertlvls[alertlvl]/2 then
-       _frame=2
-      end
-     end
-     sspr(0+_dir*27+_frame*9,31,9,11,_g.x*4-2,_g.y*4-7)
-
-    elseif _g.state == 'holding' then
-     sspr(109,31,7,11,_g.x*4-2,_g.y*4-7)
-    end
-   end
-  end
+  -- todo: draw objs[(_p.y+1)*32+_p.x] here again
  end
+
+ -- draw guards
+ for _g in all(guards) do
+  if _g.state == 'patrolling' then
+   local _dir=0
+   if _g.dx == 1 then
+    _dir=1
+   elseif _g.dy == -1 then
+    _dir=2
+   elseif _g.dy == 1 then
+    _dir=3
+   end
+   local _frame=0
+   if _g.state == 'patrolling' then
+    _frame=1
+    if tick < alertlvls[alertlvl]/2 then
+     _frame=2
+    end
+   end
+   sspr(0+_dir*27+_frame*9,31,9,11,_g.x*4-2,_g.y*4-7)
+
+  elseif _g.state == 'holding' then
+   sspr(109,31,7,11,_g.x*4-2,_g.y*4-7)
+  end
+
+  -- todo: draw objs[(_p.y+1)*32+_p.x] here again
+ end
+
 
  -- draw fog
  if devfog == false then
@@ -1787,8 +1785,6 @@ function gamedraw()
    if _f == 1 then
     local _x,_y=_i&31,_i\32
     rectfill(_x*4,_y*4,_x*4+3,_y*4+3,0)
-   elseif _f == 2 then
-    sspr(28,104,4,4,_x*4-4,_y*4-4)
    end
   end
  end
