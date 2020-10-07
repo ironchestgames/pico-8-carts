@@ -199,7 +199,7 @@ local function walladjacency(_a)
  -- return nil
 end
 
-local t=0
+local tick=0
 
 local msgs={}
 local msgcols={{6,13},{9,10}}
@@ -252,13 +252,13 @@ for _i=1,#players do
 end
 
 local guards={
- {
-  x=12,y=7,
-  dx=-1,dy=0,
-  state='holding',
-  state_c=0,
-  state_c2=0,
- },
+ -- {
+ --  x=12,y=7,
+ --  dx=-1,dy=0,
+ --  state='holding',
+ --  state_c=0,
+ --  state_c2=0,
+ -- },
  -- {
  --  x=16,y=30,
  --  dx=-1,dy=0,
@@ -275,7 +275,7 @@ local policet=0
 local function setalertlvl2(_m)
  if alertlvl == 1 then
   alertlvl=2
-  t=60
+  tick=60
   policet=120
   for _g in all(guards) do
    add(msgs,{x=_g.x,y=_g.y,s=_m,t=4,colset=2})
@@ -790,7 +790,8 @@ local seed=flr(rnd()*10000)
 -- seed=9737
 -- seed=7594
 -- seed=6590
-seed=210
+-- seed=210
+seed=8986
 debug('seed',seed)
 
 function mapgen()
@@ -1124,13 +1125,13 @@ end
 
 
 function _init()
- t=0
+ tick=0
  alertlvl=1
  mapgen()
 end
 
 function gameupdate()
- t-=1
+ tick-=1
 
  -- reset fog
  for _i=0,arslen do
@@ -1241,7 +1242,7 @@ function gameupdate()
   -- end
  end
 
- if t <= 0 then
+ if tick <= 0 then
 
   -- update guards
   for _g in all(guards) do
@@ -1340,7 +1341,7 @@ function gameupdate()
     sfx(19)
    end
   end
-  t=alertlvls[alertlvl]
+  tick=alertlvls[alertlvl]
  end
 
  -- clear objects light
@@ -1797,7 +1798,7 @@ function _draw()
      local _frame=0
      if _g.state == 'patrolling' then
       _frame=1
-      if t < alertlvls[alertlvl]/2 then
+      if tick < alertlvls[alertlvl]/2 then
        _frame=2
       end
      end
@@ -1825,7 +1826,7 @@ function _draw()
 
  -- draw messages
  local _coli=1
- if t%8 >= 4 then
+ if tick%8 >= 4 then
   _coli=2
  end
  for _m in all(msgs) do
