@@ -10,8 +10,6 @@ __lua__
 
 - map generation
 
-- add outside hacking sprite
-
 - filing drawers
  - search (up/down?)
 
@@ -67,12 +65,12 @@ __lua__
 
 - message for when switching controls
 
-- names: johnny, jimmy, tommy, benny
+- names: johnny, jimmy, tommy, timmy, benny, lenny, ray, jay, donny, sonny, fred, ted, zed, tony, vince, roy
 
 --]]
 
 devfog=false
-devvalues=not false
+devvalues=false
 
 menuitem(1, 'devfog', function() devfog=not devfog end)
 menuitem(2, 'devvalues', function() devvalues=not devvalues end)
@@ -175,22 +173,7 @@ local players={
  {},
 }
 
-local guards={
- -- {
- --  x=12,y=12,
- --  dx=-1,dy=0,
- --  state='patrolling',
- --  state_c=0,
- --  state_c2=0,
- -- },
- -- {
- --  x=16,y=30,
- --  dx=-1,dy=0,
- --  state='patrolling',
- --  state_c=0,
- --  state_c2=0,
- -- },
-}
+local guards={}
 
 local initpolice
 
@@ -293,18 +276,18 @@ end
 
 
 
-local function setalertlvl2(_m)
+local function setalertlvl2(_m,_x,_y)
  if alertlvl == 1 then
   alertlvl=2
   tick=60
   policet=120
+  local _i=0
   for _g in all(guards) do
-   add(msgs,{x=_g.x,y=_g.y,s=_m,t=4,colset=2})
+   add(msgs,{x=_g.x,y=_g.y,s=_m,t=4,delay=_i,colset=2})
+   _i+=1
    _g.state='patrolling'
   end
-  if #guards == 0 then
-   add(msgs,{x=16,y=16,s=_m,t=4,colset=2})
-  end
+  add(msgs,{x=_x,y=_y,s=_m,t=4,colset=2})
  end
 end
 
@@ -476,7 +459,7 @@ local function camcontrol(_p,_o,_tmp)
    _tmp.pos[3].state=3
    _tmp.pos[4].state=3
    sfx(13)
-   setalertlvl2('cctv compromised!')
+   setalertlvl2('cctv compromised!',_tmp.ox,_tmp.oy)
   end
  end
 
@@ -585,7 +568,7 @@ local function doorfromunder(_p,_o,_tmp)
  end
 
  if light[(_tmp.oy-2)*32+_tmp.ox] == 1 then
-  setalertlvl2('intruder alert!')
+  setalertlvl2('intruder alert!',_tmp.ox,_tmp.oy)
  end
 
  for _y=_tmp.oy-2,0,-1 do
@@ -617,7 +600,7 @@ local function doorfromabove(_p,_o,_tmp)
  end
 
  if light[(_tmp.oy+2)*32+_tmp.ox] == 1 then
-  setalertlvl2('intruder alert!')
+  setalertlvl2('intruder alert!',_tmp.ox,_tmp.oy)
  end
 
  fog[(_tmp.oy+1)*32+_tmp.ox]=0
@@ -666,7 +649,7 @@ local function lockeddoorfrombelow(_p,_o,_tmp)
  end
 
  if light[(_tmp.oy-2)*32+_tmp.ox] == 1 then
-  setalertlvl2('intruder alert!')
+  setalertlvl2('intruder alert!',_tmp.ox,_tmp.oy)
  end
 
  for _y=_tmp.oy-2,0,-1 do
@@ -709,7 +692,7 @@ local function lockeddoorfromabove(_p,_o,_tmp)
  end
 
  if light[(_tmp.oy+2)*32+_tmp.ox] == 1 then
-  setalertlvl2('intruder alert!')
+  setalertlvl2('intruder alert!',_tmp.ox,_tmp.oy)
  end
 
  fog[(_tmp.oy+1)*32+_tmp.ox]=0
@@ -816,7 +799,8 @@ local seed=flr(rnd()*10000)
 -- seed=8986
 -- seed=6124
 -- seed=1857
-seed=3497
+-- seed=3497
+-- seed=8963
 debug('seed',seed)
 
 function mapgen()
@@ -902,7 +886,7 @@ function mapgen()
    adjaction={[2]=doorpeekfromunder}
   }
 
-  -- -- add camera
+  -- add camera
   local _c={x=_xstart+1,y=_ystart+1,state=1,}
   if rnd() < 0.5 then
    _c.x=_xstart+_w-2
@@ -913,6 +897,18 @@ function mapgen()
     _c.state=0
    end
    add(cameras,_c)
+  end
+
+  -- add guard
+  local _gx,_gy=flr(_xstart+_w/2),flr(_ystart+_h/2)
+  if _h > 6 and #guards < 3 and rnd() > 0.5 then
+   add(guards,{
+    x=_gx,y=_gy,
+    dx=-1,dy=0,
+    state='patrolling',
+    state_c=0,
+    state_c2=0,
+   })
   end
 
   -- bottom wall
@@ -929,7 +925,7 @@ function mapgen()
 
  -- add corridor
  local _w=flr(rnd(5))+6
- local _h=flr(rnd(19))+10
+ local _h=flr(rnd(18))+10
  local _xstart=2+flr(rnd(28-_w))
  local _ystart=3
 
@@ -1320,9 +1316,16 @@ function gameupdate()
 
   -- update messages
   for _m in all(msgs) do
-   _m.t-=1
-   if _m.t <= 0 then
-    del(msgs,_m)
+   if _m.delay then
+    _m.delay-=1
+    if _m.delay < 0 then
+     _m.delay=nil
+    end
+   else
+    _m.t-=1
+    if _m.t <= 0 then
+     del(msgs,_m)
+    end
    end
   end
 
@@ -1577,7 +1580,8 @@ function gameupdate()
      (light[_i-1] == 1 or light[_i+1] == 1) then
    light[_i]=1
    if _o.typ == 23 then
-    setalertlvl2('broken window!')
+    local _x,_y=_i&31,_i\32
+    setalertlvl2('broken window!',_x,_y)
    end
   end
  end
@@ -1586,13 +1590,14 @@ function gameupdate()
  if alertlvl == 1 then
   for _p in all(players) do
    if light[_p.y*32+_p.x] == 1 then
-    setalertlvl2('intruder alert!')
+    setalertlvl2('intruder alert!',_p.x,_p.y)
    end
   end
   for _i=0,arslen do
    local _o=objs[_i]
    if _o and _o.typ == 10 and light[_i] == 1 then
-    setalertlvl2('safe opened!')
+    local _x,_y=_i&31,_i\32
+    setalertlvl2('safe opened!',_x,_y)
    end
   end
  end
@@ -1811,11 +1816,13 @@ function gamedraw()
   _coli=2
  end
  for _m in all(msgs) do
-  local _hw=#_m.s*2
-  local _x=max(min(_m.x*4-_hw,127-_hw*2),0)
-  local _y=max(_m.y*4-13,0)
-  local _col=msgcols[_m.colset or 1][_coli]
-  print(_m.s,_x,_y,_col)
+  if _m.delay == nil then
+   local _hw=#_m.s*2
+   local _x=max(min(_m.x*4-_hw,127-_hw*2),0)
+   local _y=max(_m.y*4-13,0)
+   local _col=msgcols[_m.colset or 1][_coli]
+   print(_m.s,_x,_y,_col)
+  end
  end
 
  if devvalues then
