@@ -65,6 +65,10 @@ __lua__
 
 - doorfromunder from outside - player is hard to see
 
+- message for when switching controls
+
+- names: johnny, jimmy, tommy, benny
+
 --]]
 
 devfog=false
@@ -276,6 +280,7 @@ end
 for _i=1,#players do
  local _p=players[_i]
  _p.i=_i-1
+ _p.origi=_p.i
  _p.dir=1
  _p.state='standing'
  _p.workingstate='hacking'
@@ -1110,6 +1115,12 @@ function gameupdate()
  -- update players
  for _p in all(players) do
 
+  -- switch player control
+  if btnp(4) or btnp(5) then
+   _p.i=_p.i^^1
+  end
+
+  -- input
   if _p.state == 'working' then
    _p.workingstate='hacking'
    _p.action()
