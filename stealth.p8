@@ -147,6 +147,8 @@ local fogdirs={
  {x=0,y=-1,dx=-1,dy=-1},
 }
 
+local windowpeekdys={-64,-32,0,32}
+
 local guardsholdingdeltas={-65,-64,-63,-34,-33,-32,-31,-30,-2,-1,0,1,2,30,31,32,33,34,63,64,65}
 
 local tick=0
@@ -730,19 +732,25 @@ end
 
 
 local function windowpeekfromleft(_p,_o)
- for _x=_p.x+2,32 do
-  fog[_p.y*32+_x]=0
-  if floor[_p.y*32+_x] == 2 then
-   break
+ for _dy in all(windowpeekdys) do
+  local _y=_p.y*32+_dy
+  for _x=_p.x+2,32 do
+   fog[_y+_x]=0
+   if floor[_y+_x] == 2 then
+    break
+   end
   end
  end
 end
 
 local function windowpeekfromright(_p,_o)
- for _x=_p.x-2,0,-1 do
-  fog[_p.y*32+_x]=0
-  if floor[_p.y*32+_x] == 2 then
-   break
+ for _dy in all(windowpeekdys) do
+  local _y=_p.y*32+_dy
+  for _x=_p.x-2,0,-1 do
+   fog[_y+_x]=0
+   if floor[_y+_x] == 2 then
+    break
+   end
   end
  end
 end
@@ -808,6 +816,7 @@ local seed=flr(rnd()*10000)
 -- seed=8986
 -- seed=6124
 -- seed=1857
+seed=3497
 debug('seed',seed)
 
 function mapgen()
