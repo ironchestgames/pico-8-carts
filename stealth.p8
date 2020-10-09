@@ -424,6 +424,8 @@ local function camcontrol(_p,_o,_tmp)
     sspr(0,120+_p.state*2,3,2,_x,_y)
    end
   end
+
+  sfx(11)
  end
 
  if _tmp.pos[1].state != 3 then
