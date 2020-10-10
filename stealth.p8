@@ -212,6 +212,26 @@ local function sortonx(_t)
  end
 end
 
+local function addbig(_b1,_b2)
+ local _b3=''
+ local _c=0
+ for _i=max(#_b1,#_b2),0,-1 do
+  local _n1=tonum(sub(_b1,_i,_i)) or 0
+  _n1=_n1 == '' and 0 or _n1
+  local _n2=tonum(sub(_b2,_i,_i)) or 0
+  _n2=_n2 == '' and 0 or _n2
+  local _n=_n1+_n2+_c
+  if _n >= 10 then
+   _n-=10
+   _c=1
+  else
+   _c=0
+  end
+  _b3=_n.._b3
+ end
+ return _b3
+end
+
 
 local function adjacency(_x1,_y1,_x2,_y2)
  if _x1 == _x2-1 and _y1 == _y2 then
