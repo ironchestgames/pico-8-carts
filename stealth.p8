@@ -194,7 +194,7 @@ local function shuffle(_l)
  return _l
 end
 
-function clone(_t)
+local function clone(_t)
  local _tc={}
  for _k,_v in pairs(_t) do
   _tc[_k]=_v
