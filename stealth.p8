@@ -75,6 +75,7 @@ devvalues=false
 menuitem(1, 'devfog', function() devfog=not devfog end)
 menuitem(2, 'devvalues', function() devvalues=not devvalues end)
 
+
 printh('debug started','debug',true)
 function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  local ss={_s2,_s3,_s4,_s5,_s6,_s7,_s8}
@@ -86,45 +87,6 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
 end
 
 
-function testme_calib(name, func, calibrate_func, ...)
- -- based on https://www.lexaloffle.com/bbs/?pid=60198#p
- local n = 1024
- local nd = 128/n*256/60*256
-
- -- calibrate
- flip()
- local unused -- i am not sure why this helps give better results, but it does, so.
-
- local x,t=stat(1),stat(2)
- for i=1,n do
-   calibrate_func(...)
- end
- local y,u=stat(1),stat(2)
-
- -- measure
- for i=1,n do
-   func(...)
- end
- local z,v=stat(1),stat(2)
-
- -- report
- local function c(t0,t1,t2)
-  return(t0+t2-2*t1)*nd*2 end -- *2 for 0.2.x
-
- local s=name.." :"
- local lc=c(x-t,y-u,z-v)
- if (lc != 0) s..=" lua="..lc
- local sc=c(t,u,v)
- if (sc != 0) s..=" sys="..sc
-
- print(s) -- no paging, so not very useful, but.
- debug(s)
-end
-
-function testme(name, func, ...)
- func()
- -- return testme_calib(name, func, function() end, ...)
-end
 
 -- set auto-repeat delay for btnp
 poke(0x5f5c, 5)
