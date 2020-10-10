@@ -173,7 +173,12 @@ local players={
  {},
 }
 
-local guards={}
+local guards
+
+local cash=1
+local maxseli=6
+local visited={}
+local mapthings
 
 local initpolice
 
@@ -808,28 +813,16 @@ end
 
 
 
-local seed=flr(rnd()*10000)
--- seed=5008
--- seed=2685
--- seed=227
--- seed=9399
--- seed=4199
--- seed=4403
--- seed=9737
--- seed=7594
--- seed=6590
--- seed=210
--- seed=8986
--- seed=6124
--- seed=1857
--- seed=3497
--- seed=8963
+local seed=rnd()
 debug('seed',seed)
 
 function mapgen()
- srand(seed)
  floor={}
  objs={}
+ guards={}
+ cameras={}
+ mapthings={}
+ local computercount=0
 
  local _r=rnd()
  local _x,_y=30,30
@@ -1076,6 +1069,11 @@ function mapgen()
    objs[_i+1]={typ=3,action={[2]=computer},loot={'door access code'},shadow={[0]=nil,nil,nil,nil}}
    objs[_i+2]={typ=4,shadow={[0]=nil,true,nil,nil}}
 
+   computercount+=1
+   if computercount == 2 then
+    add(mapthings,'hackable computers')
+   end
+
   elseif _typ == 5 then
    _o.shadow={[0]=true,nil,nil,nil}
    objs[_i+1]={typ=6,action={[2]=camcontrol},shadow={[0]=nil,nil,nil,nil}}
@@ -1087,6 +1085,8 @@ function mapgen()
    _o.loot={'diamonds',14000}
 
    objs[_i+1]={typ=9,shadow={[0]=nil,true,nil,nil}}
+
+   add(mapthings,'crackable safe')
   end
  end
 
@@ -1125,752 +1125,756 @@ function mapgen()
   end
  end
 
+ if #cameras > 1 then
+  add(mapthings, 'cameras')
+ end
+
+ if #guards > 1 then
+  add(mapthings, 'guards')
+ end
+
 end
 
 
 
 
-function _init()
+
+
+
+
+
+
+
+
+local function gameinit()
  tick=0
  alertlvl=1
- mapgen()
-end
+ _update=function()
+  tick-=1
 
-function gameupdate()
- tick-=1
+  -- reset fog
+  fog={}
 
- -- reset fog
- fog={}
+  -- update players
+  for _p in all(players) do
 
- -- update players
- for _p in all(players) do
-
-  -- switch player control
-  if btnp(4) then
-   _p.i=_p.i^^1
-  end
-  if (btnp(4) or btnp(5)) and _p.i == 0 then
-   add(msgs,{x=_p.x,y=_p.y,s='.',t=15})
-  end
-
-  -- input
-  if _p.state == 'working' then
-   _p.workingstate='hacking'
-   _p.action()
-
-  else
-   local _isinput
-   _p.dx=0
-   _p.dy=0
-   if btnp(0,_p.i) then
-    _p.dx=-1
-    _p.dir=0
-    _isinput=true
-   elseif btnp(1,_p.i) then
-    _p.dx=1
-    _p.dir=1
-    _isinput=true
-   elseif btnp(2,_p.i) then
-    _p.dy=-1
-    _isinput=true
-   elseif btnp(3,_p.i) then
-    _p.dy=1
-    _isinput=true
+   -- switch player control
+   if btnp(4) then
+    _p.i=_p.i^^1
    end
-   local _nextx,_nexty=_p.x+_p.dx,_p.y+_p.dy
-   if _nextx > 31 or _nextx < 0 or _nexty > 31 or _nexty < 0 then
-    add(escapedplayers,_p)
-    del(players,_p)
-    add(msgs,{x=_p.x,y=_p.y,s='escaped',t=30})
+   if (btnp(4) or btnp(5)) and _p.i == 0 then
+    add(msgs,{x=_p.x,y=_p.y,s='.',t=15})
+   end
+
+   -- input
+   if _p.state == 'working' then
+    _p.workingstate='hacking'
+    _p.action()
+
    else
-
-    local _ni=_nexty*32+_nextx
-    local _nexto=objs[_ni]
-    if _nexto != nil then
-     local _a=adjacency(_nextx,_nexty,_p.x,_p.y)
-     _nextx,_nexty=_p.x,_p.y
-     if _nexto.action and _nexto.action[_a] then
-      _p.state='working'
-      _p.action=curry3(_nexto.action[_a],_p,_nexto,{ox=_ni&31,oy=_ni\32,oi=_ni})
-     end
+    local _isinput
+    _p.dx=0
+    _p.dy=0
+    if btnp(0,_p.i) then
+     _p.dx=-1
+     _p.dir=0
+     _isinput=true
+    elseif btnp(1,_p.i) then
+     _p.dx=1
+     _p.dir=1
+     _isinput=true
+    elseif btnp(2,_p.i) then
+     _p.dy=-1
+     _isinput=true
+    elseif btnp(3,_p.i) then
+     _p.dy=1
+     _isinput=true
     end
+    local _nextx,_nexty=_p.x+_p.dx,_p.y+_p.dy
+    if _nextx > 31 or _nextx < 0 or _nexty > 31 or _nexty < 0 then
+     add(escapedplayers,_p)
+     del(players,_p)
+     add(msgs,{x=_p.x,y=_p.y,s='escaped',t=30})
+    else
 
-    if _p.state != 'working' then
-     local _i=_p.y*32+_p.x
-     for _a=0,3 do
-      local _oi=_i+adjdeltas[_a]
-      local _adjo=objs[_oi]
-      if _adjo and _adjo.adjaction and _adjo.adjaction[_a] then
-       _adjo.adjaction[_a](_p,_adjo,{ox=_oi&31,oy=_oi\32,oi=_oi})
+     local _ni=_nexty*32+_nextx
+     local _nexto=objs[_ni]
+     if _nexto != nil then
+      local _a=adjacency(_nextx,_nexty,_p.x,_p.y)
+      _nextx,_nexty=_p.x,_p.y
+      if _nexto.action and _nexto.action[_a] then
+       _p.state='working'
+       _p.action=curry3(_nexto.action[_a],_p,_nexto,{ox=_ni&31,oy=_ni\32,oi=_ni})
       end
      end
-    end
 
-
-    if _p.state != 'caught' and floor[_nexty*32+_nextx] != 2 then
-     _p.x,_p.y=_nextx,_nexty
-
-     -- hide behind object
      if _p.state != 'working' then
-      local _hiding=nil
-      local _pwa=walladjacency(_p)
       local _i=_p.y*32+_p.x
       for _a=0,3 do
        local _oi=_i+adjdeltas[_a]
-       local _o=objs[_oi]
-       if _o then
-        local _ox,_oy=_oi&31,_oi\32
-        local _a=adjacency(_p.x,_p.y,_ox,_oy)
-        local _owa=walladjacency({x=_ox,y=_oy})
-        if _o.shadow and _o.shadow[_a] and _owa != nil and _pwa != nil and _a != nil and light[_p.y*32+_p.x] == 0 then
-         _p.state='hiding'
-         _p.adjacency=_a
-         _hiding=true
-        end
+       local _adjo=objs[_oi]
+       if _adjo and _adjo.adjaction and _adjo.adjaction[_a] then
+        _adjo.adjaction[_a](_p,_adjo,{ox=_oi&31,oy=_oi\32,oi=_oi})
        end
-      end
-      if _hiding == nil then
-       _p.state='standing'
       end
      end
 
+
+     if _p.state != 'caught' and floor[_nexty*32+_nextx] != 2 then
+      _p.x,_p.y=_nextx,_nexty
+
+      -- hide behind object
+      if _p.state != 'working' then
+       local _hiding=nil
+       local _pwa=walladjacency(_p)
+       local _i=_p.y*32+_p.x
+       for _a=0,3 do
+        local _oi=_i+adjdeltas[_a]
+        local _o=objs[_oi]
+        if _o then
+         local _ox,_oy=_oi&31,_oi\32
+         local _a=adjacency(_p.x,_p.y,_ox,_oy)
+         local _owa=walladjacency({x=_ox,y=_oy})
+         if _o.shadow and _o.shadow[_a] and _owa != nil and _pwa != nil and _a != nil and light[_p.y*32+_p.x] == 0 then
+          _p.state='hiding'
+          _p.adjacency=_a
+          _hiding=true
+         end
+        end
+       end
+       if _hiding == nil then
+        _p.state='standing'
+       end
+      end
+
+     end
+    end
+   end
+
+   -- if one square from guard, get caught
+   for _g in all(guards) do
+    local _dx=_p.x-_g.x
+    local _dy=_p.y-_g.y
+    if (_p.state != 'hiding' or light[_p.y*32+_p.x] == 1) and _p.state != 'caught' and abs(_dx) <= 1 and abs(_dy) <= 1 then
+     _p.state='caught'
+     setalertlvl2('suspect caught!',_g.x,_g.y)
+     _g.state='holding'
+    end
+   end
+
+   -- any input near a guard makes noise and they get suspicious
+   -- if _isinput then
+   --  for _g in all(guards) do
+   --   local _dx=_p.x-_g.x
+   --   local _dy=_p.y-_g.y
+   --   local _h=sqrt(_dx*_dx+_dy*_dy)
+   --   if _g.state != 'holding' and _h <= 5 then
+   --    sfx(0)
+   --    _g.state='listening'
+   --    _g.state_c=7
+   --    _g.state_c2=3
+   --    add(msgs,{x=_g.x,y=_g.y,s='?'})
+   --   end
+   --  end
+   -- end
+  end
+
+  if tick <= 0 then
+
+   -- update guards
+   for _g in all(guards) do
+
+    -- handle state
+    if _g.state == 'standing' then
+     _g.state_c-=1
+     -- set to patrolling
+     if _g.state_c <= 0 then
+      _g.state='patrolling'
+     end
+
+    elseif _g.state == 'patrolling' then
+
+     -- turn when close to wall
+     if iswallclose(_g.x,_g.y,_g.dx,_g.dy) then
+      local _turns=shuffle{
+       {dx=_g.dy,dy=_g.dx},
+       {dx=-_g.dy,dy=-_g.dx},
+      }
+      add(_turns,{dx=-_g.dx,dy=-_g.dy})
+      for _t in all(_turns) do
+       if not iswallclose(_g.x,_g.y,_t.dx,_t.dy) then
+        _g.dx=_t.dx
+        _g.dy=_t.dy
+        break
+       end
+      end
+     end
+
+     -- move
+     local _gwa=walladjacency({x=_g.x+_g.dx,y=_g.y+_g.dy}) -- todo: do this better
+     if _gwa == 0 then
+      _g.x+=1
+     elseif _gwa == 1 then
+      _g.x-=1
+     elseif _gwa == 2 then
+      _g.y+=1
+     elseif _gwa == 3 then
+      _g.y-=1
+     else
+      _g.x+=_g.dx
+      _g.y+=_g.dy
+     end
+
+    elseif _g.state == 'holding' then
+     -- is holding suspect
+
+    elseif _g.state == 'listening' then
+     _g.state_c-=1
+     _g.state_c2-=1
+
+     if _g.state_c2 <= 0 then
+      local _action=flr(rnd(2))+1
+      -- turns 180
+      if _action == 1 then
+       _g.dx*=-1
+       _g.dy*=-1
+       _g.state_c2=3
+
+      -- decides to walk
+      elseif _action == 2 then
+       _g.state_c=0
+      end
+     end
+
+     -- set to patrolling
+     if _g.state_c <= 0 then
+      _g.state='patrolling'
+     end
+    end
+   end
+
+   -- set new tick
+   if alertlvl == 2 and policet > 0 then
+    policet-=1
+    if policet == 64 then
+     sfx(16)
+    end
+    if policet <= 0 then
+     initpolice()
+    end
+   end
+   if #guards > 0 and t == 0 then
+    if alertlvl == 2 then
+     sfx(18)
+    else
+     sfx(19)
+    end
+   end
+   tick=alertlvls[alertlvl]
+  end
+
+  -- update messages
+  for _m in all(msgs) do
+   if not _m.t then
+    _m.t=90
+   end
+   if _m.delay then
+    _m.delay-=1
+    if _m.delay < 0 then
+     _m.delay=nil
+    end
+   else
+    _m.t-=1
+    if _m.t <= 0 then
+     del(msgs,_m)
     end
    end
   end
 
-  -- if one square from guard, get caught
-  for _g in all(guards) do
-   local _dx=_p.x-_g.x
-   local _dy=_p.y-_g.y
-   if (_p.state != 'hiding' or light[_p.y*32+_p.x] == 1) and _p.state != 'caught' and abs(_dx) <= 1 and abs(_dy) <= 1 then
-    _p.state='caught'
-    setalertlvl2('suspect caught!',_g.x,_g.y)
-    _g.state='holding'
+  -- clear light
+  for _i=0,arslen do
+   local _o=objs[_i]
+   if _o then
+    _o.light={}
+   end
+   light[_i]=0
+  end
+
+  -- add cameras light
+  for _c in all(cameras) do
+   if _c.state != 0 then
+    local _dx=1
+    if floor[_c.y*32+_c.x+1] == 2 then
+     _dx=-1
+    end
+    local _x,_y=_c.x,_c.y
+    local _ldown,_lside=32,32
+    repeat
+     local _bx,_by=_x,_y
+     local _bydown=_by
+     local _bldown=1
+     while floor[_bydown*32+_bx] != 2 and _bldown <= _ldown do
+      local _o=objs[_bydown*32+_bx]
+      if _o then
+       add(_o.light,{x=0,y=-1})
+      end
+
+      light[_bydown*32+_bx]=1
+
+      -- remove fog if selected in camcontrol
+      if _c.state == 2 then
+       fog[_bydown*32+_bx]=0
+
+       local _i=(_bydown+1)*32+_bx
+       if floor[_i] == 2 then
+        fog[_i]=0
+       end
+
+       _i=_bydown*32+_bx+1
+       if floor[_i] == 2 then
+        fog[_i]=0
+       end
+
+       _i=_i-2
+       if floor[_i] == 2 then
+        fog[_i]=0
+       end
+      end
+
+      _bydown+=1
+      _bldown+=1
+     end
+
+     local _bxside=_bx
+     local _blside=1
+     while floor[_by*32+_bxside] != 2 and _blside <= _lside do
+      local _o=objs[_by*32+_bxside]
+      if _o then
+       add(_o.light,{x=-_dx,y=0})
+      end
+
+      light[_by*32+_bxside]=1
+
+      -- remove fog if selected in camcontrol
+      if _c.state == 2 then
+       if _by == _y then
+        fog[(_by-1)*32+_bxside]=0
+       end
+
+       fog[_by*32+_bxside]=0
+
+       local _i=(_by+1)*32+_bxside
+       if floor[_i] == 2 then
+        fog[_i]=0
+       end
+
+       _i=_by*32+_bxside+_dx
+       if floor[_i] == 2 then
+        fog[_i]=0
+       end
+      end
+
+      _bxside+=_dx
+      _blside+=1
+     end
+     _lside=_blside-2
+     _ldown=_bldown-2
+     _y+=1
+     _x+=_dx
+    until floor[_y*32+_x] == 2 or
+          floor[(_y-1)*32+_x] == 2 or
+          floor[_y*32+_x-_dx] == 2
    end
   end
 
-  -- any input near a guard makes noise and they get suspicious
-  -- if _isinput then
-  --  for _g in all(guards) do
-  --   local _dx=_p.x-_g.x
-  --   local _dy=_p.y-_g.y
-  --   local _h=sqrt(_dx*_dx+_dy*_dy)
-  --   if _g.state != 'holding' and _h <= 5 then
-  --    sfx(0)
-  --    _g.state='listening'
-  --    _g.state_c=7
-  --    _g.state_c2=3
-  --    add(msgs,{x=_g.x,y=_g.y,s='?'})
-  --   end
-  --  end
-  -- end
- end
-
- if tick <= 0 then
-
-  -- update guards
+  -- shine guards flashlights
   for _g in all(guards) do
-
-   -- handle state
-   if _g.state == 'standing' then
-    _g.state_c-=1
-    -- set to patrolling
-    if _g.state_c <= 0 then
-     _g.state='patrolling'
+   if _g.state == 'holding' then
+    local _i=_g.y*32+_g.x
+    for _ghd in all(guardsholdingdeltas) do
+     light[_i+_ghd]=1
     end
 
-   elseif _g.state == 'patrolling' then
+   elseif _g.dx != 0 then
+    local _x,_y=_g.x+_g.dx,_g.y+_g.dy
+    local _l=32
+    while floor[_y*32+_x] != 2 do
+     local _c=0
+     local _bx=_x
+     local _by=_y
+     while floor[_by*32+_bx] != 2 and _c <= _l do
+      local _o=objs[_by*32+_bx]
+      if _o then
+       add(_o.light,{x=0,y=-1})
+       add(_o.light,{x=-_g.dx,y=0})
+      end
+      light[_by*32+_bx]=1
+      _bx+=_g.dx
+      _by+=1
+      _c+=1
+     end
+     _l=_c-1
+     _x+=_g.dx
+    end
 
-    -- turn when close to wall
-    if iswallclose(_g.x,_g.y,_g.dx,_g.dy) then
-     local _turns=shuffle{
-      {dx=_g.dy,dy=_g.dx},
-      {dx=-_g.dy,dy=-_g.dx},
-     }
-     add(_turns,{dx=-_g.dx,dy=-_g.dy})
-     for _t in all(_turns) do
-      if not iswallclose(_g.x,_g.y,_t.dx,_t.dy) then
-       _g.dx=_t.dx
-       _g.dy=_t.dy
+    _x,_y=_g.x+_g.dx,_g.y+_g.dy
+    _l=32
+    while floor[_y*32+_x] != 2 do
+     local _c=0
+     local _bx=_x
+     local _by=_y
+     while floor[_by*32+_bx] != 2 and _c <= _l do
+      local _o=objs[_by*32+_bx]
+      if _o then
+       add(_o.light,{x=0,y=1})
+       add(_o.light,{x=-_g.dx,y=0})
+      end
+      light[_by*32+_bx]=1
+      _bx+=_g.dx
+      _by-=1
+      _c+=1
+     end
+     _l=_c-1
+     _x+=_g.dx
+    end
+
+   elseif _g.dy != 0 then
+    local _x,_y=_g.x+_g.dx,_g.y+_g.dy
+    local _l=32
+    while floor[_y*32+_x] != 2 do
+     local _c=0
+     local _bx=_x
+     local _by=_y
+     while floor[_by*32+_bx] != 2 and _c <= _l do
+      local _o=objs[_by*32+_bx]
+      if _o then
+       add(_o.light,{x=0,y=-_g.dy})
+       add(_o.light,{x=-1,y=0})
+      end
+      light[_by*32+_bx]=1
+      _bx+=1
+      _by+=_g.dy
+      _c+=1
+     end
+     _l=_c-1
+     _y+=_g.dy
+    end
+
+    _x,_y=_g.x+_g.dx,_g.y+_g.dy
+    _l=32
+    while floor[_y*32+_x] != 2 do
+     local _c=0
+     local _bx=_x
+     local _by=_y
+     while floor[_by*32+_bx] != 2 and _c <= _l do
+      local _o=objs[_by*32+_bx]
+      if _o then
+       add(_o.light,{x=0,y=-_g.dy})
+       add(_o.light,{x=1,y=0})
+      end
+      light[_by*32+_bx]=1
+      _bx-=1
+      _by+=_g.dy
+      _c+=1
+     end
+     _l=_c-1
+     _y+=_g.dy
+    end
+   end
+  end
+
+  -- add shadow around objects
+  for _i=0,arslen do
+   local _o=objs[_i]
+   if _o and _o.shadow then
+    local _ox,_oy=_i&31,_i\32
+    if _o.shadow[0] then
+     light[_oy*32+_ox-1]=0
+    end
+    if _o.shadow[1] then
+     light[_oy*32+_ox+1]=0
+    end
+    if _o.shadow[2] then
+     light[(_oy-1)*32+_ox]=0
+    end
+    if _o.shadow[3] then
+     light[(_oy+1)*32+_ox]=0
+    end
+
+    for _l in all(_o.light) do
+     light[(_oy+_l.y)*32+_ox+_l.x]=1
+    end
+   end
+  end
+
+
+  for _i=0,arslen do
+
+   -- light up walls
+   local _x,_y=_i&31,_i\32
+   if light[(_y+1)*32+_x] == 1 and floor[_y*32+_x] == 2 and floor[(_y+1)*32+_x] != 2 then
+    light[_y*32+_x]=1
+   end
+
+   -- light up windows
+   local _o=objs[_i]
+   if _o and (_o.typ == 22 or _o.typ == 23) and
+      (light[_i-1] == 1 or light[_i+1] == 1) then
+    light[_i]=1
+    if _o.typ == 23 then
+     local _x,_y=_i&31,_i\32
+     setalertlvl2('broken window!',_x,_y)
+    end
+   end
+  end
+
+  -- intruder alert
+  if alertlvl == 1 then
+   for _p in all(players) do
+    if light[_p.y*32+_p.x] == 1 then
+     setalertlvl2('intruder alert!',_p.x,_p.y)
+    end
+   end
+   for _i=0,arslen do
+    local _o=objs[_i]
+    if _o and _o.typ == 10 and light[_i] == 1 then
+     local _x,_y=_i&31,_i\32
+     setalertlvl2('safe opened!',_x,_y)
+    end
+   end
+  end
+
+  -- remove fog
+  for _p in all(players) do
+   if _p.state == 'caught' then
+    -- do nothing
+   else
+    for _d in all(fogdirs) do
+     local _x,_y=_p.x,_p.y
+     local _l=32
+     while floor[_y*32+_x] != 2 and floor[_y*32+_x] != nil do
+      local _c=0
+      local _bx=_x
+      local _by=_y
+      while _by < 32 and _by >= 0 and _bx < 32 and _bx >= 0 and floor[_by*32+_bx] != 2 and floor[_by*32+_bx] != nil and _c <= _l do
+       fog[_by*32+_bx]=0
+       _bx+=_d.dx
+       _by+=_d.dy
+       _c+=1
+      end
+      if _by < 32 and _by >= 0 and _bx < 32 and _bx >= 0 then
+       fog[_by*32+_bx]=0
+      end
+      _bx+=_d.dx
+      _by+=_d.dy
+      _l=_c
+      _x+=_d.x
+      _y+=_d.y
+      if _y < 32 and _y >= 0 and _x < 32 and _x >= 0 then
+       fog[_y*32+_x]=0
+      else
        break
       end
      end
     end
+   end
+  end
 
-    -- move
-    local _gwa=walladjacency({x=_g.x+_g.dx,y=_g.y+_g.dy}) -- todo: do this better
-    if _gwa == 0 then
-     _g.x+=1
-    elseif _gwa == 1 then
-     _g.x-=1
-    elseif _gwa == 2 then
-     _g.y+=1
-    elseif _gwa == 3 then
-     _g.y-=1
-    else
-     _g.x+=_g.dx
-     _g.y+=_g.dy
-    end
-
-   elseif _g.state == 'holding' then
-    -- is holding suspect
-
-   elseif _g.state == 'listening' then
-    _g.state_c-=1
-    _g.state_c2-=1
-
-    if _g.state_c2 <= 0 then
-     local _action=flr(rnd(2))+1
-     -- turns 180
-     if _action == 1 then
-      _g.dx*=-1
-      _g.dy*=-1
-      _g.state_c2=3
-
-     -- decides to walk
-     elseif _action == 2 then
-      _g.state_c=0
-     end
-    end
-
-    -- set to patrolling
-    if _g.state_c <= 0 then
-     _g.state='patrolling'
+  -- remove fog from holding guards
+  for _g in all(guards) do
+   if _g.state == 'holding' then
+    local _i=_g.y*32+_g.x
+    for _ghd in all(guardsholdingdeltas) do
+     fog[_i+_ghd]=0
     end
    end
   end
 
-  -- set new tick
-  if alertlvl == 2 and policet > 0 then
-   policet-=1
-   if policet == 64 then
-    sfx(16)
-   end
-   if policet <= 0 then
-    initpolice()
+  -- remove fog from walls
+  for _i=0,arslen do
+   if fog[_i+32] == 0 and floor[_i] == 2 and floor[_i+32] == 2 then
+    fog[_i]=0
    end
   end
-  if #guards > 0 and t == 0 then
-   if alertlvl == 2 then
-    sfx(18)
+
+ end
+
+ _draw=function()
+  gupd=stat(1)
+  gupdmax=max(gupd,gupdmax)
+
+  if alertlvl == 2 and policet <= 64 then
+   if policet%8 >= 4 then
+    pal(0,8)
    else
-    sfx(19)
+    pal(0,12)
    end
   end
-  tick=alertlvls[alertlvl]
- end
 
- -- update messages
- for _m in all(msgs) do
-  if not _m.t then
-   _m.t=90
-  end
-  if _m.delay then
-   _m.delay-=1
-   if _m.delay < 0 then
-    _m.delay=nil
+  local _lightcols={[0]=1,13,2}
+  for _i=arslen,0,-1 do
+
+   -- draw floor
+   local _tile=floor[_i]
+   local _l=light[_i]
+   local _x,_y=_i&31,_i\32
+   local _sx,_sy=_x*4,_y*4
+
+   local _col=_tile
+   if _l == 1 then
+    _col=_lightcols[_col]
    end
-  else
-   _m.t-=1
-   if _m.t <= 0 then
-    del(msgs,_m)
-   end
-  end
- end
-
- -- clear light
- for _i=0,arslen do
-  local _o=objs[_i]
-  if _o then
-   _o.light={}
-  end
-  light[_i]=0
- end
-
- -- add cameras light
- for _c in all(cameras) do
-  if _c.state != 0 then
-   local _dx=1
-   if floor[_c.y*32+_c.x+1] == 2 then
-    _dx=-1
-   end
-   local _x,_y=_c.x,_c.y
-   local _ldown,_lside=32,32
-   repeat
-    local _bx,_by=_x,_y
-    local _bydown=_by
-    local _bldown=1
-    while floor[_bydown*32+_bx] != 2 and _bldown <= _ldown do
-     local _o=objs[_bydown*32+_bx]
-     if _o then
-      add(_o.light,{x=0,y=-1})
-     end
-
-     light[_bydown*32+_bx]=1
-
-     -- remove fog if selected in camcontrol
-     if _c.state == 2 then
-      fog[_bydown*32+_bx]=0
-
-      local _i=(_bydown+1)*32+_bx
-      if floor[_i] == 2 then
-       fog[_i]=0
-      end
-
-      _i=_bydown*32+_bx+1
-      if floor[_i] == 2 then
-       fog[_i]=0
-      end
-
-      _i=_i-2
-      if floor[_i] == 2 then
-       fog[_i]=0
-      end
-     end
-
-     _bydown+=1
-     _bldown+=1
+   rectfill(_sx,_sy,_sx+3,_sy+3,_col)
+   
+   -- draw walls
+   if _tile == 2 then
+    local _tilebelow=floor[_i+32]
+    if _tilebelow == 0 then -- todo: maybe remove this, maybe it shouldn't be possible to have light outside
+     sspr(12,104+_l*5,4,5,_sx,_sy)
+    elseif _tilebelow == 1 then
+     rectfill(_sx,_sy,_sx+3,_sy+4,13-7*_l)
     end
-
-    local _bxside=_bx
-    local _blside=1
-    while floor[_by*32+_bxside] != 2 and _blside <= _lside do
-     local _o=objs[_by*32+_bxside]
-     if _o then
-      add(_o.light,{x=-_dx,y=0})
-     end
-
-     light[_by*32+_bxside]=1
-
-     -- remove fog if selected in camcontrol
-     if _c.state == 2 then
-      if _by == _y then
-       fog[(_by-1)*32+_bxside]=0
-      end
-
-      fog[_by*32+_bxside]=0
-
-      local _i=(_by+1)*32+_bxside
-      if floor[_i] == 2 then
-       fog[_i]=0
-      end
-
-      _i=_by*32+_bxside+_dx
-      if floor[_i] == 2 then
-       fog[_i]=0
-      end
-     end
-
-     _bxside+=_dx
-     _blside+=1
-    end
-    _lside=_blside-2
-    _ldown=_bldown-2
-    _y+=1
-    _x+=_dx
-   until floor[_y*32+_x] == 2 or
-         floor[(_y-1)*32+_x] == 2 or
-         floor[_y*32+_x-_dx] == 2
-  end
- end
-
- -- shine guards flashlights
- for _g in all(guards) do
-  if _g.state == 'holding' then
-   local _i=_g.y*32+_g.x
-   for _ghd in all(guardsholdingdeltas) do
-    light[_i+_ghd]=1
-   end
-
-  elseif _g.dx != 0 then
-   local _x,_y=_g.x+_g.dx,_g.y+_g.dy
-   local _l=32
-   while floor[_y*32+_x] != 2 do
-    local _c=0
-    local _bx=_x
-    local _by=_y
-    while floor[_by*32+_bx] != 2 and _c <= _l do
-     local _o=objs[_by*32+_bx]
-     if _o then
-      add(_o.light,{x=0,y=-1})
-      add(_o.light,{x=-_g.dx,y=0})
-     end
-     light[_by*32+_bx]=1
-     _bx+=_g.dx
-     _by+=1
-     _c+=1
-    end
-    _l=_c-1
-    _x+=_g.dx
-   end
-
-   _x,_y=_g.x+_g.dx,_g.y+_g.dy
-   _l=32
-   while floor[_y*32+_x] != 2 do
-    local _c=0
-    local _bx=_x
-    local _by=_y
-    while floor[_by*32+_bx] != 2 and _c <= _l do
-     local _o=objs[_by*32+_bx]
-     if _o then
-      add(_o.light,{x=0,y=1})
-      add(_o.light,{x=-_g.dx,y=0})
-     end
-     light[_by*32+_bx]=1
-     _bx+=_g.dx
-     _by-=1
-     _c+=1
-    end
-    _l=_c-1
-    _x+=_g.dx
-   end
-
-  elseif _g.dy != 0 then
-   local _x,_y=_g.x+_g.dx,_g.y+_g.dy
-   local _l=32
-   while floor[_y*32+_x] != 2 do
-    local _c=0
-    local _bx=_x
-    local _by=_y
-    while floor[_by*32+_bx] != 2 and _c <= _l do
-     local _o=objs[_by*32+_bx]
-     if _o then
-      add(_o.light,{x=0,y=-_g.dy})
-      add(_o.light,{x=-1,y=0})
-     end
-     light[_by*32+_bx]=1
-     _bx+=1
-     _by+=_g.dy
-     _c+=1
-    end
-    _l=_c-1
-    _y+=_g.dy
-   end
-
-   _x,_y=_g.x+_g.dx,_g.y+_g.dy
-   _l=32
-   while floor[_y*32+_x] != 2 do
-    local _c=0
-    local _bx=_x
-    local _by=_y
-    while floor[_by*32+_bx] != 2 and _c <= _l do
-     local _o=objs[_by*32+_bx]
-     if _o then
-      add(_o.light,{x=0,y=-_g.dy})
-      add(_o.light,{x=1,y=0})
-     end
-     light[_by*32+_bx]=1
-     _bx-=1
-     _by+=_g.dy
-     _c+=1
-    end
-    _l=_c-1
-    _y+=_g.dy
    end
   end
- end
 
- -- add shadow around objects
- for _i=0,arslen do
-  local _o=objs[_i]
-  if _o and _o.shadow then
-   local _ox,_oy=_i&31,_i\32
-   if _o.shadow[0] then
-    light[_oy*32+_ox-1]=0
-   end
-   if _o.shadow[1] then
-    light[_oy*32+_ox+1]=0
-   end
-   if _o.shadow[2] then
-    light[(_oy-1)*32+_ox]=0
-   end
-   if _o.shadow[3] then
-    light[(_oy+1)*32+_ox]=0
-   end
+  -- add border of premises
+  fillp(0b1010010110100101)
+  rect(0,0,127,127,3)
+  fillp()
 
-   for _l in all(_o.light) do
-    light[(_oy+_l.y)*32+_ox+_l.x]=1
-   end
-  end
- end
+  pal()
+  palt(0,false)
+  palt(15,true)
 
-
- for _i=0,arslen do
-
-  -- light up walls
-  local _x,_y=_i&31,_i\32
-  if light[(_y+1)*32+_x] == 1 and floor[_y*32+_x] == 2 and floor[(_y+1)*32+_x] != 2 then
-   light[_y*32+_x]=1
-  end
-
-  -- light up windows
-  local _o=objs[_i]
-  if _o and (_o.typ == 22 or _o.typ == 23) and
-     (light[_i-1] == 1 or light[_i+1] == 1) then
-   light[_i]=1
-   if _o.typ == 23 then
-    local _x,_y=_i&31,_i\32
-    setalertlvl2('broken window!',_x,_y)
-   end
-  end
- end
-
- -- intruder alert
- if alertlvl == 1 then
-  for _p in all(players) do
-   if light[_p.y*32+_p.x] == 1 then
-    setalertlvl2('intruder alert!',_p.x,_p.y)
-   end
-  end
+  -- draw objs
   for _i=0,arslen do
    local _o=objs[_i]
-   if _o and _o.typ == 10 and light[_i] == 1 then
+   if _o and _o.typ then
     local _x,_y=_i&31,_i\32
-    setalertlvl2('safe opened!',_x,_y)
+    local _l=light[_i]
+    sspr(_o.typ*4,_l*13,4,13,_x*4,_y*4-5)
+   end
+   _o=objs[_i-1]
+   if _o and _o.draw then
+    _o.draw()
    end
   end
- end
 
- -- remove fog
- for _p in all(players) do
-  if _p.state == 'caught' then
-   -- do nothing
-  else
-   for _d in all(fogdirs) do
-    local _x,_y=_p.x,_p.y
-    local _l=32
-    while floor[_y*32+_x] != 2 and floor[_y*32+_x] != nil do
-     local _c=0
-     local _bx=_x
-     local _by=_y
-     while _by < 32 and _by >= 0 and _bx < 32 and _bx >= 0 and floor[_by*32+_bx] != 2 and floor[_by*32+_bx] != nil and _c <= _l do
-      fog[_by*32+_bx]=0
-      _bx+=_d.dx
-      _by+=_d.dy
-      _c+=1
-     end
-     if _by < 32 and _by >= 0 and _bx < 32 and _bx >= 0 then
-      fog[_by*32+_bx]=0
-     end
-     _bx+=_d.dx
-     _by+=_d.dy
-     _l=_c
-     _x+=_d.x
-     _y+=_d.y
-     if _y < 32 and _y >= 0 and _x < 32 and _x >= 0 then
-      fog[_y*32+_x]=0
-     else
-      break
-     end
-    end
+  -- draw cameras
+  for _c in all(cameras) do
+   local _sx=8
+   if floor[_c.y*32+_c.x+1] == 2 then -- todo: make so cameras can be set anywhere on wall
+    _sx=12
    end
+   sspr(_sx,116+_c.state*3,4,3,_c.x*4,_c.y*4-4)
   end
- end
 
- -- remove fog from holding guards
- for _g in all(guards) do
-  if _g.state == 'holding' then
-   local _i=_g.y*32+_g.x
-   for _ghd in all(guardsholdingdeltas) do
-    fog[_i+_ghd]=0
-   end
-  end
- end
-
- -- remove fog from walls
- for _i=0,arslen do
-  if fog[_i+32] == 0 and floor[_i] == 2 and floor[_i+32] == 2 then
-   fog[_i]=0
-  end
- end
-
-end
-
-
-function _update()
- testme('gameupdate', gameupdate)
- -- gameupdate()
-end
-
-function _draw()
- testme('gamedraw', gamedraw)
-end
-
-function gamedraw()
- gupd=stat(1)
- gupdmax=max(gupd,gupdmax)
-
- if alertlvl == 2 and policet <= 64 then
-  if policet%8 >= 4 then
-   pal(0,8)
-  else
-   pal(0,12)
-  end
- end
-
- local _lightcols={[0]=1,13,2}
- for _i=arslen,0,-1 do
-
-  -- draw floor
-  local _tile=floor[_i]
-  local _l=light[_i]
-  local _x,_y=_i&31,_i\32
-  local _sx,_sy=_x*4,_y*4
-
-  local _col=_tile
-  if _l == 1 then
-   _col=_lightcols[_col]
-  end
-  rectfill(_sx,_sy,_sx+3,_sy+3,_col)
-  
-  -- draw walls
-  if _tile == 2 then
-   local _tilebelow=floor[_i+32]
-   if _tilebelow == 0 then -- todo: maybe remove this, maybe it shouldn't be possible to have light outside
-    sspr(12,104+_l*5,4,5,_sx,_sy)
-   elseif _tilebelow == 1 then
-    rectfill(_sx,_sy,_sx+3,_sy+4,13-7*_l)
-   end
-  end
- end
-
- -- add border of premises
- fillp(0b1010010110100101)
- rect(0,0,127,127,3)
- fillp()
-
- pal()
- palt(0,false)
- palt(15,true)
-
- -- draw objs
- for _i=0,arslen do
-  local _o=objs[_i]
-  if _o and _o.typ then
-   local _x,_y=_i&31,_i\32
+  -- draw players
+  for _p in all(players) do
+   local _i=_p.y*32+_p.x
    local _l=light[_i]
-   sspr(_o.typ*4,_l*13,4,13,_x*4,_y*4-5)
-  end
-  _o=objs[_i-1]
-  if _o and _o.draw then
-   _o.draw()
-  end
- end
-
- -- draw cameras
- for _c in all(cameras) do
-  local _sx=8
-  if floor[_c.y*32+_c.x+1] == 2 then -- todo: make so cameras can be set anywhere on wall
-   _sx=12
-  end
-  sspr(_sx,116+_c.state*3,4,3,_c.x*4,_c.y*4-4)
- end
-
- -- draw players
- for _p in all(players) do
-  local _i=_p.y*32+_p.x
-  local _l=light[_i]
-  local _floor=floor[_i]
-  local _px,_py=_p.x*4,_p.y*4-5
-  if _p.state == 'hiding' then
-   sspr(36+_p.adjacency*4,72,4,9,_px,_py)
-  elseif _p.state == 'working' then
-   if _p.workingstate == 'hacking' then
-    sspr(12+_floor*18,72+_l*9,5,9,_px,_py)
-   elseif _p.workingstate == 'cracking' then
-    sspr(52,72+_l*9,5,9,_px,_py)
-   end
-   if #_p.loot > 0 then
-    sspr(5,91+_l*4,8,4,_px,_py+5)
-   end
-  elseif _p.state == 'caught' then
-   sspr(0,90,6,9,_px,_py)
-  else
-   local _flipx=false
-   if _p.dir == 1 then
-    _flipx=true
-   end
-   if #_p.loot > 0 then
-    sspr(6+_floor*18,72+_l*9,6,9,_px-_p.dir*2,_py,6,9,_flipx)
+   local _floor=floor[_i]
+   local _px,_py=_p.x*4,_p.y*4-5
+   if _p.state == 'hiding' then
+    sspr(36+_p.adjacency*4,72,4,9,_px,_py)
+   elseif _p.state == 'working' then
+    if _p.workingstate == 'hacking' then
+     sspr(12+_floor*18,72+_l*9,5,9,_px,_py)
+    elseif _p.workingstate == 'cracking' then
+     sspr(52,72+_l*9,5,9,_px,_py)
+    end
+    if #_p.loot > 0 then
+     sspr(5,91+_l*4,8,4,_px,_py+5)
+    end
+   elseif _p.state == 'caught' then
+    sspr(0,90,6,9,_px,_py)
    else
-    sspr(0+_floor*18,72+_l*9,6,9,_px-_p.dir*2,_py,6,9,_flipx)
-   end
-  end
-
-  -- todo: draw objs[(_p.y+1)*32+_p.x] here again
- end
-
- -- draw guards
- for _g in all(guards) do
-  if _g.state == 'patrolling' then
-   local _dir=0
-   if _g.dx == 1 then
-    _dir=1
-   elseif _g.dy == -1 then
-    _dir=2
-   elseif _g.dy == 1 then
-    _dir=3
-   end
-   local _frame=0
-   if _g.state == 'patrolling' then
-    _frame=1
-    if tick < alertlvls[alertlvl]/2 then
-     _frame=2
+    local _flipx=false
+    if _p.dir == 1 then
+     _flipx=true
+    end
+    if #_p.loot > 0 then
+     sspr(6+_floor*18,72+_l*9,6,9,_px-_p.dir*2,_py,6,9,_flipx)
+    else
+     sspr(0+_floor*18,72+_l*9,6,9,_px-_p.dir*2,_py,6,9,_flipx)
     end
    end
-   sspr(0+_dir*27+_frame*9,31,9,11,_g.x*4-2,_g.y*4-7)
 
-  elseif _g.state == 'holding' then
-   sspr(109,31,7,11,_g.x*4-2,_g.y*4-7)
+   -- todo: draw objs[(_p.y+1)*32+_p.x] here again
   end
 
-  -- todo: draw objs[(_p.y+1)*32+_p.x] here again
- end
+  -- draw guards
+  for _g in all(guards) do
+   if _g.state == 'patrolling' then
+    local _dir=0
+    if _g.dx == 1 then
+     _dir=1
+    elseif _g.dy == -1 then
+     _dir=2
+    elseif _g.dy == 1 then
+     _dir=3
+    end
+    local _frame=0
+    if _g.state == 'patrolling' then
+     _frame=1
+     if tick < alertlvls[alertlvl]/2 then
+      _frame=2
+     end
+    end
+    sspr(0+_dir*27+_frame*9,31,9,11,_g.x*4-2,_g.y*4-7)
+
+   elseif _g.state == 'holding' then
+    sspr(109,31,7,11,_g.x*4-2,_g.y*4-7)
+   end
+
+   -- todo: draw objs[(_p.y+1)*32+_p.x] here again
+  end
 
 
- -- draw fog
- if devfog == false then
-  for _i=0,arslen do
-   local _f=fog[_i]
-   if _f == nil then
-    local _x,_y=_i&31,_i\32
-    rectfill(_x*4,_y*4,_x*4+3,_y*4+3,0)
+  -- draw fog
+  if devfog == false then
+   for _i=0,arslen do
+    local _f=fog[_i]
+    if _f == nil then
+     local _x,_y=_i&31,_i\32
+     rectfill(_x*4,_y*4,_x*4+3,_y*4+3,0)
+    end
    end
   end
- end
 
- -- draw messages
- local _coli=1
- if tick%8 >= 4 then
-  _coli=2
- end
- for _m in all(msgs) do
-  if _m.delay == nil then
-   local _hw=#_m.s*2
-   local _x=max(min(_m.x*4-_hw,127-_hw*2),0)
-   local _y=max(_m.y*4-13,0)
-   local _col=msgcols[_m.colset or 1][_coli]
-   print(_m.s,_x,_y,_col)
+  -- draw messages
+  local _coli=1
+  if tick%8 >= 4 then
+   _coli=2
   end
- end
+  for _m in all(msgs) do
+   if _m.delay == nil then
+    local _hw=#_m.s*2
+    local _x=max(min(_m.x*4-_hw,127-_hw*2),0)
+    local _y=max(_m.y*4-13,0)
+    local _col=msgcols[_m.colset or 1][_coli]
+    print(_m.s,_x,_y,_col)
+   end
+  end
 
- if devvalues then
+  if devvalues then
 
-  print('upd: '..gupd,0,122-54,11)
-  print(' max '..gupdmax,0,122-48,11)
-  print('fps: '..stat(7),0,122-42,11) -- note: fps
-  -- print(' min '..gfps,0,122-36,11) -- note: fps min
-  -- print('sys: '..stat(2),0,122-30,11) -- note: system calls
-  -- print(' max '..gsys,0,122-24,11) -- note: system calls max
-  print('cyc: '..stat(1),0,122-18,11) -- note: lua calls
-  print(' max '..gcyc,0,122-12,11) -- note: lua calls max
-  -- print('mem: '..stat(0),0,122-6,11) -- note: memory
-  -- print(' max '..gmem,0,122,11) -- note: memory max
+   print('upd: '..gupd,0,122-54,11)
+   print(' max '..gupdmax,0,122-48,11)
+   print('fps: '..stat(7),0,122-42,11) -- note: fps
+   -- print(' min '..gfps,0,122-36,11) -- note: fps min
+   -- print('sys: '..stat(2),0,122-30,11) -- note: system calls
+   -- print(' max '..gsys,0,122-24,11) -- note: system calls max
+   print('cyc: '..stat(1),0,122-18,11) -- note: lua calls
+   print(' max '..gcyc,0,122-12,11) -- note: lua calls max
+   -- print('mem: '..stat(0),0,122-6,11) -- note: memory
+   -- print(' max '..gmem,0,122,11) -- note: memory max
 
-  -- gfps=min(gfps,stat(7))
-  -- gsys=max(gsys,stat(2))
-  gcyc=max(gcyc,stat(1))
-  -- gmem=max(gmem,stat(0))
+   -- gfps=min(gfps,stat(7))
+   -- gsys=max(gsys,stat(2))
+   gcyc=max(gcyc,stat(1))
+   -- gmem=max(gmem,stat(0))
+  end
  end
 end
 
@@ -1881,7 +1885,19 @@ gcyc=0
 gsys=0
 gfps=30
 
-initpolice=function()
+
+
+
+
+
+
+
+
+
+
+
+
+local initpolice=function()
  local _pt=8
  sfx(16,-2)
  sfx(17)
@@ -1934,6 +1950,78 @@ initpolice=function()
   -- todo: draw armored truck for game over
  end
 end
+
+
+
+
+
+
+
+
+
+
+local function initmapselect()
+ _seli=1
+ srand(seed+_seli)
+ mapgen()
+ local _reconcost
+ _update=function()
+  local _oldseli=_seli
+  _reconcost=flr(maxseli*10)/100
+  if btnp(1) then
+   _seli+=1
+  elseif btnp(0) then
+   _seli-=1
+  end
+  if _seli != _oldseli then
+   _seli=mid(1,_seli,maxseli)
+   srand(seed+_seli)
+   mapgen()
+  end
+  if btnp(2) then
+   if _seli == maxseli then
+    if cash >= _reconcost then
+     cash-=_reconcost
+     maxseli+=1
+    end
+   elseif not visited[_seli] then
+    gameinit()
+   end
+  end
+ end
+
+ _draw=function()
+  cls()
+  print('$'..cash..'k',2,1,3)
+  rectfill(15,15,114,104,5)
+  if _seli > 1 then
+   spr(243,9,54)
+  end
+  if _seli < maxseli then
+   spr(242,117,54)
+  end
+
+  print('hit target '.._seli,19,18,15)
+  if _seli == maxseli then
+   local _col=8
+   if cash >= _reconcost then
+    _col=11
+    spr(226,61,104)
+   end
+   print('buy info $'.._reconcost..'k',28,37,_col)
+  elseif visited[_seli] then
+   print('(already visited)',28,37,6)
+  else
+   for _i=1,#mapthings do
+    print(mapthings[_i],28,30+_i*7,7)
+   end
+   spr(226,61,104)
+  end
+ end
+end
+
+
+_init=initmapselect
 
 
 __gfx__
@@ -2049,22 +2137,22 @@ b333ffffdddd02220000111122220202ffffffffffffffffffffffffffffffffffffffffffffffff
 333bffff666644451111dddd0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 3333ffff666655551111dddd0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 3bb3ffff666654441111dddd0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-3333ffff66665555ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-3333ffff66664454ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-bbbbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-bbbbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-bbbbffffff4ff4ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-8888fffff551155fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-8888ffff5ffffff5ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-8888ffffff8ff8ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-111ffffff551155fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-111fffff5ffffff5ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-777fffffffbffbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-777ffffff551155fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-bbbfffff5ffffff5ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-888fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-888fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+3333ffff6666555500000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+3333ffff6666445400000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+bbbbffffffffffff00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+bbbbffffffffffff00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+bbbbffffff4ff4ff000a0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+8888fffff551155f00aaa000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+8888ffff5ffffff50aaaaa00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+8888ffffff8ff8ffaaaaaaa0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+111ffffff551155fa0000000000a0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+111fffff5ffffff5aa00000000aa0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+777fffffffbffbffaaa000000aaa0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+777ffffff551155faaaa0000aaaa0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+bbbfffff5ffffff5aaa000000aaa0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+bbbfffffffffffffaa00000000aa0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+888fffffffffffffa0000000000a0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+888fffffffffffff0000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 __sfx__
 000100000c030110200c0100201010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
