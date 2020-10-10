@@ -252,7 +252,7 @@ local function playerloots(_p,_o)
    playerinventory[#playerinventory+1]=_o.loot -- no value, it's information
   end
  end
- add(msgs,{x=_p.x,y=_p.y-1,s=_m,t=3})
+ add(msgs,{x=_p.x,y=_p.y-1,s=_m,t=40})
  _o.loot=nil
 end
 
@@ -283,11 +283,11 @@ local function setalertlvl2(_m,_x,_y)
   policet=120
   local _i=0
   for _g in all(guards) do
-   add(msgs,{x=_g.x,y=_g.y,s=_m,t=4,delay=_i,colset=2})
+   add(msgs,{x=_g.x,y=_g.y,s=_m,delay=_i*15,colset=2})
    _i+=1
    _g.state='patrolling'
   end
-  add(msgs,{x=_x,y=_y,s=_m,t=4,colset=2})
+  add(msgs,{x=_x,y=_y,s=_m,colset=2})
  end
 end
 
@@ -1123,8 +1123,11 @@ function gameupdate()
  for _p in all(players) do
 
   -- switch player control
-  if btnp(4) or btnp(5) then
+  if btnp(4) then
    _p.i=_p.i^^1
+  end
+  if (btnp(4) or btnp(5)) and _p.i == 0 then
+   add(msgs,{x=_p.x,y=_p.y,s='.',t=15})
   end
 
   -- input
@@ -1155,7 +1158,7 @@ function gameupdate()
    if _nextx > 31 or _nextx < 0 or _nexty > 31 or _nexty < 0 then
     add(escapedplayers,_p)
     del(players,_p)
-    add(msgs,{x=_p.x,y=_p.y,s='escaped',t=2})
+    add(msgs,{x=_p.x,y=_p.y,s='escaped',t=30})
    else
 
     local _ni=_nexty*32+_nextx
@@ -1218,8 +1221,8 @@ function gameupdate()
    local _dy=_p.y-_g.y
    if (_p.state != 'hiding' or light[_p.y*32+_p.x] == 1) and _p.state != 'caught' and abs(_dx) <= 1 and abs(_dy) <= 1 then
     _p.state='caught'
+    setalertlvl2('suspect caught!',_g.x,_g.y)
     _g.state='holding'
-    add(msgs,{x=_g.x,y=_g.y,s='suspect caught!',t=4,colset=2})
    end
   end
 
@@ -1234,7 +1237,7 @@ function gameupdate()
   --    _g.state='listening'
   --    _g.state_c=7
   --    _g.state_c2=3
-  --    add(msgs,{x=_g.x,y=_g.y,s='?',t=4})
+  --    add(msgs,{x=_g.x,y=_g.y,s='?'})
   --   end
   --  end
   -- end
@@ -1314,21 +1317,6 @@ function gameupdate()
    end
   end
 
-  -- update messages
-  for _m in all(msgs) do
-   if _m.delay then
-    _m.delay-=1
-    if _m.delay < 0 then
-     _m.delay=nil
-    end
-   else
-    _m.t-=1
-    if _m.t <= 0 then
-     del(msgs,_m)
-    end
-   end
-  end
-
   -- set new tick
   if alertlvl == 2 and policet > 0 then
    policet-=1
@@ -1347,6 +1335,24 @@ function gameupdate()
    end
   end
   tick=alertlvls[alertlvl]
+ end
+
+ -- update messages
+ for _m in all(msgs) do
+  if not _m.t then
+   _m.t=90
+  end
+  if _m.delay then
+   _m.delay-=1
+   if _m.delay < 0 then
+    _m.delay=nil
+   end
+  else
+   _m.t-=1
+   if _m.t <= 0 then
+    del(msgs,_m)
+   end
+  end
  end
 
  -- clear light
