@@ -5,10 +5,9 @@ __lua__
 
 -- notes:
 -- - any _i is the position, where the part before *32 is the y-axis, and the the one after *32+ is the x-axis
+-- - local _x,_y=_i&31,_i\32
 
 --[[
-
-- map generation
 
 - filing drawers
  - search (up/down?)
@@ -16,11 +15,6 @@ __lua__
 - bug if suspect seen and caught same tick (came out of hiding for ex)
 
 - bug fog wrapping
-
-- map picker scene
- - left/right scrolling blueprints
- - up selects and enters the map
- - see possible loot??
 
 - loot scene
  - print out, row by row what the loot was
@@ -91,30 +85,69 @@ end
 -- set auto-repeat delay for btnp
 poke(0x5f5c, 5)
 
-local diropposites={[0]=1,0,3,2,}
-local arslen=32*32-1
+--7789
+-- s2t usage:
+-- t=s2t'1;2;3;4;5;6;7;hej pa dig din gamle gries;'
+-- t=s2t'.x;1;.y;2;'
+function s2t(s)
+ local _t,_i,_s,_d={},1,''
+ repeat
+  _d,s=sub(s,1,1),sub(s,2)
+  if _d != ';' then
+   _s=_s.._d
+  else
+   if sub(_s,1,1) != '.' then
+    _s=tonum(_s) or _s
+   end
+   _t[_i]=_s
+   if (_s == '') _t[_i]=nil
+   _i+=1
+   _s=''
+  end
+ until #s == 0
+ for _i=2,#_t,2 do
+  local _tib=_t[_i-1]
+  if sub(tostr(_tib),1,1) == '.' then
+   _s=sub(_tib,2)
+   _s=tonum(_s) or _s
+   _t[_s],_t[_i-1],_t[_i]=_t[_i]
+  end
+ end
+ return _t
+end
 
-local adjdeltas={[0]=-1,1,-32,32,}
+local floorlightcols=s2t'.0;1;.1;13;.2;2;'
+
+local arslen=32*32-1 -- todo: 1023
+
+local adjdeltas=s2t'.0;-1;.1;1;.2;-32;.3;32;'
 
 local fogdirs={
- {x=1,y=0,dx=1,dy=1},
- {x=1,y=0,dx=1,dy=-1},
- {x=-1,y=0,dx=-1,dy=1},
- {x=-1,y=0,dx=-1,dy=-1},
- {x=0,y=1,dx=1,dy=1},
- {x=0,y=1,dx=-1,dy=1},
- {x=0,y=-1,dx=1,dy=-1},
- {x=0,y=-1,dx=-1,dy=-1},
+ s2t'.x;1;.y;0;.dx;1;.dy;1;',
+ s2t'.x;1;.y;0;.dx;1;.dy;-1;',
+ s2t'.x;-1;.y;0;.dx;-1;.dy;1;',
+ s2t'.x;-1;.y;0;.dx;-1;.dy;-1;',
+ s2t'.x;0;.y;1;.dx;1;.dy;1;',
+ s2t'.x;0;.y;1;.dx;-1;.dy;1;',
+ s2t'.x;0;.y;-1;.dx;1;.dy;-1;',
+ s2t'.x;0;.y;-1;.dx;-1;.dy;-1;',
 }
 
-local windowpeekdys={-64,-32,0,32}
+local windowpeekdys=s2t'-64;-32;0;32;'
 
-local guardsholdingdeltas={-65,-64,-63,-34,-33,-32,-31,-30,-2,-1,0,1,2,30,31,32,33,34,63,64,65}
+local guardsholdingdeltas=s2t'-65;-64;-63;-34;-33;-32;-31;-30;-2;-1;0;1;2;30;31;32;33;34;63;64;65;'
+
+local camcontrolscreenpos={
+ s2t'.x;-2;.y;-4;',
+ s2t'.x;3;.y;-4;',
+ s2t'.x;-2;.y;-1;',
+ s2t'.x;3;.y;-1;',
+}
 
 local tick=0
 
 local msgs={}
-local msgcols={{6,13},{9,10}}
+local msgcols={s2t'6;13;',s2t'9;10;'}
 
 local floor
 local objs
@@ -123,7 +156,7 @@ local fog={}
 local cameras={}
 
 local alertlvl=1
-local alertlvls={24,8} -- note: only tick time
+local alertlvls=s2t'24;8;' -- note: only tick time
 local policet=0
 
 local escapedplayers={}
@@ -370,12 +403,7 @@ local function camcontrol(_p,_o,_tmp)
  _p.workingstate='hacking'
  if not _tmp.sel then
   _tmp.sel=1
-  _tmp.pos={
-   {x=-2,y=-4},
-   {x=3,y=-4},
-   {x=-2,y=-1},
-   {x=3,y=-1},
-  }
+  _tmp.pos=camcontrolscreenpos
 
   -- start all cameras
   for _i=1,4 do
@@ -441,7 +469,7 @@ local function camcontrol(_p,_o,_tmp)
   end
 
   if _c > 1 then
-   _tmp.pos[1].state=3
+   _tmp.pos[1].state=3 -- todo: token hunt?
    _tmp.pos[2].state=3
    _tmp.pos[3].state=3
    _tmp.pos[4].state=3
@@ -477,7 +505,7 @@ local function safe(_p,_o,_tmp)
 
   -- generate new code
   if _o.code == nil then
-   _o.code={flr(rnd(8))+1,flr(rnd(8))+1,flr(rnd(8))+1,flr(rnd(8))+1,flr(rnd(8))+1}
+   _o.code={flr(rnd(8))+1,flr(rnd(8))+1,flr(rnd(8))+1,flr(rnd(8))+1,flr(rnd(8))+1} -- todo: token hunt?
   end
 
   -- reset for this try
@@ -779,11 +807,7 @@ local seed=rnd()
 debug('seed',seed)
 
 function mapgen()
- floor={}
- objs={}
- guards={}
- cameras={}
- mapthings={}
+ floor,objs,guards,cameras,mapthings={},{},{},{},{}
  local computercount=0
 
  local _r=rnd()
@@ -800,7 +824,6 @@ function mapgen()
  end
 
  for _i=0,arslen do
-  -- local _x,_y=_i&31,_i\32
   floor[_i]=0
  end
 
@@ -844,7 +867,7 @@ function mapgen()
   end
 
   -- add left window
-  objs[(_ystart+2+flr(rnd(_h-5)))*32+_xstart]={
+  objs[(_ystart+2+flr(rnd(_h-5)))*32+_xstart]={ -- todo: token hunt?
    typ=22,
    action={[0]=breakwindowfromright,[1]=breakwindowfromleft},
    adjaction={[0]=windowpeekfromright,[1]=windowpeekfromleft},
@@ -880,13 +903,9 @@ function mapgen()
   -- add guard
   local _gx,_gy=flr(_xstart+_w/2),flr(_ystart+_h/2)
   if _h > 6 and #guards < 3 and rnd() > 0.5 then
-   add(guards,{
-    x=_gx,y=_gy,
-    dx=-1,dy=0,
-    state='patrolling',
-    state_c=0,
-    state_c2=0,
-   })
+   local _g=s2t'.dx;-1;.dy;0;.state;patrolling;.state_c;0;state_c2;0;'
+   _g.x,_g.y=_gx,_gy
+   add(guards,_g)
   end
 
   -- bottom wall
@@ -934,7 +953,7 @@ function mapgen()
  for _j=#cameras,1,-1 do
   local _c=cameras[_j]
   local _i=_c.y*32+_c.x
-  if objs[_i-32-1] or
+  if objs[_i-32-1] or -- todo: token hunt?
      objs[_i-1] or
      objs[_i+1] or
      objs[_i-32] or
@@ -971,7 +990,7 @@ function mapgen()
     end
    end
    if _remove == false and
-      objs[_i-32-1] == nil and
+      objs[_i-32-1] == nil and -- todo: token hunt?
       objs[_i-32] == nil and
       objs[_i-32+1] == nil and
       objs[_i-32+2] == nil and
@@ -1011,7 +1030,7 @@ function mapgen()
  -- 5 - camcontrol
  -- 8 - safe
 
- local _types={0,1,2,8}
+ local _types=s2t'0;1;2;8;'
 
  if #cameras > 0 then
   add(_types,5)
@@ -1023,7 +1042,7 @@ function mapgen()
    del(_types,_typ)
   end
 
-  local _o={typ=_typ,shadow={[0]=true,true,nil,nil},}
+  local _o={typ=_typ,shadow={[0]=true,true,nil,nil},} -- todo: token hunt? should be able to remove trailing nils
   objs[_i]=_o
 
   if _typ == 2 then
@@ -1197,7 +1216,7 @@ local function gameinit()
          local _ox,_oy=_oi&31,_oi\32
          local _a=adjacency(_p.x,_p.y,_ox,_oy)
          local _owa=walladjacency({x=_ox,y=_oy})
-         if _o.shadow and _o.shadow[_a] and _owa != nil and _pwa != nil and _a != nil and light[_p.y*32+_p.x] == 0 then
+         if _o.shadow and _o.shadow[_a] and _owa != nil and _pwa != nil and _a != nil and light[_p.y*32+_p.x] == 0 then -- todo: token hunt
           _p.state='hiding'
           _p.adjacency=_a
           _hiding=true
@@ -1274,7 +1293,7 @@ local function gameinit()
 
      -- move
      local _gwa=walladjacency({x=_g.x+_g.dx,y=_g.y+_g.dy}) -- todo: do this better
-     if _gwa == 0 then
+     if _gwa == 0 then -- todo: token hunt? lookup table instead
       _g.x+=1
      elseif _gwa == 1 then
       _g.x-=1
@@ -1326,7 +1345,7 @@ local function gameinit()
     end
    end
    if #guards > 0 and t == 0 then
-    if alertlvl == 2 then
+    if alertlvl == 2 then -- todo: token hunt, place sfx in memory to do sfx(17+alertlvl)
      sfx(18)
     else
      sfx(19)
@@ -1363,6 +1382,7 @@ local function gameinit()
   end
 
   -- add cameras light
+  -- todo: token hunt???
   for _c in all(cameras) do
    if _c.state != 0 then
     local _dx=1
@@ -1450,6 +1470,7 @@ local function gameinit()
   end
 
   -- shine guards flashlights
+  -- todo: token hunt?!?!
   for _g in all(guards) do
    if _g.state == 'holding' then
     local _i=_g.y*32+_g.x
@@ -1550,7 +1571,7 @@ local function gameinit()
    local _o=objs[_i]
    if _o and _o.shadow then
     local _ox,_oy=_i&31,_i\32
-    if _o.shadow[0] then
+    if _o.shadow[0] then -- todo: token hunt? lookup table instead?
      light[_oy*32+_ox-1]=0
     end
     if _o.shadow[1] then
@@ -1584,7 +1605,7 @@ local function gameinit()
       (light[_i-1] == 1 or light[_i+1] == 1) then
     light[_i]=1
     if _o.typ == 23 then
-     local _x,_y=_i&31,_i\32
+     local _x,_y=_i&31,_i\32 -- todo: token hunt, inline
      setalertlvl2('broken window!',_x,_y)
     end
    end
@@ -1600,13 +1621,14 @@ local function gameinit()
    for _i=0,arslen do
     local _o=objs[_i]
     if _o and _o.typ == 10 and light[_i] == 1 then
-     local _x,_y=_i&31,_i\32
+     local _x,_y=_i&31,_i\32 -- todo: token hunt, inline
      setalertlvl2('safe opened!',_x,_y)
     end
    end
   end
 
   -- remove fog
+  -- todo: token hunt
   for _p in all(players) do
    if _p.state == 'caught' then
     -- do nothing
@@ -1673,7 +1695,6 @@ local function gameinit()
    end
   end
 
-  local _lightcols={[0]=1,13,2}
   for _i=arslen,0,-1 do
 
    -- draw floor
@@ -1684,7 +1705,7 @@ local function gameinit()
 
    local _col=_tile
    if _l == 1 then
-    _col=_lightcols[_col]
+    _col=floorlightcols[_col]
    end
    rectfill(_sx,_sy,_sx+3,_sy+3,_col)
    
@@ -1712,7 +1733,7 @@ local function gameinit()
   for _i=0,arslen do
    local _o=objs[_i]
    if _o and _o.typ then
-    local _x,_y=_i&31,_i\32
+    local _x,_y=_i&31,_i\32 -- todo: token hunt, inline?
     local _l=light[_i]
     sspr(_o.typ*4,_l*13,4,13,_x*4,_y*4-5)
    end
@@ -1725,7 +1746,7 @@ local function gameinit()
   -- draw cameras
   for _c in all(cameras) do
    local _sx=8
-   if floor[_c.y*32+_c.x+1] == 2 then -- todo: make so cameras can be set anywhere on wall
+   if floor[_c.y*32+_c.x+1] == 2 then
     _sx=12
    end
    sspr(_sx,116+_c.state*3,4,3,_c.x*4,_c.y*4-4)
@@ -1768,7 +1789,7 @@ local function gameinit()
   -- draw guards
   for _g in all(guards) do
    if _g.state == 'patrolling' then
-    local _dir=0
+    local _dir=0 -- todo: token hunt, lookup table instead?
     if _g.dx == 1 then
      _dir=1
     elseif _g.dy == -1 then
@@ -1777,7 +1798,7 @@ local function gameinit()
      _dir=3
     end
     local _frame=0
-    if _g.state == 'patrolling' then
+    if _g.state == 'patrolling' then -- todo: token hut, why is is doubled here?
      _frame=1
      if tick < alertlvls[alertlvl]/2 then
       _frame=2
@@ -1798,7 +1819,7 @@ local function gameinit()
    for _i=0,arslen do
     local _f=fog[_i]
     if _f == nil then
-     local _x,_y=_i&31,_i\32
+     local _x,_y=_i&31,_i\32 -- todo: token hunt?
      rectfill(_x*4,_y*4,_x*4+3,_y*4+3,0)
     end
    end
@@ -1900,7 +1921,7 @@ local initpolice=function()
     _dx=-1
     _flipx=false
    end
-   sspr(92,63,8,11,_x+16*_dx,_y+15,8,11,_flipx)
+   sspr(92,63,8,11,_x+16*_dx,_y+15,8,11,_flipx) -- todo: token hunt?
    sspr(92,63+11,8,11,_x+18*_dx,_y-1,8,11,_flipx)
    sspr(92,63+22,8,11,_x+16*_dx,_y-15,8,11,_flipx)
   end
