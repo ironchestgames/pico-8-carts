@@ -1848,7 +1848,7 @@ gfps=30
 
 
 
-local initpolice=function()
+initpolice=function()
  local _pt=8
  sfx(16,-2)
  sfx(17)
