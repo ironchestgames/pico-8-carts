@@ -85,7 +85,7 @@ end
 -- set auto-repeat delay for btnp
 poke(0x5f5c, 5)
 
---7789
+
 -- s2t usage:
 -- t=s2t'1;2;3;4;5;6;7;hej pa dig din gamle gries;'
 -- t=s2t'.x;1;.y;2;'
@@ -136,6 +136,8 @@ local fogdirs={
 local windowpeekdys=s2t'-64;-32;0;32;'
 
 local guardsholdingdeltas=s2t'-65;-64;-63;-34;-33;-32;-31;-30;-2;-1;0;1;2;30;31;32;33;34;63;64;65;'
+local guarddxdeltas=s2t'.0;1;.1;-1;.2;0;.3;0;'
+local guarddydeltas=s2t'.0;0;.1;0;.2;1;.3;-1;'
 
 local camcontrolscreenpos={
  s2t'.x;-2;.y;-4;',
@@ -248,14 +250,11 @@ end
 
 local function walladjacency(_a)
  -- todo: fix for out of bounds
- if floor[_a.y*32+_a.x-1] == 2 then
-  return 0
- elseif floor[_a.y*32+_a.x+1] == 2 then
-  return 1
- elseif floor[(_a.y-1)*32+_a.x] == 2 then
-  return 2
- elseif floor[(_a.y+1)*32+_a.x] == 2 then
-  return 3
+ local _i=_a.y*32+_a.x
+ for _j=0,3 do
+  if floor[_i+adjdeltas[_j]] == 2 then
+   return _j
+  end
  end
  -- return nil
 end
@@ -359,7 +358,7 @@ local function computer(_p,_o,_tmp)
  end
 
  if _tmp.state == 'ready' then
-  local _input=nil
+  local _input
   if btnp(0,_p.i) then
    _input=0
   elseif btnp(1,_p.i) then
@@ -368,7 +367,7 @@ local function computer(_p,_o,_tmp)
    _input=2
   end
 
-  if _input != nil then
+  if _input then
    if _input == _tmp.seq[1] then
     del(_tmp.seq,_input)
     if #_tmp.seq == 0 then
@@ -419,9 +418,7 @@ local function camcontrol(_p,_o,_tmp)
   _o.draw=function()
    for _i=1,#_tmp.pos do
     local _p=_tmp.pos[_i]
-    local _x=_tmp.ox*4+_p.x
-    local _y=_tmp.oy*4+_p.y
-    sspr(0,120+_p.state*2,3,2,_x,_y)
+    sspr(0,120+_p.state*2,3,2,_tmp.ox*4+_p.x,_tmp.oy*4+_p.y)
    end
   end
 
@@ -469,10 +466,9 @@ local function camcontrol(_p,_o,_tmp)
   end
 
   if _c > 1 then
-   _tmp.pos[1].state=3 -- todo: token hunt?
-   _tmp.pos[2].state=3
-   _tmp.pos[3].state=3
-   _tmp.pos[4].state=3
+   for _i=1,4 do
+    _tmp.pos[_i].state=3
+   end
    sfx(13)
    setalertlvl2('cctv compromised!',_tmp.ox,_tmp.oy)
   end
@@ -501,25 +497,29 @@ end
 
 local function safe(_p,_o,_tmp)
  _p.workingstate='cracking'
- if _o.isopen != true then
+ if not _o.isopen then
 
   -- generate new code
-  if _o.code == nil then
-   _o.code={flr(rnd(8))+1,flr(rnd(8))+1,flr(rnd(8))+1,flr(rnd(8))+1,flr(rnd(8))+1} -- todo: token hunt?
+  if not _o.code then
+   _o.code={}
+   for _i=1,5 do
+    add(_o.code,flr(rnd(8))+1)
+   end
   end
 
   -- reset for this try
-  if _tmp.code == nil then
+  if not _tmp.code then
    _tmp.code=_o.code
    _tmp.codei=1
    _tmp.codetick=0
    _tmp.unlocked=nil
 
    _o.draw=function()
-    if _tmp.iserror == true then
-     pset(_tmp.ox*4+5,_tmp.oy*4-3,8)
-    elseif _o.isopen != true and _tmp.unlocked == true then
-     pset(_tmp.ox*4+5,_tmp.oy*4-3,11)
+    local _x,_y=_tmp.ox*4+5,_tmp.oy*4-3
+    if _tmp.iserror then
+     pset(_x,_y,8)
+    elseif _tmp.unlocked and not _o.isopen then
+     pset(_x,_y,11)
     end
    end
   end
@@ -527,10 +527,10 @@ local function safe(_p,_o,_tmp)
   local _dir=_tmp.codei%2
   for _i=0,1 do
    if btnp(_i,_p.i) then
-    local _snd=nil
+    local _snd
     if _dir == _i then
      _tmp.codetick+=1
-     if _tmp.iserror != true and _tmp.codetick == _tmp.code[_tmp.codei] then
+     if _tmp.codetick == _tmp.code[_tmp.codei] and not _tmp.iserror then
       if _tmp.codei == #_tmp.code then
        _tmp.unlocked=true
       end
@@ -542,7 +542,7 @@ local function safe(_p,_o,_tmp)
     else
      _tmp.iserror=true
     end
-    if _snd != true then
+    if not _snd then -- todo: token hunt, maybe order sfx so you can do sfx(14+_sfxi)
      sfx(15) -- click
     end
    end
@@ -580,7 +580,7 @@ local function resetdoor(_p,_o)
 end
 
 local function doorfromunder(_p,_o,_tmp)
- if _tmp.opened == nil then
+ if not _tmp.opened then
   _o.typ+=2
   _tmp.opened=true
  end
@@ -611,7 +611,7 @@ local function doorpeekfromunder(_p,_o,_tmp)
 end
 
 local function doorfromabove(_p,_o,_tmp)
- if _tmp.opened == nil then
+ if not _tmp.opened then
   _tmp.o2=objs[_tmp.oi+32]
   _tmp.o2.typ+=2
   _tmp.opened=true
@@ -623,8 +623,9 @@ local function doorfromabove(_p,_o,_tmp)
 
  fog[(_tmp.oy+1)*32+_tmp.ox]=0
  for _y=_tmp.oy+2,32 do
-  fog[_y*32+_tmp.ox]=0
-  if floor[_y*32+_tmp.ox] == 2 then
+  local _i=_y*32+_tmp.ox
+  fog[_i]=0
+  if floor[_i] == 2 then
    break
   end
  end
@@ -640,8 +641,9 @@ local function doorfromabove(_p,_o,_tmp)
 end
 
 local function doorpeekfromabove(_p,_o,_tmp)
- fog[(_tmp.oy+1)*32+_tmp.ox]=0
- fog[(_tmp.oy+2)*32+_tmp.ox]=0
+ local _i=_tmp.oy*32+_tmp.ox
+ fog[_i+32]=0
+ fog[_i+64]=0
 end
 
 
@@ -661,7 +663,7 @@ local function lockeddoorfrombelow(_p,_o,_tmp)
   return
  end
 
- if _tmp.opened == nil then
+ if not _tmp.opened then
   _o.typ+=2
   _tmp.opened=true
  end
@@ -704,7 +706,7 @@ local function lockeddoorfromabove(_p,_o,_tmp)
   return
  end
 
- if _tmp.opened == nil then
+ if not _tmp.opened then
   _o2.typ+=2
   _tmp.opened=true
  end
@@ -715,8 +717,9 @@ local function lockeddoorfromabove(_p,_o,_tmp)
 
  fog[(_tmp.oy+1)*32+_tmp.ox]=0
  for _y=_tmp.oy+2,32 do
-  fog[_y*32+_tmp.ox]=0
-  if floor[_y*32+_tmp.ox] == 2 then
+  local _i=_y*32+_tmp.ox
+  fog[_i]=0
+  if floor[_i] == 2 then
    break
   end
  end
@@ -782,6 +785,14 @@ local function breakwindowfromright(_p,_o)
  _p.state='standing'
 end
 
+local function newwindow()
+ return {
+  typ=22,
+  action={[0]=breakwindowfromright,[1]=breakwindowfromleft},
+  adjaction={[0]=windowpeekfromright,[1]=windowpeekfromleft},
+ }
+end
+
 local function iswallclose(_x,_y,_dx,_dy)
  local _c=0
  while _y >= 1 and _y <= 32 and _x >= 1 and _x <= 32 and floor[_y*32+_x] != 2 do
@@ -828,26 +839,17 @@ function mapgen()
  end
 
  local function floorcount(_x,_y)
-  local _c=0
-  if floor[_y*32+_x-1] == 1 then
-   _c+=1
-  end
-  if floor[_y*32+_x+1] == 1 then
-   _c+=1
-  end
-  if floor[(_y-1)*32+_x] == 1 then
-   _c+=1
-  end
-  if floor[(_y+1)*32+_x] == 1 then
-   _c+=1
+  local _c,_i=0,_y*32+_x
+  for _j=0,3 do
+   if floor[_i+adjdeltas[_j]] == 1 then
+    _c+=1
+   end
   end
   return _c
  end
 
  -- add rooms
- local _xmin=2
- local _ymin=3
- local _ystart=3
+ local _xmin,_ymin,_ystart=2,3,3
 
  repeat
   local _w=flr(rnd(19))+10
@@ -867,28 +869,20 @@ function mapgen()
   end
 
   -- add left window
-  objs[(_ystart+2+flr(rnd(_h-5)))*32+_xstart]={ -- todo: token hunt?
-   typ=22,
-   action={[0]=breakwindowfromright,[1]=breakwindowfromleft},
-   adjaction={[0]=windowpeekfromright,[1]=windowpeekfromleft},
-  }
+  objs[(_ystart+2+flr(rnd(_h-5)))*32+_xstart]=newwindow()
 
   -- add right window
-  objs[(_ystart+2+flr(rnd(_h-5)))*32+_xstart+_w-1]={
-   typ=22,
-   action={[0]=breakwindowfromright,[1]=breakwindowfromleft},
-   adjaction={[0]=windowpeekfromright,[1]=windowpeekfromleft},
-  }
+  objs[(_ystart+2+flr(rnd(_h-5)))*32+_xstart+_w-1]=newwindow()
 
   -- add top door
-  objs[(_ystart*32)+_xstart+2+flr(rnd(_w-5))]={
+  objs[_ystart*32+_xstart+2+flr(rnd(_w-5))]={
    typ=12,
    action={[2]=doorfromunder},
    adjaction={[2]=doorpeekfromunder}
   }
 
   -- add camera
-  local _c={x=_xstart+1,y=_ystart+1,state=1,}
+  local _c={x=_xstart+1,y=_ystart+1,state=1}
   if rnd() < 0.5 then
    _c.x=_xstart+_w-2
   end
@@ -953,7 +947,7 @@ function mapgen()
  for _j=#cameras,1,-1 do
   local _c=cameras[_j]
   local _i=_c.y*32+_c.x
-  if objs[_i-32-1] or -- todo: token hunt?
+  if objs[_i-31] or
      objs[_i-1] or
      objs[_i+1] or
      objs[_i-32] or
@@ -1042,13 +1036,13 @@ function mapgen()
    del(_types,_typ)
   end
 
-  local _o={typ=_typ,shadow={[0]=true,true,nil,nil},} -- todo: token hunt? should be able to remove trailing nils
+  local _o={typ=_typ,shadow={[0]=true,true}}
   objs[_i]=_o
 
   if _typ == 2 then
-   _o.shadow={[0]=true,nil,nil,nil}
-   objs[_i+1]={typ=3,action={[2]=computer},loot={'door access code'},shadow={[0]=nil,nil,nil,nil}}
-   objs[_i+2]={typ=4,shadow={[0]=nil,true,nil,nil}}
+   _o.shadow={[0]=true}
+   objs[_i+1]={typ=3,action={[2]=computer},loot={'door access code'},shadow={}}
+   objs[_i+2]={typ=4,shadow={true}}
 
    computercount+=1
    if computercount == 2 then
@@ -1056,16 +1050,16 @@ function mapgen()
    end
 
   elseif _typ == 5 then
-   _o.shadow={[0]=true,nil,nil,nil}
-   objs[_i+1]={typ=6,action={[2]=camcontrol},shadow={[0]=nil,nil,nil,nil}}
-   objs[_i+2]={typ=7,shadow={[0]=nil,true,nil,nil}}
+   _o.shadow={[0]=true}
+   objs[_i+1]={typ=6,action={[2]=camcontrol},shadow={}}
+   objs[_i+2]={typ=7,shadow={true}}
 
   elseif _typ == 8 then
-   _o.shadow={[0]=true,nil,nil,nil}
+   _o.shadow={[0]=true}
    _o.action={[2]=safe}
    _o.loot={'diamonds',14000}
 
-   objs[_i+1]={typ=9,shadow={[0]=nil,true,nil,nil}}
+   objs[_i+1]={typ=9,shadow={true}}
 
    add(mapthings,'crackable safe')
   end
@@ -1076,31 +1070,30 @@ function mapgen()
   local _o=objs[_i]
   if _o then
    _o.light={}
-  end
 
-  -- remove windows
-  if _o and _o.typ == 22 then
-   if not (floor[_i] == 2 and floor[_i-1] != 2 and floor[_i+1] != 2) then
-    objs[_i]=nil
-   end
-  end
+   -- remove windows
+   if _o.typ == 22 then
+    if not (floor[_i] == 2 and floor[_i-1] != 2 and floor[_i+1] != 2) then
+     objs[_i]=nil
+    end
 
-  -- fix doors
-  if _o and _o.typ == 12 then
-   if objs[_i+1] or not (floor[_i] == 2 and floor[_i-1] == 2 and floor[_i+1] == 2 and floor[_i+32] != 2 and floor[_i-64] != 2) then
-    objs[_i]=nil
-   else
-    objs[_i-32]={action={[3]=doorfromabove},adjaction={[3]=doorpeekfromabove}}
-    objs[_i+1]={typ=13}
+   -- fix doors
+   elseif _o.typ == 12 then
+    if objs[_i+1] or not (floor[_i] == 2 and floor[_i-1] == 2 and floor[_i+1] == 2 and floor[_i+32] != 2 and floor[_i-64] != 2) then
+     objs[_i]=nil
+    else
+     objs[_i-32]={action={[3]=doorfromabove},adjaction={[3]=doorpeekfromabove}}
+     objs[_i+1]={typ=13}
 
-    -- switch to locked
-    if rnd() > 0.75 then
-     objs[_i].typ=16
-     objs[_i].action[2]=lockeddoorfrombelow
+     -- switch to locked
+     if rnd() > 0.70 then
+      objs[_i].typ=16
+      objs[_i].action[2]=lockeddoorfrombelow
 
-     objs[_i-32].action[3]=lockeddoorfromabove
+      objs[_i-32].action[3]=lockeddoorfromabove
 
-     objs[_i+1].typ=17
+      objs[_i+1].typ=17
+     end
     end
    end
   end
@@ -1206,7 +1199,7 @@ local function gameinit()
 
       -- hide behind object
       if _p.state != 'working' then
-       local _hiding=nil
+       local _hiding
        local _pwa=walladjacency(_p)
        local _i=_p.y*32+_p.x
        for _a=0,3 do
@@ -1215,15 +1208,15 @@ local function gameinit()
         if _o then
          local _ox,_oy=_oi&31,_oi\32
          local _a=adjacency(_p.x,_p.y,_ox,_oy)
-         local _owa=walladjacency({x=_ox,y=_oy})
-         if _o.shadow and _o.shadow[_a] and _owa != nil and _pwa != nil and _a != nil and light[_p.y*32+_p.x] == 0 then -- todo: token hunt
+         local _owa=walladjacency{x=_ox,y=_oy}
+         if _o.shadow and _o.shadow[_a] and _owa and _pwa and _a and light[_i] == 0 then
           _p.state='hiding'
           _p.adjacency=_a
           _hiding=true
          end
         end
        end
-       if _hiding == nil then
+       if not _hiding then
         _p.state='standing'
        end
       end
@@ -1292,24 +1285,14 @@ local function gameinit()
      end
 
      -- move
-     local _gwa=walladjacency({x=_g.x+_g.dx,y=_g.y+_g.dy}) -- todo: do this better
-     if _gwa == 0 then -- todo: token hunt? lookup table instead
-      _g.x+=1
-     elseif _gwa == 1 then
-      _g.x-=1
-     elseif _gwa == 2 then
-      _g.y+=1
-     elseif _gwa == 3 then
-      _g.y-=1
-     else
-      _g.x+=_g.dx
-      _g.y+=_g.dy
-     end
+     local _gwa=walladjacency{x=_g.x+_g.dx,y=_g.y+_g.dy} -- todo: do this better
+     _g.x+=guarddxdeltas[_gwa] or _g.dx
+     _g.y+=guarddydeltas[_gwa] or _g.dy
 
     elseif _g.state == 'holding' then
      -- is holding suspect
 
-    elseif _g.state == 'listening' then
+    elseif _g.state == 'listening' then -- todo: implement this
      _g.state_c-=1
      _g.state_c2-=1
 
@@ -1570,20 +1553,13 @@ local function gameinit()
   for _i=0,arslen do
    local _o=objs[_i]
    if _o and _o.shadow then
-    local _ox,_oy=_i&31,_i\32
-    if _o.shadow[0] then -- todo: token hunt? lookup table instead?
-     light[_oy*32+_ox-1]=0
-    end
-    if _o.shadow[1] then
-     light[_oy*32+_ox+1]=0
-    end
-    if _o.shadow[2] then
-     light[(_oy-1)*32+_ox]=0
-    end
-    if _o.shadow[3] then
-     light[(_oy+1)*32+_ox]=0
+    for _j=0,3 do
+     if _o.shadow[_j] then
+      light[_i+adjdeltas[_j]]=0
+     end
     end
 
+    local _ox,_oy=_i&31,_i\32
     for _l in all(_o.light) do
      light[(_oy+_l.y)*32+_ox+_l.x]=1
     end
@@ -1594,9 +1570,10 @@ local function gameinit()
   for _i=0,arslen do
 
    -- light up walls
-   local _x,_y=_i&31,_i\32
-   if light[(_y+1)*32+_x] == 1 and floor[_y*32+_x] == 2 and floor[(_y+1)*32+_x] != 2 then
-    light[_y*32+_x]=1
+   if light[_i+32] == 1 and
+      floor[_i] == 2 and
+      floor[_i+32] != 2 then
+    light[_i]=1
    end
 
    -- light up windows
@@ -1605,8 +1582,7 @@ local function gameinit()
       (light[_i-1] == 1 or light[_i+1] == 1) then
     light[_i]=1
     if _o.typ == 23 then
-     local _x,_y=_i&31,_i\32 -- todo: token hunt, inline
-     setalertlvl2('broken window!',_x,_y)
+     setalertlvl2('broken window!',_i&31,_i\32)
     end
    end
   end
@@ -1621,8 +1597,7 @@ local function gameinit()
    for _i=0,arslen do
     local _o=objs[_i]
     if _o and _o.typ == 10 and light[_i] == 1 then
-     local _x,_y=_i&31,_i\32 -- todo: token hunt, inline
-     setalertlvl2('safe opened!',_x,_y)
+     setalertlvl2('safe opened!',_i&31,_i\32)
     end
    end
   end
@@ -1630,9 +1605,7 @@ local function gameinit()
   -- remove fog
   -- todo: token hunt
   for _p in all(players) do
-   if _p.state == 'caught' then
-    -- do nothing
-   else
+   if _p.state != 'caught' then
     for _d in all(fogdirs) do
      local _x,_y=_p.x,_p.y
      local _l=32
@@ -1789,20 +1762,15 @@ local function gameinit()
   -- draw guards
   for _g in all(guards) do
    if _g.state == 'patrolling' then
-    local _dir=0 -- todo: token hunt, lookup table instead?
-    if _g.dx == 1 then
-     _dir=1
-    elseif _g.dy == -1 then
-     _dir=2
-    elseif _g.dy == 1 then
-     _dir=3
-    end
-    local _frame=0
-    if _g.state == 'patrolling' then -- todo: token hut, why is is doubled here?
-     _frame=1
-     if tick < alertlvls[alertlvl]/2 then
-      _frame=2
+    local _dir=0
+    for _j=1,3 do
+     if adjdeltas[_j] == _g.dy*32+_g.dx then
+      _dir=_j
      end
+    end
+    local _frame=2
+    if tick < alertlvls[alertlvl]/2 then
+     _frame=1
     end
     sspr(0+_dir*27+_frame*9,31,9,11,_g.x*4-2,_g.y*4-7)
 
@@ -1818,9 +1786,9 @@ local function gameinit()
   if devfog == false then
    for _i=0,arslen do
     local _f=fog[_i]
-    if _f == nil then
-     local _x,_y=_i&31,_i\32 -- todo: token hunt?
-     rectfill(_x*4,_y*4,_x*4+3,_y*4+3,0)
+    if not _f then
+     local _x,_y=(_i&31)*4,(_i\32)*4
+     rectfill(_x,_y,_x+3,_y+3,0)
     end
    end
   end
