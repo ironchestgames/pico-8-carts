@@ -84,44 +84,6 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
 end
 
 
-function testme_calib(name, func, calibrate_func, ...)
- -- based on https://www.lexaloffle.com/bbs/?pid=60198#p
- local n = 1024
-
- -- calibrate
- flip()
- local unused -- i am not sure why this helps give better results, but it does, so.
-
- local x,t=stat(1),stat(2)
- for i=1,n do
-   calibrate_func(...)
- end
- local y,u=stat(1),stat(2)
-
- -- measure
- for i=1,n do
-   func(...)
- end
- local z,v=stat(1),stat(2)
-
- -- report
- local function c(t0,t1,t2) return(t0+t2-2*t1)*128/n*256/30*256*2 end -- *2 for 0.2.x
-
- local s=name.." :"
- local lc=c(x-t,y-u,z-v)
- if (lc != 0) s..=" lua="..lc
- local sc=c(t,u,v)
- if (sc != 0) s..=" sys="..sc
-
- print(s) -- no paging, so not very useful, but.
- debug(s)
-end
-
-function testme(name, func, ...)
- return testme_calib(name, func, function() end, ...)
-end
-
-
 
 -- set auto-repeat delay for btnp
 poke(0x5f5c, 5)
@@ -304,9 +266,9 @@ end
 
 local function playerloots(_p,_o)
  local _m='(nothing)'
- if _o.loot != nil then
+ if _o.loot then
   _m=_o.loot[1]
-  if _o.loot[2] != nil then -- has value, then it's a thing, take it
+  if _o.loot[2] then -- has value, then it's a thing, take it
    _p.loot[#_p.loot+1]=_o.loot
   else
    playerinventory[#playerinventory+1]=_o.loot -- no value, it's information
@@ -315,7 +277,6 @@ local function playerloots(_p,_o)
  add(msgs,{x=_p.x,y=_p.y-1,s=_m,t=40})
  _o.loot=nil
 end
-
 
 
 for _i=0,arslen do
@@ -773,61 +734,43 @@ local function lockeddoorfromabove(_p,_o,_tmp)
 end
 
 
-local function windowpeekfromleft(_p,_o)
- for _dy in all(windowpeekdys) do
-  local _y=_p.y*32+_dy
-  for _x=_p.x+2,32 do
-   fog[_y+_x]=0
-   if floor[_y+_x] == 2 then
-    break
+local function getwindowpeekfunc(_startoff,_end,_di)
+ return function(_p,_o)
+  for _dy in all(windowpeekdys) do
+   local _y=_p.y*32+_dy
+   for _x=_p.x+_startoff,_end,_di do
+    fog[_y+_x]=0
+    if floor[_y+_x] == 2 then
+     break
+    end
    end
   end
  end
 end
 
-local function windowpeekfromright(_p,_o)
- for _dy in all(windowpeekdys) do
-  local _y=_p.y*32+_dy
-  for _x=_p.x-2,0,-1 do
-   fog[_y+_x]=0
-   if floor[_y+_x] == 2 then
-    break
-   end
+local function getbreakwindowfunc(_xmod)
+ return function(_p,_o)
+  if _o.typ == 22 then
+   _o.typ+=1
+   -- todo: play sound
+  elseif _o.typ == 23 then
+   _p.x+=2*_xmod
   end
+
+  -- reset player
+  _p.action=nil
+  _p.state='standing'
+
  end
 end
 
-local function breakwindowfromleft(_p,_o)
- if _o.typ == 22 then
-  _o.typ+=1
-  -- todo: play sound
- elseif _o.typ == 23 then
-  _p.x+=2
- end
 
- -- reset player
- _p.action=nil
- _p.state='standing'
-end
-
-local function breakwindowfromright(_p,_o)
- if _o.typ == 22 then
-  _o.typ+=1
-  -- todo: play sound
- elseif _o.typ == 23 then
-  _p.x-=2
- end
-
- -- reset player
- _p.action=nil
- _p.state='standing'
-end
 
 local function newwindow()
  return {
   typ=22,
-  action={[0]=breakwindowfromright,[1]=breakwindowfromleft},
-  adjaction={[0]=windowpeekfromright,[1]=windowpeekfromleft},
+  action={[0]=getbreakwindowfunc(-1),[1]=getbreakwindowfunc(1)},
+  adjaction={[0]=getwindowpeekfunc(-2,0,-1),[1]=getwindowpeekfunc(2,32,1)},
  }
 end
 
