@@ -263,7 +263,7 @@ end
 
 
 local function playerloots(_p,_o)
- local _m='(nothing)'
+ local _m='(nothing of value)'
  if _o.loot then
   _m=_o.loot[1]
   if _o.loot[2] then -- has value, then it's a thing, take it
@@ -299,7 +299,7 @@ local function setalertlvl2(_m,_x,_y)
  if alertlvl == 1 then
   alertlvl=2
   tick=60
-  policet=120
+  policet=90
   local _i=0
   for _g in all(guards) do
    add(msgs,{x=_g.x,y=_g.y,s=_m,delay=_i*15,colset=2})
@@ -1085,7 +1085,16 @@ function mapgen()
 
   if _typ == 2 then
    _o.shadow={[0]=true}
-   objs[_i+1]={typ=3,action={[2]=computer},loot={'door access code'},shadow={}}
+   objs[_i+1]={
+    typ=3,
+    action={[2]=computer},
+    loot=shuffle({nil,nil,
+     {'door access code'},
+     {'company secrets',rnd()},
+     {'classified files',rnd()*2},
+     })[1],
+    shadow={},
+   }
    objs[_i+2]={typ=4,shadow={true}}
 
    computercount+=1
@@ -1101,7 +1110,14 @@ function mapgen()
   elseif _typ == 8 then
    _o.shadow={[0]=true}
    _o.action={[2]=safe}
-   _o.loot={'diamonds',14000}
+   _o.loot=shuffle({
+    {'useless stocks',rnd()*0.1},
+    {'cash',rnd()},
+    {'stocks',rnd()+rnd()},
+    {'classified documents',rnd()+rnd()+rnd()},
+    {'gold',(rnd()+rnd()+rnd())/3*5},
+    {'diamonds',(rnd()+rnd()+rnd())/3*14},
+    })[1]
 
    objs[_i+1]={typ=9,shadow={true}}
 
@@ -1232,6 +1248,8 @@ local function gameinit()
      add(escapedplayers,_p)
      del(players,_p)
      add(msgs,{x=_p.x,y=_p.y,s='escaped',t=30})
+
+     -- todo: go to loot screen
     else
 
      local _ni=_nexty*32+_nextx
@@ -2043,12 +2061,12 @@ local function initmapselect()
 end
 
 
--- _init=initmapselect
+_init=initmapselect
 
-_init=function()
- mapgen()
- gameinit()
-end
+-- _init=function()
+--  mapgen()
+--  gameinit()
+-- end
 
 
 __gfx__
