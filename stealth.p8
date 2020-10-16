@@ -66,11 +66,8 @@ __lua__
 devfog=false
 devvalues=false
 
-local isborder=false
-
-menuitem(1, 'toggle border', function() isborder=not isborder end)
-menuitem(2, 'devfog', function() devfog=not devfog end)
-menuitem(3, 'devvalues', function() devvalues=not devvalues end)
+menuitem(1, 'devfog', function() devfog=not devfog end)
+menuitem(2, 'devvalues', function() devvalues=not devvalues end)
 
 
 printh('debug started','debug',true)
@@ -1768,11 +1765,9 @@ local function gameinit()
   end
 
   -- add border of premises
-  if isborder then
-   fillp(0b1010010110100101)
-   rect(0,0,127,127,3)
-   fillp()
-  end
+  fillp(0b1010010110100101)
+  rect(0,0,127,127,1)
+  fillp()
 
   pal()
   palt(0,false)
