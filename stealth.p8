@@ -178,6 +178,7 @@ local guards
 local cash=1
 local maxseli=6
 local visited={}
+local ispoweron
 local mapthings
 
 local initpolice
@@ -320,65 +321,71 @@ end
 
 local function computer(_p,_o,_tmp)
  _p.workingstate='hacking'
- if _tmp.action_c == nil then
-  _tmp.action_c=0
-  _tmp.state='booting'
-  sfx(11)
-  local _l=14 -- note: change this if good at computers
-  _tmp.seq={}
-  for _i=1,_l do
-   local _n=0
-   repeat
-    _n=flr(rnd(3))
-   until _n != _tmp.seq[_i-1]
-   _tmp.seq[_i]=_n
-  end
-  _o.draw=function()
-   if _tmp.state == 'booting' then
-    sspr(0,102,4,3,_tmp.ox*4,_tmp.oy*4-3)
-
-   elseif _tmp.state == 'success' then
-    sspr(0,114,4,3,_tmp.ox*4,_tmp.oy*4-3)
-
-   elseif _tmp.state == 'fail' then
-    sspr(0,117,4,3,_tmp.ox*4,_tmp.oy*4-3)
-
-   else
-    sspr(0,105+_tmp.seq[1]*3,4,3,_tmp.ox*4,_tmp.oy*4-3)
+ if ispoweron then
+  if _tmp.action_c == nil then
+   _tmp.action_c=0
+   _tmp.state='booting'
+   sfx(11)
+   local _l=14 -- note: change this if good at computers
+   _tmp.seq={}
+   for _i=1,_l do
+    local _n=0
+    repeat
+     _n=flr(rnd(3))
+    until _n != _tmp.seq[_i-1]
+    _tmp.seq[_i]=_n
    end
-  end
- end
+   _o.draw=function()
+    if _tmp.state == 'booting' then
+     sspr(0,102,4,3,_tmp.ox*4,_tmp.oy*4-3)
 
- _tmp.action_c+=1
+    elseif _tmp.state == 'success' then
+     sspr(0,114,4,3,_tmp.ox*4,_tmp.oy*4-3)
 
- if _tmp.action_c == 30 then
-  _tmp.state='ready'
-  sfx(12)
- end
+    elseif _tmp.state == 'fail' then
+     sspr(0,117,4,3,_tmp.ox*4,_tmp.oy*4-3)
 
- if _tmp.state == 'ready' then
-  local _input
-  if btnp(0,_p.i) then
-   _input=0
-  elseif btnp(1,_p.i) then
-   _input=1
-  elseif btnp(2,_p.i) then
-   _input=2
-  end
-
-  if _input then
-   if _input == _tmp.seq[1] then
-    del(_tmp.seq,_input)
-    if #_tmp.seq == 0 then
-     _tmp.state='success'
-     sfx(10)
-     playerloots(_p,_o)
+    else
+     sspr(0,105+_tmp.seq[1]*3,4,3,_tmp.ox*4,_tmp.oy*4-3)
     end
-   else
-    _tmp.state='fail'
-    sfx(9)
    end
   end
+
+  _tmp.action_c+=1
+
+  if _tmp.action_c == 30 then
+   _tmp.state='ready'
+   sfx(12)
+  end
+
+  if _tmp.state == 'ready' then
+   local _input
+   if btnp(0,_p.i) then
+    _input=0
+   elseif btnp(1,_p.i) then
+    _input=1
+   elseif btnp(2,_p.i) then
+    _input=2
+   end
+
+   if _input then
+    if _input == _tmp.seq[1] then
+     del(_tmp.seq,_input)
+     if #_tmp.seq == 0 then
+      _tmp.state='success'
+      sfx(10)
+      playerloots(_p,_o)
+     end
+    else
+     _tmp.state='fail'
+     sfx(9)
+    end
+   end
+  end
+
+ else
+  _tmp.action_c=nil
+  _o.draw=nil
  end
 
  if btnp(3,_p.i) then
@@ -399,78 +406,84 @@ end
 -- 3 - system alarm (camcontrol)
 local function camcontrol(_p,_o,_tmp)
  _p.workingstate='hacking'
- if not _tmp.sel then
-  _tmp.sel=1
-  _tmp.pos=camcontrolscreenpos
-
-  -- start all cameras
-  for _i=1,4 do
-   local _c=cameras[_i]
-   _tmp.pos[_i].state=1
-   if _c then
-    _c.state=1
-   end
-  end
-
-  _tmp.pos[1].state=2
-
-  _o.draw=function()
-   for _i=1,#_tmp.pos do
-    local _p=_tmp.pos[_i]
-    sspr(0,120+_p.state*2,3,2,_tmp.ox*4+_p.x,_tmp.oy*4+_p.y)
-   end
-  end
-
-  sfx(11)
- end
-
- if _tmp.pos[1].state != 3 then
-
-  _tmp.pos[_tmp.sel].state=1
-
-  if btnp(0,_p.i) then
-   _tmp.sel-=1
-  elseif btnp(1,_p.i) then
-   _tmp.sel+=1
-  end
-
-  if _tmp.sel > 4 then
+ if ispoweron then
+  if not _tmp.sel then
    _tmp.sel=1
-  elseif _tmp.sel < 1 then
-   _tmp.sel=4
+   _tmp.pos=camcontrolscreenpos
+
+   -- start all cameras
+   for _i=1,4 do
+    local _c=cameras[_i]
+    _tmp.pos[_i].state=1
+    if _c then
+     _c.state=1
+    end
+   end
+
+   _tmp.pos[1].state=2
+
+   _o.draw=function()
+    for _i=1,#_tmp.pos do
+     local _p=_tmp.pos[_i]
+     sspr(0,120+_p.state*2,3,2,_tmp.ox*4+_p.x,_tmp.oy*4+_p.y)
+    end
+   end
+
+   sfx(11)
   end
 
-  _tmp.pos[_tmp.sel].state=2
+  if _tmp.pos[1].state != 3 then
 
-  if btnp(2,_p.i) then
-   _tmp.pos[_tmp.sel].state=0
-   _tmp.sel+=1
+   _tmp.pos[_tmp.sel].state=1
+
+   if btnp(0,_p.i) then
+    _tmp.sel-=1
+   elseif btnp(1,_p.i) then
+    _tmp.sel+=1
+   end
+
    if _tmp.sel > 4 then
     _tmp.sel=1
    elseif _tmp.sel < 1 then
     _tmp.sel=4
    end
+
    _tmp.pos[_tmp.sel].state=2
-  end
 
-  for _c in all(cameras) do
-   _c.state=_tmp.pos[_c.i].state
-  end
+   if btnp(2,_p.i) then
+    _tmp.pos[_tmp.sel].state=0
+    _tmp.sel+=1
+    if _tmp.sel > 4 then
+     _tmp.sel=1
+    elseif _tmp.sel < 1 then
+     _tmp.sel=4
+    end
+    _tmp.pos[_tmp.sel].state=2
+   end
 
-  local _c=0
-  for _p in all(_tmp.pos) do
-   if _p.state == 0 then
-    _c+=1
+   for _c in all(cameras) do
+    _c.state=_tmp.pos[_c.i].state
+   end
+
+   local _c=0
+   for _p in all(_tmp.pos) do
+    if _p.state == 0 then
+     _c+=1
+    end
+   end
+
+   if _c > 1 then
+    for _i=1,4 do
+     _tmp.pos[_i].state=3
+    end
+    sfx(13)
+    setalertlvl2('cctv compromised!',_tmp.ox,_tmp.oy)
    end
   end
 
-  if _c > 1 then
-   for _i=1,4 do
-    _tmp.pos[_i].state=3
-   end
-   sfx(13)
-   setalertlvl2('cctv compromised!',_tmp.ox,_tmp.oy)
-  end
+ else
+  _tmp.sel=nil
+  _o.draw=nil
  end
 
  if btnp(3,_p.i) then
@@ -481,7 +494,9 @@ local function camcontrol(_p,_o,_tmp)
   -- reset all cameras
   for _i=1,4 do
    local _c=cameras[_i]
-   _tmp.pos[_i].state=1
+   if _tmp.pos and _tmp.pos[_i] then
+    _tmp.pos[_i].state=1
+   end
    if _c then
     _c.state=1
    end
@@ -647,44 +662,50 @@ end
 
 
 local function lockeddoorfrombelow(_p,_o,_tmp)
- if _o.typ == 16 then
-  for _l in all(playerinventory) do
-   if _l[1] ==  'door access code' then
-    _o.typ+=2
-    _p.action=nil
-    _p.state='standing'
-    -- todo: sfx
-    return
+ if ispoweron then
+  if _o.typ == 16 then
+   for _l in all(playerinventory) do
+    if _l[1] == 'door access code' then
+     _o.typ+=2
+     _p.action=nil
+     _p.state='standing'
+     -- todo: sfx
+     return
+    end
+   end
+   _p.action=nil
+   _p.state='standing'
+   return
+  end
+
+  if not _tmp.opened then
+   _o.typ+=2
+   _tmp.opened=true
+  end
+
+  if light[(_tmp.oy-2)*32+_tmp.ox] == 1 then
+   setalertlvl2('intruder alert!',_tmp.ox,_tmp.oy)
+  end
+
+  for _y=_tmp.oy-2,0,-1 do
+   fog[_y*32+_tmp.ox]=0
+   if floor[_y*32+_tmp.ox] == 2 then
+    break
    end
   end
+
+  if btnp(2,_p.i) then
+   _p.y-=3
+   resetdoor(_p,_o)
+  end
+
+  if btnp(3,_p.i) then
+   resetdoor(_p,_o)
+  end
+
+ else
   _p.action=nil
   _p.state='standing'
-  return
- end
-
- if not _tmp.opened then
-  _o.typ+=2
-  _tmp.opened=true
- end
-
- if light[(_tmp.oy-2)*32+_tmp.ox] == 1 then
-  setalertlvl2('intruder alert!',_tmp.ox,_tmp.oy)
- end
-
- for _y=_tmp.oy-2,0,-1 do
-  fog[_y*32+_tmp.ox]=0
-  if floor[_y*32+_tmp.ox] == 2 then
-   break
-  end
- end
-
- if btnp(2,_p.i) then
-  _p.y-=3
-  resetdoor(_p,_o)
- end
-
- if btnp(3,_p.i) then
-  resetdoor(_p,_o)
  end
 end
 
@@ -730,6 +751,43 @@ local function lockeddoorfromabove(_p,_o,_tmp)
  if btnp(3,_p.i) then
   _p.y+=3
   resetdoor(_p,_o2)
+ end
+end
+
+
+local function fusebox(_p,_o,_tmp)
+ _o.typ=25
+ _p.workingstate='cracking'
+ if _tmp.tick == nil then
+  _tmp.tick=0
+
+  _o.draw=function()
+   local _col=0
+   if _tmp.tick%12 > 6 then
+    _col=9
+   end
+   if ispoweron then
+    _col=11
+   end
+   pset(_tmp.ox*4+3,_tmp.oy*4,_col)
+  end
+ end
+
+ _tmp.tick+=1
+
+ if btn(2,_p.i) then
+  ispoweron=false
+ else
+  -- reset player
+  _p.action=nil
+  _p.state='standing'
+
+  -- reset obj
+  _o.typ=24
+  _o.draw=nil
+
+  -- reset state
+  ispoweron=true
  end
 end
 
@@ -800,6 +858,7 @@ debug('seed',seed)
 
 function mapgen()
  floor,objs,guards,cameras,mapthings={},{},{},{},{}
+ ispoweron=true
  local computercount=0
 
  local _r=rnd()
@@ -922,6 +981,13 @@ function mapgen()
     floor[_i]=1
    end
   end
+ end
+
+ -- add outside fusebox
+ local _fbi=(_ystart+_h-1)*32+_xstart+2
+ if rnd(0.3) and floor[_fbi+32] != 2 then
+  local _o={typ=24,shadow={},action={[2]=fusebox}}
+  objs[_fbi]=_o
  end
 
  -- fix cameras
@@ -1123,8 +1189,27 @@ local function gameinit()
 
    -- input
    if _p.state == 'working' then
+    local waspoweron=ispoweron
     _p.workingstate='hacking'
     _p.action()
+
+    -- update from ispoweron
+    if ispoweron and not waspoweron then
+     for _c in all(cameras) do
+      _c.state=1
+     end
+    elseif waspoweron and not ispoweron then
+     for _c in all(cameras) do
+      _c.state=0
+     end
+
+     for _i=0,arslen do
+      local _o=objs[_i]
+      if _o and _o.typ == 18 then
+       _o.typ=16
+      end
+     end
+    end
 
    else
     local _isinput
@@ -1723,12 +1808,12 @@ local function gameinit()
    local _floor=floor[_i]
    local _px,_py=_p.x*4,_p.y*4-5
    if _p.state == 'hiding' then
-    sspr(36+_p.adjacency*4,72,4,9,_px,_py)
+    sspr(46+_p.adjacency*4,72,4,9,_px,_py)
    elseif _p.state == 'working' then
     if _p.workingstate == 'hacking' then
-     sspr(12+_floor*18,72+_l*9,5,9,_px,_py)
+     sspr(12+_floor*23,72+_l*9,5,9,_px,_py)
     elseif _p.workingstate == 'cracking' then
-     sspr(52,72+_l*9,5,9,_px,_py)
+     sspr(17+_floor*23,72+_l*9,5,9,_px,_py)
     end
     if #_p.loot > 0 then
      sspr(5,91+_l*4,8,4,_px,_py+5)
@@ -1741,9 +1826,9 @@ local function gameinit()
      _flipx=true
     end
     if #_p.loot > 0 then
-     sspr(6+_floor*18,72+_l*9,6,9,_px-_p.dir*2,_py,6,9,_flipx)
+     sspr(6+_floor*23,72+_l*9,6,9,_px-_p.dir*2,_py,6,9,_flipx)
     else
-     sspr(0+_floor*18,72+_l*9,6,9,_px-_p.dir*2,_py,6,9,_flipx)
+     sspr(0+_floor*23,72+_l*9,6,9,_px-_p.dir*2,_py,6,9,_flipx)
     end
    end
 
@@ -1974,12 +2059,12 @@ end
 __gfx__
 f5ffffffffffffffffff5555555555555555555555555555ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 f5f5ccccfff555555fff2511155111525111111551111125ffffffffffffffffffffffffffffffffffffffff5dd55dd5ffffffffffffffffffffffffffffffff
-ff5fcc1c5ff511115fff251115511152511d111551555225222222ff222222ff222222ff222222ff222222ff5dd55d15ffffffffffffffffffffffffffffffff
-f5ffcc1cf5f511115fff25555555555251111115555552d5255552ff211152ff2dddd2ff2dddd2ff2111d2ff5dd55115ffffffffffffffffffffffffffffffff
-f5ffc1cc25251111522225111551115251dd111551111225255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd55115ffffffffffffffffffffffffffffffff
-2222fccf2d255555522255111551115551d11115511112d5255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd55dd5ffffffffffffffffffffffffffffffff
-dddd55552225d5d552225555555555555111111551555225255552ff211552ff28ddd2ff2bddd2ff211dd2ffffffffffffffffffffffffffffffffffffffffff
-dddd522522255d5d52522255d15d552255555555555552552d5552ff211552ff25ddd2ff25ddd2ff211dd2ffffffffffffffffffffffffffffffffffffffffff
+ff5fcc1c5ff511115fff251115511152511d111551555225222222ff222222ff222222ff222222ff222222ff5dd55d15ffffff55ffffffffffffffffffffffff
+f5ffcc1cf5f511115fff25555555555251111115555552d5255552ff211152ff2dddd2ff2dddd2ff2111d2ff5dd55115ffffff55ffffffffffffffffffffffff
+f5ffc1cc25251111522225111551115251dd111551111225255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd551154fff4f55ffffffffffffffffffffffff
+2222fccf2d255555522255111551115551d11115511112d5255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd55dd54fdd4fddffffffffffffffffffffffff
+dddd55552225d5d552225555555555555111111551555225255552ff211552ff28ddd2ff2bddd2ff211dd2ffffffffff445544ddffffffffffffffffffffffff
+dddd522522255d5d52522255d15d552255555555555552552d5552ff211552ff25ddd2ff25ddd2ff211dd2ffffffffffff55ffddffffffffffffffffffffffff
 22225ff522255555522222255555522255ffff5555ffff55255552ff211d52ff2dddd2ff2dddd2ff2115d2ffffffffffffffffffffffffffffffffffffffffff
 ffffffff5ffffffffff5552222222255ffffffffffffffff255552ff211552ff2dddd2ff2dddd2ff211dd2ffffffffffffffffffffffffffffffffffffffffff
 ffffffff5ffffffffff5ff52222225fffffffffffffffffffffffffffff5fffffffffffffffffffffffdffffffffffffffffffffffffffffffffffffffffffff
@@ -2044,24 +2129,24 @@ ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb1111bbb5ddddd64449464449446fdddddd7
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbdddbbbb5d111164444964444944ddddddd5
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb1111bbb511110dd6666d6666666600011d7
-ff1fffff1ffff1ffffff0fffff0ffff0ffffffffffffffffffffff0fffffffffffffffffffffffffffffffffffffb1bb1bbb51110166d666d6666666d1110117
-ff1fffff1ffff1ffffff0fffff0ffff0fffffffffffffffff0ffff0f0fffffffffffffffffffffffffffffffffff11bb1bbb588110006666d666666d60001115
-f111fff1111f111ffff000fff0000f000ffffff00fffffff000ff000ffffffffffffffffffffffffffffffffffffbb1bbbbb511100000666d666666600000115
-11111f1111111111ff00000f0000000000fffff00fffffff000ff00fffffffffffffffffffffffffffffffffffffbb11bbbbb51100100666666666660010015b
-1111f1111111111fff0000f0000000000fffff0000ffff0f000ff00fffffffffffffffffffffffffffffffffffffbb9bbbbbbbbb00001bbbbbbbbbbb00001bbb
-f111fff11111111ffff000fff00000000fffff0000ffff0f000ff000ffffffffffffffffffffffffffffffffffffbb9bbb55bbbbb111bbbbbbbbbbbbb111bbbb
-f1f1fff1f1ff1f1ffff0f0fff0f0ff0f0ffff000000ff0000f0f00f0ffffffffffffffffffffffffffffffffffffb111119bbbbddddddddddddddddddbbbbbbb
-f1f1fff1f1ff1f1ffff0f0fff0f0ff0f0ffff000000ff000ffffffffffffffffffffffffffffffffffffffffffff1111bbbbbbdddddddddddddd88ddddbbbbbb
-f1f1fff1f1ff1f1ffff0f0fff0f0ff0f0fff00f00f00f000ffffffffffffffffffffffffffffffffffffffffffff19ddbbbbbbdddddddddddddd11ddd6dbbbbb
-fffffffffffff1fffffffffffffffff1ffffffffffffffffffffff1fffffffffffffffffffffffffffffffffffffb111bbbbbbddddddddddddddddddd76dbbbb
-ff1fffff1ffffeffffff1fffff1ffffefffffffffffffffff1ffffefefffffffffffffffffffffffffffffffffffb1b1bbbbbb1dddddddddddddddddd676ddbb
-f1e1fff1e22f111ffff1e1fff1e22f111ffffff11fffffff1e1ff111ffffffffffffffffffffffffffffffffffffb1b1bbbbbb1111111111111111111677dddb
-11111f111e22111eff11111f111e22111efffffeefffffff111ff11fffffffffffffffffffffffffffffffffffffb1b1bbbbbb110101011010111d555167dddb
-1e11fe1e1122111fff1e11fe1e1122111fffff1111ffff1fe1eff11fffffffffffffffffffffffffffffffffffffbbbbbbbbbb1101010110101115d55516dddb
-f111fff11122111ffff111fff11122111fffff1111ffffef111ff111fffffffffffffffffffffffffbbbbbbbbebebb1bbbbbbb11010101101011155d5551ddd7
-f1f1fff1f1ff1f1ffff1f1fff1f1ff1f1ffff111111ff1111f1f11f1fffffffffffffffffffffffffbbbbbbbb1b1bb11bbbbb5110101011010111111111111d7
-f1f1fff1f1ff1f1ffff1f1fff1f1ff1f1ffff111111ff111fffffffffffffffffffffffffffffffffbbbbbbbb111bb9bbbbbb511111111111111111111111115
-f1f1fff1f1ff1f1ffff1f1fff1f1ff1f1fff11feef11f111fffffffffffffffffffffffffffffffffbbbbbbbb1e1bb9bbbbbb511110001111111111110001117
+ff1fffff1ffff1fffff1fffff0fffff0ffff0fffff0fffffffffffffffffffffffffffffffffffffffffffffffffb1bb1bbb51110166d666d6666666d1110117
+ff1fffff1ffff1fffff1f1fff0fffff0ffff0fffff0f0ffffffffffffff0ffffffffffffffffffffffffffffffff11bb1bbb588110006666d666666d60001115
+f111fff1111f111fff111fff000fff0000f000fff000fffff00fffffff000fffffffffffffffffffffffffffffffbb1bbbbb511100000666d666666600000115
+11111f1111111111ff11fff00000f0000000000ff00ffffff00fffffff000fffffffffffffffffffffffffffffffbb11bbbbb51100100666666666660010015b
+1111f1111111111fff11fff0000f0000000000fff00fffff0000ffff0f000fffffffffffffffffffffffffffffffbb9bbbbbbbbb00001bbbbbbbbbbb00001bbb
+f111fff11111111fff111fff000fff00000000fff000ffff0000ffff0f000fffffffffffffffffffffffffffffffbb9bbb55bbbbb111bbbbbbbbbbbbb111bbbb
+f1f1fff1f1ff1f1ff11f1fff0f0fff0f0ff0f0ff00f0fff000000ff0000f0fffffffffffffffffffffffffffffffb111119bbbbddddddddddddddddddbbbbbbb
+f1f1fff1f1ff1f1fffffffff0f0fff0f0ff0f0fffffffff000000ff000ffffffffffffffffffffffffffffffffff1111bbbbbbdddddddddddddd88ddddbbbbbb
+f1f1fff1f1ff1f1fffffffff0f0fff0f0ff0f0ffffffff00f00f00f000ffffffffffffffffffffffffffffffffff19ddbbbbbbdddddddddddddd11ddd6dbbbbb
+fffffffffffff1fffff1ffffffffffffffff1fffff1fffffffffffffffffffffffffffffffffffffffffffffffffb111bbbbbbddddddddddddddddddd76dbbbb
+ff1fffff1ffffefffffefefff1fffff1ffffefffffefeffffffffffffff1ffffffffffffffffffffffffffffffffb1b1bbbbbb1dddddddddddddddddd676ddbb
+f1e1fff1e22f111fff111fff1e1fff1e22f111fff111fffff11fffffff1e1fffffffffffffffffffffffffffffffb1b1bbbbbb1111111111111111111677dddb
+11111f111e22111eff11fff11111f111e22111eff11ffffffeefffffff111fffffffffffffffffffffffffffffffb1b1bbbbbb110101011010111d555167dddb
+1e11fe1e1122111fff11fff1e11fe1e1122111fff11fffff1111ffff1fe1efffffffffffffffffffffffffffffffbbbbbbbbbb1101010110101115d55516dddb
+f111fff11122111fff111fff111fff11122111fff111ffff1111ffffef111ffffffffffffffffffffbbbbbbbbebebb1bbbbbbb11010101101011155d5551ddd7
+f1f1fff1f1ff1f1ff11f1fff1f1fff1f1ff1f1ff11f1fff111111ff1111f1ffffffffffffffffffffbbbbbbbb1b1bb11bbbbb5110101011010111111111111d7
+f1f1fff1f1ff1f1fffffffff1f1fff1f1ff1f1fffffffff111111ff111fffffffffffffffffffffffbbbbbbbb111bb9bbbbbb511111111111111111111111115
+f1f1fff1f1ff1f1fffffffff1f1fff1f1ff1f1ffffffff11feef11f111fffffffffffffffffffffffbbbbbbbb1e1bb9bbbbbb511110001111111111110001117
 fffffffffffffefefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbb111b111bbbbb581101110111111111101110117
 ff1ffffffffff1f1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbb111b1111b5bb581110001111111111110001115
 f1e1fffffffff111fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbb111bdd119b5b511100000111111111100000115
