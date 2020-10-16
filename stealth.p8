@@ -14,13 +14,6 @@ __lua__
 
 - bug if suspect seen and caught same tick (came out of hiding for ex)
 
-- bug fog wrapping
-
-- loot scene
- - print out, row by row what the loot was
- - add it up
- - pressing next -> show total cash
-
 - guard behaviour
  - go towards player if lighted
 
@@ -82,8 +75,7 @@ end
 
 
 
--- set auto-repeat delay for btnp
-poke(0x5f5c, 5)
+
 
 
 -- s2t usage:
@@ -148,7 +140,7 @@ local camcontrolscreenpos={
 
 local tick=0
 
-local msgs={}
+local msgs
 local msgcols={s2t'6;13;',s2t'9;10;'}
 
 local floor
@@ -174,11 +166,13 @@ local guards
 
 local cash=1
 local maxseli=6
+local seli=1
 local visited={}
 local ispoweron
 local mapthings
 
 local initpolice
+local initstatus
 
 
 -- helper funcs
@@ -215,26 +209,6 @@ local function sortonx(_t)
  end
 end
 
--- local function addbig(_b1,_b2)
---  local _b3=''
---  local _c=0
---  for _i=max(#_b1,#_b2),0,-1 do
---   local _n1=tonum(sub(_b1,_i,_i)) or 0
---   _n1=_n1 == '' and 0 or _n1
---   local _n2=tonum(sub(_b2,_i,_i)) or 0
---   _n2=_n2 == '' and 0 or _n2
---   local _n=_n1+_n2+_c
---   if _n >= 10 then
---    _n-=10
---    _c=1
---   else
---    _c=0
---   end
---   _b3=_n.._b3
---  end
---  return _b3
--- end
-
 
 local function adjacency(_x1,_y1,_x2,_y2)
  if _x1 == _x2-1 and _y1 == _y2 then
@@ -267,9 +241,9 @@ local function playerloots(_p,_o)
  if _o.loot then
   _m=_o.loot[1]
   if _o.loot[2] then -- has value, then it's a thing, take it
-   _p.loot[#_p.loot+1]=_o.loot
+   add(_p.loot,_o.loot)
   else
-   playerinventory[#playerinventory+1]=_o.loot -- no value, it's information
+   add(playerinventory,_o.loot) -- no value, it's information
   end
  end
  add(msgs,{x=_p.x,y=_p.y-1,s=_m,t=40})
@@ -1181,6 +1155,9 @@ end
 
 
 local function gameinit()
+ -- set auto-repeat delay for btnp
+ poke(0x5f5c,5)
+ msgs={}
  tick=0
  alertlvl=1
  _update=function()
@@ -1245,11 +1222,13 @@ local function gameinit()
     end
     local _nextx,_nexty=_p.x+_p.dx,_p.y+_p.dy
     if _nextx > 31 or _nextx < 0 or _nexty > 31 or _nexty < 0 then
-     add(escapedplayers,_p)
-     del(players,_p)
+     add(escapedplayers,del(players,_p))
      add(msgs,{x=_p.x,y=_p.y,s='escaped',t=30})
 
-     -- todo: go to loot screen
+     if #players <= 0 then
+      initstatus()
+      return
+     end
     else
 
      local _ni=_nexty*32+_nextx
@@ -2001,30 +1980,31 @@ end
 
 
 local function initmapselect()
- _seli=1
- srand(seed+_seli)
+ poke(0x5f5c,-1)
+ palt()
+ srand(seed+seli)
  mapgen()
  local _reconcost
  _update=function()
-  local _oldseli=_seli
+  local _oldseli=seli
   _reconcost=flr(maxseli*10)/100
   if btnp(1) then
-   _seli+=1
+   seli+=1
   elseif btnp(0) then
-   _seli-=1
+   seli-=1
   end
-  if _seli != _oldseli then
-   _seli=mid(1,_seli,maxseli)
-   srand(seed+_seli)
+  if seli != _oldseli then
+   seli=mid(1,seli,maxseli)
+   srand(seed+seli)
    mapgen()
   end
-  if btnp(2) then
-   if _seli == maxseli then
+  if btnp(2) or btnp(4) or btnp(5) then
+   if seli == maxseli then
     if cash >= _reconcost then
      cash-=_reconcost
      maxseli+=1
     end
-   elseif not visited[_seli] then
+   elseif not visited[seli] then
     gameinit()
    end
   end
@@ -2034,22 +2014,22 @@ local function initmapselect()
   cls()
   print('$'..cash..'k',2,1,3)
   rectfill(15,15,114,104,5)
-  if _seli > 1 then
+  if seli > 1 then
    spr(243,9,54)
   end
-  if _seli < maxseli then
+  if seli < maxseli then
    spr(242,117,54)
   end
 
-  print('hit target '.._seli,19,18,15)
-  if _seli == maxseli then
+  print('hit target '..seli,19,18,15)
+  if seli == maxseli then
    local _col=8
    if cash >= _reconcost then
     _col=11
     spr(226,61,104)
    end
    print('buy info $'.._reconcost..'k',28,37,_col)
-  elseif visited[_seli] then
+  elseif visited[seli] then
    print('(already visited)',28,37,6)
   else
    for _i=1,#mapthings do
@@ -2061,7 +2041,74 @@ local function initmapselect()
 end
 
 
-_init=initmapselect
+
+
+
+
+
+
+initstatus=function()
+ poke(0x5f5c,-1)
+ local _rows={{'ingoing',cash}}
+ for _p in all(escapedplayers) do
+  for _l in all(_p.loot) do
+   add(_rows,_l)
+  end
+ end
+ cash=0
+ for _r in all(_rows) do
+  cash+=_r[2]
+ end
+
+ for _p in all(escapedplayers) do
+  _p.i=_p.origi
+  _p.loot={}
+  players[_p.origi+1]=_p
+ end
+
+ escapedplayers={}
+ playerinventory={}
+
+ _update=function()
+  if btnp(4) or btnp(5) then
+   initmapselect()
+  end
+ end
+
+ _draw=function()
+  cls()
+
+  local _offy=49
+  for _r in all(_rows) do
+   print(_r[1],10,_offy,6)
+   local _r2='$'.._r[2]..'k'
+   local _col=11
+   if _r[2] < 0 then
+    _col=14
+    _r2='-$'..abs(_r[2])..'k'
+   end
+   print(_r2,113-#_r2*4,_offy,_col)
+   _offy+=7
+  end
+
+  print('total',10,115,5)
+
+  local _s='$'..cash..'k'
+  print(_s,113-#_s*4,115,11)
+ end
+end
+
+
+
+
+
+
+
+
+
+-- _init=initmapselect
+
+_init=initstatus
 
 -- _init=function()
 --  mapgen()
