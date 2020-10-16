@@ -56,11 +56,10 @@ __lua__
 
 --]]
 
+cartdata'ironchestgames_sneakystealy_v1_dev1'
+
 devfog=false
 devvalues=false
-
-menuitem(1, 'devfog', function() devfog=not devfog end)
-menuitem(2, 'devvalues', function() devvalues=not devvalues end)
 
 
 printh('debug started','debug',true)
@@ -153,26 +152,53 @@ local alertlvl=1
 local alertlvls=s2t'24;8;' -- note: only tick time
 local policet=0
 
+local players
 local escapedplayers={}
 local playerinventory={}
 
-
-local players={
- {},
- {},
-}
-
 local guards
 
-local cash=1
-local maxseli=6
 local seli=1
-local visited={}
 local ispoweron
 local mapthings
 
+local seed=dget(61)
+while seed == 0 do
+ seed=rnd()
+ dset(62,1) -- 62 is cash
+ dset(63,6)
+ debug('new seed',seed)
+end
+dset(61,seed)
+
 local initpolice
 local initstatus
+
+-- init light
+for _i=0,arslen do
+ light[_i]=0
+end
+
+
+menuitem(1, 'rat on eachother', function()
+ for _p in all(escapedplayers) do
+  add(players,del(escapedplayers,_p))
+ end
+ initpolice(function()
+  -- reset game
+  for _i=0,63 do
+   dset(_i,0)
+  end
+  dset(62,1)
+  dset(63,6)
+  seed=rnd()
+  seli=1
+  initstatus()
+ end)
+end)
+menuitem(2, 'devfog', function() devfog=not devfog end)
+menuitem(3, 'devvalues', function() devvalues=not devvalues end)
+
 
 
 -- helper funcs
@@ -248,21 +274,6 @@ local function playerloots(_p,_o)
  end
  add(msgs,{x=_p.x,y=_p.y-1,s=_m,t=40})
  _o.loot=nil
-end
-
-
-for _i=0,arslen do
- light[_i]=0
-end
-
-for _i=1,#players do
- local _p=players[_i]
- _p.i=_i-1
- _p.origi=_p.i
- _p.dir=1
- _p.state='standing'
- _p.workingstate='hacking'
- _p.loot={}
 end
 
 
@@ -824,9 +835,6 @@ end
 
 
 
-local seed=rnd()
-debug('seed',seed)
-
 function mapgen()
  floor,objs,guards,cameras,mapthings={},{},{},{},{}
  ispoweron=true
@@ -1085,11 +1093,11 @@ function mapgen()
    _o.shadow={[0]=true}
    _o.action={[2]=safe}
    _o.loot=shuffle({
-    {'useless stocks',rnd()*0.1},
-    {'cash',rnd()},
-    {'stocks',rnd()+rnd()},
-    {'classified documents',rnd()+rnd()+rnd()},
-    {'gold',(rnd()+rnd()+rnd())/3*5},
+    {'a little cash',rnd()*0.1},
+    {'some cash',rnd()},
+    {'good cash',rnd()+rnd()},
+    {'classified docs',rnd()+rnd()+rnd()},
+    {'gold bars',(rnd()+rnd()+rnd())/3*5},
     {'diamonds',(rnd()+rnd()+rnd())/3*14},
     })[1]
 
@@ -1134,11 +1142,11 @@ function mapgen()
  end
 
  if #cameras > 1 then
-  add(mapthings, 'cameras')
+  add(mapthings, 'many cameras')
  end
 
  if #guards > 1 then
-  add(mapthings, 'guards')
+  add(mapthings, 'many guards')
  end
 
 end
@@ -1384,7 +1392,13 @@ local function gameinit()
      sfx(16)
     end
     if policet <= 0 then
-     initpolice()
+     initpolice(function()
+      if #players == 2 then
+       debug('game over')
+      else
+       debug('pay bail')
+      end
+     end)
     end
    end
    if #guards > 0 and t == 0 then
@@ -1916,7 +1930,7 @@ gfps=30
 
 
 
-initpolice=function()
+initpolice=function(_onpress)
  local _pt=8
  sfx(16,-2)
  sfx(17)
@@ -1928,6 +1942,10 @@ initpolice=function()
   _pt-=1
   if _pt < 0 then
    _pt=64
+  end
+
+  if btnp(4) then
+   _onpress()
   end
  end
 
@@ -1986,54 +2004,65 @@ local function initmapselect()
  mapgen()
  local _reconcost
  _update=function()
+  local _cash=dget(62)
+  local _nextbuyi=dget(63)
   local _oldseli=seli
-  _reconcost=flr(maxseli*10)/100
+  _reconcost=flr(_nextbuyi*10)/100
   if btnp(1) then
    seli+=1
   elseif btnp(0) then
    seli-=1
   end
+  seli=min(seli,60)
   if seli != _oldseli then
-   seli=mid(1,seli,maxseli)
+   seli=mid(1,seli,_nextbuyi)
    srand(seed+seli)
    mapgen()
   end
-  if btnp(2) or btnp(4) or btnp(5) then
-   if seli == maxseli then
-    if cash >= _reconcost then
-     cash-=_reconcost
-     maxseli+=1
+  if btnp(2) or btnp(4) then
+   if seli == _nextbuyi then
+    if _cash >= _reconcost then
+     _cash-=_reconcost
+     dset(62,_cash)
+     dset(63,_nextbuyi+1)
     end
-   elseif not visited[seli] then
+   elseif dget(seli) != 1 then
+    dset(seli,1)
     gameinit()
    end
   end
  end
 
  _draw=function()
+  local _cash=dget(62)
+  local _nextbuyi=dget(63)
   cls()
-  print('$'..cash..'k',2,1,3)
+  print('$'.._cash..'k',2,1,3)
   rectfill(15,15,114,104,5)
   if seli > 1 then
    spr(243,9,54)
   end
-  if seli < maxseli then
+  if seli < _nextbuyi then
    spr(242,117,54)
   end
 
   print('hit target '..seli,19,18,15)
-  if seli == maxseli then
+  if seli == _nextbuyi then
    local _col=8
-   if cash >= _reconcost then
+   if _cash >= _reconcost then
     _col=11
     spr(226,61,104)
    end
    print('buy info $'.._reconcost..'k',28,37,_col)
-  elseif visited[seli] then
+  elseif dget(seli) == 1 then
    print('(already visited)',28,37,6)
   else
+   print('recon showed:',28,37,6)
    for _i=1,#mapthings do
-    print(mapthings[_i],28,30+_i*7,7)
+    print(mapthings[_i],28,37+_i*7,7)
+   end
+   if #mapthings == 0 then
+    print('(not much)',28,44,7)
    end
    spr(226,61,104)
   end
@@ -2048,17 +2077,19 @@ end
 
 
 initstatus=function()
+ sfx(16,-2)
  poke(0x5f5c,-1)
- local _rows={{'ingoing',cash}}
+ local _rows={{'ingoing',dget(62)}}
  for _p in all(escapedplayers) do
   for _l in all(_p.loot) do
    add(_rows,_l)
   end
  end
- cash=0
+ local _cash=0
  for _r in all(_rows) do
-  cash+=_r[2]
+  _cash+=_r[2]
  end
+ dset(62,_cash)
 
  for _p in all(escapedplayers) do
   _p.i=_p.origi
@@ -2066,11 +2097,28 @@ initstatus=function()
   players[_p.origi+1]=_p
  end
 
+
+
+-- init players
+players={{},{}}
+for _i=1,2 do
+ players[_i]={
+  i=_i-1,
+  x=10+6*(_i-1),
+  y=8,
+  origi=_i-1,
+  dir=1,
+  state='standing',
+  workingstate='hacking',
+  loot={},
+ }
+end
+
  escapedplayers={}
  playerinventory={}
 
  _update=function()
-  if btnp(4) or btnp(5) then
+  if btnp(4) then
    initmapselect()
   end
  end
@@ -2093,7 +2141,7 @@ initstatus=function()
 
   print('total',10,115,5)
 
-  local _s='$'..cash..'k'
+  local _s='$'.._cash..'k'
   print(_s,113-#_s*4,115,11)
  end
 end
