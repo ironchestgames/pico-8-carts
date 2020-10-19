@@ -48,15 +48,11 @@ __lua__
 
 - window broken glass
 
-- doorfromunder from outside - player is hard to see
-
-- message for when switching controls
-
 - names: johnny, jimmy, tommy, timmy, benny, lenny, ray, jay, donny, sonny, fred, ted, zed, tony, vince, roy
 
 --]]
 
-cartdata'ironchestgames_sneakystealy_v1_dev1'
+cartdata'ironchestgames_sneakystealy_v1_dev2'
 
 devfog=false
 devvalues=false
@@ -162,43 +158,14 @@ local seli=1
 local ispoweron
 local mapthings
 
-local seed=dget(61)
-while seed == 0 do
- seed=rnd()
- dset(62,1) -- 62 is cash
- dset(63,6)
- debug('new seed',seed)
-end
-dset(61,seed)
-
 local initpolice
 local initstatus
+local initsplash
 
 -- init light
 for _i=0,arslen do
  light[_i]=0
 end
-
-
-menuitem(1, 'rat on eachother', function()
- for _p in all(escapedplayers) do
-  add(players,del(escapedplayers,_p))
- end
- initpolice(function()
-  -- reset game
-  for _i=0,63 do
-   dset(_i,0)
-  end
-  dset(62,1)
-  dset(63,6)
-  seed=rnd()
-  seli=1
-  initstatus()
- end)
-end)
-menuitem(2, 'devfog', function() devfog=not devfog end)
-menuitem(3, 'devvalues', function() devvalues=not devvalues end)
-
 
 
 -- helper funcs
@@ -887,11 +854,12 @@ function mapgen()
    end
   end
 
-  -- add left window
-  objs[(_ystart+2+flr(rnd(_h-5)))*32+_xstart]=newwindow()
-
-  -- add right window
-  objs[(_ystart+2+flr(rnd(_h-5)))*32+_xstart+_w-1]=newwindow()
+  -- add window
+  local _xoff=0
+  if rnd() > 0.5 then
+   _xoff=_w-1
+  end
+  objs[(_ystart+2+flr(rnd(_h-5)))*32+_xstart+_xoff]=newwindow()
 
   -- add top door
   objs[_ystart*32+_xstart+2+flr(rnd(_w-5))]={
@@ -1072,8 +1040,9 @@ function mapgen()
     action={[2]=computer},
     loot=shuffle({nil,nil,
      {'door access code'},
-     {'company secrets',rnd()},
-     {'classified files',rnd()*2},
+     {'blueprint'},
+     {'company secrets',flr(rnd()*1000)},
+     {'classified files',flr(rnd()*2000)},
      })[1],
     shadow={},
    }
@@ -1092,14 +1061,18 @@ function mapgen()
   elseif _typ == 8 then
    _o.shadow={[0]=true}
    _o.action={[2]=safe}
+   local _c=flr(rnd()*1000+500)
    _o.loot=shuffle({
-    {'a little cash',rnd()*0.1},
-    {'some cash',rnd()},
-    {'good cash',rnd()+rnd()},
-    {'classified docs',rnd()+rnd()+rnd()},
-    {'gold bars',(rnd()+rnd()+rnd())/3*5},
-    {'diamonds',(rnd()+rnd()+rnd())/3*14},
-    })[1]
+    {'a little cash',flr(rnd()*600)},
+    {'some cash',_c},
+    {'some cash',_c},
+    {'some cash',_c},
+    {'some cash',_c},
+    {'good cash',flr(rnd()+rnd()+2)*100},
+    {'classified docs',flr(rnd()+rnd()+rnd()+rnd())*200},
+    {'gold bars',flr(((rnd()+rnd()+rnd())/3)*3000)},
+    {'diamonds',flr(((rnd()+rnd()+rnd())/3)*10000)},
+   })[1]
 
    objs[_i+1]={typ=9,shadow={true}}
 
@@ -1392,13 +1365,14 @@ local function gameinit()
      sfx(16)
     end
     if policet <= 0 then
-     initpolice(function()
-      if #players == 2 then
-       debug('game over')
-      else
-       debug('pay bail')
+     local _f
+     if #players == 1 then
+      _f=function()
+       add(escapedplayers[1].loot,{'bail',-2000}) -- todo: base on wantedness
+       initstatus()
       end
-     end)
+     end
+     initpolice(_f)
     end
    end
    if #guards > 0 and t == 0 then
@@ -1945,7 +1919,12 @@ initpolice=function(_onpress)
   end
 
   if btnp(4) then
-   _onpress()
+   if _onpress then
+    _onpress()
+   else
+    dset(61,0)
+    initsplash()
+   end
   end
  end
 
@@ -1975,16 +1954,22 @@ initpolice=function(_onpress)
     _dx=-1
     _flipx=false
    end
-   sspr(92,63,8,11,_x+16*_dx,_y+15,8,11,_flipx) -- todo: token hunt?
+   local _tmp=_x+16*_dx
+   sspr(92,63,8,11,_tmp,_y+15,8,11,_flipx) -- todo: token hunt?
    sspr(92,63+11,8,11,_x+18*_dx,_y-1,8,11,_flipx)
-   sspr(92,63+22,8,11,_x+16*_dx,_y-15,8,11,_flipx)
+   sspr(92,63+22,8,11,_tmp,_y-15,8,11,_flipx)
   end
 
   -- draw car
-  sspr(100,61,28,17,80,107)
+  sspr(100,61,28,17,80,104)
+
+  -- draw armored truck for game over
+  if not _onpress then
+   sspr(100,78,28,18,15,102)
+   print('caught!  \x8e to start over',16,122,10)
+  end
 
   -- todo: add wantedness and draw extra police
-  -- todo: draw armored truck for game over
  end
 end
 
@@ -2000,14 +1985,14 @@ end
 local function initmapselect()
  poke(0x5f5c,-1)
  palt()
- srand(seed+seli)
+ srand(dget(61)+seli)
  mapgen()
  local _reconcost
  _update=function()
   local _cash=dget(62)
   local _nextbuyi=dget(63)
   local _oldseli=seli
-  _reconcost=flr(_nextbuyi*10)/100
+  _reconcost=flr(_nextbuyi*8)
   if btnp(1) then
    seli+=1
   elseif btnp(0) then
@@ -2016,7 +2001,7 @@ local function initmapselect()
   seli=min(seli,60)
   if seli != _oldseli then
    seli=mid(1,seli,_nextbuyi)
-   srand(seed+seli)
+   srand(dget(61)+seli)
    mapgen()
   end
   if btnp(2) or btnp(4) then
@@ -2037,7 +2022,7 @@ local function initmapselect()
   local _cash=dget(62)
   local _nextbuyi=dget(63)
   cls()
-  print('$'.._cash..'k',2,1,3)
+  print('$'.._cash,2,1,3)
   rectfill(15,15,114,104,5)
   if seli > 1 then
    spr(243,9,54)
@@ -2053,11 +2038,11 @@ local function initmapselect()
     _col=11
     spr(226,61,104)
    end
-   print('buy info $'.._reconcost..'k',28,37,_col)
+   print('buy info $'.._reconcost,28,37,_col)
   elseif dget(seli) == 1 then
    print('(already visited)',28,37,6)
   else
-   print('recon showed:',28,37,6)
+   print('scouted:',28,37,6)
    for _i=1,#mapthings do
     print(mapthings[_i],28,37+_i*7,7)
    end
@@ -2076,8 +2061,9 @@ end
 
 
 
-initstatus=function()
+initstatus=function(_msg)
  sfx(16,-2)
+ sfx(17,-2)
  poke(0x5f5c,-1)
  local _rows={{'ingoing',dget(62)}}
  for _p in all(escapedplayers) do
@@ -2085,6 +2071,7 @@ initstatus=function()
    add(_rows,_l)
   end
  end
+ add(_rows,{'daily expenses',-80})
  local _cash=0
  for _r in all(_rows) do
   _cash+=_r[2]
@@ -2097,29 +2084,44 @@ initstatus=function()
   players[_p.origi+1]=_p
  end
 
+ -- init msg
+ _msg=_msg or ''
+ if dget(62) < 0 then
+  _msg='no cash! \x8e to start over'
+ end
 
+ -- init players
+ players={{},{}}
+ for _i=1,2 do
+  players[_i]={
+   i=_i-1,
+   x=10+6*(_i-1),
+   y=8,
+   origi=_i-1,
+   dir=1,
+   state='standing',
+   workingstate='hacking',
+   loot={},
+  }
+ end
 
--- init players
-players={{},{}}
-for _i=1,2 do
- players[_i]={
-  i=_i-1,
-  x=10+6*(_i-1),
-  y=8,
-  origi=_i-1,
-  dir=1,
-  state='standing',
-  workingstate='hacking',
-  loot={},
- }
-end
+ for _l in all(playerinventory) do
+  if _l[1] == 'blueprint' and dget(63) < 60 then
+   dset(63,dget(63)+1)
+  end
+ end
 
  escapedplayers={}
  playerinventory={}
 
  _update=function()
   if btnp(4) then
-   initmapselect()
+   if _cash < 0 then
+    dset(61,0)
+    initsplash()
+   else
+    initmapselect()
+   end
   end
  end
 
@@ -2129,20 +2131,28 @@ end
   local _offy=49
   for _r in all(_rows) do
    print(_r[1],10,_offy,6)
-   local _r2='$'.._r[2]..'k'
+   local _r2='$'.._r[2]
    local _col=11
+   local _offx=0
    if _r[2] < 0 then
     _col=14
-    _r2='-$'..abs(_r[2])..'k'
+    _r2='-$'..abs(_r[2])
+    _offx=4
    end
-   print(_r2,113-#_r2*4,_offy,_col)
+   print(_r2,88-_offx,_offy,_col)
    _offy+=7
   end
 
   print('total',10,115,5)
 
-  local _s='$'.._cash..'k'
-  print(_s,113-#_s*4,115,11)
+  local _col=11
+  if _cash < 0 then
+   _col=14
+  end
+  local _s='$'.._cash
+  print(_s,98-#_s*2,115,_col)
+
+  print(_msg,64-#_msg*2,122,10)
  end
 end
 
@@ -2153,15 +2163,51 @@ end
 
 
 
+-- splash
+function initsplash()
+ sfx(16,-2)
+ sfx(17,-2)
+ local _msg='continuing saved "career"'
+ while dget(61) == 0 do
 
--- _init=initmapselect
+  -- 1-60 is unlocked status if corresponding maps
+  -- 61 is seed
+  -- 62 is cash
+  -- 63 is current maxseli
+  for _i=0,60 do
+   dset(_i,0)
+  end
 
-_init=initstatus
+  dset(61,rnd())
+  dset(62,1000)
+  dset(63,6)
+  seli=1
 
--- _init=function()
---  mapgen()
---  gameinit()
--- end
+  _msg='started new "career"'
+  debug('new seed',dget(61))
+ end
+
+ _update=function()
+  if btnp(4) then
+   menuitem(1, 'rat on eachother', function()
+    for _p in all(escapedplayers) do
+     add(players,del(escapedplayers,_p))
+    end
+    initpolice()
+   end)
+   initstatus(_msg)
+  end
+ end
+ _draw=function()
+  cls(0)
+  print('sneaky stealy',39,46,2)
+  print('sneaky stealy',38,45,7)
+  print('\x8e to start/continue game',13,120,10)
+ end
+end
+
+
+_init=initsplash
 
 
 __gfx__
