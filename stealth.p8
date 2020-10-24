@@ -663,8 +663,8 @@ end
 
 
 local function fusebox(_p,_o,_tmp)
- _o.typ,_p.workingstate=25,'cracking'
- if _tmp.tick == nil then
+ _o.typ,_p.workingstate,ispoweron=25,'cracking'
+ if not _tmp.tick then
   _tmp.tick=0
 
   _o.draw=function()
@@ -681,9 +681,7 @@ local function fusebox(_p,_o,_tmp)
 
  _tmp.tick+=1
 
- if btn(2,_p.i) then
-  ispoweron=false
- else
+ if btn(3,_p.i) then
   -- reset player and obj and ispoweron
   ispoweron,_p.state,_o.typ,_p.action,_o.draw=true,'standing',24
  end
@@ -910,15 +908,14 @@ function mapgen()
  for _y=2,29 do
   local _x=flr(rnd(4))+2
   while _x < 29 do
-   local _i=_y*32+_x
-   local _remove=false
+   local _i,_remove=_y*32+_x
    for _c in all(cameras) do
     if _c.x == _x and _c.y == _y or adjacency(_c.x,_c.y,_x,_y) then
      _remove=true
      break
     end
    end
-   if _remove == false and
+   if (not _remove) and
       objs[_i-32-1] == nil and -- todo: token hunt?
       objs[_i-32] == nil and
       objs[_i-32+1] == nil and
