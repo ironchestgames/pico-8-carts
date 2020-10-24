@@ -54,9 +54,6 @@ __lua__
 
 cartdata'ironchestgames_sneakystealy_v1_dev2'
 
-devfog=false
-devvalues=false
-
 
 printh('debug started','debug',true)
 function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
@@ -194,7 +191,7 @@ end
 
 local function sortonx(_t)
  for _i=1,#_t do
-  local _j = _i
+  local _j=_i
   while _j > 1 and _t[_j-1].x > _t[_j].x do
    _t[_j],_t[_j-1]=_t[_j-1],_t[_j]
    _j=_j-1
@@ -249,9 +246,7 @@ end
 
 local function setalertlvl2(_m,_x,_y)
  if alertlvl == 1 then
-  alertlvl=2
-  tick=60
-  policet=90
+  alertlvl,tick,policet=2,60,90
   local _i=0
   for _g in all(guards) do
    add(msgs,{x=_g.x,y=_g.y,s=_m,delay=_i*15,colset=2})
@@ -271,12 +266,10 @@ end
 local function computer(_p,_o,_tmp)
  _p.workingstate='hacking'
  if ispoweron then
-  if _tmp.action_c == nil then
-   _tmp.action_c=0
-   _tmp.state='booting'
+  if not _tmp.action_c then
+   _tmp.seq,_tmp.action_c,_tmp.state={},0,'booting'
    sfx(11)
-   local _l=14 -- note: change this if good at computers
-   _tmp.seq={}
+   local _l=14
    for _i=1,_l do
     local _n=0
     repeat
@@ -333,17 +326,12 @@ local function computer(_p,_o,_tmp)
   end
 
  else
-  _tmp.action_c=nil
-  _o.draw=nil
+  _tmp.action_c,_o.draw=nil
  end
 
  if btnp(3,_p.i) then
-  -- reset player
-  _p.action=nil
-  _p.state='standing'
-
-  -- reset obj
-  _o.draw=nil
+  -- reset player and obj
+  _p.state,_p.action,_o.draw='standing'
  end
 end
 
@@ -352,13 +340,12 @@ end
 -- 0 - off
 -- 1 - on
 -- 2 - selected/on (camcontrol)
--- 3 - system alarm (camcontrol)
+-- 3 - system alarm (camcontrol) (not used)
 local function camcontrol(_p,_o,_tmp)
  _p.workingstate='hacking'
  if ispoweron then
   if not _tmp.sel then
-   _tmp.sel=1
-   _tmp.pos=camcontrolscreenpos
+   _tmp.sel,_tmp.pos=1,camcontrolscreenpos
 
    -- start all cameras
    for _i=1,4 do
@@ -381,79 +368,63 @@ local function camcontrol(_p,_o,_tmp)
    sfx(11)
   end
 
-  if _tmp.pos[1].state != 3 then
+  _tmp.pos[_tmp.sel].state=1
 
-   _tmp.pos[_tmp.sel].state=1
+  if btnp(0,_p.i) then
+   _tmp.sel-=1
+  elseif btnp(1,_p.i) then
+   _tmp.sel+=1
+  end
 
-   if btnp(0,_p.i) then
-    _tmp.sel-=1
-   elseif btnp(1,_p.i) then
-    _tmp.sel+=1
+  if _tmp.sel > 4 then
+   _tmp.sel=1
+  elseif _tmp.sel < 1 then
+   _tmp.sel=4
+  end
+
+  _tmp.pos[_tmp.sel].state=2
+
+  if btnp(2,_p.i) then
+   for _i=1,4 do
+    _tmp.pos[_i].state=1
    end
-
+   _tmp.pos[_tmp.sel].state=0
+   _tmp.sel+=1
    if _tmp.sel > 4 then
     _tmp.sel=1
    elseif _tmp.sel < 1 then
     _tmp.sel=4
    end
-
    _tmp.pos[_tmp.sel].state=2
+  end
 
-   if btnp(2,_p.i) then
-    _tmp.pos[_tmp.sel].state=0
-    _tmp.sel+=1
-    if _tmp.sel > 4 then
-     _tmp.sel=1
-    elseif _tmp.sel < 1 then
-     _tmp.sel=4
-    end
-    _tmp.pos[_tmp.sel].state=2
-   end
+  for _c in all(cameras) do
+   _c.state=_tmp.pos[_c.i].state
+  end
 
-   for _c in all(cameras) do
-    _c.state=_tmp.pos[_c.i].state
-   end
-
-   local _c=0
-   for _p in all(_tmp.pos) do
-    if _p.state == 0 then
-     _c+=1
-    end
-   end
-
-   if _c > 1 then
-    for _i=1,4 do
-     _tmp.pos[_i].state=3
-    end
-    sfx(13)
-    setalertlvl2('cctv compromised!',_tmp.ox,_tmp.oy)
+  local _count=0
+  for _p in all(_tmp.pos) do
+   if _p.state == 0 then
+    _count+=1
    end
   end
 
  else
-  _tmp.sel=nil
-  _o.draw=nil
+  _tmp.sel,_o.draw=nil
  end
 
  if btnp(3,_p.i) then
-  -- reset player
-  _p.action=nil
-  _p.state='standing'
+  -- reset player and obj
+  _p.state,_p.action,_o.draw='standing'
 
   -- reset all cameras
   for _i=1,4 do
+   _tmp.pos[_i].state=1
    local _c=cameras[_i]
-   if _tmp.pos and _tmp.pos[_i] then
-    _tmp.pos[_i].state=1
-   end
    if _c then
     _c.state=1
    end
   end
-  _tmp={}
-
-  -- reset obj
-  _o.draw=nil
  end
 end
 
@@ -472,10 +443,7 @@ local function safe(_p,_o,_tmp)
 
   -- reset for this try
   if not _tmp.code then
-   _tmp.code=_o.code
-   _tmp.codei=1
-   _tmp.codetick=0
-   _tmp.unlocked=nil
+   _tmp.code,_tmp.codei,_tmp.codetick,_tmp.unlocked=_o.code,1,0
 
    _o.draw=function()
     local _x,_y=_tmp.ox*4+5,_tmp.oy*4-3
@@ -521,12 +489,8 @@ local function safe(_p,_o,_tmp)
  end
  
  if btnp(3,_p.i) then
-  -- reset player
-  _p.action=nil
-  _p.state='standing'
-
-  -- reset obj
-  _o.draw=nil
+  -- reset player and obj
+  _p.state,_p.action,_o.draw='standing'
  end
 
 end
@@ -535,8 +499,7 @@ end
 
 local function resetdoor(_p,_o)
  -- reset player
- _p.action=nil
- _p.state='standing'
+ _p.state,_p.action='standing'
 
  -- reset obj
  _o.typ-=2
@@ -616,14 +579,12 @@ local function lockeddoorfrombelow(_p,_o,_tmp)
    for _l in all(playerinventory) do
     if _l[1] == 'door access code' then
      _o.typ+=2
-     _p.action=nil
-     _p.state='standing'
+     _p.state,_p.action='standing'
      -- todo: sfx
      return
     end
    end
-   _p.action=nil
-   _p.state='standing'
+   _p.state,_p.action='standing'
    return
   end
 
@@ -653,8 +614,7 @@ local function lockeddoorfrombelow(_p,_o,_tmp)
   end
 
  else
-  _p.action=nil
-  _p.state='standing'
+  _p.state,_p.action='standing'
  end
 end
 
@@ -664,14 +624,12 @@ local function lockeddoorfromabove(_p,_o,_tmp)
   for _l in all(playerinventory) do
    if _l[1] ==  'door access code' then
     _o2.typ+=2
-    _p.action=nil
-    _p.state='standing'
+    _p.state,_p.action='standing'
     -- todo: sfx
     return
    end
   end
-  _p.action=nil
-  _p.state='standing'
+  _p.state,_p.action='standing'
   return
  end
 
@@ -705,8 +663,7 @@ end
 
 
 local function fusebox(_p,_o,_tmp)
- _o.typ=25
- _p.workingstate='cracking'
+ _o.typ,_p.workingstate=25,'cracking'
  if _tmp.tick == nil then
   _tmp.tick=0
 
@@ -727,16 +684,8 @@ local function fusebox(_p,_o,_tmp)
  if btn(2,_p.i) then
   ispoweron=false
  else
-  -- reset player
-  _p.action=nil
-  _p.state='standing'
-
-  -- reset obj
-  _o.typ=24
-  _o.draw=nil
-
-  -- reset state
-  ispoweron=true
+  -- reset player and obj and ispoweron
+  ispoweron,_p.state,_o.typ,_p.action,_o.draw=true,'standing',24
  end
 end
 
@@ -765,9 +714,7 @@ local function getbreakwindowfunc(_xmod)
   end
 
   -- reset player
-  _p.action=nil
-  _p.state='standing'
-
+  _p.state,_p.action='standing'
  end
 end
 
@@ -803,8 +750,7 @@ end
 
 
 function mapgen()
- floor,objs,guards,cameras,mapthings={},{},{},{},{}
- ispoweron=true
+ floor,objs,guards,cameras,mapthings,ispoweron={},{},{},{},{},true
  local computercount=0
 
  local _r=rnd()
@@ -838,16 +784,14 @@ function mapgen()
  local _xmin,_ymin,_ystart=2,3,3
 
  repeat
-  local _w=flr(rnd(19))+10
-  local _h=flr(rnd(5))+6
+  local _w,_h=flr(rnd(19))+10, flr(rnd(5))+6
   local _xstart=2+flr(rnd(28-_w))
 
   for _y=0,_h-1 do
    for _x=0,_w-1 do
     local _i=(_ystart+_y)*32+_xstart+_x
     if _y == 0 or _y == _h-1 or _x == 0 or _x == _w-1 then
-     floor[_i]=2
-     floor[(_ystart+_y-1)*32+_xstart+_x]=2
+     floor[_i],floor[(_ystart+_y-1)*32+_xstart+_x]=2,2
     else
      floor[_i]=1
     end
@@ -902,18 +846,15 @@ function mapgen()
  until _ystart+_h-1 > 27
 
  -- add corridor
- local _w=flr(rnd(5))+6
- local _h=flr(rnd(18))+10
- local _xstart=2+flr(rnd(28-_w))
- local _ystart=3
+ local _w,_h=flr(rnd(5))+6, flr(rnd(18))+10
+ local _xstart,_ystart=2+flr(rnd(28-_w)),3
 
  for _y=0,_h-1 do
   for _x=0,_w-1 do
    local _i=(_ystart+_y)*32+_xstart+_x
    local _fc=floorcount(_xstart+_x,_ystart+_y)
    if _y == 0 or _y == _h-1 then
-    floor[(_ystart+_y)*32+_xstart+_x]=2
-    floor[(_ystart+_y-1)*32+_xstart+_x]=2
+    floor[(_ystart+_y)*32+_xstart+_x],floor[(_ystart+_y-1)*32+_xstart+_x]=2,2
    end
    if _y == 0 or _y == _h-1 or _x == 0 or _x == _w-1 then
     local _current=floor[_i]
@@ -1138,9 +1079,7 @@ end
 local function gameinit()
  -- set auto-repeat delay for btnp
  poke(0x5f5c,5)
- msgs={}
- tick=0
- alertlvl=1
+ msgs,tick,alertlvl={},0,1
  _update=function()
   tick-=1
 
@@ -1183,23 +1122,15 @@ local function gameinit()
     end
 
    else
-    local _isinput
-    _p.dx=0
-    _p.dy=0
+    _p.dx,_p.dy=0,0
     if btnp(0,_p.i) then
-     _p.dx=-1
-     _p.dir=0
-     _isinput=true
+     _p.dx,_p.dir=-1,0
     elseif btnp(1,_p.i) then
-     _p.dx=1
-     _p.dir=1
-     _isinput=true
+     _p.dx,_p.dir=1,1
     elseif btnp(2,_p.i) then
      _p.dy=-1
-     _isinput=true
     elseif btnp(3,_p.i) then
      _p.dy=1
-     _isinput=true
     end
     local _nextx,_nexty=_p.x+_p.dx,_p.y+_p.dy
     if _nextx > 31 or _nextx < 0 or _nexty > 31 or _nexty < 0 then
@@ -1240,20 +1171,15 @@ local function gameinit()
 
       -- hide behind object
       if _p.state != 'working' then
-       local _hiding
-       local _pwa=walladjacency(_p)
-       local _i=_p.y*32+_p.x
+       local _i,_pwa,_hiding=_p.y*32+_p.x, walladjacency(_p)
        for _a=0,3 do
         local _oi=_i+adjdeltas[_a]
         local _o=objs[_oi]
         if _o then
          local _ox,_oy=_oi&31,_oi\32
-         local _a=adjacency(_p.x,_p.y,_ox,_oy)
-         local _owa=walladjacency{x=_ox,y=_oy}
+         local _a,_owa=adjacency(_p.x,_p.y,_ox,_oy), walladjacency{x=_ox,y=_oy}
          if _o.shadow and _o.shadow[_a] and _owa and _pwa and _a and light[_i] == 0 then
-          _p.state='hiding'
-          _p.adjacency=_a
-          _hiding=true
+          _p.state,_p.adjacency,_hiding='hiding',_a,true
          end
         end
        end
@@ -1268,8 +1194,7 @@ local function gameinit()
 
    -- if one square from guard, get caught
    for _g in all(guards) do
-    local _dx=_p.x-_g.x
-    local _dy=_p.y-_g.y
+    local _dx,_dy=_p.x-_g.x,_p.y-_g.y
     if (_p.state != 'hiding' or light[_p.y*32+_p.x] == 1) and _p.state != 'caught' and abs(_dx) <= 1 and abs(_dy) <= 1 then
      _p.state='caught'
      setalertlvl2('suspect caught!',_g.x,_g.y)
@@ -1424,8 +1349,7 @@ local function gameinit()
     local _ldown,_lside=32,32
     repeat
      local _bx,_by=_x,_y
-     local _bydown=_by
-     local _bldown=1
+     local _bydown,_bldown=_by,1
      while floor[_bydown*32+_bx] != 2 and _bldown <= _ldown do
       local _o=objs[_bydown*32+_bx]
       if _o then
@@ -1458,8 +1382,7 @@ local function gameinit()
       _bldown+=1
      end
 
-     local _bxside=_bx
-     local _blside=1
+     local _bxside,_blside=_bx,1
      while floor[_by*32+_bxside] != 2 and _blside <= _lside do
       local _o=objs[_by*32+_bxside]
       if _o then
@@ -1490,8 +1413,7 @@ local function gameinit()
       _bxside+=_dx
       _blside+=1
      end
-     _lside=_blside-2
-     _ldown=_bldown-2
+     _lside,_ldown=_blside-2,_bldown-2
      _y+=1
      _x+=_dx
     until floor[_y*32+_x] == 2 or
@@ -1501,7 +1423,6 @@ local function gameinit()
   end
 
   -- shine guards flashlights
-  -- todo: token hunt?!?!
   for _g in all(guards) do
    if _g.state == 'holding' then
     local _i=_g.y*32+_g.x
@@ -1510,89 +1431,46 @@ local function gameinit()
     end
 
    elseif _g.dx != 0 then
-    local _x,_y=_g.x+_g.dx,_g.y+_g.dy
-    local _l=32
-    while floor[_y*32+_x] != 2 do
-     local _c=0
-     local _bx=_x
-     local _by=_y
-     while floor[_by*32+_bx] != 2 and _c <= _l do
-      local _o=objs[_by*32+_bx]
-      if _o then
-       add(_o.light,{x=0,y=-1})
-       add(_o.light,{x=-_g.dx,y=0})
+    for _i=1,-1,-2 do
+     local _x,_y,_l=_g.x+_g.dx,_g.y+_g.dy,32
+     while floor[_y*32+_x] != 2 do
+      local _c,_bx,_by=0,_x,_y
+      while floor[_by*32+_bx] != 2 and _c <= _l do
+       local _o=objs[_by*32+_bx]
+       if _o then
+        add(_o.light,{x=0,y=-(_i)})
+        add(_o.light,{x=-_g.dx,y=0})
+       end
+       light[_by*32+_bx]=1
+       _bx+=_g.dx
+       _by+=_i
+       _c+=1
       end
-      light[_by*32+_bx]=1
-      _bx+=_g.dx
-      _by+=1
-      _c+=1
+      _l=_c-1
+      _x+=_g.dx
      end
-     _l=_c-1
-     _x+=_g.dx
-    end
-
-    _x,_y=_g.x+_g.dx,_g.y+_g.dy
-    _l=32
-    while floor[_y*32+_x] != 2 do
-     local _c=0
-     local _bx=_x
-     local _by=_y
-     while floor[_by*32+_bx] != 2 and _c <= _l do
-      local _o=objs[_by*32+_bx]
-      if _o then
-       add(_o.light,{x=0,y=1})
-       add(_o.light,{x=-_g.dx,y=0})
-      end
-      light[_by*32+_bx]=1
-      _bx+=_g.dx
-      _by-=1
-      _c+=1
-     end
-     _l=_c-1
-     _x+=_g.dx
     end
 
    elseif _g.dy != 0 then
-    local _x,_y=_g.x+_g.dx,_g.y+_g.dy
-    local _l=32
-    while floor[_y*32+_x] != 2 do
-     local _c=0
-     local _bx=_x
-     local _by=_y
-     while floor[_by*32+_bx] != 2 and _c <= _l do
-      local _o=objs[_by*32+_bx]
-      if _o then
-       add(_o.light,{x=0,y=-_g.dy})
-       add(_o.light,{x=-1,y=0})
-      end
-      light[_by*32+_bx]=1
-      _bx+=1
-      _by+=_g.dy
-      _c+=1
-     end
-     _l=_c-1
-     _y+=_g.dy
-    end
 
-    _x,_y=_g.x+_g.dx,_g.y+_g.dy
-    _l=32
-    while floor[_y*32+_x] != 2 do
-     local _c=0
-     local _bx=_x
-     local _by=_y
-     while floor[_by*32+_bx] != 2 and _c <= _l do
-      local _o=objs[_by*32+_bx]
-      if _o then
-       add(_o.light,{x=0,y=-_g.dy})
-       add(_o.light,{x=1,y=0})
+    for _i=1,-1,-2 do
+     local _x,_y,_l=_g.x+_g.dx,_g.y+_g.dy,32
+     while floor[_y*32+_x] != 2 do
+      local _c,_bx,_by=0,_x,_y
+      while floor[_by*32+_bx] != 2 and _c <= _l do
+       local _o=objs[_by*32+_bx]
+       if _o then
+        add(_o.light,{x=0,y=-_g.dy})
+        add(_o.light,{x=-(_i),y=0})
+       end
+       light[_by*32+_bx]=1
+       _bx+=_i
+       _by+=_g.dy
+       _c+=1
       end
-      light[_by*32+_bx]=1
-      _bx-=1
-      _by+=_g.dy
-      _c+=1
+      _l=_c-1
+      _y+=_g.dy
      end
-     _l=_c-1
-     _y+=_g.dy
     end
    end
   end
@@ -1663,13 +1541,16 @@ local function gameinit()
   for _p in all(players) do
    if _p.state != 'caught' then
     for _d in all(fogdirs) do
-     local _x,_y=_p.x,_p.y
-     local _l=32
-     while floor[_y*32+_x] != 2 and floor[_y*32+_x] != nil do
-      local _c=0
-      local _bx=_x
-      local _by=_y
-      while _by < 32 and _by >= 0 and _bx < 32 and _bx >= 0 and floor[_by*32+_bx] != 2 and floor[_by*32+_bx] != nil and _c <= _l do
+     local _x,_y,_l=_p.x,_p.y,32
+     while floor[_y*32+_x] != 2 and floor[_y*32+_x] do
+      local _c,_bx,_by=0,_x,_y
+      while _by < 32 and
+            _by >= 0 and
+            _bx < 32 and
+            _bx >= 0 and
+            floor[_by*32+_bx] != 2 and
+            floor[_by*32+_bx] and
+            _c <= _l do
        fog[_by*32+_bx]=0
        _bx+=_d.dx
        _by+=_d.dy
@@ -1713,9 +1594,6 @@ local function gameinit()
  end
 
  _draw=function()
-  gupd=stat(1)
-  gupdmax=max(gupd,gupdmax)
-
   if alertlvl == 2 and policet <= 64 then
    if policet%8 >= 4 then
     pal(0,8)
@@ -1727,12 +1605,9 @@ local function gameinit()
   for _i=arslen,0,-1 do
 
    -- draw floor
-   local _tile=floor[_i]
-   local _l=light[_i]
-   local _x,_y=_i&31,_i\32
-   local _sx,_sy=_x*4,_y*4
+   local _tile,_l,_x,_y=floor[_i],light[_i],_i&31,_i\32
+   local _sx,_sy,_col=_x*4,_y*4,_tile
 
-   local _col=_tile
    if _l == 1 then
     _col=floorlightcols[_col]
    end
@@ -1762,8 +1637,7 @@ local function gameinit()
   for _i=0,arslen do
    local _o=objs[_i]
    if _o and _o.typ then
-    local _x,_y=_i&31,_i\32 -- todo: token hunt, inline?
-    local _l=light[_i]
+    local _x,_y,_l=_i&31,_i\32,light[_i]
     sspr(_o.typ*4,_l*13,4,13,_x*4,_y*4-5)
    end
    _o=objs[_i-1]
@@ -1784,9 +1658,7 @@ local function gameinit()
   -- draw players
   for _p in all(players) do
    local _i=_p.y*32+_p.x
-   local _l=light[_i]
-   local _floor=floor[_i]
-   local _px,_py=_p.x*4,_p.y*4-5
+   local _l,_floor,_px,_py=light[_i],floor[_i],_p.x*4,_p.y*4-5
    if _p.state == 'hiding' then
     sspr(46+_p.adjacency*4,72,4,9,_px,_py)
    elseif _p.state == 'working' then
@@ -1801,10 +1673,7 @@ local function gameinit()
    elseif _p.state == 'caught' then
     sspr(0,90,6,9,_px,_py)
    else
-    local _flipx=false
-    if _p.dir == 1 then
-     _flipx=true
-    end
+    local _flipx=_p.dir == 1
     if #_p.loot > 0 then
      sspr(6+_floor*23,72+_l*9,6,9,_px-_p.dir*2,_py,6,9,_flipx)
     else
@@ -1812,7 +1681,7 @@ local function gameinit()
     end
    end
 
-   -- todo: draw objs[(_p.y+1)*32+_p.x] here again
+   -- todo: draw objs[(_p.y+1)*32+_p.x] here again?
   end
 
   -- draw guards
@@ -1834,18 +1703,15 @@ local function gameinit()
     sspr(109,31,7,11,_g.x*4-2,_g.y*4-7)
    end
 
-   -- todo: draw objs[(_p.y+1)*32+_p.x] here again
+   -- todo: draw objs[(_p.y+1)*32+_p.x] here again?
   end
 
 
   -- draw fog
-  if devfog == false then
-   for _i=0,arslen do
-    local _f=fog[_i]
-    if not _f then
-     local _x,_y=(_i&31)*4,(_i\32)*4
-     rectfill(_x,_y,_x+3,_y+3,0)
-    end
+  for _i=0,arslen do
+   if not fog[_i] then
+    local _x,_y=(_i&31)*4,(_i\32)*4
+    rectfill(_x,_y,_x+3,_y+3,0)
    end
   end
 
@@ -1857,40 +1723,12 @@ local function gameinit()
   for _m in all(msgs) do
    if _m.delay == nil then
     local _hw=#_m.s*2
-    local _x=max(min(_m.x*4-_hw,127-_hw*2),0)
-    local _y=max(_m.y*4-13,0)
-    local _col=msgcols[_m.colset or 1][_coli]
+    local _x,_y,_col=max(min(_m.x*4-_hw,127-_hw*2),0), max(_m.y*4-13,0), msgcols[_m.colset or 1][_coli]
     print(_m.s,_x,_y,_col)
    end
   end
-
-  if devvalues then
-
-   print('upd: '..gupd,0,122-54,11)
-   print(' max '..gupdmax,0,122-48,11)
-   print('fps: '..stat(7),0,122-42,11) -- note: fps
-   -- print(' min '..gfps,0,122-36,11) -- note: fps min
-   -- print('sys: '..stat(2),0,122-30,11) -- note: system calls
-   -- print(' max '..gsys,0,122-24,11) -- note: system calls max
-   print('cyc: '..stat(1),0,122-18,11) -- note: lua calls
-   print(' max '..gcyc,0,122-12,11) -- note: lua calls max
-   -- print('mem: '..stat(0),0,122-6,11) -- note: memory
-   -- print(' max '..gmem,0,122,11) -- note: memory max
-
-   -- gfps=min(gfps,stat(7))
-   -- gsys=max(gsys,stat(2))
-   gcyc=max(gcyc,stat(1))
-   -- gmem=max(gmem,stat(0))
-  end
  end
 end
-
-gupd=0
-gupdmax=0
-gmem=0
-gcyc=0
-gsys=0
-gfps=30
 
 
 
@@ -1940,24 +1778,21 @@ initpolice=function(_onpress)
   sortonx(_playersbyx)
   for _i=1,#_playersbyx do
    local _p=_playersbyx[_i]
-   local _x=mid(24,_p.x*4,127-24)
-   local _y=mid(16,_p.y*4,127-42)
+   local _x,_y=mid(24,_p.x*4,127-24), mid(16,_p.y*4,127-42)
    sspr(89,86,3,10,_x,_y)
    if #_p.loot > 0 then
     sspr(81,86,8,10,_x,_y)
    end
 
    -- draw officers
-   local _dx=1
-   local _flipx=true
-   if _i%2 == 1 then
-    _dx=-1
-    _flipx=false
+   local _dx,_flipx=-1,_i%2 == 1
+   if _flipx then
+    _dx=1
    end
    local _tmp=_x+16*_dx
-   sspr(92,63,8,11,_tmp,_y+15,8,11,_flipx) -- todo: token hunt?
-   sspr(92,63+11,8,11,_x+18*_dx,_y-1,8,11,_flipx)
-   sspr(92,63+22,8,11,_tmp,_y-15,8,11,_flipx)
+   sspr(92,63,8,11,_tmp,_y+15,8,11,_flipx)
+   sspr(92,74,8,11,_x+18*_dx,_y-1,8,11,_flipx)
+   sspr(92,85,8,11,_tmp,_y-15,8,11,_flipx)
   end
 
   -- draw car
@@ -1989,9 +1824,7 @@ local function initmapselect()
  mapgen()
  local _reconcost
  _update=function()
-  local _cash=dget(62)
-  local _nextbuyi=dget(63)
-  local _oldseli=seli
+  local _cash,_nextbuyi,_oldseli=dget(62),dget(63),seli
   _reconcost=flr(_nextbuyi*8)
   if btnp(1) then
    seli+=1
@@ -2019,8 +1852,7 @@ local function initmapselect()
  end
 
  _draw=function()
-  local _cash=dget(62)
-  local _nextbuyi=dget(63)
+  local _cash,_nextbuyi=dget(62),dget(63)
   cls()
   print('$'.._cash,2,1,3)
   rectfill(15,15,114,104,5)
@@ -2079,9 +1911,7 @@ initstatus=function(_msg)
  dset(62,_cash)
 
  for _p in all(escapedplayers) do
-  _p.i=_p.origi
-  _p.loot={}
-  players[_p.origi+1]=_p
+  _p.i,_p.loot,players[_p.origi+1]=_p.origi,{},_p
  end
 
  -- init msg
@@ -2111,8 +1941,7 @@ initstatus=function(_msg)
   end
  end
 
- escapedplayers={}
- playerinventory={}
+ escapedplayers,playerinventory={},{}
 
  _update=function()
   if btnp(4) then
@@ -2131,13 +1960,9 @@ initstatus=function(_msg)
   local _offy=49
   for _r in all(_rows) do
    print(_r[1],10,_offy,6)
-   local _r2='$'.._r[2]
-   local _col=11
-   local _offx=0
+   local _r2,_col,_offx='$'.._r[2],11,0
    if _r[2] < 0 then
-    _col=14
-    _r2='-$'..abs(_r[2])
-    _offx=4
+    _r2,_col,_offx='-$'..abs(_r[2]),14,4
    end
    print(_r2,88-_offx,_offy,_col)
    _offy+=7
@@ -2181,9 +2006,7 @@ function initsplash()
   dset(61,rnd())
   dset(62,1000)
   dset(63,6)
-  seli=1
-
-  _msg='started new "career"'
+  seli,_msg=1,'started new "career"'
   debug('new seed',dget(61))
  end
 
