@@ -1129,62 +1129,69 @@ local function gameinit()
     elseif btnp(3,_p.i) then
      _p.dy=1
     end
-    local _nextx,_nexty=_p.x+_p.dx,_p.y+_p.dy
-    if _nextx > 31 or _nextx < 0 or _nexty > 31 or _nexty < 0 then
-     add(escapedplayers,del(players,_p))
-     add(msgs,{x=_p.x,y=_p.y,s='escaped',t=30})
-
-     if #players <= 0 then
-      initstatus()
-      return
-     end
+    local _nextx,_nexty,_otherp=_p.x+_p.dx,_p.y+_p.dy,players[1]
+    if _otherp == _p then
+     _otherp=players[2]
+    end
+    if _otherp and _nextx == _otherp.x and _nexty == _otherp.y then
+     sfx(20)
     else
+     if _nextx > 31 or _nextx < 0 or _nexty > 31 or _nexty < 0 then
+      add(escapedplayers,del(players,_p))
+      add(msgs,{x=_p.x,y=_p.y,s='escaped',t=30})
 
-     local _ni=_nexty*32+_nextx
-     local _nexto=objs[_ni]
-     if _nexto != nil then
-      local _a=adjacency(_nextx,_nexty,_p.x,_p.y)
-      _nextx,_nexty=_p.x,_p.y
-      if _nexto.action and _nexto.action[_a] then
-       _p.state='working'
-       _p.action=curry3(_nexto.action[_a],_p,_nexto,{ox=_ni&31,oy=_ni\32,oi=_ni})
+      if #players <= 0 then
+       initstatus()
+       return
       end
-     end
+     else
 
-     if _p.state != 'working' then
-      local _i=_p.y*32+_p.x
-      for _a=0,3 do
-       local _oi=_i+adjdeltas[_a]
-       local _adjo=objs[_oi]
-       if _adjo and _adjo.adjaction and _adjo.adjaction[_a] then
-        _adjo.adjaction[_a](_p,_adjo,{ox=_oi&31,oy=_oi\32,oi=_oi})
+      local _ni=_nexty*32+_nextx
+      local _nexto=objs[_ni]
+      if _nexto != nil then
+       local _a=adjacency(_nextx,_nexty,_p.x,_p.y)
+       _nextx,_nexty=_p.x,_p.y
+       if _nexto.action and _nexto.action[_a] then
+        _p.state='working'
+        _p.action=curry3(_nexto.action[_a],_p,_nexto,{ox=_ni&31,oy=_ni\32,oi=_ni})
        end
       end
-     end
 
-
-     if _p.state != 'caught' and floor[_nexty*32+_nextx] != 2 then
-      _p.x,_p.y=_nextx,_nexty
-
-      -- hide behind object
       if _p.state != 'working' then
-       local _i,_pwa,_hiding=_p.y*32+_p.x, walladjacency(_p)
+       local _i=_p.y*32+_p.x
        for _a=0,3 do
         local _oi=_i+adjdeltas[_a]
-        local _o=objs[_oi]
-        if _o then
-         local _ox,_oy=_oi&31,_oi\32
-         local _a,_owa=adjacency(_p.x,_p.y,_ox,_oy), walladjacency{x=_ox,y=_oy}
-         if _o.shadow and _o.shadow[_a] and _owa and _pwa and _a and light[_i] == 0 then
-          _p.state,_p.adjacency,_hiding='hiding',_a,true
-         end
+        local _adjo=objs[_oi]
+        if _adjo and _adjo.adjaction and _adjo.adjaction[_a] then
+         _adjo.adjaction[_a](_p,_adjo,{ox=_oi&31,oy=_oi\32,oi=_oi})
         end
-       end
-       if not _hiding then
-        _p.state='standing'
        end
       end
 
+
+      if _p.state != 'caught' and floor[_nexty*32+_nextx] != 2 then
+       _p.x,_p.y=_nextx,_nexty
+
+       -- hide behind object
+       if _p.state != 'working' then
+        local _i,_pwa,_hiding=_p.y*32+_p.x, walladjacency(_p)
+        for _a=0,3 do
+         local _oi=_i+adjdeltas[_a]
+         local _o=objs[_oi]
+         if _o then
+          local _ox,_oy=_oi&31,_oi\32
+          local _a,_owa=adjacency(_p.x,_p.y,_ox,_oy), walladjacency{x=_ox,y=_oy}
+          if _o.shadow and _o.shadow[_a] and _owa and _pwa and _a and light[_i] == 0 then
+           _p.state,_p.adjacency,_hiding='hiding',_a,true
+          end
+         end
+        end
+        if not _hiding then
+         _p.state='standing'
+        end
+       end
+
+      end
      end
     end
    end
@@ -2180,3 +2187,4 @@ __sfx__
 01800000257711d771257711d77100700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000000
 010800000473000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700
 010800000072000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700
+001000000704007000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
