@@ -32,10 +32,6 @@ __lua__
 - cabinet
  - search (how? just open?)
 
-- fix generic loot sound
- - play in player loots
- - remove from action functions
-
 - table???
  - hide under
 
@@ -247,8 +243,7 @@ local function setalertlvl2(_m,_x,_y)
   for _g in all(guards) do
    add(msgs,{x=_g.x,y=_g.y,s=_m,delay=_i*15,colset=2})
    _i+=1
-   _g.state='patrolling'
-   _g.state_c=0
+   _g.state,_g.state_c='patrolling',0
   end
   add(msgs,{x=_x,y=_y,s=_m,colset=2})
  end
@@ -450,17 +445,9 @@ local function safe(_p,_o,_tmp)
  _p.workingstate='cracking'
  if not _o.isopen then
 
-  -- generate new code
-  if not _o.code then
-   _o.code={}
-   for _i=1,5 do
-    add(_o.code,flr(rnd(8))+1)
-   end
-  end
-
   -- reset for this try
   if not _tmp.code then
-   _tmp.code,_tmp.codei,_tmp.codetick,_tmp.unlocked=_o.code,1,0
+   _tmp.code,_tmp.codei,_tmp.codetick,_tmp.codedir,_tmp.unlocked=_o.code,1,0,_o.codedir
 
    _o.draw=function()
     local _x,_y=_tmp.ox*4+5,_tmp.oy*4-3
@@ -472,17 +459,21 @@ local function safe(_p,_o,_tmp)
    end
   end
 
-  local _dir=_tmp.codei%2
   for _i=0,1 do
    if btnp(_i,_p.i) then
+    if not _tmp.codedir then
+     _tmp.codedir=_i
+     _o.codedir=_tmp.codedir
+    end
     local _snd
-    if _dir == _i then
+    if _tmp.codedir == _i then
      _tmp.codetick+=1
      if _tmp.codetick == _tmp.code[_tmp.codei] and not _tmp.iserror then
       if _tmp.codei == #_tmp.code then
        _tmp.unlocked=true
       end
       _tmp.codei+=1
+      _tmp.codedir=abs(_i-1)
       _tmp.codetick=0
       sfx(14) -- high click
       _snd=true
@@ -908,7 +899,8 @@ function mapgen()
  for _j=#cameras,1,-1 do
   local _c=cameras[_j]
   local _i=_c.y*32+_c.x
-  if objs[_i-31] or
+  if objs[_i] or
+     objs[_i-31] or
      objs[_i-1] or
      objs[_i+1] or
      objs[_i-32] or
@@ -1027,6 +1019,15 @@ function mapgen()
   elseif _typ == 8 then
    _o.shadow={[0]=true}
    _o.action={[1]=soundaction,[2]=safe}
+
+   -- generate new code
+   if not _o.code then
+    _o.code={}
+    for _i=1,5 do
+     add(_o.code,flr(rnd(8))+1)
+    end
+   end
+
    local _c=flr(rnd(1000)+500)
    _o.loot=shuffle({
     {'a little cash',flr(rnd(600))},
@@ -1272,15 +1273,7 @@ local function gameinit()
    for _g in all(guards) do
 
     -- handle state
-    if _g.state == 'standing' then
-    -- todo: remove??
-     _g.state_c-=1
-     -- set to patrolling
-     if _g.state_c <= 0 then
-      _g.state='patrolling'
-     end
-
-    elseif _g.state == 'patrolling' then
+    if _g.state == 'patrolling' then
 
      -- turn when close to wall
      if iswallclose(_g.x,_g.y,_g.dx,_g.dy) then
@@ -1303,31 +1296,24 @@ local function gameinit()
      _g.x+=guarddxdeltas[_gwa] or _g.dx
      _g.y+=guarddydeltas[_gwa] or _g.dy
 
-    elseif _g.state == 'holding' then
-     -- is holding suspect
-
     elseif _g.state == 'listening' then
      _g.state_c-=1
 
      if _g.state_c <= 0 or _g.state_c % 10 == 1 then
       local _newdir=flr(rnd(4))
-      _g.dx=guarddxdeltas[_newdir]
-      _g.dy=guarddydeltas[_newdir]
-      _g.state='patrolling'
+      _g.dx,_g.dy,_g.state=guarddxdeltas[_newdir],guarddydeltas[_newdir],'patrolling'
      elseif _g.state_c > 30 then
       setalertlvl2('heard someone!',_g.x,_g.y)
      end
+
+    -- elseif _g.state == 'holding' then -- do nothing
     end
    end
 
    -- set new tick
    _playwalksfx=not _playwalksfx
    if _playwalksfx then
-    if alertlvl == 2 then
-     sfx(18)
-    else
-     sfx(19)
-    end
+    sfx(18+alertlvl-1)
    end
    if alertlvl == 2 and policet > 0 then
     policet-=1
@@ -1338,7 +1324,7 @@ local function gameinit()
      local _f
      if #players == 1 then
       _f=function()
-       add(escapedplayers[1].loot,{'bail',-2000}) -- todo: base on wantedness
+       add(escapedplayers[1].loot,{'bail',-(1700+players[1].ltime)})
        initstatus()
       end
      end
@@ -1350,9 +1336,7 @@ local function gameinit()
 
   -- update messages
   for _m in all(msgs) do
-   if not _m.t then
-    _m.t=90
-   end
+   _m.t=_m.t or 90
    if _m.delay then
     _m.delay-=1
     if _m.delay < 0 then
@@ -1383,8 +1367,7 @@ local function gameinit()
     if floor[_c.y*32+_c.x+1] == 2 then
      _dx=-1
     end
-    local _x,_y=_c.x,_c.y
-    local _ldown,_lside=32,32
+    local _x,_y,_ldown,_lside=_c.x,_c.y,32,32
     repeat
      local _bx,_by=_x,_y
      local _bydown,_bldown=_by,1
@@ -1552,12 +1535,13 @@ local function gameinit()
   end
 
   -- intruder alert
-  if alertlvl == 1 then
-   for _p in all(players) do
-    if light[_p.y*32+_p.x] == 1 then
-     setalertlvl2('intruder alert!',_p.x,_p.y)
-    end
+  for _p in all(players) do
+   if light[_p.y*32+_p.x] == 1 then
+    _p.ltime+=1
+    setalertlvl2('intruder alert!',_p.x,_p.y)
    end
+  end
+  if alertlvl == 1 then
    for _i=0,arslen do
     local _o=objs[_i]
     if _o and _o.typ == 10 and light[_i] == 1 then
@@ -1758,7 +1742,7 @@ local function gameinit()
    _coli=2
   end
   for _m in all(msgs) do
-   if _m.delay == nil then
+   if not _m.delay then
     local _hw=#_m.s*2
     local _x,_y,_col=max(min(_m.x*4-_hw,127-_hw*2),0), max(_m.y*4-13,0), msgcols[_m.colset or 1][_coli]
     print(_m.s,_x,_y,_col)
@@ -1963,6 +1947,7 @@ initstatus=function(_msg)
    state='standing',
    workingstate='hacking',
    loot={},
+   ltime=0,
   }
  end
 
@@ -2214,8 +2199,8 @@ __sfx__
 000300001b05000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 008001051d711257111d711257111d711007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700
 00800000257711d771257711d77100700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000000
-001000000c122031020b1220010200102001020010200102001020010200102001020010200102001020010200102001020010200102001020010200102001020010200102001020010200102001020010200102
 003000000502503005000250000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005
+001000000c122031020b1220010200102001020010200102001020010200102001020010200102001020010200102001020010200102001020010200102001020010200102001020010200102001020010200102
 001000000524007200002000020000200002000020000200002000020000200002000020000200002000020000200002000020000200002000020000200002000020000200002000020000200002000020000200
 000900001045110451004011145111451004011245112451004011345113451004011445114451004011545115451394013a4013a4013a4013a40139401004013c40100401004010040100401004010040100401
 002700002262303603006030060300603006030060300603006030060300603006030060300603006030060300603006030060300603006030060300603006030060300603006030060300603006030060300603
@@ -2223,7 +2208,7 @@ __sfx__
 000b0000211552a155361550010537105301052910500105001050010523105211052710522105211052110500105001050010500105001050010500105001050010500105001050010500105001050010500105
 0015000002160021000d1000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
