@@ -97,7 +97,7 @@ end
 
 local floorlightcols=s2t'.0;1;.1;13;.2;2;'
 
-local arslen=32*32-1 -- todo: 1023
+local arslen=1023 --32*32-1
 
 local adjdeltas=s2t'.0;-1;.1;1;.2;-32;.3;32;'
 
@@ -267,7 +267,7 @@ local function makesound(_p,_sfx)
    local _m='!'
    if alertlvl == 1 then
     _g.state='listening'
-    _g.state_c+=flr(rnd(5))+3
+    _g.state_c+=flr(rnd(3))+5
     _m='?'
    end
    add(msgs,{x=_g.x,y=_g.y,s=_m,colset=2,t=30})
@@ -944,14 +944,14 @@ function mapgen()
     end
    end
    if (not _remove) and
-      objs[_i-32-1] == nil and -- todo: token hunt?
-      objs[_i-32] == nil and
-      objs[_i-32+1] == nil and
-      objs[_i-32+2] == nil and
-      objs[_i-1] == nil and
-      objs[_i] == nil and
-      objs[_i+1] == nil and
-      objs[_i+2] == nil and
+      not (objs[_i-32-1] or
+       objs[_i-32] or
+       objs[_i-32+1] or
+       objs[_i-32+2] or
+       objs[_i-1] or
+       objs[_i] or
+       objs[_i+1] or
+       objs[_i+2]) and
       floor[_i-32] == 2 and
       floor[_i-32+1] == 2 and
       floor[_i-32+2] == 2 and
@@ -1051,11 +1051,11 @@ function mapgen()
   for _j=1,3 do
    local _y=flr(rnd(29))+2
    local _i=_y*32+_x
-   if objs[_i] == nil and
-      objs[_i-32] == nil and
-      objs[_i-1] == nil and
-      objs[_i+1] == nil and
-      objs[_i+32] == nil and
+   if not (objs[_i] or
+       objs[_i-32] or
+       objs[_i-1] or
+       objs[_i+1] or
+       objs[_i+32]) and
       floor[_i] == 1 and
       floor[_i-32] == 1 and
       floor[_i+32] == 1 and
@@ -1074,6 +1074,7 @@ function mapgen()
   local _o=objs[_i]
   if _o then
    _o.light={}
+
 
    _o.action=_o.action or {
     [0]=soundaction,
