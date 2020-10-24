@@ -739,6 +739,11 @@ local function getbreakwindowfunc(_xmod)
  end
 end
 
+local function soundaction(_p)
+ makesound(_p,0)
+  _p.state,_p.action='standing'
+end
+
 
 
 local function newwindow()
@@ -1016,12 +1021,12 @@ function mapgen()
 
   elseif _typ == 5 then
    _o.shadow={[0]=true}
-   objs[_i+1]={typ=6,action={[2]=camcontrol},shadow={}}
+   objs[_i+1]={typ=6,action={[0]=soundaction,[2]=camcontrol},shadow={}}
    objs[_i+2]={typ=7,shadow={true}}
 
   elseif _typ == 8 then
    _o.shadow={[0]=true}
-   _o.action={[2]=safe}
+   _o.action={[1]=soundaction,[2]=safe}
    local _c=flr(rnd(1000)+500)
    _o.loot=shuffle({
     {'a little cash',flr(rnd(600))},
@@ -1041,11 +1046,41 @@ function mapgen()
   end
  end
 
+ -- add plants and watercoolers vertically
+ for _x=2,29 do
+  for _j=1,3 do
+   local _y=flr(rnd(29))+2
+   local _i=_y*32+_x
+   if objs[_i] == nil and
+      objs[_i-32] == nil and
+      objs[_i-1] == nil and
+      objs[_i+1] == nil and
+      objs[_i+32] == nil and
+      floor[_i] == 1 and
+      floor[_i-32] == 1 and
+      floor[_i+32] == 1 and
+      (floor[_i+1] == 1 or floor[_i-1] == 1) and
+      (floor[_i+1] == 2 or floor[_i-1] == 2) then
+    local _typ=flr(rnd(2))
+    local _o={typ=_typ,shadow={[2]=true,[3]=true}}
+    objs[_i]=_o
+   end
+  end
+ end
+
+
  -- fix objs
  for _i=0,arslen do
   local _o=objs[_i]
   if _o then
    _o.light={}
+
+   _o.action=_o.action or {
+    [0]=soundaction,
+    [1]=soundaction,
+    [2]=soundaction,
+    [3]=soundaction,
+   }
 
    -- remove windows
    if _o.typ == 22 then
@@ -1533,13 +1568,7 @@ local function gameinit()
 
 
 
-
-
-
-
-
   -- remove fog
-  -- todo: token hunt
   for _p in all(players) do
    if _p.state != 'caught' then
     for _d in all(fogdirs) do
@@ -1683,7 +1712,11 @@ local function gameinit()
     end
    end
 
-   -- todo: draw objs[(_p.y+1)*32+_p.x] here again?
+   local _o=objs[_i+32]
+   if _o and _o.typ then
+    local _l=light[_i+32]
+    sspr(_o.typ*4,_l*13,4,13,_px,_py+4)
+   end
   end
 
   -- draw guards
@@ -1707,8 +1740,6 @@ local function gameinit()
    elseif _g.state == 'listening' then
     sspr(_dir*27,31,9,11,_g.x*4-2,_g.y*4-7)
    end
-
-   -- todo: draw objs[(_p.y+1)*32+_p.x] here again?
   end
 
 
@@ -1748,7 +1779,6 @@ end
 
 
 initpolice=function(_onpress)
- local _pt=8
  sfx(16,-2)
  sfx(17)
  palt(0,false)
@@ -1756,11 +1786,6 @@ initpolice=function(_onpress)
  palt(11,true)
 
  _update=function()
-  _pt-=1
-  if _pt < 0 then
-   _pt=64
-  end
-
   if btnp(4) then
    if _onpress then
     _onpress()
@@ -1772,7 +1797,7 @@ initpolice=function(_onpress)
  end
 
  _draw=function()
-  if _pt%64 >= 32 then
+  if flr(t())%2 == 1 then
    cls(8)
   else
    cls(12)
@@ -1800,7 +1825,7 @@ initpolice=function(_onpress)
    sspr(92,85,8,11,_tmp,_y-15,8,11,_flipx)
   end
 
-  -- draw car
+  -- draw police car
   sspr(100,61,28,17,80,104)
 
   -- draw armored truck for game over
@@ -1809,7 +1834,6 @@ initpolice=function(_onpress)
    print('caught!  \x8e to start over',16,122,10)
   end
 
-  -- todo: add wantedness and draw extra police
  end
 end
 
@@ -1859,7 +1883,8 @@ local function initmapselect()
  _draw=function()
   local _cash,_nextbuyi=dget(62),dget(63)
   cls()
-  print('$'.._cash,2,1,3)
+  rectfill(0,0,46,6,3)
+  print('$'.._cash,2,1,11)
   rectfill(15,15,114,104,5)
   if seli > 1 then
    spr(243,9,54)
@@ -1875,7 +1900,7 @@ local function initmapselect()
     _col=11
     spr(226,61,104)
    end
-   print('buy info $'.._reconcost,28,37,_col)
+   print('pay scout $'.._reconcost,28,37,_col)
   elseif dget(seli) == 1 then
    print('(already visited)',28,37,6)
   else
@@ -1962,7 +1987,7 @@ initstatus=function(_msg)
  _draw=function()
   cls()
 
-  local _offy=49
+  local _offy=29
   for _r in all(_rows) do
    print(_r[1],10,_offy,6)
    local _r2,_col,_offx='$'.._r[2],11,0
@@ -1973,16 +1998,16 @@ initstatus=function(_msg)
    _offy+=7
   end
 
-  print('total',10,115,5)
+  print('total',10,110,5)
 
   local _col=11
   if _cash < 0 then
    _col=14
   end
   local _s='$'.._cash
-  print(_s,98-#_s*2,115,_col)
+  print(_s,98-#_s*2,110,_col)
 
-  print(_msg,64-#_msg*2,122,10)
+  print(_msg,64-#_msg*2,119,10)
  end
 end
 
@@ -2029,10 +2054,10 @@ function initsplash()
   end
  end
  _draw=function()
-  cls(0)
+  cls()
   print('sneaky stealy',39,46,2)
   print('sneaky stealy',38,45,7)
-  print('\x8e to start/continue game',13,120,10)
+  print('\x8e to start/continue game',13,119,10)
  end
 end
 
