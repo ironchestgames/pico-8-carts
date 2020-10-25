@@ -22,9 +22,6 @@ __lua__
  - change number of officers in police scene
  - if wantedness is more than 3, send armored truck, and game over
 
-- armed guards
- - if player is within 10 squares in guard dir then he is caught, only horizontally
-
 - guard behaviour
  - go towards player if lighted
  - standing guard
@@ -44,18 +41,6 @@ __lua__
 --]]
 
 cartdata'ironchestgames_sneakystealy_v1_dev2'
-
-
-printh('debug started','debug',true)
-function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
- local ss={_s2,_s3,_s4,_s5,_s6,_s7,_s8}
- local result=tostr(_s1)
- for s in all(ss) do
-  result=result..', '..tostr(s)
- end
- printh(result,'debug',false)
-end
-
 
 
 
@@ -121,7 +106,7 @@ local camcontrolscreenpos={
  s2t'.x;3;.y;-1;',
 }
 
-local tick=0
+local tick
 
 local msgs
 local msgcols={s2t'6;13;',s2t'9;10;'}
@@ -130,19 +115,19 @@ local floor
 local objs
 local light={}
 local fog={}
-local cameras={}
+local cameras
 
-local alertlvl=1
+local alertlvl
 local alertlvls=s2t'24;8;' -- note: only tick time
 local policet=0
 
 local players
-local escapedplayers={}
-local playerinventory={}
+local escapedplayers
+local playerinventory
 
 local guards
 
-local seli=1
+local seli
 local ispoweron
 local mapthings
 
@@ -836,7 +821,7 @@ function mapgen()
   local _gx,_gy=flr(_xstart+_w/2),flr(_ystart+_h/2)
   if _h > 6 and #guards < 3 and rnd() > 0.5 then
    local _g=s2t'.dx;-1;.dy;0;.state;patrolling;.state_c;0;'
-   _g.x,_g.y=_gx,_gy
+   _g.x,_g.y,_g.isarmed=_gx,_gy,flr(rnd()+0.2)
    add(guards,_g)
   end
 
@@ -1110,6 +1095,13 @@ function mapgen()
   add(mapthings, 'many guards')
  end
 
+ for _g in all(guards) do
+  if _g.isarmed == 1 then
+   add(mapthings, 'guards might be armed')
+   break
+  end
+ end
+
 end
 
 
@@ -1140,7 +1132,7 @@ local function gameinit()
    if btnp(4) then
     _p.i=_p.i^^1
    end
-   if (btnp(4) or btnp(5)) and _p.i == 0 then
+   if btnp(4) and _p.i == 0 then
     add(msgs,{_p.x,_p.y,'.',15})
    end
 
@@ -1297,6 +1289,7 @@ local function gameinit()
      end
 
     -- elseif _g.state == 'holding' then -- do nothing
+    -- elseif _g.state == 'gunpointing' then -- do nothing
     end
    end
 
@@ -1547,11 +1540,32 @@ local function gameinit()
   end
 
 
+  -- armed guards catch
+  for _g in all(guards) do
+   if _g.isarmed == 1 then
+    for _p in all(players) do
+     if _p.y == _g.y then
+      for _x=_g.x,_g.x+_g.dx*10,_g.dx do
+       if floor[_g.y*32+_x] == 2 then
+        break
+       elseif _p.x == _x then
+        if _p.state != 'caught' then
+         add(msgs,{_g.x,_g.y,'hands up!',nil,nil,2})
+        end
+        _p.state='caught'
+        _p.workingstate='handsup'
+        _g.state='gunpointing'
+       end
+      end
+     end
+    end
+   end
+  end
 
 
   -- remove fog
   for _p in all(players) do
-   if _p.state != 'caught' then
+   if _p.state != 'caught' or _p.workingstate == 'handsup' then
     for _d in all(fogdirs) do
      local _x,_y,_l=_p.x,_p.y,32
      while floor[_y*32+_x] != 2 and floor[_y*32+_x] do
@@ -1683,7 +1697,14 @@ local function gameinit()
      sspr(5,91+_l*4,8,4,_px,_py+5)
     end
    elseif _p.state == 'caught' then
-    sspr(0,90,6,9,_px,_py)
+    if _p.workingstate == 'handsup' then
+     sspr(13,90,3,10,_px,_py-1)
+    else
+     sspr(0,90,6,9,_px,_py)
+    end
+    if #_p.loot > 0 then
+     sspr(5,95,8,4,_px,_py+5)
+    end
    else
     local _flipx=_p.dir == 1
     if #_p.loot > 0 then
@@ -1713,13 +1734,16 @@ local function gameinit()
     if tick < alertlvls[alertlvl]/2 then
      _frame=1
     end
-    sspr(_dir*27+_frame*9,31,9,11,_g.x*4-2,_g.y*4-7)
+    sspr(_dir*27+_frame*9,31+11*_g.isarmed,9,11,_g.x*4-2,_g.y*4-7)
 
    elseif _g.state == 'holding' then
-    sspr(109,31,7,11,_g.x*4-2,_g.y*4-7)
+    sspr(109,31+11*_g.isarmed,7,11,_g.x*4-2,_g.y*4-7)
+
+   elseif _g.state == 'gunpointing' then
+    sspr(11+11*_g.dx,53,7,11,_g.x*4-2,_g.y*4-7)
 
    elseif _g.state == 'listening' then
-    sspr(_dir*27,31,9,11,_g.x*4-2,_g.y*4-7)
+    sspr(_dir*27,31+11*_g.isarmed,9,11,_g.x*4-2,_g.y*4-7)
    end
   end
 
@@ -1881,16 +1905,16 @@ local function initmapselect()
     _col=11
     spr(226,61,104)
    end
-   print('pay scout $'.._reconcost,28,37,_col)
+   print('pay scout $'.._reconcost,23,37,_col)
   elseif dget(seli) == 1 then
-   print('(already visited)',28,37,6)
+   print('(already visited)',23,37,6)
   else
-   print('scouted:',28,37,6)
+   print('scouted:',23,37,6)
    for _i=1,#mapthings do
-    print(mapthings[_i],28,37+_i*7,7)
+    print(mapthings[_i],23,37+_i*7,7)
    end
    if #mapthings == 0 then
-    print('(not much)',28,44,7)
+    print('(not much)',23,44,7)
    end
    spr(226,61,104)
   end
@@ -2090,28 +2114,28 @@ ffff4449fffff444f9759f5594ff9444ffff9f444fffff4955f957fff4449fffff444fffff45554f
 ffff4f4ffffff4f4ffffff444ffff4f4ffffff4f4ffffff444fffffff4f4ffffff4f4ffffff444fffff74f4fffff74f4fffff5444ffffff4f4ffffffffffffff
 ffff4f4ffffff444ffffff4f44fff4f4ffffff444fffff44f4fffffff4f4ffffff4ffffffff4f4ffffff4f4ffffffff4fffff74f4ffffff4f4ffffffffffffff
 ffff4f4ffffffff4ffffff4ffffff4f4ffffff4ffffffffff4fffffff4f4ffffff4ffffffffff4ffffff4f4ffffffff4ffffff4ffffffff4f4ffffffffffffff
-fffff5ffffffff5fffffffffffffff5ffffffff5ffffffffffffffffff5ffffffff5fffffffffffffffff5ffffffff5fffffffffffffffff5fffffff5fffffff
-ffff55fffffff55ffffffff5ffffff55fffffff55fffffff5ffffffff55fffffff55ffffffff5ffffffff55fffffff55fffffff5ffffffff55ffffff55ffffff
-fffff9ffffffff9fffffff55ffffff9ffffffff9ffffffff55ffffffff9ffffffff9fffffff55ffffffff9ffffffff9ffffffff55fffffff9fffffff9fffffff
-fffff9ffffffff9ffffffff9ffffff9ffffffff9ffffffff9fffffffff9ffffffff9ffffffff9ffffffff9ffffffff9ffffffff9ffffffff9fffffff9fffffff
-ffff555ffffff555fffffff9fffff555ffffff555fffffff9ffffffff555ffffff555fffffff9fffffff555ffffff555fffffff9fffffff555fffff555f00fff
-fff55555ffff55555fffff555fff55555ffff55555fffff555ffffff55555ffff55555fffff555fffff55555ffff55555fffff555fffff55555ffff55559ffff
-759f4445f759f444f5fff55555ff5444f9575f444f957f55555fffff54445ffff5444f9fff55555ffff94445ffff9444f9fff55555fff5f444f9fff445957fff
-ffff5549fffff554f9759f4495ff9455ffff9f455fffff5944f957fff4559fffff455fffff54445ffff55549ffff5554fffff94449fff9f554fffff455ffffff
-ffff5f5ffffff5f5ffffff554ffff5f5ffffff5f5ffffff455fffffff5f5ffffff5f5ffffff455fffff75f5fffff75f5fffff5554ffffff5f5fffff5f5ffffff
-ffff5f5ffffff555ffffff5f55fff5f5ffffff555fffff55f5fffffff5f5ffffff5ffffffff5f5ffffff5f5ffffffff5fffff75f5ffffff5f5fffff5f5ffffff
-ffff5f5ffffffff5ffffff5ffffff5f5ffffff5ffffffffff5fffffff5f5ffffff5ffffffffff5ffffff5f5ffffffff5ffffff5ffffffff5f5fffff5f5ffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbbbbbbb88bbbbbbbbbbbbb
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbb7777788777bbbbbbbbbb
-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbbbbbbbbb777777667777bbbbbbbbb
+fffff5ffffffff5fffffffffffffff5ffffffff5ffffffffffffffffff5ffffffff5fffffffffffffffff5ffffffff5fffffffffffffffff5fffffffffffffff
+ffff55fffffff55ffffffff5ffffff55fffffff55fffffff5ffffffff55fffffff55ffffffff5ffffffff55fffffff55fffffff5ffffffff55ffffffffffffff
+fffff9ffffffff9fffffff55ffffff9ffffffff9ffffffff55ffffffff9ffffffff9fffffff55ffffffff9ffffffff9ffffffff55fffffff9fffffffffffffff
+fffff9ffffffff9ffffffff9ffffff9ffffffff9ffffffff9fffffffff9ffffffff9ffffffff9ffffffff9ffffffff9ffffffff9ffffffff9fffffffffffffff
+ffff555ffffff555fffffff9fffff555ffffff555fffffff9ffffffff555ffffff555fffffff9fffffff555ffffff555fffffff9fffffff555ffffffffffffff
+fff55555ffff55555fffff555fff55555ffff55555fffff555ffffff55555ffff55555fffff555fffff55555ffff55555fffff555fffff55555fffffffffffff
+759f4445f759f444f5fff55555ff5444f9575f444f957f55555fffff54445ffff5444f9fff55555ffff94445ffff9444f9fff55555fff5f444f9ffffffffffff
+ffff5549fffff554f9759f4495ff9455ffff9f455fffff5944f957fff4559fffff455fffff54445ffff55549ffff5554fffff94449fff9f554ffffffffffffff
+ffff5f5ffffff5f5ffffff554ffff5f5ffffff5f5ffffff455fffffff5f5ffffff5f5ffffff455fffff75f5fffff75f5fffff5554ffffff5f5ffffffffffffff
+ffff5f5ffffff555ffffff5f55fff5f5ffffff555fffff55f5fffffff5f5ffffff5ffffffff5f5ffffff5f5ffffffff5fffff75f5ffffff5f5ffffffffffffff
+ffff5f5ffffffff5ffffff5ffffff5f5ffffff5ffffffffff5fffffff5f5ffffff5ffffffffff5ffffff5f5ffffffff5ffffff5ffffffff5f5ffffffffffffff
+fffff5fffffffffffffffff5ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ffff55fffffffffffffffff55fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+fffff9fffffffffffffffff9ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+fffff9fffffffffffffffff9ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f00f555fffffffffffffff555f00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ff95555fffffffffffffff55559fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f759544fffffffffffffff445957ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ffff554fffffffffffffff455fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ffff5f5fffffffffffffff5f5fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbbbbbbb88bbbbbbbbbbbbb
+ffff5f5fffffffffffffff5f5fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbb7777788777bbbbbbbbbb
+ffff5f5fffffffffffffff5f5fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbbbbbbbbb777777667777bbbbbbbbb
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbb1bbbbbbbbbbb7f77777cc777f7bbbbbbbb
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbb11bb5bbbddddf777777cc7777f7bbbbbbb
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbb9bb5bbbddddd7f77777dd777f7fdddddbb
