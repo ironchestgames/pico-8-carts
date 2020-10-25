@@ -1685,13 +1685,14 @@ local function gameinit()
   for _p in all(players) do
    local _i=_p.y*32+_p.x
    local _l,_floor,_px,_py=light[_i],floor[_i],_p.x*4,_p.y*4-5
+   local _sylight,_floor23=72+_l*9,_floor*23
    if _p.state == 'hiding' then
     sspr(46+_p.adjacency*4,72,4,9,_px,_py)
    elseif _p.state == 'working' then
     if _p.workingstate == 'hacking' then
-     sspr(12+_floor*23,72+_l*9,5,9,_px,_py)
+     sspr(12+_floor23,_sylight,5,9,_px,_py)
     elseif _p.workingstate == 'cracking' then
-     sspr(17+_floor*23,72+_l*9,5,9,_px,_py)
+     sspr(17+_floor23,_sylight,5,9,_px,_py)
     end
     if #_p.loot > 0 then
      sspr(5,91+_l*4,8,4,_px,_py+5)
@@ -1706,11 +1707,11 @@ local function gameinit()
      sspr(5,95,8,4,_px,_py+5)
     end
    else
-    local _flipx=_p.dir == 1
+    local _flipx,_xoff,_y,_px2=_p.dir == 1,_floor23,_sylight,_px-_p.dir*2
     if #_p.loot > 0 then
-     sspr(6+_floor*23,72+_l*9,6,9,_px-_p.dir*2,_py,6,9,_flipx)
+     sspr(6+_xoff,_y,6,9,_px2,_py,6,9,_flipx)
     else
-     sspr(0+_floor*23,72+_l*9,6,9,_px-_p.dir*2,_py,6,9,_flipx)
+     sspr(0+_xoff,_y,6,9,_px2,_py,6,9,_flipx)
     end
    end
 
@@ -1723,7 +1724,7 @@ local function gameinit()
 
   -- draw guards
   for _g in all(guards) do
-   local _dir=0
+   local _dir,_gx,_gy=0,_g.x*4-2,_g.y*4-7
    for _j=1,3 do
     if adjdeltas[_j] == _g.dy*32+_g.dx then
      _dir=_j
@@ -1734,16 +1735,16 @@ local function gameinit()
     if tick < alertlvls[alertlvl]/2 then
      _frame=1
     end
-    sspr(_dir*27+_frame*9,31+11*_g.isarmed,9,11,_g.x*4-2,_g.y*4-7)
+    sspr(_dir*27+_frame*9,31+11*_g.isarmed,9,11,_gx,_gy)
 
    elseif _g.state == 'holding' then
-    sspr(109,31+11*_g.isarmed,7,11,_g.x*4-2,_g.y*4-7)
+    sspr(109,31+11*_g.isarmed,7,11,_gx,_gy)
 
    elseif _g.state == 'gunpointing' then
-    sspr(11+11*_g.dx,53,7,11,_g.x*4-2,_g.y*4-7)
+    sspr(11+11*_g.dx,53,7,11,_gx,_gy)
 
    elseif _g.state == 'listening' then
-    sspr(_dir*27,31+11*_g.isarmed,9,11,_g.x*4-2,_g.y*4-7)
+    sspr(_dir*27,31+11*_g.isarmed,9,11,_gx,_gy)
    end
   end
 
@@ -1786,7 +1787,7 @@ end
 initpolice=function(_onpress)
  sfx(16,-2)
  sfx(17)
- palt(0,false)
+ palt(0)
  palt(15,false)
  palt(11,true)
 
@@ -1856,10 +1857,10 @@ local function initmapselect()
  palt()
  srand(dget(61)+seli)
  mapgen()
- local _reconcost
+ local _cash,_reconcost=0
  _update=function()
-  local _cash,_nextbuyi,_oldseli=dget(62),dget(63),seli
-  _reconcost=flr(_nextbuyi*8)
+  local _nextbuyi,_oldseli=dget(63),seli
+  _cash,_reconcost=dget(62),flr(_nextbuyi*8)
   if btnp(1) then
    seli+=1
   elseif btnp(0) then
@@ -1874,8 +1875,7 @@ local function initmapselect()
   if btnp(2) or btnp(4) then
    if seli == _nextbuyi then
     if _cash >= _reconcost then
-     _cash-=_reconcost
-     dset(62,_cash)
+     dset(62,_cash-_reconcost)
      dset(63,_nextbuyi+1)
     end
    elseif dget(seli) != 1 then
@@ -1886,7 +1886,7 @@ local function initmapselect()
  end
 
  _draw=function()
-  local _cash,_nextbuyi=dget(62),dget(63)
+  local _nextbuyi=dget(63)
   cls()
   rectfill(0,0,46,6,3)
   print('$'.._cash,2,1,11)
@@ -1894,7 +1894,7 @@ local function initmapselect()
   if seli > 1 then
    spr(243,9,54)
   end
-  if seli < _nextbuyi then
+  if seli < _nextbuyi and seli < 60 then
    spr(242,117,54)
   end
 
@@ -1909,12 +1909,12 @@ local function initmapselect()
   elseif dget(seli) == 1 then
    print('(already visited)',23,37,6)
   else
-   print('scouted:',23,37,6)
+   print('scouted / blueprint:',23,37,6)
    for _i=1,#mapthings do
     print(mapthings[_i],23,37+_i*7,7)
    end
    if #mapthings == 0 then
-    print('(not much)',23,44,7)
+    print('(nothing much)',23,44,7)
    end
    spr(226,61,104)
   end
@@ -1938,7 +1938,7 @@ initstatus=function(_msg)
    add(_rows,_l)
   end
  end
- add(_rows,{'daily expenses',-80})
+ add(_rows,{'daily expenses',-(80+(dget(63)-6)*2)})
  local _cash=0
  for _r in all(_rows) do
   _cash+=_r[2]
@@ -2042,7 +2042,7 @@ function initsplash()
   end
 
   dset(61,rnd())
-  dset(62,1000)
+  dset(62,200)
   dset(63,6)
   seli,_msg=1,'started new "career"'
   -- debug('new seed',dget(61))
@@ -2069,7 +2069,6 @@ end
 
 
 _init=initsplash
-
 
 __gfx__
 f5ffffffffffffffffff5555555555555555555555555555ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
