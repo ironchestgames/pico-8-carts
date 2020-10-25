@@ -355,7 +355,7 @@ local function camcontrol(_p,_o,_tmp)
  _p.workingstate='hacking'
  if ispoweron then
   if not _tmp.sel then
-   _tmp.sel,_tmp.pos=1,camcontrolscreenpos
+   _tmp.sel,_tmp.pos=0,camcontrolscreenpos
 
    -- start all cameras
    for _i=1,4 do
@@ -378,7 +378,7 @@ local function camcontrol(_p,_o,_tmp)
    makesound(_p,11)
   end
 
-  _tmp.pos[_tmp.sel].state=1
+  _tmp.pos[_tmp.sel+1].state=1
 
   if btnp(0,_p.i) then
    _tmp.sel-=1
@@ -386,26 +386,18 @@ local function camcontrol(_p,_o,_tmp)
    _tmp.sel+=1
   end
 
-  if _tmp.sel > 4 then
-   _tmp.sel=1
-  elseif _tmp.sel < 1 then
-   _tmp.sel=4
-  end
+  _tmp.sel=_tmp.sel%4
 
-  _tmp.pos[_tmp.sel].state=2
+  _tmp.pos[_tmp.sel+1].state=2
 
   if btnp(2,_p.i) then
    for _i=1,4 do
     _tmp.pos[_i].state=1
    end
-   _tmp.pos[_tmp.sel].state=0
+   _tmp.pos[_tmp.sel+1].state=0
    _tmp.sel+=1
-   if _tmp.sel > 4 then
-    _tmp.sel=1
-   elseif _tmp.sel < 1 then
-    _tmp.sel=4
-   end
-   _tmp.pos[_tmp.sel].state=2
+   _tmp.sel=_tmp.sel%4
+   _tmp.pos[_tmp.sel+1].state=2
   end
 
   for _c in all(cameras) do
@@ -447,14 +439,17 @@ local function safe(_p,_o,_tmp)
 
   -- reset for this try
   if not _tmp.code then
-   _tmp.code,_tmp.codei,_tmp.codetick,_tmp.codedir,_tmp.unlocked=_o.code,1,0,_o.codedir
+   _tmp.code,_tmp.codei,_tmp.codetick,_tmp.codedir=_o.code,1,0,_o.codedir
+   -- _tmp.unlocked=nil
 
    _o.draw=function()
     local _x,_y=_tmp.ox*4+5,_tmp.oy*4-3
-    if _tmp.iserror then
-     pset(_x,_y,8)
-    elseif _tmp.unlocked and not _o.isopen then
-     pset(_x,_y,11)
+    if not _o.isopen then
+     if _tmp.iserror then
+      pset(_x,_y,8)
+     elseif _tmp.unlocked then
+      pset(_x,_y,11)
+     end
     end
    end
   end
@@ -462,21 +457,16 @@ local function safe(_p,_o,_tmp)
   for _i=0,1 do
    if btnp(_i,_p.i) then
     if not _tmp.codedir then
-     _tmp.codedir=_i
-     _o.codedir=_tmp.codedir
+     _tmp.codedir,_o.codedir=_i,_i
     end
     local _snd
     if _tmp.codedir == _i then
      _tmp.codetick+=1
      if _tmp.codetick == _tmp.code[_tmp.codei] and not _tmp.iserror then
-      if _tmp.codei == #_tmp.code then
-       _tmp.unlocked=true
-      end
+      _tmp.unlocked=_tmp.codei == #_tmp.code
       _tmp.codei+=1
-      _tmp.codedir=abs(_i-1)
-      _tmp.codetick=0
+      _tmp.codedir,_tmp.codetick,_snd=abs(_i-1),0,true
       sfx(14) -- high click
-      _snd=true
      end
     else
      _tmp.iserror=true
