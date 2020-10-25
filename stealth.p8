@@ -227,7 +227,7 @@ local function playerloots(_p,_o)
    add(playerinventory,_o.loot) -- no value, it's information
   end
  end
- add(msgs,{x=_p.x,y=_p.y-1,s=_m,t=40})
+ add(msgs,{_p.x,_p.y-1,_m,40})
  _o.loot=nil
 end
 
@@ -241,11 +241,11 @@ local function setalertlvl2(_m,_x,_y)
   alertlvl,tick,policet=2,60,90
   local _i=0
   for _g in all(guards) do
-   add(msgs,{x=_g.x,y=_g.y,s=_m,delay=_i*15,colset=2})
+   add(msgs,{_g.x,_g.y,_m,nil,_i*15,2})
    _i+=1
    _g.state,_g.state_c='patrolling',0
   end
-  add(msgs,{x=_x,y=_y,s=_m,colset=2})
+  add(msgs,{_x,_y,_m,nil,nil,2})
  end
 end
 
@@ -265,7 +265,7 @@ local function makesound(_p,_sfx)
     _g.state_c+=flr(rnd(3))+5
     _m='?'
    end
-   add(msgs,{x=_g.x,y=_g.y,s=_m,colset=2,t=30})
+   add(msgs,{_g.x,_g.y,_m,30,nil,2})
   end
  end
 end
@@ -1141,7 +1141,7 @@ local function gameinit()
     _p.i=_p.i^^1
    end
    if (btnp(4) or btnp(5)) and _p.i == 0 then
-    add(msgs,{x=_p.x,y=_p.y,s='.',t=15})
+    add(msgs,{_p.x,_p.y,'.',15})
    end
 
    -- input
@@ -1188,7 +1188,7 @@ local function gameinit()
     else
      if _nextx > 31 or _nextx < 0 or _nexty > 31 or _nexty < 0 then
       add(escapedplayers,del(players,_p))
-      add(msgs,{x=_p.x,y=_p.y,s='escaped',t=30})
+      add(msgs,{_p.x,_p.y,'escaped',30})
 
       if #players <= 0 then
        initstatus()
@@ -1325,16 +1325,22 @@ local function gameinit()
   end
 
   -- update messages
+  -- 1 - x
+  -- 2 - y
+  -- 3 - string
+  -- 4 - time
+  -- 5 - delay
+  -- 6 - colorset (1 or 2)
   for _m in all(msgs) do
-   _m.t=_m.t or 90
-   if _m.delay then
-    _m.delay-=1
-    if _m.delay < 0 then
-     _m.delay=nil
+   _m[4]=_m[4] or 90
+   if _m[5] then
+    _m[5]-=1
+    if _m[5] < 0 then
+     _m[5]=nil
     end
    else
-    _m.t-=1
-    if _m.t <= 0 then
+    _m[4]-=1
+    if _m[4] <= 0 then
      del(msgs,_m)
     end
    end
@@ -1732,10 +1738,10 @@ local function gameinit()
    _coli=2
   end
   for _m in all(msgs) do
-   if not _m.delay then
-    local _hw=#_m.s*2
-    local _x,_y,_col=max(min(_m.x*4-_hw,127-_hw*2),0), max(_m.y*4-13,0), msgcols[_m.colset or 1][_coli]
-    print(_m.s,_x,_y,_col)
+   if not _m[5] then
+    local _hw=#_m[3]*2
+    local _x,_y,_col=max(min(_m[1]*4-_hw,127-_hw*2),0), max(_m[2]*4-13,0), msgcols[_m[6] or 1][_coli]
+    print(_m[3],_x,_y,_col)
    end
   end
  end
@@ -2015,7 +2021,7 @@ function initsplash()
   dset(62,1000)
   dset(63,6)
   seli,_msg=1,'started new "career"'
-  debug('new seed',dget(61))
+  -- debug('new seed',dget(61))
  end
 
  _update=function()
