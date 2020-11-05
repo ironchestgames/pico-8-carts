@@ -9,6 +9,8 @@ __lua__
 
 --[[
 
+- fix bug to have walls not adjacent to bottom of map
+
 - filing drawers
  - search (up/down?)
 
@@ -1255,16 +1257,22 @@ local function gameinit()
 
      -- turn when close to wall
      if iswallclose(_g.x,_g.y,_g.dx,_g.dy) then
-      local _turns=shuffle{
-       {dx=_g.dy,dy=_g.dx},
-       {dx=-_g.dy,dy=-_g.dx},
-      }
-      add(_turns,{dx=-_g.dx,dy=-_g.dy})
-      for _t in all(_turns) do
-       if not iswallclose(_g.x,_g.y,_t.dx,_t.dy) then
-        _g.dx=_t.dx
-        _g.dy=_t.dy
-        break
+      local _obj=objs[(_g.y+_g.dy*3)*32+_g.x+_g.dx*3]
+      if _obj and _obj.typ == 23 and not _obj.isguarded then
+       _obj.isguarded=true
+       _g.state='guarding'
+      else
+       local _turns=shuffle{
+        {dx=_g.dy,dy=_g.dx},
+        {dx=-_g.dy,dy=-_g.dx},
+       }
+       add(_turns,{dx=-_g.dx,dy=-_g.dy})
+       for _t in all(_turns) do
+        if not iswallclose(_g.x,_g.y,_t.dx,_t.dy) then
+         _g.dx=_t.dx
+         _g.dy=_t.dy
+         break
+        end
        end
       end
      end
@@ -1283,6 +1291,7 @@ local function gameinit()
       setalertlvl2('heard someone!',_g.x,_g.y)
      end
 
+    -- elseif _g.state == 'guarding' then -- do nothing
     -- elseif _g.state == 'holding' then -- do nothing
     -- elseif _g.state == 'gunpointing' then -- do nothing
     end
@@ -1738,7 +1747,7 @@ local function gameinit()
    elseif _g.state == 'gunpointing' then
     sspr(11+11*_g.dx,53,7,11,_gx,_gy)
 
-   elseif _g.state == 'listening' then
+   elseif _g.state == 'listening' or _g.state == 'guarding' then
     sspr(_dir*27,31+11*_g.isarmed,9,11,_gx,_gy)
    end
   end
