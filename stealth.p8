@@ -14,9 +14,6 @@ __lua__
 
 - bug if suspect seen and caught same tick (came out of hiding for ex)
 
-- guard behaviour
- - go towards player if lighted
-
 - wantedness
  - increase wantedness if spending too much time in light
  - change number of officers in police scene
@@ -264,7 +261,7 @@ local function computer(_p,_o,_tmp)
   if not _tmp.action_c then
    _tmp.seq,_tmp.action_c,_tmp.state={},0,'booting'
    makesound(_p,11)
-   local _l=14
+   local _l=6+flr(rnd(8))
    for _i=1,_l do
     local _n=0
     repeat
@@ -974,6 +971,7 @@ function mapgen()
     loot=shuffle({nil,nil,
      {'door access code'},
      {'blueprint'},
+     {'blackmail material',flr(rnd(500))},
      {'company secrets',flr(rnd(1000))},
      {'classified files',flr(rnd(2000))},
      })[1],
@@ -1003,17 +1001,15 @@ function mapgen()
     end
    end
 
-   local _c=flr(rnd(1000)+500)
+   local _somecash={'some cash',flr(100+rnd(300))}
+   local _goodcash={'good cash',flr(400+rnd(200))}
    _o.loot=shuffle({
-    {'a little cash',flr(rnd(600))},
-    {'some cash',_c},
-    {'some cash',_c},
-    {'some cash',_c},
-    {'some cash',_c},
-    {'good cash',flr(rnd()+rnd()+2)*100},
-    {'classified docs',flr(rnd()+rnd()+rnd()+rnd())*200},
-    {'gold bars',flr(((rnd()+rnd()+rnd())/3)*3000)},
-    {'diamonds',flr(((rnd()+rnd()+rnd())/3)*10000)},
+    {'a little cash',flr(10+rnd(90))},
+    _somecash,_somecash,_somecash,_somecash,
+    _goodcash,_goodcash,
+    {'gold bars',flr(500+rnd(600))},
+    {'diamonds',flr(800+rnd(1200))},
+    {'classified docs',flr(1200)},
    })[1]
 
    objs[_i+1]={typ=9,shadow={true}}
@@ -1282,8 +1278,7 @@ local function gameinit()
      _g.state_c-=1
 
      if _g.state_c <= 0 or _g.state_c % 10 == 1 then
-      local _newdir=flr(rnd(4))
-      _g.dx,_g.dy,_g.state=guarddxdeltas[_newdir],guarddydeltas[_newdir],'patrolling'
+      _g.dx,_g.dy,_g.state=_g.dx*-1,_g.dy*-1,'patrolling'
      elseif _g.state_c > 30 then
       setalertlvl2('heard someone!',_g.x,_g.y)
      end
