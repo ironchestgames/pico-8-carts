@@ -9,8 +9,6 @@ __lua__
 
 --[[
 
-- fix bug to have walls not adjacent to bottom of map
-
 - filing drawers
  - search (up/down?)
 
@@ -828,11 +826,13 @@ function mapgen()
   _ystart+=_h-1
 
   -- add bottom door
-  objs[_ystart*32+_xstart+2+flr(rnd(_w-5))]={
-   typ=12,
-   action={[2]=doorfromunder},
-   adjaction={[2]=doorpeekfromunder}
-  }
+  if _ystart < 31 then
+   objs[_ystart*32+_xstart+2+flr(rnd(_w-5))]={
+    typ=12,
+    action={[2]=doorfromunder},
+    adjaction={[2]=doorpeekfromunder}
+   }
+  end
 
  until _ystart+_h-1 > 27
 
