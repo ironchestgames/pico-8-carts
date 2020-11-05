@@ -946,11 +946,16 @@ function mapgen()
 
  -- 0 - plant
  -- 1 - watercooler
- -- 2 - computer
+ -- 2 - stack of boxes
+ -- 3 - plant on pillar
+ -- 4 - statyette
  -- 5 - camcontrol
  -- 8 - safe
+ -- 26 - computer
+ -- 30 - statyette
+ -- (31 - stolen statyette)
 
- local _types=s2t'0;1;2;8;'
+ local _types=s2t'0;0;26;8;'
 
  if #cameras > 0 then
   add(_types,5)
@@ -962,13 +967,17 @@ function mapgen()
    del(_types,_typ)
   end
 
+  if _typ == 0 then
+   _typ=flr(rnd(5))
+  end
+
   local _o={typ=_typ,shadow={[0]=true,true}}
   objs[_i]=_o
 
-  if _typ == 2 then
+  if _typ == 26 then
    _o.shadow={[0]=true}
    objs[_i+1]={
-    typ=3,
+    typ=27,
     action={[2]=computer},
     loot=shuffle({
      nil,
@@ -981,7 +990,7 @@ function mapgen()
      })[1],
     shadow={},
    }
-   objs[_i+2]={typ=4,shadow={true}}
+   objs[_i+2]={typ=28,shadow={true}}
 
    computercount+=1
    if computercount == 2 then
@@ -1009,7 +1018,7 @@ function mapgen()
    local _goodcash={'good cash',300+rnd(200)}
    _o.loot=shuffle({
     {'a little cash',10+rnd(90)},
-    _somecash,_somecash,_somecash,_somecash,
+    _somecash,_somecash,_somecash,
     _goodcash,_goodcash,
     {'gold bars',500+rnd(600)},
     {'diamonds',1000+rnd(1000)},
@@ -1027,16 +1036,17 @@ function mapgen()
   for _j=1,3 do
    local _y=flr(rnd(29))+2
    local _i=_y*32+_x
+   local _imin1,_iplus1=_i-1,_i+1
    if not (objs[_i] or
        objs[_i-32] or
-       objs[_i-1] or
-       objs[_i+1] or
+       objs[_imin1] or
+       objs[_iplus1] or
        objs[_i+32]) and
       floor[_i] == 1 and
       floor[_i-32] == 1 and
       floor[_i+32] == 1 and
-      (floor[_i+1] == 1 or floor[_i-1] == 1) and
-      (floor[_i+1] == 2 or floor[_i-1] == 2) then
+      (floor[_iplus1] == 1 or floor[_imin1] == 1) and
+      (floor[_iplus1] == 2 or floor[_imin1] == 2) then
     local _typ=flr(rnd(2))
     local _o={typ=_typ,shadow={[2]=true,[3]=true}}
     objs[_i]=_o
@@ -1866,7 +1876,7 @@ local function initmapselect()
  local _cash,_reconcost=0
  _update=function()
   local _nextbuyi,_oldseli=dget(63),seli
-  _cash,_reconcost=dget(62),flr(_nextbuyi*8)
+  _cash,_reconcost=dget(62),flr(_nextbuyi*6)
   if btnp(1) then
    seli+=1
   elseif btnp(0) then
@@ -1945,7 +1955,7 @@ initstatus=function(_msg)
    add(_rows,_l)
   end
  end
- add(_rows,{'daily expenses',-(80+(dget(63)-6)*2)})
+ add(_rows,{'daily expenses',-(38+dget(63)*2)})
  local _cash=0
  for _r in all(_rows) do
   _cash+=_r[2]
@@ -2078,31 +2088,31 @@ end
 _init=initsplash
 
 __gfx__
-f5ffffffffffffffffff5555555555555555555555555555ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f5f5ccccfff555555fff2511155111525111111551111125ffffffffffffffffffffffffffffffffffffffff5dd55dd5ffffffffffffffffffffffffffffffff
-ff5fcc1c5ff511115fff251115511152511d111551555225222222ff222222ff222222ff222222ff222222ff5dd55d15ffffffffffffffffffffffffffffffff
-f5ffcc1cf5f511115fff25555555555251111115555552d5255552ff211152ff2dddd2ff2dddd2ff2111d2ff5dd55115ffffff55ffffffffffffffffffffffff
-f5ffc1cc25251111522225111551115251dd111551111225255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd55115ffffff55ffffffffffffffffffffffff
-2222fccf2d255555522255111551115551d11115511112d5255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd55dd54fff4f55ffffffffffffffffffffffff
-dddd55552225d5d552225555555555555111111551555225255552ff211552ff28ddd2ff2bddd2ff211dd2ffffffffff4f554fddffffffffffffffffffffffff
-dddd522522255d5d52522255d15d552255555555555552552d5552ff211552ff25ddd2ff25ddd2ff211dd2ffffffffff442244ddffffffffffffffffffffffff
-22225ff522255555522222255555522255ffff5555ffff55255552ff211d52ff2dddd2ff2dddd2ff2115d2ffffffffffff22ffddffffffffffffffffffffffff
-ffffffff5ffffffffff5552222222255ffffffffffffffff255552ff211552ff2dddd2ff2dddd2ff211dd2ffffffffffffffffffffffffffffffffffffffffff
-ffffffff5ffffffffff5ff52222225fffffffffffffffffffffffffffff5fffffffffffffffffffffffdffffffffffffffffffffffffffffffffffffffffffff
-ffffffff5ffffffffff5fff555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f5ffffff555fffffff6f5555555555555555555555555555ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6fffff
+f5f5cccc555ffffff6ff2511155111525111111551111125ffffffffffffffffffffffffffffffffffffffff5dd55dd5fffffffffff555555ffffffff6ffffff
+ff5fcc3cf1112222f66f251115511152511d111551555225222222ff222222ff222222ff222222ff222222ff5dd55d15ffffffff5ff511115ffffffff66fffff
+f5ffcc3cf1112452f55f25555555555251111115555552d5255552ff211152ff2dddd2ff2dddd2ff2111d2ff5dd55115ffffff55f5f511115ffffffff55ff55f
+f5ffc3ccf1112222555525111551115251dd111551111225255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd55115ffffff55252511115222ffff55555555
+2222fccf22422512544555111551115551d11115511112d5255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd55dd54fff4f552d2555555222ffff54455445
+dddd55552222222255555555555555555111111551555225255552ff211552ff28ddd2ff2bddd2ff211dd2ffffffffff4f554fdd2225d5d55222ffff55555555
+dddd52252222215255552255d15d552255555555555552552d5552ff211552ff25ddd2ff25ddd2ff211dd2ffffffffff442244dd22255d5d5252ffff55555555
+22225ff522222222555522255555522255ffff5555ffff55255552ff211d52ff2dddd2ff2dddd2ff2115d2ffffffffffff22ffdd222555555222ffff55555555
+ffffffffffffffffffff552222222255ffffffffffffffff255552ff211552ff2dddd2ff2dddd2ff211dd2ffffffffffffffffff5ffffffffff5ffffffffffff
+ffffffffffffffffffffff52222225fffffffffffffffffffffffffffff5fffffffffffffffffffffffdffffffffffffffffffff5ffffffffff5ffffffffffff
+fffffffffffffffffffffff555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5ffffffffff5ffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f3ffffffffffffffffff5555555555555555555555555555ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f3f3ccccfff555555fffd5111551115d5222222551111125ffffffffffffffffffffffffffffffffffffffff46744674ffffffffffffffffffffffffffffffff
-ff3fcc7c3ff511115fffd5111551115d5226222551444225222222ff222222ff222222ff222222ff222222ff47644714ffffffffffffffffffffffffffffffff
-f3ffcc7cf3f511115fffd5555555555d5222222555555265244442ff211142ff266662ff266662ff211162ff46644114ffffff55ffffffffffffffffffffffff
-f3ffc7cc434511115444d5111551115d5266222551111225244442ff211442ff266662ff266662ff211662ff46744114ffffff55ffffffffffffffffffffffff
-4444fccf4645555554445511155111555262222551111265244442ff211442ff266662ff266662ff211662ff476447644fff4f55ffffffffffffffffffffffff
-6666555544456d6d54445555555555555222222551444225244442ff211442ff286662ff2b6662ff211662ffffffffff4fdd4fddffffffffffffffffffffffff
-666654454445d6d6545422556d5655225555555555555255294442ff211442ff2d6662ff2d6662ff211662ffffffffff445544ddffffffffffffffffffffffff
-44445ff544455555544422255555522255ffff5555ffff55244442ff211942ff266662ff266662ff211d62ffffffffffff55ffddffffffffffffffffffffffff
-ffffffff2ffffffffff2552222222255ffffffffffffffff244442ff211442ff266662ff266662ff211662ffffffffffffffffffffffffffffffffffffffffff
-ffffffff2ffffffffff2ff52222225fffffffffffffffffffffffffffff4fffffffffffffffffffffff6ffffffffffffffffffffffffffffffffffffffffffff
-ffffffff2ffffffffff2fff555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+f3ffffff444fffffff7f5555555555555555555555555555ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7fffff
+f3f3cccc444ffffff7ffd5111551115d5222222551111125ffffffffffffffffffffffffffffffffffffffff46744674fffffffffff555555ffffffff7ffffff
+ff3fcc7cf5554444f77fd5111551115d5226222551444225222222ff222222ff222222ff222222ff222222ff47644714ffffffff3ff511115ffffffff77fffff
+f3ffcc7cf55549d4f55fd5555555555d5222222555555265244442ff211142ff266662ff266662ff211162ff46644114ffffff55f3f511115ffffffff55ff55f
+f3ffc7ccf55544445555d5111551115d5266222551111225244442ff211442ff266662ff266662ff211662ff46744114ffffff55434511115444ffff55555555
+4444fccf4494435459955511155111555262222551111265244442ff211442ff266662ff266662ff211662ff476447644fff4f55464555555444ffff59955995
+666655554444444455555555555555555222222551444225244442ff211442ff286662ff2b6662ff211662ffffffffff4fdd4fdd44456d6d5444ffff55555555
+6666544544444524555522556d5655225555555555555255294442ff211442ff2d6662ff2d6662ff211662ffffffffff445544dd4445d6d65454ffff55555555
+44445ff544444444555522255555522255ffff5555ffff55244442ff211942ff266662ff266662ff211d62ffffffffffff55ffdd444555555444ffff55555555
+ffffffffffffffffffff552222222255ffffffffffffffff244442ff211442ff266662ff266662ff211662ffffffffffffffffff2ffffffffff2ffffffffffff
+ffffffffffffffffffffff52222225fffffffffffffffffffffffffffff4fffffffffffffffffffffff6ffffffffffffffffffff2ffffffffff2ffffffffffff
+fffffffffffffffffffffff555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2ffffffffff2ffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
