@@ -220,7 +220,7 @@ end
 local function setalertlvl2(_m,_x,_y)
  if alertlvl == 1 then
   sfx(21)
-  alertlvl,tick,policet=2,60,90
+  alertlvl,tick,policet=2,60,60
   local _i=0
   for _g in all(guards) do
    add(msgs,{_g.x,_g.y,_m,nil,_i*15,2})
@@ -970,12 +970,14 @@ function mapgen()
    objs[_i+1]={
     typ=3,
     action={[2]=computer},
-    loot=shuffle({nil,nil,
+    loot=shuffle({
+     nil,
      {'door access code'},
      {'blueprint'},
-     {'blackmail material',flr(rnd(500))},
-     {'company secrets',flr(rnd(1000))},
-     {'classified files',flr(rnd(2000))},
+     {'cute cat pictures',1},
+     {'blackmail material',rnd(400)},
+     {'company secrets',rnd(800)},
+     {'classified files',rnd(1400)},
      })[1],
     shadow={},
    }
@@ -999,19 +1001,19 @@ function mapgen()
    if not _o.code then
     _o.code={}
     for _i=1,5 do
-     add(_o.code,flr(rnd(8))+1)
+     add(_o.code,flr(rnd(6))+1)
     end
    end
 
-   local _somecash={'some cash',flr(100+rnd(300))}
-   local _goodcash={'good cash',flr(400+rnd(200))}
+   local _somecash={'some cash',100+rnd(200)}
+   local _goodcash={'good cash',300+rnd(200)}
    _o.loot=shuffle({
-    {'a little cash',flr(10+rnd(90))},
+    {'a little cash',10+rnd(90)},
     _somecash,_somecash,_somecash,_somecash,
     _goodcash,_goodcash,
-    {'gold bars',flr(500+rnd(600))},
-    {'diamonds',flr(800+rnd(1200))},
-    {'classified docs',flr(1200)},
+    {'gold bars',500+rnd(600)},
+    {'diamonds',1000+rnd(1000)},
+    {'documents',rnd(1200)},
    })[1]
 
    objs[_i+1]={typ=9,shadow={true}}
@@ -1304,7 +1306,7 @@ local function gameinit()
    end
    if alertlvl == 2 and policet > 0 then
     policet-=1
-    if policet == 64 then
+    if policet == 48 then
      sfx(16)
     end
     if policet <= 0 then
@@ -1624,7 +1626,7 @@ local function gameinit()
  end
 
  _draw=function()
-  if alertlvl == 2 and policet <= 64 then
+  if alertlvl == 2 and policet <= 48 then
    if policet%8 >= 4 then
     pal(0,8)
    else
@@ -1939,6 +1941,7 @@ initstatus=function(_msg)
  local _rows={{'ingoing',dget(62)}}
  for _p in all(escapedplayers) do
   for _l in all(_p.loot) do
+   _l[2]=flr(_l[2])
    add(_rows,_l)
   end
  end
