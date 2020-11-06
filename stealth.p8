@@ -687,7 +687,7 @@ local function newwindow()
  }
 end
 
-local function stealstatyette(_p,_o,_tmp)
+local function stealstatuette(_p,_o,_tmp)
  makesound(_p,0)
  playerloots(_p,_o)
  _o.typ,_o.action=31,{[0]=soundaction,soundaction,soundaction,soundaction}
@@ -929,8 +929,8 @@ function mapgen()
  -- 5 - camcontrol
  -- 8 - safe
  -- 26 - computer
- -- 30 - statyette
- -- 31 - stolen statyette
+ -- 30 - statuette
+ -- 31 - stolen statuette
 
  local _types=s2t'0;0;26;8;30;'
 
@@ -1007,8 +1007,8 @@ function mapgen()
    add(mapthings,'crackable safe')
 
   elseif _typ == 30 then
-   _o.action={[0]=stealstatyette,stealstatyette,stealstatyette,stealstatyette}
-   _o.loot={'statyette',10+rnd(100)}
+   _o.action={[0]=stealstatuette,stealstatuette,stealstatuette,stealstatuette}
+   _o.loot={'statuette',10+rnd(100)}
   end
  end
 
@@ -1538,7 +1538,7 @@ local function gameinit()
      if _o.typ == 10 then
       setalertlvl2('safe opened!',_i&31,_i\32)
      elseif _o.typ == 31 then
-      setalertlvl2('statyette gone!',_i&31,_i\32)
+      setalertlvl2('statuette gone!',_i&31,_i\32)
      end
     end
    end
