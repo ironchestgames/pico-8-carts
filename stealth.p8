@@ -154,24 +154,6 @@ local function shuffle(_l)
  return _l
 end
 
-local function clone(_t)
- local _tc={}
- for _k,_v in pairs(_t) do
-  _tc[_k]=_v
- end
- return _tc
-end
-
-local function sortonx(_t)
- for _i=1,#_t do
-  local _j=_i
-  while _j > 1 and _t[_j-1].x > _t[_j].x do
-   _t[_j],_t[_j-1]=_t[_j-1],_t[_j]
-   _j=_j-1
-  end
- end
-end
-
 
 local function adjacency(_x1,_y1,_x2,_y2)
  if _x1 == _x2-1 and _y1 == _y2 then
@@ -238,14 +220,11 @@ local function makesound(_p,_sfx)
   local _dx,_dy=_g.x-_p.x,_g.y-_p.y
   local _h=sqrt(_dx*_dx+_dy*_dy)
   if _h < 6 then
-   local _newdir=flr(rnd(4))
-   _g.dx=guarddxdeltas[_newdir]
-   _g.dy=guarddydeltas[_newdir]
-   local _m='!'
+   local _newdir,_m=flr(rnd(4)),'!'
+   _g.dx,_g.dy=guarddxdeltas[_newdir],guarddydeltas[_newdir]
    if alertlvl == 1 then
-    _g.state='listening'
+    _g.state,_m='listening','?'
     _g.state_c+=flr(rnd(3))+5
-    _m='?'
    end
    add(msgs,{_g.x,_g.y,_m,30,nil,2})
   end
@@ -270,18 +249,17 @@ local function computer(_p,_o,_tmp)
     _tmp.seq[_i]=_n
    end
    _o.draw=function()
+    local _yoffset=0
     if _tmp.state == 'booting' then
-     sspr(0,102,4,3,_tmp.ox*4,_tmp.oy*4-3)
-
+     _yoffset=-3
     elseif _tmp.state == 'success' then
-     sspr(0,114,4,3,_tmp.ox*4,_tmp.oy*4-3)
-
+     _yoffset=9
     elseif _tmp.state == 'fail' then
-     sspr(0,117,4,3,_tmp.ox*4,_tmp.oy*4-3)
-
+     _yoffset=12
     else
-     sspr(0,105+_tmp.seq[1]*3,4,3,_tmp.ox*4,_tmp.oy*4-3)
+     _yoffset=_tmp.seq[1]*3
     end
+    sspr(0,105+_yoffset,4,3,_tmp.ox*4,_tmp.oy*4-3)
    end
   end
 
@@ -294,12 +272,10 @@ local function computer(_p,_o,_tmp)
 
   if _tmp.state == 'ready' then
    local _input
-   if btnp(0,_p.i) then
-    _input=0
-   elseif btnp(1,_p.i) then
-    _input=1
-   elseif btnp(2,_p.i) then
-    _input=2
+   for _i=0,2 do
+    if btnp(_i,_p.i) then
+     _input=_i
+    end
    end
 
    if _input then
@@ -369,7 +345,6 @@ local function camcontrol(_p,_o,_tmp)
   end
 
   _tmp.sel=_tmp.sel%4
-
   _tmp.pos[_tmp.sel+1].state=2
 
   if btnp(2,_p.i) then
@@ -377,8 +352,7 @@ local function camcontrol(_p,_o,_tmp)
     _tmp.pos[_i].state=1
    end
    _tmp.pos[_tmp.sel+1].state=0
-   _tmp.sel+=1
-   _tmp.sel=_tmp.sel%4
+   _tmp.sel=(_tmp.sel+1)%4
    _tmp.pos[_tmp.sel+1].state=2
   end
 
@@ -452,6 +426,7 @@ local function safe(_p,_o,_tmp)
      end
     else
      _tmp.iserror=true
+     _tmp.unlocked=false
     end
     if not _snd then -- todo: token hunt, maybe order sfx so you can do sfx(14+_sfxi)
      sfx(15) -- click
@@ -654,14 +629,9 @@ local function fusebox(_p,_o,_tmp)
   _tmp.tick=0
 
   _o.draw=function()
-   local _col=0
    if _tmp.tick%12 > 6 then
-    _col=9
+    pset(_tmp.ox*4+3,_tmp.oy*4+2,9)
    end
-   if ispoweron then
-    _col=11
-   end
-   pset(_tmp.ox*4+3,_tmp.oy*4,_col)
   end
  end
 
@@ -864,9 +834,8 @@ function mapgen()
 
  -- add outside fusebox
  local _fbi=(_ystart+_h-1)*32+_xstart+2
- if rnd(0.3) and floor[_fbi+32] != 2 then
-  local _o={typ=24,shadow={},action={[2]=fusebox}}
-  objs[_fbi]=_o
+ if floor[_fbi+32] != 2 then
+  objs[_fbi]={typ=24,shadow={},action={[2]=fusebox}}
  end
 
  -- fix cameras
@@ -909,27 +878,28 @@ function mapgen()
      break
     end
    end
+   local _imin1,_iplus1,_iplus2=_i-1,_i+1,_i+2
    if (not _remove) and
-      not (objs[_i-32-1] or
+      not (objs[_imin1-32] or
        objs[_i-32] or
-       objs[_i-32+1] or
-       objs[_i-32+2] or
-       objs[_i-1] or
+       objs[_iplus1-32] or
+       objs[_iplus2-32] or
+       objs[_imin1] or
        objs[_i] or
-       objs[_i+1] or
-       objs[_i+2]) and
+       objs[_iplus1] or
+       objs[_iplus2]) and
       floor[_i-32] == 2 and
-      floor[_i-32+1] == 2 and
-      floor[_i-32+2] == 2 and
+      floor[_iplus1-32] == 2 and
+      floor[_iplus2-32] == 2 and
       floor[_i] == 1 and
-      floor[_i+1] == 1 and
-      floor[_i+2] == 1 and
+      floor[_iplus1] == 1 and
+      floor[_iplus2] == 1 and
       floor[_i+32] == 1 and
-      floor[_i+32+1] == 1 and
-      floor[_i+32+2] == 1 and
+      floor[_iplus1+32] == 1 and
+      floor[_iplus2+32] == 1 and
       floor[_i+64] == 1 and
-      floor[_i+64+1] == 1 and
-      floor[_i+64+2] == 1 then
+      floor[_iplus1+64] == 1 and
+      floor[_iplus2+64] == 1 then
     add(_pos,_i)
     _x+=5
    elseif _remove == true then
@@ -962,7 +932,7 @@ function mapgen()
  end
 
  for _i in all(_pos) do
-  local _typ=_types[flr(rnd(#_types))+1]
+  local _typ,_iplus1=_types[flr(rnd(#_types))+1],_i+1
   if _typ == 8 or _typ == 5 then
    del(_types,_typ)
   end
@@ -976,10 +946,10 @@ function mapgen()
 
   if _typ == 26 then
    _o.shadow={[0]=true}
-   objs[_i+1]={
+   objs[_iplus1]={
     typ=27,
     action={[2]=computer},
-    loot=shuffle({
+    loot=shuffle{
      nil,
      {'door access code'},
      {'blueprint'},
@@ -987,7 +957,7 @@ function mapgen()
      {'blackmail material',rnd(400)},
      {'company secrets',rnd(800)},
      {'classified files',rnd(1400)},
-     })[1],
+     }[1],
     shadow={},
    }
    objs[_i+2]={typ=28,shadow={true}}
@@ -999,7 +969,7 @@ function mapgen()
 
   elseif _typ == 5 then
    _o.shadow={[0]=true}
-   objs[_i+1]={typ=6,action={[0]=soundaction,[2]=camcontrol},shadow={}}
+   objs[_iplus1]={typ=6,action={[0]=soundaction,[2]=camcontrol},shadow={}}
    objs[_i+2]={typ=7,shadow={true}}
 
   elseif _typ == 8 then
@@ -1016,16 +986,16 @@ function mapgen()
 
    local _somecash={'some cash',100+rnd(200)}
    local _goodcash={'good cash',300+rnd(200)}
-   _o.loot=shuffle({
+   _o.loot=shuffle{
     {'a little cash',10+rnd(90)},
     _somecash,_somecash,_somecash,
     _goodcash,_goodcash,
     {'gold bars',500+rnd(600)},
     {'diamonds',1000+rnd(1000)},
     {'documents',rnd(1200)},
-   })[1]
+   }[1]
 
-   objs[_i+1]={typ=9,shadow={true}}
+   objs[_iplus1]={typ=9,shadow={true}}
 
    add(mapthings,'crackable safe')
   end
@@ -1057,7 +1027,7 @@ function mapgen()
 
  -- fix objs
  for _i=0,arslen do
-  local _o=objs[_i]
+  local _o,_iplus1=objs[_i],_i+1
   if _o then
    _o.light={}
 
@@ -1071,26 +1041,30 @@ function mapgen()
 
    -- remove windows
    if _o.typ == 22 then
-    if not (floor[_i] == 2 and floor[_i-1] != 2 and floor[_i+1] != 2) then
+    if not (floor[_i] == 2 and floor[_i-1] != 2 and floor[_iplus1] != 2) then
      objs[_i]=nil
     end
 
    -- fix doors
    elseif _o.typ == 12 then
-    if objs[_i+1] or not (floor[_i] == 2 and floor[_i-1] == 2 and floor[_i+1] == 2 and floor[_i+32] != 2 and floor[_i-64] != 2) then
+    if objs[_iplus1] or not (floor[_i] == 2 and floor[_i-1] == 2 and floor[_iplus1] == 2 and floor[_i+32] != 2 and floor[_i-64] != 2) then
      objs[_i]=nil
     else
-     objs[_i-32]={action={[3]=doorfromabove},adjaction={[3]=doorpeekfromabove}}
-     objs[_i+1]={typ=13}
+     objs[_i-32],
+     objs[_iplus1]=
+       {action={[3]=doorfromabove},adjaction={[3]=doorpeekfromabove}},
+       {typ=13}
 
      -- switch to locked
      if rnd() > 0.70 then
-      objs[_i].typ=16
-      objs[_i].action[2]=lockeddoorfrombelow
-
-      objs[_i-32].action[3]=lockeddoorfromabove
-
-      objs[_i+1].typ=17
+      objs[_i].typ,
+      objs[_i].action[2],
+      objs[_i-32].action[3],
+      objs[_iplus1].typ=
+        16,
+        lockeddoorfrombelow,
+        lockeddoorfromabove,
+        17
      end
     end
    end
@@ -1098,16 +1072,16 @@ function mapgen()
  end
 
  if #cameras > 1 then
-  add(mapthings, 'many cameras')
+  add(mapthings,'many cameras')
  end
 
  if #guards > 1 then
-  add(mapthings, 'many guards')
+  add(mapthings,'many guards')
  end
 
  for _g in all(guards) do
   if _g.isarmed == 1 then
-   add(mapthings, 'guards might be armed')
+   add(mapthings,'guards might be armed')
    break
   end
  end
@@ -1826,10 +1800,12 @@ initpolice=function(_onpress)
   end
 
   -- draw players
-  local _playersbyx=clone(players)
-  sortonx(_playersbyx)
-  for _i=1,#_playersbyx do
-   local _p=_playersbyx[_i]
+  if #players == 2 and players[1].x > players[2].x then
+   players[1],players[2]=players[2],players[1]
+  end
+
+  for _i=1,#players do
+   local _p=players[_i]
    local _x,_y=mid(24,_p.x*4,127-24), mid(16,_p.y*4,127-42)
    sspr(89,86,3,10,_x,_y)
    if #_p.loot > 0 then
@@ -1837,7 +1813,7 @@ initpolice=function(_onpress)
    end
 
    -- draw officers
-   local _dx,_flipx=-1,_i%2 == 1
+   local _dx,_flipx=-1,_i%2 == 0
    if _flipx then
     _dx=1
    end
