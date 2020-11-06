@@ -41,8 +41,6 @@ cartdata'ironchestgames_sneakystealy_v1_dev2'
 
 
 
-
-
 -- s2t usage:
 -- t=s2t'1;2;3;4;5;6;7;hej pa dig din gamle gries;'
 -- t=s2t'.x;1;.y;2;'
@@ -957,7 +955,6 @@ function mapgen()
     typ=27,
     action={[2]=computer},
     loot=shuffle{
-     nil,
      {'door access code'},
      {'blueprint'},
      {'cute cat pictures',1},
@@ -991,12 +988,10 @@ function mapgen()
     end
    end
 
-   local _somecash={'some cash',100+rnd(200)}
-   local _goodcash={'good cash',300+rnd(200)}
    _o.loot=shuffle{
     {'a little cash',10+rnd(90)},
-    _somecash,_somecash,_somecash,
-    _goodcash,_goodcash,
+    {'some cash',100+rnd(200)},
+    {'good cash',300+rnd(200)},
     {'gold bars',500+rnd(600)},
     {'diamonds',1000+rnd(1000)},
     {'documents',rnd(1200)},
@@ -1079,6 +1074,13 @@ function mapgen()
      end
     end
    end
+  end
+ end
+
+ -- fix guards
+ for _g in all(guards) do
+  if floor[_g.y*32+_g.x] == 2 then
+   del(guards,_g)
   end
  end
 
@@ -1264,11 +1266,13 @@ local function gameinit()
         {dx=-_g.dy,dy=-_g.dx},
        }
        add(_turns,{dx=-_g.dx,dy=-_g.dy})
-       for _t in all(_turns) do
+       for _i=1,3 do
+        local _t=_turns[_i]
         if not iswallclose(_g.x,_g.y,_t.dx,_t.dy) then
          _g.dx=_t.dx
          _g.dy=_t.dy
-         break
+        elseif _i == 3 then
+         _g.state='guarding'
         end
        end
       end
@@ -1951,7 +1955,11 @@ initstatus=function(_msg)
  for _r in all(_rows) do
   _cash+=_r[2]
  end
+ if _cash < -20000 then
+  _cash=32767
+ end
  dset(62,_cash)
+ dset(0,max(_cash,dget(0)))
 
  for _p in all(escapedplayers) do
   _p.i,_p.loot,players[_p.origi+1]=_p.origi,{},_p
@@ -2001,6 +2009,9 @@ initstatus=function(_msg)
  _draw=function()
   cls()
 
+  local _s='highscore $'..dget(0)
+  print(_s,126-#_s*4,3,3)
+
   local _offy=29
   for _r in all(_rows) do
    print(_r[1],10,_offy,6)
@@ -2045,7 +2056,7 @@ function initsplash()
   -- 61 is seed
   -- 62 is cash
   -- 63 is current maxseli
-  for _i=0,60 do
+  for _i=1,60 do
    dset(_i,0)
   end
 
@@ -2079,26 +2090,26 @@ end
 _init=initsplash
 
 __gfx__
-f5fffffff555ffffffff5555555555555555555555555555ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6fffff
-f5f5ccccf222ffffffff2511155111525111111551111125ffffffffffffffffffffffffffffffffffffffff5dd55dd5fffffffffff555555ffffffff6ffffff
-ff5fcc3c555f5ffffff5251115511152511d111551555225222222ff222222ff222222ff222222ff222222ff5dd55d15ffffffff5ff511115ffffffff66fffff
+f5ffffffffffffffffff5555555555555555555555555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6ffffff
+f5f5ccccf555ffffffff2511155111525111111551111125ffffffffffffffffffffffffffffffffffffffff5dd55dd5fffffffffff555555fffffffff6fffff
+ff5fcc3cf2225ffffff5251115511152511d111551555225222222ff222222ff222222ff222222ff222222ff5dd55d15ffffffff5ff511115ffffffff66fffff
 f5ffcc3c555f5ffffff525555555555251111115555552d5255552ff211152ff2dddd2ff2dddd2ff2111d2ff5dd55115fffffffff5f511115ffffffff55ff55f
-f5ffc3cc222f5ffffff525111551115251dd111551111225255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd5511544444555252511115222ffff55555555
-2222fccf5d555222222555111551115551d11115511112d5255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd55dd5222225552d2555555222ffff54455445
-dddd55555555555555555555555555555111111551555225255552ff211552ff28ddd2ff2bddd2ff211dd2ffffffffff222525552225d5d55222ffff55555555
+f5ffc3cc555f5ffffff525111551115251dd111551111225255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd5511544444555252511115222ffff55555555
+2222fccf222f5222222555111551115551d11115511112d5255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd55dd5222225552d2555555222ffff54455445
+dddd55555d55555555555555555555555111111551555225255552ff211552ff28ddd2ff2bddd2ff211dd2ffffffffff222525552225d5d55222ffff55555555
 dddd522555555ff55ff52255d15d552255555555555552552d5552ff211552ff25ddd2ff25ddd2ff211dd2ffffffffff2222255522255d5d5252ffff55555555
 22225ff522225ff55ff522255555522255ffff5555ffff55255552ff211d52ff2dddd2ff2dddd2ff2115d2fffffffffff5fff5ff222555555222ffff55555555
 ffffffffffffffffffff552222222255ffffffffffffffff255552ff211552ff2dddd2ff2dddd2ff211dd2fffffffffff5fff5ff5ffffffffff5ffffffffffff
 ffffffffffffffffffffff52222225fffffffffffffffffffffffffffff5fffffffffffffffffffffffdffffffffffffffffffff5ffffffffff5ffffffffffff
 fffffffffffffffffffffff555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5ffffffffff5ffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-f3fffffff444ffffffff5555555555555555555555555555ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7fffff
-f3f3ccccf222ffffffffd5111551115d5222222551111125ffffffffffffffffffffffffffffffffffffffff46744674fffffffffff555555ffffffff7ffffff
-ff3fcc7c444f5ffffff5d5111551115d5226222551444225222222ff222222ff222222ff222222ff222222ff47644714ffffffff3ff511115ffffffff77fffff
+f3ffffffffffffffffff5555555555555555555555555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7ffffff
+f3f3ccccf444ffffffffd5111551115d5222222551111125ffffffffffffffffffffffffffffffffffffffff46744674fffffffffff555555fffffffff7fffff
+ff3fcc7cf2225ffffff5d5111551115d5226222551444225222222ff222222ff222222ff222222ff222222ff47644714ffffffff3ff511115ffffffff77fffff
 f3ffcc7c444f5ffffff5d5555555555d5222222555555265244442ff211142ff266662ff266662ff211162ff46644114fffffffff3f511115ffffffff55ff55f
-f3ffc7cc222f5ffffff5d5111551115d5266222551111225244442ff211442ff266662ff266662ff211662ff46744114ddddd555434511115444ffff55555555
-4444fccf4944588888855511155111555262222551111265244442ff211442ff266662ff266662ff211662ff4764476444444555464555555444ffff59955995
-666655554444555555555555555555555222222551444225244442ff211442ff286662ff2b6662ff211662ffffffffff444d455544456d6d5444ffff55555555
+f3ffc7cc444f5ffffff5d5111551115d5266222551111225244442ff211442ff266662ff266662ff211662ff46744114ddddd555434511115444ffff55555555
+4444fccf222f588888855511155111555262222551111265244442ff211442ff266662ff266662ff211662ff4764476444444555464555555444ffff59955995
+666655554944555555555555555555555222222551444225244442ff211442ff286662ff2b6662ff211662ffffffffff444d455544456d6d5444ffff55555555
 6666544544445ff55ff522556d5655225555555555555255294442ff211442ff2d6662ff2d6662ff211662ffffffffff444445554445d6d65454ffff55555555
 44445ff522225ff55ff522255555522255ffff5555ffff55244442ff211942ff266662ff266662ff211d62fffffffffff5fff5ff444555555444ffff55555555
 ffffffffffffffffffff552222222255ffffffffffffffff244442ff211442ff266662ff266662ff211662fffffffffff5fff5ff2ffffffffff2ffffffffffff
