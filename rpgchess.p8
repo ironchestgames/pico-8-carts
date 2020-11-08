@@ -18,11 +18,11 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
 end
 
 function clone(_t)
- local t={}
- for k,v in pairs(_t) do
-  t[k]=v
+ local _r={}
+ for _k,_v in pairs(_t) do
+  _r[_k]=_v
  end
- return t
+ return _r
 end
 
 function sort(_t,_f)
@@ -56,6 +56,7 @@ local rows=11
 local cols=16
 local arlsen=rows*cols-1 -- 11 rows, 14 cols
 local board={
+ [0]=16,
  [cols-1]=16,
  [cols]=16,
  [arlsen]=16,
@@ -65,9 +66,16 @@ local board={
  -- [5*cols+4]=16,
  -- [6*cols+4]=16,
  -- [7*cols+4]=16,
+ -- [7*cols+5]=16,
+ -- [8*cols+4]=16,
  -- [8*cols+5]=16,
+ -- [9*cols+5]=16,
+ -- [9*cols+4]=16,
+ -- [10*cols+5]=16,
+ -- [11*cols+5]=16,
  }
 local creatures
+local summoners
 
 local function getcreatureonpos(_x,_y)
  for _c in all(creatures) do
@@ -75,25 +83,45 @@ local function getcreatureonpos(_x,_y)
    return _c
   end
  end
+ -- return nil
+end
+
+local function copymoves(_t)
+ local _r=clone(_t)
+ for _k,_v in pairs(_r) do
+  _r[_k]=clone(_v)
+ end
+ return _r
 end
 
 
-movedeltasspearman={
- {x=1,y=0,w=3},
- {x=1,y=-1,w=2},
- {x=1,y=1,w=2},
- {x=0,y=-1,w=1},
- {x=0,y=1,w=1},
- }
+movedeltas={
+ spearman={
+  {x=1,y=0,w=3},
+  {x=1,y=-1,w=2},
+  {x=1,y=1,w=2},
+  {x=0,y=-1,w=1},
+  {x=0,y=1,w=1},
+ },
+}
+
+summoners={
+ {walkdir=1,x=1,y=5,typ=0},
+ {walkdir=-1,x=14,y=3,typ=0},
+}
 
 creatures={
- {walkdir=1,x=0,y=5,typ=0,state='moving',active=true,movedeltas=movedeltasspearman},
- -- {walkdir=-1,x=15,y=5,typ=0,state='moving',active=false,update=spearman},
+ {summoner=1,walkdir=1,x=0,y=6,typ=0,active=true,movedeltas='spearman'},
+ {summoner=2,walkdir=-1,x=15,y=8,typ=0,active=false,movedeltas='spearman'},
 }
+
+for _c in all(creatures) do
+ _c.movedeltas=movedeltas[_c.movedeltas]
+end
 
 
 local tick=0
-local tickwrap=10
+local tickwrap=30
 
 function _update()
  tick+=1
@@ -115,21 +143,32 @@ function _update()
 
    if _c.active then
 
+    local _enemysummoner=summoners[(_c.summoner%2)+1]
+
     -- todo: attack
 
     -- move
-    local _moves=clone(_c.movedeltas)
+    local _moves
+
+    if _c.x == _enemysummoner.x then
+     local _dy=sgn(_enemysummoner.y-_c.y)
+     _moves={
+      {x=0,y=_dy,w=3},
+      {x=-_c.walkdir,y=_dy,w=1},
+     }
+    else
+     _moves=copymoves(_c.movedeltas)
+    end
 
     for _m in all(_moves) do
-     local _nextx,_nexty=_c.x+_m.x,_c.y+_m.y
+     local _nextx,_nexty=_c.x+_m.x*_c.walkdir,_c.y+_m.y
 
      -- is outside board long-side edges
-     if _nexty < 0 or _nexty > rows then
+     if _nexty < 0 or 
+        _nexty >= rows or
+        board[_nexty*cols+_nextx] or
+        getcreatureonpos(_nextx,_nexty) then
       del(_moves,_m)
-     elseif board[_nexty*cols+_nextx] then
-      del(_moves,_m)
-     -- todo: can not step onto friendly creatures
-     -- todo: if in same col as enemy summoner, move towards
      elseif _nextx == _c.lastx and _nexty == _c.lasty then
       _m.w-=0.5
      end
@@ -141,7 +180,7 @@ function _update()
 
     if #_moves > 0 then
      _c.lastx,_c.lasty=_c.x,_c.y
-     _c.x+=_moves[1].x
+     _c.x+=_moves[1].x*_c.walkdir
      _c.y+=_moves[1].y
     end
 
@@ -161,6 +200,8 @@ function _update()
 end
 
 function _draw()
+ palt(0,false)
+ palt(11,true)
  cls(3)
 
  local _offy=16
@@ -173,10 +214,19 @@ function _draw()
    spr(_p,_x*8,_offy+_y*8)
   end
  end
+
+ -- draw summoners
+ for _s in all(summoners) do
+  spr(_s.typ,_s.x*8,_offy+_s.y*8)
+ end
  
- -- draw summoners/creatures
+ -- draw creatures
  for _c in all(creatures) do
-  spr(_c.typ,_c.x*8,_offy+_c.y*8)
+  local _foffset=0
+  if _c.active then
+   _foffset=flr(tick/(tickwrap/5))%2
+  end
+  spr(_c.typ+_foffset,_c.x*8,_offy+_c.y*8,1,1,_c.walkdir == -1)
  end
 
  -- draw effects
@@ -186,14 +236,14 @@ function _draw()
 end
 
 __gfx__
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+b0000b0bbbbbbb0b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0ffff060b00000600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0f0f00600ffff0600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0ffff0400f0f00400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000400ffff0400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0dddd040000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000400dddd0400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0bbbb040000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00055500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00555550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
