@@ -56,12 +56,12 @@ local rows=11
 local cols=16
 local arlsen=rows*cols-1 -- 11 rows, 14 cols
 local board={
- [0]=16,
+ -- [0]=16,
  [cols-1]=16,
  [cols]=16,
  [arlsen]=16,
  [3*cols+3]=16,
- [4*cols+3]=16,
+ -- [4*cols+3]=16,
  -- [4*cols+4]=16,
  -- [5*cols+4]=16,
  -- [6*cols+4]=16,
@@ -76,6 +76,7 @@ local board={
  }
 local creatures
 local summoners
+local playersummoner
 local isvictory
 
 local function getcreatureonpos(_x,_y)
@@ -116,14 +117,19 @@ movedeltas={
 }
 
 summoners={
- {walkdir=1,x=1,y=5,typ=0,hp=3},
- {walkdir=-1,x=14,y=3,typ=0,hp=3},
+ {walkdir=1,x=1,y=5,typ=0,active=true,hp=3,hassummoned=false,sel=1,availablesels={},creatures={
+  {typ=0,hp=2,movedeltas='spearman',attackdeltas='spearman'},
+  {typ=0,hp=2,movedeltas='spearman',attackdeltas='spearman'},
+  {typ=0,hp=2,movedeltas='spearman',attackdeltas='spearman'},
+  }},
+ {walkdir=-1,x=14,y=3,typ=0,active=false,hp=3,sel=6,creatures={
+
+  }},
 }
+playersummoner=summoners[1]
 
 creatures={
- {summoner=1,walkdir=1,x=1,y=6,typ=0,hp=2,active=true,movedeltas='spearman',attackdeltas='spearman'},
- {summoner=1,walkdir=1,x=0,y=6,typ=0,hp=2,active=true,movedeltas='spearman',attackdeltas='spearman'},
- {summoner=2,walkdir=-1,x=15,y=7,typ=0,hp=2,active=false,movedeltas='spearman',attackdeltas='spearman'},
+ {summoner=2,walkdir=-1,x=8,y=3,typ=0,hp=2,active=false,movedeltas='spearman',attackdeltas='spearman'},
 }
 
 for _c in all(creatures) do
@@ -139,33 +145,71 @@ local animtick=0
 local animlen=12
 
 function _update60()
+
+ for _i=0,rows-1 do
+  if not (board[_i*cols] or getcreatureonpos(0,_i)) then
+   playersummoner.availablesels[_i]=true
+  else
+   playersummoner.availablesels[_i]=nil
+  end
+ end
+
+ if btnp(2) then
+  playersummoner.sel-=1
+ elseif btnp(3) then
+  playersummoner.sel+=1
+ end
+
+ playersummoner.sel=mid(1,playersummoner.sel,rows-1)
+
+ if btnp(4) then
+  if not playersummoner.availablesels[playersummoner.sel] then
+   -- todo: play sfx
+  elseif not playersummoner.hassummoned then
+   playersummoner.hassummoned=true
+   local _c=del(playersummoner.creatures,playersummoner.creatures[1])
+   if _c then
+    _c.x,_c.y=0,playersummoner.sel
+    _c.active=playersummoner.active
+    _c.walkdir=playersummoner.walkdir
+    _c.summoner=1
+    _c.movedeltas=movedeltas[_c.movedeltas]
+    _c.attackdeltas=attackdeltas[_c.attackdeltas]
+    add(creatures,_c)
+   end
+  end
+ end
+
  if animtick > 0 then
   animtick-=1
 
- elseif summoners[1].hp <= 0 or summoners[2].hp <= 0 then
+ elseif playersummoner.hp <= 0 or summoners[2].hp <= 0 then
 
-  if summoners[1].hp <= 0 then
-   isvictory=true
-  else
+  if playersummoner.hp <= 0 then
    isvictory=false
+  else
+   isvictory=true
   end
 
- else
+ else -- update
 
   tick+=1
 
   if tick >= tickwrap then
+
+   -- todo: ai make decision
 
    -- todo: sort on x first, friendly creatures with x closer to enemy summoner moves first
 
    -- update creatures
    for _c in all(creatures) do
 
+    local _summoner=summoners[_c.summoner]
+    local _enemysummoner=summoners[(_c.summoner%2)+1]
+
     _c.anim=nil
 
     if _c.active then
-
-     local _enemysummoner=summoners[(_c.summoner%2)+1]
 
      local _attacks=copydeltas(_c.attackdeltas)
 
@@ -183,8 +227,6 @@ function _update60()
      if #_attacks > 0 then
 
       _c.anim='attacking'
-
-      _c.lastmovx=nil
 
       _c.attx=_c.x+_attacks[1].x*_c.walkdir
       _c.atty=_c.y+_attacks[1].y
@@ -218,14 +260,16 @@ function _update60()
       for _m in all(_moves) do
        local _nextx,_nexty=_c.x+_m.x*_c.walkdir,_c.y+_m.y
 
-       -- is outside board long-side edges
-       -- todo: always go towards center row
        if _nexty < 0 or
           _nexty >= rows or
           board[_nexty*cols+_nextx] or
-          getcreatureonpos(_nextx,_nexty) then
+          getcreatureonpos(_nextx,_nexty) or
+          (_nextx == _summoner.x and _nexty == _summoner.y) then
         del(_moves,_m)
        elseif _nextx == _c.lastmovx and _nexty == _c.lastmovy then
+        _m.w-=0.5
+       end
+       if abs(_nexty-_enemysummoner.y) > abs(_c.y-_enemysummoner.y) then
         _m.w-=0.5
        end
       end
@@ -242,6 +286,13 @@ function _update60()
     end
 
     _c.active=not _c.active
+   end
+
+   for _s in all(summoners) do
+    _s.active=not _s.active
+    if _s.active then
+     _s.hassummoned=nil
+    end
    end
 
    -- next turn
@@ -271,6 +322,13 @@ function _draw()
  for _s in all(summoners) do
   spr(_s.typ,_s.x*8,_yoff+_s.y*8)
  end
+
+ -- draw player next summon
+ local _c=playersummoner.creatures[1]
+ if _c then
+  rectfill(0,_yoff+playersummoner.sel*8,7,_yoff+playersummoner.sel*8+7,10)
+  spr(_c.typ,0,_yoff+playersummoner.sel*8)
+ end
  
  -- draw creatures
  sort(creatures,sortony)
@@ -297,8 +355,10 @@ function _draw()
  -- draw effects
 
  -- draw isvictory
- if isvictory != nil then
+ if isvictory == true then
   print('victory!',64,64,7)
+ elseif isvictory == false then
+  print('defeat',64,64,7)
  end
 
  -- draw gui
