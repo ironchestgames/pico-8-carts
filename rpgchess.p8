@@ -135,18 +135,22 @@ creaturetypes={
  },
  spider={
   typ=160,
-  hp=2,
+  hp=3,
   movedeltas='spearman',
   attackdeltas='spearman',
  },
 }
 
-playersummoner={id=1,walkdir=1,x=1,y=5,typ=30,active=true,hp=3,hassummoned=false,sel=1,availablesels={},creatures={
+playersummoner={id=1,walkdir=1,x=1,y=5,typ=30,active=true,hp=3,sel=1,availablesels={},creatures={
+ {'spearman'},
+ {'spearman'},
  {'spearman'},
  {'spearman'},
  {'spearman'},
 }}
-enemysummoner={id=2,walkdir=-1,x=14,y=3,typ=14,active=false,hp=3,hassummoned=false,sel=6,creatures={
+enemysummoner={id=2,walkdir=-1,x=14,y=5,typ=14,active=false,hp=3,sel=6,creatures={
+ {'spider'},
+ {'spider'},
  {'spider'},
  {'spider'},
  {'spider'},
@@ -158,7 +162,6 @@ creatures={}
 
 
 local function summoncreature(_s)
- _s.hassummoned=true
  local _c=del(_s.creatures,_s.creatures[1])
  if _c then
   local _ctyp=creaturetypes[_c[1]]
@@ -177,10 +180,10 @@ end
 
 
 local tick=0
-local tickwrap=56
+local tickwrap=50
 
 local animtick=0
-local animlen=12
+local animlen=10
 
 function _update60()
 
@@ -201,7 +204,7 @@ function _update60()
  playersummoner.sel=mid(0,playersummoner.sel,rows-1)
 
  if btnp(4) then
-  if (not playersummoner.availablesels[playersummoner.sel]) or playersummoner.hassummoned then
+  if (not playersummoner.availablesels[playersummoner.sel]) then
    sfx(9)
   else
    summoncreature(playersummoner)
@@ -229,7 +232,6 @@ function _update60()
    if #enemysummoner.creatures > 0 then
     local _sel=flr(rnd(rows-1))
     if rnd() > 0.5 and
-       (not enemysummoner.hassummoned) and
        not (board[_sel*cols+15] or getcreatureonpos(15,_sel)) then
      enemysummoner.sel=_sel
      summoncreature(enemysummoner)
@@ -333,9 +335,6 @@ function _update60()
 
    for _s in all(summoners) do
     _s.active=not _s.active
-    if _s.active then
-     _s.hassummoned=nil
-    end
    end
 
    -- next turn
@@ -373,14 +372,19 @@ function _draw()
  end
 
  -- draw player next summon
+ local _col=10
+ if not playersummoner.availablesels[playersummoner.sel] then
+  _col=8
+ end
+ rect(0,_yoff+playersummoner.sel*8,7,_yoff+playersummoner.sel*8+8,_col)
+ print(#playersummoner.creatures,2,_yoff+playersummoner.sel*8+2)
+
  local _c=playersummoner.creatures[1]
  if _c then
-  local _col,_ctyp=10,creaturetypes[_c[1]]
-  if playersummoner.hassummoned or not playersummoner.availablesels[playersummoner.sel] then
-   _col=8
+  local _ctyp=creaturetypes[_c[1]]
+  if tick%tickwrap > tickwrap/2 then
+   spr(_ctyp.typ,0,_yoff+playersummoner.sel*8)
   end
-  rectfill(0,_yoff+playersummoner.sel*8,7,_yoff+playersummoner.sel*8+7,_col)
-  spr(_ctyp.typ,0,_yoff+playersummoner.sel*8)
  end
  
  -- draw creatures
