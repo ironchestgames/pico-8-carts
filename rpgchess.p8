@@ -63,7 +63,7 @@ end
 local rows=11
 local cols=16
 local arlsen=rows*cols-1 -- 11 rows, 14 cols
-local theme=1
+local theme=0
 local themepalt={[0]=15,15,}
 local themecls={[0]=3,5,}
 local backdrop=shuffle{[0]=0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,}
@@ -133,6 +133,33 @@ movdeltas={
   {x=1,y=-1,w=2},
   {x=1,y=1,w=2},
  },
+ hawk_1={
+  {x=1,y=1,w=3},
+  {x=1,y=0,w=2},
+ },
+ hawk_2={
+  {x=1,y=-1,w=3},
+  {x=1,y=0,w=2},
+ },
+}
+
+updates={
+ spearwall=function(_c,_s)
+
+ end,
+ hawk=function(_c,_s)
+  if not _c.movdeltas then
+   if _c.y >= _s.y then
+    _c.movdeltas=movdeltas.hawk_2
+   else
+    _c.movdeltas=movdeltas.hawk_1
+   end
+  elseif _c.y <= 0 then
+   _c.movdeltas=movdeltas.hawk_1
+  elseif _c.y >= rows-1 then
+   _c.movdeltas=movdeltas.hawk_2
+  end
+ end,
 }
 
 creaturetypes={
@@ -180,32 +207,41 @@ creaturetypes={
   attackanimtyp='attacking_stabbing',
   special_ignoreboard=1,
  },
-
+ hawk={
+  typ=164,
+  hp=1,
+  movdeltas='hawk_',
+  attackdeltas='spearman',
+  movanimtyp='moving_flying',
+  attackanimtyp='attacking_stabbing',
+  special_ignoreboard=1,
+  special_update='hawk',
+ },
 }
 
-playersummoner={id=1,walkdir=1,x=1,y=5,typ=14,active=true,hp=3,sel=1,availablesels={},creatures={
- {'spearman'},
- {'spearman'},
- {'spearman'},
- {'spearman'},
- -- {'bat'},
- -- {'bat'},
- -- {'bat'},
- -- {'bat'},
- -- {'spider'},
-}}
-enemysummoner={id=2,walkdir=-1,x=14,y=5,typ=30,active=false,hp=3,sel=6,creatures={
+playersummoner={id=1,walkdir=1,x=1,y=5,typ=30,active=true,hp=3,sel=1,availablesels={},creatures={
+ {'archer'},
+ {'archer'},
  -- {'archer'},
- -- {'spearman'},
- -- {'spearman'},
+ -- {'archer'},
  {'knifeman'},
  {'knifeman'},
+ {'spearman'},
+ {'spearman'},
  {'knifeman'},
- {'knifeman'},
- -- {'spearman'},
- -- {'spearman'},
- -- {'spearman'},
- -- {'spearman'},
+}}
+enemysummoner={id=2,walkdir=-1,x=14,y=5,typ=14,active=false,hp=3,sel=6,creatures=shuffle{
+ {'bat'},
+ {'bat'},
+ {'bat'},
+ {'bat'},
+ {'bat'},
+ {'hawk'},
+ {'spider'},
+ {'spider'},
+ {'spider'},
+ -- {'hawk'},
+ {'bat'},
  }}
 
 summoners={playersummoner,enemysummoner}
@@ -236,6 +272,7 @@ local function summoncreature(_s)
   end
   _c.movdeltas=movdeltas[_ctyp.movdeltas]
   _c.attackdeltas=attackdeltas[_ctyp.attackdeltas]
+  _c.special_update=updates[_c.special_update]
 
   add(creatures,_c)
  end
@@ -243,10 +280,10 @@ end
 
 
 local tick=0
-local tickwrap=50
+local tickwrap=64
 
 local animtick=0
-local animlen=10
+local animlen=tickwrap/4
 
 function _update60()
 
@@ -315,15 +352,8 @@ function _update60()
 
     _c.anim=nil
 
-    if _c.special_spearwall and not _c.active then
-     local _otherup=getcreatureonpos(_c.x,_c.y-1)
-     local _otherdown=getcreatureonpos(_c.x,_c.y+1)
-     if (_otherup and _otherup.summoner == _c.summoner and _otherup.special_spearwall) or
-        (_otherdown and _otherdown.summoner == _c.summoner and _otherdown.special_spearwall) then
-      _c.special_spearwall=2
-     else
-      _c.special_spearwall=1
-     end
+    if _c.special_update then
+     _c.special_update(_c,_summoner)
     end
 
     if (_c.active or _c.special_spearwall == 2) and not _c.isincapacitated then
@@ -332,7 +362,7 @@ function _update60()
 
      if _c.special_shooting then
       _attacks={}
-      local _ad=attackdeltas[_ctyp.attackdeltas][1]
+      local _ad=clone(attackdeltas[_ctyp.attackdeltas][1])
       if _c.x == _enemysummoner.x then
        _ad.x=0
       end
@@ -395,13 +425,19 @@ function _update60()
        _enemysummoner.hp-=1
       end
 
-     elseif _c.active then -- move
+     elseif _c.active and not _c.isincapacitated then -- move
 
       _c.anim=_c.movanimtyp
 
       local _moves=copydeltas(_c.movdeltas)
 
       if _c.x == _enemysummoner.x then
+       local _enemysummonerdy=abs(_enemysummoner.y-_c.y)
+       for _m in all(_moves) do
+        if _c.y+_m.y-_enemysummonerdy < _enemysummonerdy then
+         _m.w+=10
+        end
+       end
        add(_moves,{x=0,y=sgn(_enemysummoner.y-_c.y),w=0.1})
       end
 
@@ -442,6 +478,19 @@ function _update60()
     end
 
     _c.active=not _c.active
+   end
+
+   for _c in all(creatures) do
+    if _c.special_spearwall and not _c.active then
+     local _otherup=getcreatureonpos(_c.x,_c.y-1)
+     local _otherdown=getcreatureonpos(_c.x,_c.y+1)
+     if (_otherup and _otherup.summoner == _c.summoner and _otherup.special_spearwall) or
+        (_otherdown and _otherdown.summoner == _c.summoner and _otherdown.special_spearwall) then
+      _c.special_spearwall=2
+     else
+      _c.special_spearwall=1
+     end
+    end
    end
 
    for _s in all(summoners) do
@@ -655,12 +704,12 @@ b0303330b000b330f00400ffffffffff03555055055550553355505033555050ffffffffffffffff
 000000400dddd04000004011000000010ddd0660000004010ddd0401111111111111111111111111111111111111111111111111111111111111111111111111
 01111040000000400104001101110111000000010111001100000011111111111111111111111111111111111111111111111111111111111111111111111111
 11111111111111111111111111101111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-10001111111111110001000111050111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-02220111100001110550550110555011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-02022001022220111055501110505011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-02020010020200011105011110010011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-0000dd000202dd001110111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-01009d9000009d901111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+10001111111111110001000111050111000110001110011111111111111111111111111111111111111111111111111111111111111111111111111111111111
+022201111000011105505501105550110d7007d01107701111111111111111111111111111111111111111111111111111111111111111111111111111111111
+0202200102222011105550111050501110d77d01107dd70111111111111111111111111111111111111111111111111111111111111111111111111111111111
+02020010020200011105011110010011110dd01110dffd0111111111111111111111111111111111111111111111111111111111111111111111111111111111
+0000dd000202dd001110111111111111110f0f0110d00d0111111111111111111111111111111111111111111111111111111111111111111111111111111111
+01009d9000009d901111111111111111111010111001100111111111111111111111111111111111111111111111111111111111111111111111111111111111
 01010000010100001111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
