@@ -104,7 +104,10 @@ attackdeltas={
   {x=1,y=1,w=1},
   {x=0,y=-1,w=1},
   {x=0,y=1,w=1},
- }
+ },
+ archer={
+  {x=1,y=1,w=12},
+ },
 }
 
 movdeltas={
@@ -135,10 +138,12 @@ movdeltas={
 creaturetypes={
  spearman={
   typ=144,
-  hp=2,
+  hp=1,
   movdeltas='spearman',
   attackdeltas='spearman',
   movanimtyp='moving_jumping',
+  attackanimtyp='attacking_stabbing',
+  special_moveonkill=1,
  },
  knifeman={
   typ=146,
@@ -146,6 +151,16 @@ creaturetypes={
   movdeltas='spearman',
   attackdeltas='spearman',
   movanimtyp='moving_jumping',
+  attackanimtyp='attacking_stabbing',
+ },
+ archer={
+  typ=148,
+  hp=1,
+  movdeltas='spearman',
+  attackdeltas='archer',
+  movanimtyp='moving_jumping',
+  attackanimtyp='attacking_shooting',
+  special_shooting=1,
  },
  spider={
   typ=160,
@@ -153,6 +168,7 @@ creaturetypes={
   movdeltas='spider',
   attackdeltas='spearman',
   movanimtyp='moving_jumping',
+  attackanimtyp='attacking_stabbing',
   special_makecocoon=1,
  },
  bat={
@@ -161,6 +177,7 @@ creaturetypes={
   movdeltas='bat',
   attackdeltas='spearman',
   movanimtyp='moving_flying',
+  attackanimtyp='attacking_stabbing',
   special_ignoreboard=1,
  },
 
@@ -174,11 +191,12 @@ playersummoner={id=1,walkdir=1,x=1,y=5,typ=14,active=true,hp=3,sel=1,availablese
  {'spider'},
 }}
 enemysummoner={id=2,walkdir=-1,x=14,y=5,typ=30,active=false,hp=3,sel=6,creatures={
- {'knifeman'},
- {'knifeman'},
- {'knifeman'},
+ {'archer'},
  {'spearman'},
  {'spearman'},
+ {'knifeman'},
+ {'knifeman'},
+ {'knifeman'},
  {'spearman'},
  {'spearman'},
  }}
@@ -206,14 +224,12 @@ local function summoncreature(_s)
   _c.summoner=_s.id
   _c.isincapacitated=nil
 
-  _c.hp=_ctyp.hp
-  _c.typ=_ctyp.typ
+  for _k,_v in pairs(_ctyp) do
+   _c[_k]=_v
+  end
   _c.movdeltas=movdeltas[_ctyp.movdeltas]
   _c.attackdeltas=attackdeltas[_ctyp.attackdeltas]
-  _c.movanimtyp=_ctyp.movanimtyp
 
-  _c.special_ignoreboard=_ctyp.special_ignoreboard
-  _c.special_makecocoon=_ctyp.special_makecocoon
   add(creatures,_c)
  end
 end
@@ -227,8 +243,16 @@ local animlen=10
 
 function _update60()
 
+ local _1creaturectyp
+ if playersummoner.creatures[1] then
+  _1creaturectyp=creaturetypes[playersummoner.creatures[1][1]]
+ end
  for _i=0,rows-1 do
-  if not (board[_i*cols] or getcreatureonpos(0,_i)) then
+  local _isboard=board[_i*cols]
+  if _1creaturectyp and _1creaturectyp.special_ignoreboard then
+   _isboard=nil
+  end
+  if not (_isboard or getcreatureonpos(0,_i)) then
    playersummoner.availablesels[_i]=true
   else
    playersummoner.availablesels[_i]=nil
@@ -280,12 +304,37 @@ function _update60()
 
     local _summoner=summoners[_c.summoner]
     local _enemysummoner=summoners[(_c.summoner%2)+1]
+    local _ctyp=creaturetypes[_c[1]]
 
     _c.anim=nil
 
     if _c.active and not _c.isincapacitated then
 
      local _attacks=copydeltas(_c.attackdeltas)
+
+     if _c.special_shooting then
+      _attacks={}
+      local _ad=attackdeltas[_ctyp.attackdeltas][1]
+      if _c.x == _enemysummoner.x then
+       _ad.x=0
+      end
+      for _i=1,rows do
+       local _x,_y=_c.x+_i*_ad.x,_c.y+_i*_ad.y
+       local _other=getcreatureonpos(_x,_y)
+       if _x < 0 or _x > cols or _y < 0 or _y >= rows or board[_y*cols+_x] or (_other and _other.summoner == _c.summoner) then
+        break
+       end
+       add(_attacks,{x=_i*_ad.x,y=_i*_ad.y,w=_ad.w-_i})
+      end
+      for _i=1,rows do
+       local _x,_y=_c.x+_i*_ad.x,_c.y+_i*-_ad.y
+       local _other=getcreatureonpos(_x,_y)
+       if _x < 0 or _x > cols or _y < 0 or _y >= rows or board[_y*cols+_x] or (_other and _other.summoner == _c.summoner) then
+        break
+       end
+       add(_attacks,{x=_i*_ad.x,y=_i*-_ad.y,w=_ad.w-_i})
+      end
+     end
 
      for _a in all(_attacks) do
       local _ax,_ay=_c.x+_a.x*_c.walkdir,_c.y+_a.y
@@ -297,10 +346,11 @@ function _update60()
        end
       end
      end
-
      if #_attacks > 0 then
 
-      _c.anim='attacking'
+      _c.anim=_c.attackanimtyp
+
+      -- todo: add shots to effects
 
       _c.attx=_c.x+_attacks[1].x*_c.walkdir
       _c.atty=_c.y+_attacks[1].y
@@ -311,6 +361,14 @@ function _update60()
        if _other.hp <= 0 then
         del(creatures,_other)
         add(summoners[_other.summoner].creatures,_other)
+        if _c.special_moveonkill and
+           not board[_c.atty*cols+_c.attx] then
+         _c.anim=_c.movanimtyp
+         _c.lastmovx=_c.x
+         _c.lastmovy=_c.y
+         _c.x=_c.attx
+         _c.y=_c.atty
+        end
        elseif _c.special_makecocoon then
         _other.typ=15
         _other.isincapacitated=true
@@ -450,6 +508,9 @@ function _draw()
  -- draw creatures
  sort(creatures,sortony)
  for _c in all(creatures) do
+  for _a in all(_c.attacks) do
+   rect((_c.x+_a.x)*8,_yoff+(_c.y+_a.y)*8,(_c.x+_a.x)*8+7,_yoff+(_c.y+_a.y)*8+7,8)
+  end
   local _foff=0
   local _animxoff,_animyoff=0,0
   if _c.active and not _c.isincapacitated then
@@ -464,9 +525,11 @@ function _draw()
     _animxoff=(_c.lastmovx-_c.x)*_p^2*8
     _animyoff=(_c.lastmovy-_c.y)*_p^2*8
     _foff=1
-   elseif _c.anim == 'attacking' then
+   elseif _c.anim == 'attacking_stabbing' then
     _animxoff=(_c.attx-_c.x)*_p^3*5
     _animyoff=(_c.atty-_c.y)*_p^3*5
+   elseif _c.anim == 'attacking_shooting' then -- todo: remove this and add shots to effects instead
+    line(_c.x*8+7,_yoff+_c.y*8+4,_c.attx*8+4,_yoff+_c.atty*8+4,7)
    end
   end
   spr(_c.typ+_foff,_animxoff+_c.x*8,_yoff+_animyoff+_c.y*8,1,1,_c.walkdir == -1)
@@ -564,14 +627,14 @@ b0303330b000b330f00400ffffffffff03555055055550553355505033555050ffffffffffffffff
 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-10000101111111011000011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-0ffff060100000600ffff01110000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-0f0f00600ffff0600f0f00110ffff011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-0ffff0400f0f00400ffff0110f0f0011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-000000400ffff040000000000ffff011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-0dddd040000000400ddd066000000000111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-000000400dddd040000000010ddd0660111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-01111040000000400111011100000001111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+10000101111111011000011111111111100000111111001111111111111111111111111111111111111111111111111111111111111111111111111111111111
+0ffff060100000600ffff011100001110ffff4011000040111111111111111111111111111111111111111111111111111111111111111111111111111111111
+0f0f00600ffff0600f0f00110ffff0110f0f00400ffff04011111111111111111111111111111111111111111111111111111111111111111111111111111111
+0ffff0400f0f00400ffff0110f0f00110ffff0400f0f004011111111111111111111111111111111111111111111111111111111111111111111111111111111
+000000400ffff040000000000ffff011000000400ffff04011111111111111111111111111111111111111111111111111111111111111111111111111111111
+0dddd040000000400ddd0660000000000ddd00400000004011111111111111111111111111111111111111111111111111111111111111111111111111111111
+000000400dddd040000000010ddd0660000004010ddd040111111111111111111111111111111111111111111111111111111111111111111111111111111111
+01111040000000400111011100000001011100110000001111111111111111111111111111111111111111111111111111111111111111111111111111111111
 11111111111111111111111111101111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
 10001111111111110001000111050111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
 02220111100001110550550110555011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
