@@ -501,8 +501,8 @@ function _update60()
         _isboard=nil
        end
 
-       if _nextx < 0 or
-          _nextx > 15 or
+       if _nextx < 1 or
+          _nextx > 14 or
           _nexty < 0 or
           _nexty >= rows or
           _isboard or
