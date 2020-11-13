@@ -9,6 +9,8 @@ __lua__
 
 --[[
 
+- set label
+
 - filing drawers
  - search (up/down?)
 
@@ -1266,13 +1268,12 @@ local function gameinit()
         {dx=-_g.dy,dy=-_g.dx},
        }
        add(_turns,{dx=-_g.dx,dy=-_g.dy})
-       for _i=1,3 do
+       for _i=1,3 do -- note: #_turns is always 3
         local _t=_turns[_i]
         if not iswallclose(_g.x,_g.y,_t.dx,_t.dy) then
          _g.dx=_t.dx
          _g.dy=_t.dy
-        elseif _i == 3 then
-         _g.state='guarding'
+         break
         end
        end
       end
