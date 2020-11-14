@@ -988,13 +988,13 @@ function mapgen()
     end
    end
 
+   local _goodcash={'good cash',300+rnd(200)}
    _o.loot=shuffle{
-    {'a little cash',10+rnd(90)},
     {'some cash',100+rnd(200)},
-    {'good cash',300+rnd(200)},
+    _goodcash,_goodcash,
     {'gold bars',500+rnd(600)},
     {'diamonds',1000+rnd(1000)},
-    {'documents',rnd(1200)},
+    {'important documents',rnd(1200)},
    }[1]
 
    objs[_iplus1]={typ=9,shadow={true}}
@@ -1303,7 +1303,7 @@ local function gameinit()
    end
    if alertlvl == 2 and policet > 0 then
     policet-=1
-    if policet == 48 then
+    if policet == 44 then
      sfx(16)
     end
     if policet <= 0 then
@@ -1609,9 +1609,8 @@ local function gameinit()
   -- remove fog from holding guards
   for _g in all(guards) do
    if _g.state == 'holding' then
-    local _i=_g.y*32+_g.x
     for _ghd in all(guardsholdingdeltas) do
-     fog[_i+_ghd]=0
+     fog[_g.y*32+_g.x+_ghd]=0
     end
    end
   end
@@ -1626,11 +1625,10 @@ local function gameinit()
  end
 
  _draw=function()
-  if alertlvl == 2 and policet <= 48 then
+  if alertlvl == 2 and policet <= 44 then
+   pal(0,12)
    if policet%8 >= 4 then
     pal(0,8)
-   else
-    pal(0,12)
    end
   end
 
@@ -1714,12 +1712,11 @@ local function gameinit()
      sspr(5,95,8,4,_px,_py+5)
     end
    else
-    local _flipx,_px2=_p.dir == 1,_px-_p.dir*2
+    local _flipx,_px2,_sx=_p.dir == 1,_px-_p.dir*2,0
     if #_p.loot > 0 then
-     sspr(6+_floor23,_sylight,6,9,_px2,_py,6,9,_flipx)
-    else
-     sspr(_floor23,_sylight,6,9,_px2,_py,6,9,_flipx)
+     _sx=6
     end
+    sspr(_sx+_floor23,_sylight,6,9,_px2,_py,6,9,_flipx)
    end
 
    local _o=objs[_i+32]
@@ -1823,7 +1820,7 @@ initpolice=function(_onpress)
 
   for _i=1,#players do
    local _p=players[_i]
-   local _x,_y=mid(24,_p.x*4,103),mid(16,_p.y*4,85)
+   local _x,_y=mid(24,_p.x*4+rnd(8),103),mid(16,_p.y*4,85)
    sspr(89,86,3,10,_x,_y)
    if #_p.loot > 0 then
     sspr(81,86,8,10,_x,_y)
@@ -1848,6 +1845,7 @@ initpolice=function(_onpress)
   if not _onpress then
    sspr(100,78,28,18,15,102)
    _s='caught!  \x8e to start over'
+   print('$'..dget(62),1,1,7)
   end
   print(_s,16,122,10)
 
