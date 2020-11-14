@@ -16,11 +16,6 @@ __lua__
 
 - bug if suspect seen and caught same tick (came out of hiding for ex)
 
-- wantedness
- - increase wantedness if spending too much time in light
- - change number of officers in police scene
- - if wantedness is more than 3, send armored truck, and game over
-
 - guard behaviour
  - go towards player if lighted
  - standing guard
@@ -89,6 +84,7 @@ local fogdirs={
  s2t'.x;0;.y;-1;.dx;1;.dy;-1;',
  s2t'.x;0;.y;-1;.dx;-1;.dy;-1;',
 }
+local cameradirs=s2t'8;12;'
 
 local windowpeekdys=s2t'-64;-32;0;32;'
 
@@ -117,6 +113,8 @@ local cameras
 local alertlvl
 local alertlvls=s2t'24;8;' -- note: only tick time
 local policet=0
+local seenaddend=0
+local wantedness=0
 
 local players
 local escapedplayers
@@ -1114,9 +1112,8 @@ end
 
 
 local function gameinit()
- -- set auto-repeat delay for btnp
- poke(0x5f5c,5)
- msgs,tick,alertlvl={},0,1
+ poke(0x5f5c,5) -- note: set auto-repeat delay for btnp
+ msgs,tick,alertlvl,seenaddend={},0,1,-1
  local _playwalksfx
  _update=function()
   tick-=1
@@ -1313,11 +1310,12 @@ local function gameinit()
      local _f
      if #players == 1 then
       _f=function()
-       add(escapedplayers[1].loot,{'bail',-(1700+players[1].ltime)})
+       add(escapedplayers[1].loot,{'bail',-2000})
        initstatus()
       end
      end
      initpolice(_f)
+     return
     end
    end
    tick=alertlvls[alertlvl]
@@ -1523,16 +1521,13 @@ local function gameinit()
    if _o and (_o.typ == 22 or _o.typ == 23) and
       (light[_i-1] == 1 or light[_i+1] == 1) then
     light[_i]=1
-    if _o.typ == 23 then
-     setalertlvl2('broken window!',_i&31,_i\32)
-    end
    end
   end
 
   -- intruder alert
   for _p in all(players) do
    if light[_p.y*32+_p.x] == 1 then
-    _p.ltime+=1
+    seenaddend=1
     setalertlvl2('intruder alert!',_p.x,_p.y)
    end
   end
@@ -1540,10 +1535,13 @@ local function gameinit()
    for _i=0,arslen do
     local _o=objs[_i]
     if _o and light[_i] == 1 then
+     local _x,_y=_i&31,_i\32
      if _o.typ == 10 then
-      setalertlvl2('safe opened!',_i&31,_i\32)
+      setalertlvl2('safe opened!',_x,_y)
      elseif _o.typ == 31 then
-      setalertlvl2('statuette gone!',_i&31,_i\32)
+      setalertlvl2('statuette gone!',_x,_y)
+     elseif _o.typ == 23 then
+      setalertlvl2('broken window!',_x,_y)
      end
     end
    end
@@ -1562,9 +1560,7 @@ local function gameinit()
         if _p.state != 'caught' then
          add(msgs,{_g.x,_g.y,'hands up!',nil,nil,2})
         end
-        _p.state='caught'
-        _p.workingstate='handsup'
-        _g.state='gunpointing'
+        _p.state,_p.workingstate,_g.state='caught','handsup','gunpointing'
        end
       end
      end
@@ -1661,9 +1657,9 @@ local function gameinit()
   end
 
   -- add border of premises
-  fillp(0b1010010110100101)
-  rect(0,0,127,127,1)
-  fillp()
+  -- fillp(0b1010010110100101)
+  rect(0,0,127,127,5)
+  -- fillp()
 
   pal()
   palt(0,false)
@@ -1673,8 +1669,13 @@ local function gameinit()
   for _i=0,arslen do
    local _o=objs[_i]
    if _o and _o.typ then
-    local _x,_y,_l=_i&31,_i\32,light[_i]
-    sspr(_o.typ*4,_l*13,4,13,_x*4,_y*4-5)
+    sspr(
+     _o.typ*4,
+     light[_i]*13,
+     4,
+     13,
+     (_i&31)*4,
+     (_i\32)*4-5)
    end
    _o=objs[_i-1]
    if _o and _o.draw then
@@ -1684,18 +1685,14 @@ local function gameinit()
 
   -- draw cameras
   for _c in all(cameras) do
-   local _sx=8
-   if floor[_c.y*32+_c.x+1] == 2 then
-    _sx=12
-   end
-   sspr(_sx,116+_c.state*3,4,3,_c.x*4,_c.y*4-4)
+   sspr(cameradirs[floor[_c.y*32+_c.x+1]],116+_c.state*3,4,3,_c.x*4,_c.y*4-4)
   end
 
   -- draw players
   for _p in all(players) do
    local _i=_p.y*32+_p.x
-   local _l,_floor,_px,_py=light[_i],floor[_i],_p.x*4,_p.y*4-5
-   local _sylight,_floor23=72+_l*9,_floor*23
+   local _l,_floor23,_px,_py=light[_i],floor[_i]*23,_p.x*4,_p.y*4-5
+   local _sylight=72+_l*9
    if _p.state == 'hiding' then
     sspr(46+_p.adjacency*4,72,4,9,_px,_py)
    elseif _p.state == 'working' then
@@ -1717,11 +1714,11 @@ local function gameinit()
      sspr(5,95,8,4,_px,_py+5)
     end
    else
-    local _flipx,_xoff,_y,_px2=_p.dir == 1,_floor23,_sylight,_px-_p.dir*2
+    local _flipx,_px2=_p.dir == 1,_px-_p.dir*2
     if #_p.loot > 0 then
-     sspr(6+_xoff,_y,6,9,_px2,_py,6,9,_flipx)
+     sspr(6+_floor23,_sylight,6,9,_px2,_py,6,9,_flipx)
     else
-     sspr(0+_xoff,_y,6,9,_px2,_py,6,9,_flipx)
+     sspr(_floor23,_sylight,6,9,_px2,_py,6,9,_flipx)
     end
    end
 
@@ -1734,7 +1731,7 @@ local function gameinit()
 
   -- draw guards
   for _g in all(guards) do
-   local _dir,_gx,_gy=0,_g.x*4-2,_g.y*4-7
+   local _dir,_gx,_gy,_sy=0,_g.x*4-2,_g.y*4-7,31+11*_g.isarmed
    for _j=1,3 do
     if adjdeltas[_j] == _g.dy*32+_g.dx then
      _dir=_j
@@ -1745,16 +1742,16 @@ local function gameinit()
     if tick < alertlvls[alertlvl]/2 then
      _frame=1
     end
-    sspr(_dir*27+_frame*9,31+11*_g.isarmed,9,11,_gx,_gy)
+    sspr(_dir*27+_frame*9,_sy,9,11,_gx,_gy)
 
    elseif _g.state == 'holding' then
-    sspr(109,31+11*_g.isarmed,7,11,_gx,_gy)
+    sspr(109,_sy,7,11,_gx,_gy)
 
    elseif _g.state == 'gunpointing' then
     sspr(11+11*_g.dx,53,7,11,_gx,_gy)
 
    elseif _g.state == 'listening' or _g.state == 'guarding' then
-    sspr(_dir*27,31+11*_g.isarmed,9,11,_gx,_gy)
+    sspr(_dir*27,_sy,9,11,_gx,_gy)
    end
   end
 
@@ -1775,8 +1772,11 @@ local function gameinit()
   for _m in all(msgs) do
    if not _m[5] then
     local _hw=#_m[3]*2
-    local _x,_y,_col=max(min(_m[1]*4-_hw,127-_hw*2),0), max(_m[2]*4-13,0), msgcols[_m[6] or 1][_coli]
-    print(_m[3],_x,_y,_col)
+    print(
+     _m[3],
+     max(min(_m[1]*4-_hw,127-_hw*2),0),
+     max(_m[2]*4-13,0),
+     msgcols[_m[6] or 1][_coli])
    end
   end
  end
@@ -1800,6 +1800,7 @@ initpolice=function(_onpress)
  palt(0)
  palt(15,false)
  palt(11,true)
+ wantedness,seenaddend=0,0
 
  _update=function()
   if btnp(4) then
@@ -1813,11 +1814,7 @@ initpolice=function(_onpress)
  end
 
  _draw=function()
-  if flr(t())%2 == 1 then
-   cls(8)
-  else
-   cls(12)
-  end
+  cls(s2t'.0;12;.1;8;'[flr(t())%2])
 
   -- draw players
   if #players == 2 and players[1].x > players[2].x then
@@ -1826,7 +1823,7 @@ initpolice=function(_onpress)
 
   for _i=1,#players do
    local _p=players[_i]
-   local _x,_y=mid(24,_p.x*4,127-24), mid(16,_p.y*4,127-42)
+   local _x,_y=mid(24,_p.x*4,103),mid(16,_p.y*4,85)
    sspr(89,86,3,10,_x,_y)
    if #_p.loot > 0 then
     sspr(81,86,8,10,_x,_y)
@@ -1847,10 +1844,12 @@ initpolice=function(_onpress)
   sspr(100,61,28,17,80,104)
 
   -- draw armored truck for game over
+  local _s='caught!  \x8e to pay bail'
   if not _onpress then
    sspr(100,78,28,18,15,102)
-   print('caught!  \x8e to start over',16,122,10)
+   _s='caught!  \x8e to start over'
   end
+  print(_s,16,122,10)
 
  end
 end
@@ -1865,7 +1864,6 @@ end
 
 
 local function initmapselect()
- poke(0x5f5c,-1)
  palt()
  srand(dget(61)+seli)
  mapgen()
@@ -1943,7 +1941,6 @@ end
 initstatus=function(_msg)
  sfx(16,-2)
  sfx(17,-2)
- poke(0x5f5c,-1)
  local _rows={{'ingoing',dget(62)}}
  for _p in all(escapedplayers) do
   for _l in all(_p.loot) do
@@ -1972,19 +1969,24 @@ initstatus=function(_msg)
   _msg='no cash! \x8e to start over'
  end
 
+ wantedness=mid(0,wantedness+seenaddend,4)
+ local _recognised=wantedness == 4
+ if _recognised then
+  _msg='\x8e they know your face now' -- todo: something better
+ end
+
  -- init players
  players={{},{}}
- for _i=1,2 do
-  players[_i]={
-   i=_i-1,
-   x=10+6*(_i-1),
+ for _i=0,1 do
+  players[_i+1]={
+   i=_i,
+   x=10+6*_i,
    y=8,
-   origi=_i-1,
+   origi=_i,
    dir=1,
    state='standing',
    workingstate='hacking',
    loot={},
-   ltime=0,
   }
  end
 
@@ -1998,7 +2000,9 @@ initstatus=function(_msg)
 
  _update=function()
   if btnp(4) then
-   if _cash < 0 then
+   if _recognised then
+    initpolice()
+   elseif _cash < 0 then
     dset(61,0)
     initsplash()
    else
@@ -2010,8 +2014,19 @@ initstatus=function(_msg)
  _draw=function()
   cls()
 
+  rectfill(54,0,127,6,3)
   local _s='highscore $'..dget(0)
-  print(_s,126-#_s*4,3,3)
+  print(_s,120-#_s*4,1,1)
+
+  local _col=6
+  if _recognised and flr(t()*2)%2 == 1 then
+   _col=8
+  end
+  print('(wantedness)',46,16,_col)
+
+  for _i=0,3 do
+   spr(244+mid(0,wantedness-_i,1),9+_i*8,14)
+  end
 
   local _offy=29
   for _r in all(_rows) do
@@ -2053,6 +2068,7 @@ function initsplash()
  seli=dget(63)-1
  while dget(61) == 0 do
 
+  -- 0 is highscore
   -- 1-60 is unlocked status if corresponding maps
   -- 61 is seed
   -- 62 is cash
@@ -2095,11 +2111,11 @@ f5ffffffffffffffffff5555555555555555555555555555ffffffffffffffffffffffffffffffff
 f5f5ccccf555ffffffff2511155111525111111551111125ffffffffffffffffffffffffffffffffffffffff5dd55dd5fffffffffff555555fffffffff6fffff
 ff5fcc3cf2225ffffff5251115511152511d111551555225222222ff222222ff222222ff222222ff222222ff5dd55d15ffffffff5ff511115ffffffff66fffff
 f5ffcc3c555f5ffffff525555555555251111115555552d5255552ff211152ff2dddd2ff2dddd2ff2111d2ff5dd55115fffffffff5f511115ffffffff55ff55f
-f5ffc3cc555f5ffffff525111551115251dd111551111225255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd5511544444555252511115222ffff55555555
-2222fccf222f5222222555111551115551d11115511112d5255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd55dd5222225552d2555555222ffff54455445
-dddd55555d55555555555555555555555111111551555225255552ff211552ff28ddd2ff2bddd2ff211dd2ffffffffff222525552225d5d55222ffff55555555
-dddd522555555ff55ff52255d15d552255555555555552552d5552ff211552ff25ddd2ff25ddd2ff211dd2ffffffffff2222255522255d5d5252ffff55555555
-22225ff522225ff55ff522255555522255ffff5555ffff55255552ff211d52ff2dddd2ff2dddd2ff2115d2fffffffffff5fff5ff222555555222ffff55555555
+f5ffc3cc555f5ffffff525111551115251dd111551111225255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd55115ffffffff252511115222ffff55555555
+2222fccf222f5222222555111551115551d11115511112d5255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd55dd5444445552d2555555222ffff54455445
+dddd55555d55555555555555555555555111111551555225255552ff211552ff28ddd2ff2bddd2ff211dd2ffffffffff222225552225d5d55222ffff55555555
+dddd522555555ff55ff52255d15d552255555555555552552d5552ff211552ff25ddd2ff25ddd2ff211dd2ffffffffff2225255522255d5d5252ffff55555555
+22225ff522225ff55ff522255555522255ffff5555ffff55255552ff211d52ff2dddd2ff2dddd2ff2115d2ffffffffff22222555222555555222ffff55555555
 ffffffffffffffffffff552222222255ffffffffffffffff255552ff211552ff2dddd2ff2dddd2ff211dd2fffffffffff5fff5ff5ffffffffff5ffffffffffff
 ffffffffffffffffffffff52222225fffffffffffffffffffffffffffff5fffffffffffffffffffffffdffffffffffffffffffff5ffffffffff5ffffffffffff
 fffffffffffffffffffffff555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5ffffffffff5ffffffffffff
@@ -2108,11 +2124,11 @@ f3ffffffffffffffffff5555555555555555555555555555ffffffffffffffffffffffffffffffff
 f3f3ccccf444ffffffffd5111551115d5222222551111125ffffffffffffffffffffffffffffffffffffffff46744674fffffffffff555555fffffffff7fffff
 ff3fcc7cf2225ffffff5d5111551115d5226222551444225222222ff222222ff222222ff222222ff222222ff47644714ffffffff3ff511115ffffffff77fffff
 f3ffcc7c444f5ffffff5d5555555555d5222222555555265244442ff211142ff266662ff266662ff211162ff46644114fffffffff3f511115ffffffff55ff55f
-f3ffc7cc444f5ffffff5d5111551115d5266222551111225244442ff211442ff266662ff266662ff211662ff46744114ddddd555434511115444ffff55555555
-4444fccf222f588888855511155111555262222551111265244442ff211442ff266662ff266662ff211662ff4764476444444555464555555444ffff59955995
-666655554944555555555555555555555222222551444225244442ff211442ff286662ff2b6662ff211662ffffffffff444d455544456d6d5444ffff55555555
-6666544544445ff55ff522556d5655225555555555555255294442ff211442ff2d6662ff2d6662ff211662ffffffffff444445554445d6d65454ffff55555555
-44445ff522225ff55ff522255555522255ffff5555ffff55244442ff211942ff266662ff266662ff211d62fffffffffff5fff5ff444555555444ffff55555555
+f3ffc7cc444f5ffffff5d5111551115d5266222551111225244442ff211442ff266662ff266662ff211662ff46744114ffffffff434511115444ffff55555555
+4444fccf222f588888855511155111555262222551111265244442ff211442ff266662ff266662ff211662ff47644764ddddd555464555555444ffff59955995
+666655554944555555555555555555555222222551444225244442ff211442ff286662ff2b6662ff211662ffffffffff4444455544456d6d5444ffff55555555
+6666544544445ff55ff522556d5655225555555555555255294442ff211442ff2d6662ff2d6662ff211662ffffffffff444d45554445d6d65454ffff55555555
+44445ff522225ff55ff522255555522255ffff5555ffff55244442ff211942ff266662ff266662ff211d62ffffffffff44444555444555555444ffff55555555
 ffffffffffffffffffff552222222255ffffffffffffffff244442ff211442ff266662ff266662ff211662fffffffffff5fff5ff2ffffffffff2ffffffffffff
 ffffffffffffffffffffff52222225fffffffffffffffffffffffffffff4fffffffffffffffffffffff6ffffffffffffffffffff2ffffffffff2ffffffffffff
 fffffffffffffffffffffff555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2ffffffffff2ffffffffffff
@@ -2211,14 +2227,14 @@ bbbbffffff4ff4ff000a0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 8888fffff551155f00aaa000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 8888ffff5ffffff50aaaaa00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 8888ffffff8ff8ffaaaaaaa0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-111ffffff551155fa0000000000a0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-111fffff5ffffff5aa00000000aa0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-777fffffffbffbffaaa000000aaa0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-777ffffff551155faaaa0000aaaa0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-bbbfffff5ffffff5aaa000000aaa0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-bbbfffffffffffffaa00000000aa0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-888fffffffffffffa0000000000a0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-888fffffffffffff0000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+111ffffff551155fa0000000000a0000002222000088e800ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+111fffff5ffffff5aa00000000aa0000021222d008288e80ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+777fffffffbffbffaaa000000aaa0000012dde20028ee7e0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+777ffffff551155faaaa0000aaaa000002122d2008288ee0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+bbbfffff5ffffff5aaa000000aaa000002122d2008288ee0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+bbbfffffffffffffaa00000000aa00000d222d600d888e60ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+888fffffffffffffa0000000000a000000ddd60000666700ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+888fffffffffffff00000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 __sfx__
 000100001d050110400c0400204010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
