@@ -1127,9 +1127,9 @@ local function gameinit()
    -- switch player control
    if btnp(4) then
     _p.i=_p.i^^1
-   end
-   if btnp(4) and _p.i == 0 then
-    add(msgs,{_p.x,_p.y,'.',15})
+    if _p.i == 0 then
+     add(msgs,{_p.x,_p.y,'.',15})
+    end
    end
 
    -- input
@@ -1257,8 +1257,7 @@ local function gameinit()
      if iswallclose(_g.x,_g.y,_g.dx,_g.dy) then
       local _obj=objs[(_g.y+_g.dy*3)*32+_g.x+_g.dx*3]
       if _obj and _obj.typ == 23 and not _obj.isguarded then
-       _obj.isguarded=true
-       _g.state='guarding'
+       _obj.isguarded,_g.state=true,'guarding'
       else
        local _turns=shuffle{
         {dx=_g.dy,dy=_g.dx},
@@ -1268,8 +1267,7 @@ local function gameinit()
        for _i=1,3 do -- note: #_turns is always 3
         local _t=_turns[_i]
         if not iswallclose(_g.x,_g.y,_t.dx,_t.dy) then
-         _g.dx=_t.dx
-         _g.dy=_t.dy
+         _g.dx,_g.dy=_t.dx,_t.dy
          break
         end
        end
@@ -1624,6 +1622,7 @@ local function gameinit()
 
  end
 
+
  _draw=function()
   if alertlvl == 2 and policet <= 44 then
    pal(0,12)
@@ -1646,8 +1645,8 @@ local function gameinit()
    -- draw walls
    if _tile == 2 then
     local _tilebelow=floor[_i+32]
-    if _tilebelow == 0 then -- todo: maybe remove this, maybe it shouldn't be possible to have light outside
-     sspr(12,104+_l*5,4,5,_sx,_sy)
+    if _tilebelow == 0 then
+     sspr(12,104,4,5,_sx,_sy)
     elseif _tilebelow == 1 then
      rectfill(_sx,_sy,_sx+3,_sy+4,13-7*_l)
     end
@@ -1799,6 +1798,11 @@ initpolice=function(_onpress)
  palt(11,true)
  wantedness,seenaddend=0,0
 
+ -- sort players on x
+ if #players == 2 and players[1].x > players[2].x then
+  players[1],players[2]=players[2],players[1]
+ end
+
  _update=function()
   if btnp(4) then
    if _onpress then
@@ -1814,13 +1818,10 @@ initpolice=function(_onpress)
   cls(s2t'.0;12;.1;8;'[flr(t())%2])
 
   -- draw players
-  if #players == 2 and players[1].x > players[2].x then
-   players[1],players[2]=players[2],players[1]
-  end
-
   for _i=1,#players do
    local _p=players[_i]
-   local _x,_y=mid(24,_p.x*4+rnd(8),103),mid(16,_p.y*4,85)
+   local _off=_i*4
+   local _x,_y=mid(20+_off,_p.x*4,107-_off),mid(12+_off,_p.y*4,89-_off)
    sspr(89,86,3,10,_x,_y)
    if #_p.loot > 0 then
     sspr(81,86,8,10,_x,_y)
