@@ -112,9 +112,7 @@ local cameras
 
 local alertlvl
 local alertlvls=s2t'24;8;' -- note: only tick time
-local policet=0
-local seenaddend=0
-local wantedness=0
+local policet,wantedness,seenaddend=0,0,0
 
 local players
 local escapedplayers
@@ -1796,7 +1794,7 @@ initpolice=function(_onpress)
  palt(0)
  palt(15,false)
  palt(11,true)
- wantedness,seenaddend=0,0
+ wantedness,seenaddend=3,0
 
  -- sort players on x
  if #players == 2 and players[1].x > players[2].x then
@@ -1971,7 +1969,7 @@ initstatus=function(_msg)
  wantedness=mid(0,wantedness+seenaddend,4)
  local _recognised=wantedness == 4
  if _recognised then
-  _msg='\x8e they know your face now' -- todo: something better
+  _msg='\x8e to dare leaving hiding place' -- todo: something better
  end
 
  -- init players
@@ -2080,6 +2078,7 @@ function initsplash()
   dset(62,200)
   dset(63,6)
   seli,_msg=1,'started new "career"'
+  wantedness=0
   -- debug('new seed',dget(61))
  end
 
