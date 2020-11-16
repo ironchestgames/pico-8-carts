@@ -9,8 +9,6 @@ __lua__
 
 --[[
 
-- smoother loot for safes
-
 - msg.y's should not be in same interval
 
 - add door access cards to be found (maybe on desks?)
@@ -1001,12 +999,11 @@ function mapgen()
     end
    end
 
-   local _goodcash={'good cash',300+rnd(200)}
+   local _goodcash={'good cash',400+rnd(200)}
    _o.loot=shuffle{
-    {'some cash',100+rnd(200)},
     _goodcash,_goodcash,
-    {'gold bars',500+rnd(600)},
-    {'diamonds',1000+rnd(1000)},
+    {'gold bars',600+rnd(600)},
+    {'diamonds',1200+rnd(900)},
     {'important documents',rnd(1200)},
    }[1]
 
