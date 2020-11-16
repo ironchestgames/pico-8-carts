@@ -13,8 +13,6 @@ __lua__
 
 - msg.y's should not be in same interval
 
-- remove that cameras can be added shut off? (confusing)
-
 - add door access cards to be found (maybe on desks?)
 
 - remove wantedness? (or try the wantedness icon in the top left)
@@ -801,9 +799,6 @@ function mapgen()
   end
 
   if rnd() > 0.5 then
-   if rnd() > 0.8 then
-    _c.state=0
-   end
    add(cameras,_c)
   end
 
