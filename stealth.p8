@@ -9,6 +9,26 @@ __lua__
 
 --[[
 
+- smoother loot for safes
+
+- msg.y's should not be in same interval
+
+- remove that cameras can be added shut off? (confusing)
+
+- add door access cards to be found (maybe on desks?)
+
+- remove wantedness? (or try the wantedness icon in the top left)
+
+- unlock doors with fusebox
+
+- clearer text for when lighted doors are opened (instead of "intruder alert" it should say something about opened door)
+
+- clearer texts of why the alarm goes of (maybe do different values for when lighted by camera or guard, then have text "camera: statuette gone!")
+
+- remove map selection, maybe it's just "scouted", then you can choose to
+  enter or skip, if you skip you go back to status (new day.) this change
+  would impact wantedness (as a new day would drive down wantedness)
+
 - set label
 
 - filing drawers
@@ -34,7 +54,7 @@ __lua__
 
 --]]
 
-cartdata'ironchestgames_sneakystealy_v1_dev2'
+cartdata'ironchestgames_sneakystealy_v1_dev3'
 
 
 
@@ -954,7 +974,6 @@ function mapgen()
     action={[2]=computer},
     loot=shuffle{
      {'door access code'},
-     {'blueprint'},
      {'cute cat pictures',1},
      {'blackmail material',rnd(400)},
      {'company secrets',rnd(800)},
@@ -1916,7 +1935,7 @@ local function initmapselect()
   elseif dget(seli) == 1 then
    print('(already visited)',23,37,6)
   else
-   print('scouted / blueprint:',23,37,6)
+   print('scouted:',23,37,6)
    for _i=1,#mapthings do
     print(mapthings[_i],23,37+_i*7,7)
    end
@@ -1969,7 +1988,7 @@ initstatus=function(_msg)
  wantedness=mid(0,wantedness+seenaddend,4)
  local _recognised=wantedness == 4
  if _recognised then
-  _msg='\x8e to dare leaving hiding place' -- todo: something better
+  _msg='\x8e to leave hiding place...' -- todo: something better
  end
 
  -- init players
@@ -1985,12 +2004,6 @@ initstatus=function(_msg)
    workingstate='hacking',
    loot={},
   }
- end
-
- for _l in all(playerinventory) do
-  if _l[1] == 'blueprint' and dget(63) < 60 then
-   dset(63,dget(63)+1)
-  end
  end
 
  escapedplayers,playerinventory={},{}
