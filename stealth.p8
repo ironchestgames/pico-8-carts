@@ -489,52 +489,19 @@ local function resetdoor(_p,_o)
  end
 end
 
-local function doorfromunder(_p,_o,_tmp)
+local function door(_p,_o,_tmp,_doorobj,_dy,_forstop)
  if not _tmp.opened then
-  _o.typ=doortypopened[_o.typ]
+  _doorobj.typ=doortypopened[_doorobj.typ]
   _tmp.opened=true
   makesound(_p,23)
  end
 
- if light[(_tmp.oy-2)*32+_tmp.ox] == 1 then
-  setalertlvl2('intruder alert!',_tmp.ox,_tmp.oy)
- end
-
- for _y=_tmp.oy-2,0,-1 do
-  fog[_y*32+_tmp.ox]=0
-  if floor[_y*32+_tmp.ox] == 2 then
-   break
-  end
- end
-
- if btnp(2,_p.i) then
-  _p.y-=3
-  resetdoor(_p,_o)
- end
-
- if btnp(3,_p.i) then
-  resetdoor(_p,_o)
- end
-end
-
-local function doorpeekfromunder(_p,_o,_tmp)
- fog[(_tmp.oy-2)*32+_tmp.ox]=0
-end
-
-local function doorfromabove(_p,_o,_tmp)
- if not _tmp.opened then
-  _tmp.o2=objs[_tmp.oi+32]
-  _tmp.o2.typ=doortypopened[_tmp.o2.typ]
-  _tmp.opened=true
-  makesound(_p,23)
- end
-
- if light[(_tmp.oy+2)*32+_tmp.ox] == 1 then
+ if light[(_tmp.oy+2*_dy)*32+_tmp.ox] == 1 then
   setalertlvl2('intruder alert!',_tmp.ox,_tmp.oy)
  end
 
  fog[(_tmp.oy+1)*32+_tmp.ox]=0
- for _y=_tmp.oy+2,32 do
+ for _y=_tmp.oy+2*_dy,_forstop,_dy do
   local _i=_y*32+_tmp.ox
   fog[_i]=0
   if floor[_i] == 2 then
@@ -543,13 +510,30 @@ local function doorfromabove(_p,_o,_tmp)
  end
 
  if btnp(2,_p.i) then
-  resetdoor(_p,_tmp.o2)
+  if _dy < 0 then
+   _p.y-=3
+  end
+  resetdoor(_p,_doorobj)
  end
 
  if btnp(3,_p.i) then
-  _p.y+=3
-  resetdoor(_p,_tmp.o2)
+  if _dy > 0 then
+   _p.y+=3
+  end
+  resetdoor(_p,_doorobj)
  end
+end
+
+local function doorfromunder(_p,_o,_tmp)
+ door(_p,_o,_tmp,_o,-1,0)
+end
+
+local function doorfromabove(_p,_o,_tmp)
+ door(_p,_o,_tmp,objs[_tmp.oi+32],1,32)
+end
+
+local function doorpeekfromunder(_p,_o,_tmp)
+ fog[(_tmp.oy-2)*32+_tmp.ox]=0
 end
 
 local function doorpeekfromabove(_p,_o,_tmp)
@@ -559,64 +543,11 @@ local function doorpeekfromabove(_p,_o,_tmp)
 end
 
 
-local function lockeddoorfrombelow(_p,_o,_tmp)
- if ispoweron then
-  if _o.typ == 15 then
-   for _l in all(playerinventory) do
-    if _l[1] == 'door access code' then
-     _o.typ=16
-     _p.state,_p.action='standing'
-     makesound(_p,24)
-     return
-    end
-   end
-   makesound(_p,25)
-   _p.state,_p.action='standing'
-   return
-  end
-
-  if doortypopened[_o.typ] and not _tmp.opened then
-   _o.typ=doortypopened[_o.typ]
-   _tmp.opened=true
-   makesound(_p,23)
-  end
-
-  if light[(_tmp.oy-2)*32+_tmp.ox] == 1 then
-   setalertlvl2('intruder alert!',_tmp.ox,_tmp.oy)
-  end
-
-  for _y=_tmp.oy-2,0,-1 do
-   fog[_y*32+_tmp.ox]=0
-   if floor[_y*32+_tmp.ox] == 2 then
-    break
-   end
-  end
-
-  if btnp(2,_p.i) then
-   _p.y-=3
-   resetdoor(_p,_o)
-  end
-
-  if btnp(3,_p.i) then
-   resetdoor(_p,_o)
-  end
-
- else
-  if doortypopened[_o.typ] and not _tmp.opened then
-   _o.typ=doortypopened[_o.typ]
-   _tmp.opened=true
-   makesound(_p,23)
-  end
-  _p.state,_p.action='standing'
- end
-end
-
-local function lockeddoorfromabove(_p,_o,_tmp)
- local _o2=objs[_tmp.oi+32]
- if _o2.typ == 15 then
+local function lockeddoor(_p,_o,_tmp,_doorobj,_dy,_forstop)
+ if _doorobj.typ == 15 then
   for _l in all(playerinventory) do
    if _l[1] ==  'door access code' then
-    _o2.typ=16
+    _doorobj.typ=16
     _p.state,_p.action='standing'
     makesound(_p,24)
     return
@@ -628,17 +559,17 @@ local function lockeddoorfromabove(_p,_o,_tmp)
  end
 
  if not _tmp.opened then
-  _o2.typ=doortypopened[_o2.typ]
+  _doorobj.typ=doortypopened[_doorobj.typ]
   _tmp.opened=true
   makesound(_p,23)
  end
 
- if light[(_tmp.oy+2)*32+_tmp.ox] == 1 then
+ if light[(_tmp.oy+2*_dy)*32+_tmp.ox] == 1 then
   setalertlvl2('intruder alert!',_tmp.ox,_tmp.oy)
  end
 
  fog[(_tmp.oy+1)*32+_tmp.ox]=0
- for _y=_tmp.oy+2,32 do
+ for _y=_tmp.oy+2*_dy,_forstop,_dy do
   local _i=_y*32+_tmp.ox
   fog[_i]=0
   if floor[_i] == 2 then
@@ -647,13 +578,26 @@ local function lockeddoorfromabove(_p,_o,_tmp)
  end
 
  if btnp(2,_p.i) then
-  resetdoor(_p,_o2)
+  if _dy < 0 then
+   _p.y-=3
+  end
+  resetdoor(_p,_doorobj)
  end
 
  if btnp(3,_p.i) then
-  _p.y+=3
-  resetdoor(_p,_o2)
+  if _dy > 0 then
+   _p.y+=3
+  end
+  resetdoor(_p,_doorobj)
  end
+end
+
+local function lockeddoorfrombelow(_p,_o,_tmp)
+ lockeddoor(_p,_o,_tmp,_o,-1,0)
+end
+
+local function lockeddoorfromabove(_p,_o,_tmp)
+ lockeddoor(_p,_o,_tmp,objs[_tmp.oi+32],1,32)
 end
 
 
@@ -671,9 +615,22 @@ local function fusebox(_p,_o,_tmp)
 
  _tmp.tick+=1
 
+ for _i=0,arslen do
+  local _o=objs[_i]
+  if _o and (_o.typ == 15 or _o.typ == 16) then
+   _o.typ=17
+  end
+ end
+
  if btn(3,_p.i) then
   -- reset player and obj and ispoweron
   ispoweron,_p.state,_o.typ,_p.action,_o.draw=true,'standing',24
+  for _i=0,arslen do
+   local _o=objs[_i]
+   if _o and _o.typ == 17 then
+    _o.typ=15
+   end
+  end
  end
 end
 
@@ -823,12 +780,12 @@ function mapgen()
   end
 
   -- add guard
-  -- local _gx,_gy=flr(_xstart+_w/2),flr(_ystart+_h/2)
-  -- if _h > 6 and #guards < 3 and rnd() > 0.5 then
-  --  local _g=s2t'.dx;-1;.dy;0;.state;patrolling;.state_c;0;'
-  --  _g.x,_g.y,_g.isarmed=_gx,_gy,flr(rnd()+0.2)
-  --  add(guards,_g)
-  -- end
+  local _gx,_gy=flr(_xstart+_w/2),flr(_ystart+_h/2)
+  if _h > 6 and #guards < 3 and rnd() > 0.5 then
+   local _g=s2t'.dx;-1;.dy;0;.state;patrolling;.state_c;0;'
+   _g.x,_g.y,_g.isarmed=_gx,_gy,flr(rnd()+0.2)
+   add(guards,_g)
+  end
 
   -- bottom wall
   _ystart+=_h-1
@@ -1790,12 +1747,12 @@ local function gameinit()
 
 
   -- draw fog
-  -- for _i=0,arslen do
-  --  if not fog[_i] then
-  --   local _x,_y=(_i&31)*4,(_i\32)*4
-  --   rectfill(_x,_y,_x+3,_y+3,0)
-  --  end
-  -- end
+  for _i=0,arslen do
+   if not fog[_i] then
+    local _x,_y=(_i&31)*4,(_i\32)*4
+    rectfill(_x,_y,_x+3,_y+3,0)
+   end
+  end
 
   -- draw messages
   local _coli=1
