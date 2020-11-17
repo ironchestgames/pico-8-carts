@@ -9,11 +9,11 @@ __lua__
 
 --[[
 
+- increase chance of locked doors to room with safe?
+
 - msg.y's should not be in same interval
 
 - add door access cards to be found (maybe on desks?)
-
-- clearer text for when lighted doors are opened (instead of "intruder alert" it should say something about opened door)
 
 - clearer texts of why the alarm goes of (maybe do different values for when lighted by camera or guard, then have text "camera: statuette gone!")
 
@@ -199,26 +199,19 @@ local function playerloots(_p,_o)
    add(playerinventory,_o.loot) -- no value, it's information
   end
  end
- add(msgs,{_p.x,_p.y-1,_m,40})
+ add(msgs,{_p.x,_p.y-1,_m,1,40})
  _o.loot=nil
 end
 
 
-
-
-
 local function setalertlvl2(_m,_x,_y)
  if alertlvl == 1 then
-  seenaddend,seenx,seeny,seent=1,_x*4-2,_y*4-8,60
   sfx(21)
   alertlvl,tick,policet=2,60,60
-  local _i=0
   for _g in all(guards) do
-   add(msgs,{_g.x,_g.y,_m,nil,_i*15,2})
-   _i+=1
    _g.state,_g.state_c='patrolling',0
   end
-  add(msgs,{_x,_y,_m,nil,nil,2})
+  add(msgs,{_x,_y,_m,2})
  end
 end
 
@@ -235,7 +228,7 @@ local function makesound(_p,_sfx)
     _g.state,_m='listening','?'
     _g.state_c+=flr(rnd(3))+5
    end
-   add(msgs,{_g.x,_g.y,_m,30,nil,2})
+   add(msgs,{_g.x,_g.y,_m,2,30})
   end
  end
 end
@@ -494,7 +487,7 @@ local function door(_p,_o,_tmp,_doorobj,_dy,_forstop)
  end
 
  if light[(_tmp.oy+2*_dy)*32+_tmp.ox] == 1 then
-  setalertlvl2('intruder alert!',_tmp.ox,_tmp.oy)
+  setalertlvl2('door opened!',_tmp.ox,_tmp.oy)
  end
 
  fog[(_tmp.oy+1)*32+_tmp.ox]=0
@@ -562,7 +555,7 @@ local function lockeddoor(_p,_o,_tmp,_doorobj,_dy,_forstop)
  end
 
  if light[(_tmp.oy+2*_dy)*32+_tmp.ox] == 1 then
-  setalertlvl2('intruder alert!',_tmp.ox,_tmp.oy)
+  setalertlvl2('door opened!',_tmp.ox,_tmp.oy)
  end
 
  fog[(_tmp.oy+1)*32+_tmp.ox]=0
@@ -1119,7 +1112,7 @@ local function gameinit()
    if btnp(4) then
     _p.i=_p.i^^1
     if _p.i == 0 then
-     add(msgs,{_p.x,_p.y,'.',15})
+     add(msgs,{_p.x,_p.y,'.',1,15})
     end
    end
 
@@ -1167,7 +1160,7 @@ local function gameinit()
     else
      if _nextx > 31 or _nextx < 0 or _nexty > 31 or _nexty < 0 then
       add(escapedplayers,del(players,_p))
-      add(msgs,{_p.x,_p.y,'escaped',30})
+      add(msgs,{_p.x,_p.y,'escaped',1,30})
 
       if #players <= 0 then
        initstatus()
@@ -1314,21 +1307,13 @@ local function gameinit()
   -- 1 - x
   -- 2 - y
   -- 3 - string
-  -- 4 - time
-  -- 5 - delay
-  -- 6 - colorset (1 or 2)
+  -- 4 - colorset (1 or 2)
+  -- 5 - time
   for _m in all(msgs) do
-   _m[4]=_m[4] or 90
-   if _m[5] then
-    _m[5]-=1
-    if _m[5] < 0 then
-     _m[5]=nil
-    end
-   else
-    _m[4]-=1
-    if _m[4] <= 0 then
-     del(msgs,_m)
-    end
+   _m[5]=_m[5] or 90
+   _m[5]-=1
+   if _m[5] <= 0 then
+    del(msgs,_m)
    end
   end
 
@@ -1516,6 +1501,12 @@ local function gameinit()
   -- intruder alert
   for _p in all(players) do
    if light[_p.y*32+_p.x] == 1 then
+    if not seent then
+     seenaddend,seenx,seeny,seent=1,_p.x*4-2,_p.y*4-8,60
+     if wantedness >= 3 then
+      add(msgs,{_p.x,_p.y-1,'we\'ve seen your face now!',2})
+     end
+    end
     setalertlvl2('intruder alert!',_p.x,_p.y)
    end
   end
@@ -1546,7 +1537,7 @@ local function gameinit()
         break
        elseif _p.x == _x then
         if _p.state != 'caught' then
-         add(msgs,{_g.x,_g.y,'hands up!',nil,nil,2})
+         add(msgs,{_g.x,_g.y,'hands up!',2})
         end
         _p.state,_p.workingstate,_g.state='caught','handsup','gunpointing'
        end
@@ -1750,7 +1741,7 @@ local function gameinit()
    end
   end
 
-  -- draw seen icon
+  -- draw seen icons
   if seent and seent > 0 then
    seent-=1
    if seent%8 > 4 then
@@ -1764,14 +1755,12 @@ local function gameinit()
    _coli=2
   end
   for _m in all(msgs) do
-   if not _m[5] then
-    local _hw=#_m[3]*2
-    print(
-     _m[3],
-     max(min(_m[1]*4-_hw,127-_hw*2),0),
-     max(_m[2]*4-13,0),
-     msgcols[_m[6] or 1][_coli])
-   end
+   local _hw=#_m[3]*2
+   print(
+    _m[3],
+    max(min(_m[1]*4-_hw,127-_hw*2),0),
+    max(_m[2]*4-13,0),
+    msgcols[_m[4]][_coli])
   end
  end
 end
@@ -2009,11 +1998,9 @@ initstatus=function(_msg)
   local _s='highscore $'..dget(0)
   print(_s,120-#_s*4,1,1)
 
-  local _col=6
   if _recognised and flr(t()*2)%2 == 1 then
-   _col=8
+   print('wanted',46,16,8)
   end
-  print('(wantedness)',46,16,_col)
 
   for _i=0,3 do
    spr(244+mid(0,wantedness-_i,1),9+_i*8,14)
