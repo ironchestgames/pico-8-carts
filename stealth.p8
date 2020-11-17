@@ -462,19 +462,36 @@ local function safe(_p,_o,_tmp)
 
 end
 
+--[[
 
+12 - regular door
+13 - regular door open
+14 - regular door frame
+
+15 - door with lock (locked)
+16 - door with lock (unlocked)
+17 - door with lock (shutdown)
+18 - door with lock open
+19 - door with lock frame
+
+--]]
+local doortypopened=s2t'.12;13;.16;18;.17;18;'
+local doortypclosed=s2t'.13;12;.18;17;'
 
 local function resetdoor(_p,_o)
  -- reset player
  _p.state,_p.action='standing'
 
  -- reset obj
- _o.typ-=2
+ _o.typ=doortypclosed[_o.typ]
+ if _o.typ == 17 and ispoweron then
+  _o.typ=15
+ end
 end
 
 local function doorfromunder(_p,_o,_tmp)
  if not _tmp.opened then
-  _o.typ+=2
+  _o.typ=doortypopened[_o.typ]
   _tmp.opened=true
   makesound(_p,23)
  end
@@ -507,7 +524,7 @@ end
 local function doorfromabove(_p,_o,_tmp)
  if not _tmp.opened then
   _tmp.o2=objs[_tmp.oi+32]
-  _tmp.o2.typ+=2
+  _tmp.o2.typ=doortypopened[_tmp.o2.typ]
   _tmp.opened=true
   makesound(_p,23)
  end
@@ -544,10 +561,10 @@ end
 
 local function lockeddoorfrombelow(_p,_o,_tmp)
  if ispoweron then
-  if _o.typ == 16 then
+  if _o.typ == 15 then
    for _l in all(playerinventory) do
     if _l[1] == 'door access code' then
-     _o.typ+=2
+     _o.typ=16
      _p.state,_p.action='standing'
      makesound(_p,24)
      return
@@ -558,8 +575,8 @@ local function lockeddoorfrombelow(_p,_o,_tmp)
    return
   end
 
-  if not _tmp.opened then
-   _o.typ+=2
+  if doortypopened[_o.typ] and not _tmp.opened then
+   _o.typ=doortypopened[_o.typ]
    _tmp.opened=true
    makesound(_p,23)
   end
@@ -585,16 +602,21 @@ local function lockeddoorfrombelow(_p,_o,_tmp)
   end
 
  else
+  if doortypopened[_o.typ] and not _tmp.opened then
+   _o.typ=doortypopened[_o.typ]
+   _tmp.opened=true
+   makesound(_p,23)
+  end
   _p.state,_p.action='standing'
  end
 end
 
 local function lockeddoorfromabove(_p,_o,_tmp)
  local _o2=objs[_tmp.oi+32]
- if _o2.typ == 16 then
+ if _o2.typ == 15 then
   for _l in all(playerinventory) do
    if _l[1] ==  'door access code' then
-    _o2.typ+=2
+    _o2.typ=16
     _p.state,_p.action='standing'
     makesound(_p,24)
     return
@@ -606,7 +628,7 @@ local function lockeddoorfromabove(_p,_o,_tmp)
  end
 
  if not _tmp.opened then
-  _o2.typ+=2
+  _o2.typ=doortypopened[_o2.typ]
   _tmp.opened=true
   makesound(_p,23)
  end
@@ -801,12 +823,12 @@ function mapgen()
   end
 
   -- add guard
-  local _gx,_gy=flr(_xstart+_w/2),flr(_ystart+_h/2)
-  if _h > 6 and #guards < 3 and rnd() > 0.5 then
-   local _g=s2t'.dx;-1;.dy;0;.state;patrolling;.state_c;0;'
-   _g.x,_g.y,_g.isarmed=_gx,_gy,flr(rnd()+0.2)
-   add(guards,_g)
-  end
+  -- local _gx,_gy=flr(_xstart+_w/2),flr(_ystart+_h/2)
+  -- if _h > 6 and #guards < 3 and rnd() > 0.5 then
+  --  local _g=s2t'.dx;-1;.dy;0;.state;patrolling;.state_c;0;'
+  --  _g.x,_g.y,_g.isarmed=_gx,_gy,flr(rnd()+0.2)
+  --  add(guards,_g)
+  -- end
 
   -- bottom wall
   _ystart+=_h-1
@@ -1074,7 +1096,7 @@ function mapgen()
      objs[_i-32],
      objs[_iplus1]=
        {action={[3]=doorfromabove},adjaction={[3]=doorpeekfromabove}},
-       {typ=13}
+       {typ=14}
 
      -- switch to locked
      if rnd() > 0.70 then
@@ -1082,10 +1104,10 @@ function mapgen()
       objs[_i].action[2],
       objs[_i-32].action[3],
       objs[_iplus1].typ=
-        16,
+        15,
         lockeddoorfrombelow,
         lockeddoorfromabove,
-        17
+        19
      end
     end
    end
@@ -1768,12 +1790,12 @@ local function gameinit()
 
 
   -- draw fog
-  for _i=0,arslen do
-   if not fog[_i] then
-    local _x,_y=(_i&31)*4,(_i\32)*4
-    rectfill(_x,_y,_x+3,_y+3,0)
-   end
-  end
+  -- for _i=0,arslen do
+  --  if not fog[_i] then
+  --   local _x,_y=(_i&31)*4,(_i\32)*4
+  --   rectfill(_x,_y,_x+3,_y+3,0)
+  --  end
+  -- end
 
   -- draw messages
   local _coli=1
@@ -2118,28 +2140,28 @@ _init=initsplash
 __gfx__
 f5ffffffffffffffffff5555555555555555555555555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff99ff6ffffff
 f5f5ccccf555ffffffff2511155111525111111551111125ffffffffffffffffffffffffffffffffffffffff5dd55dd5fffffffffff555555ffff9ffff6fffff
-ff5fcc3cf2225ffffff5251115511152511d111551555225222222ff222222ff222222ff222222ff222222ff5dd55d15ffffffff5ff511115ffff99ff66fffff
-f5ffcc3c555f5ffffff525555555555251111115555552d5255552ff211152ff2dddd2ff2dddd2ff2111d2ff5dd55115fffffffff5f511115ffff55ff55ff55f
-f5ffc3cc555f5ffffff525111551115251dd111551111225255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd55115ffffffff252511115222555555555555
-2222fccf222f5222222555111551115551d11115511112d5255552ff211552ff2dddd2ff2dddd2ff211dd2ff5dd55dd5444445552d2555555222544554455445
-dddd55555d55555555555555555555555111111551555225255552ff211552ff28ddd2ff2bddd2ff211dd2ffffffffff222225552225d5d55222555555555555
-dddd522555555ff55ff52255d15d552255555555555552552d5552ff211552ff25ddd2ff25ddd2ff211dd2ffffffffff2225255522255d5d5252555555555555
-22225ff522225ff55ff522255555522255ffff5555ffff55255552ff211d52ff2dddd2ff2dddd2ff2115d2ffffffffff22222555222555555222555555555555
-ffffffffffffffffffff552222222255ffffffffffffffff255552ff211552ff2dddd2ff2dddd2ff211dd2fffffffffff5fff5ff5ffffffffff5ffffffffffff
-ffffffffffffffffffffff52222225fffffffffffffffffffffffffffff5fffffffffffffffffffffffdffffffffffffffffffff5ffffffffff5ffffffffffff
+ff5fcc3cf2225ffffff5251115511152511d1115515552252222222222ff222222222222222222ffffffffff5dd55d15ffffffff5ff511115ffff99ff66fffff
+f5ffcc3c555f5ffffff525555555555251111115555552d52555211152ff2ddd2ddd2ddd2111d2ffffffffff5dd55115fffffffff5f511115ffff55ff55ff55f
+f5ffc3cc555f5ffffff525111551115251dd1115511112252555211552ff2ddd2ddd2ddd211dd2ffffffffff5dd55115ffffffff252511115222555555555555
+2222fccf222f5222222555111551115551d11115511112d52555211552ff2ddd2ddd2ddd211dd2ffffffffff5dd55dd5444445552d2555555222544554455445
+dddd55555d555555555555555555555551111115515552252555211552ff28dd2bdd24dd211dd2ffffffffffffffffff222225552225d5d55222555555555555
+dddd522555555ff55ff52255d15d552255555555555552552d55211552ff25dd25dd25dd211dd2ffffffffffffffffff2225255522255d5d5252555555555555
+22225ff522225ff55ff522255555522255ffff5555ffff552555211d52ff2ddd2ddd2ddd2115d2ffffffffffffffffff22222555222555555222555555555555
+ffffffffffffffffffff552222222255ffffffffffffffff2555211552ff2ddd2ddd2ddd211dd2fffffffffffffffffff5fff5ff5ffffffffff5ffffffffffff
+ffffffffffffffffffffff52222225fffffffffffffffffffffffff5fffffffffffffffffffdffffffffffffffffffffffffffff5ffffffffff5ffffffffffff
 fffffffffffffffffffffff555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5ffffffffff5ffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 f3ffffffffffffffffff5555555555555555555555555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaaff7ffffff
 f3f3ccccf444ffffffffd5111551115d5222222551111125ffffffffffffffffffffffffffffffffffffffff46744674fffffffffff555555ffffaffff7fffff
-ff3fcc7cf2225ffffff5d5111551115d5226222551444225222222ff222222ff222222ff222222ff222222ff47644714ffffffff3ff511115ffffaaff77fffff
-f3ffcc7c444f5ffffff5d5555555555d5222222555555265244442ff211142ff266662ff266662ff211162ff46644114fffffffff3f511115ffff55ff55ff55f
-f3ffc7cc444f5ffffff5d5111551115d5266222551111225244442ff211442ff266662ff266662ff211662ff46744114ffffffff434511115444555555555555
-4444fccf222f588888855511155111555262222551111265244442ff211442ff266662ff266662ff211662ff47644764ddddd555464555555444599559955995
-666655554944555555555555555555555222222551444225244442ff211442ff286662ff2b6662ff211662ffffffffff4444455544456d6d5444555555555555
-6666544544445ff55ff522556d5655225555555555555255294442ff211442ff2d6662ff2d6662ff211662ffffffffff444d45554445d6d65454555555555555
-44445ff522225ff55ff522255555522255ffff5555ffff55244442ff211942ff266662ff266662ff211d62ffffffffff44444555444555555444555555555555
-ffffffffffffffffffff552222222255ffffffffffffffff244442ff211442ff266662ff266662ff211662fffffffffff5fff5ff2ffffffffff2ffffffffffff
-ffffffffffffffffffffff52222225fffffffffffffffffffffffffffff4fffffffffffffffffffffff6ffffffffffffffffffff2ffffffffff2ffffffffffff
+ff3fcc7cf2225ffffff5d5111551115d52262225514442252222222222ff222222222222222222ffffffffff47644714ffffffff3ff511115ffffaaff77fffff
+f3ffcc7c444f5ffffff5d5555555555d52222225555552652444211142ff266626662666211162ffffffffff46644114fffffffff3f511115ffff55ff55ff55f
+f3ffc7cc444f5ffffff5d5111551115d52662225511112252444211442ff266626662666211662ffffffffff46744114ffffffff434511115444555555555555
+4444fccf222f5888888555111551115552622225511112652444211442ff266626662666211662ffffffffff47644764ddddd555464555555444599559955995
+6666555549445555555555555555555552222225514442252444211442ff28662b662466211662ffffffffffffffffff4444455544456d6d5444555555555555
+6666544544445ff55ff522556d56552255555555555552552944211442ff2d662d662d66211662ffffffffffffffffff444d45554445d6d65454555555555555
+44445ff522225ff55ff522255555522255ffff5555ffff552444211942ff266626662666211d62ffffffffffffffffff44444555444555555444555555555555
+ffffffffffffffffffff552222222255ffffffffffffffff2444211442ff266626662666211662fffffffffffffffffff5fff5ff2ffffffffff2ffffffffffff
+ffffffffffffffffffffff52222225fffffffffffffffffffffffff4fffffffffffffffffff6ffffffffffffffffffffffffffff2ffffffffff2ffffffffffff
 fffffffffffffffffffffff555555fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2ffffffffff2ffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
