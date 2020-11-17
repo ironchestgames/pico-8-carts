@@ -13,10 +13,6 @@ __lua__
 
 - add door access cards to be found (maybe on desks?)
 
-- remove wantedness? (or try the wantedness icon in the top left)
-
-- unlock doors with fusebox
-
 - clearer text for when lighted doors are opened (instead of "intruder alert" it should say something about opened door)
 
 - clearer texts of why the alarm goes of (maybe do different values for when lighted by camera or guard, then have text "camera: statuette gone!")
@@ -213,6 +209,7 @@ end
 
 local function setalertlvl2(_m,_x,_y)
  if alertlvl == 1 then
+  seenaddend,seenx,seeny,seent=1,_x*4-2,_y*4-8,60
   sfx(21)
   alertlvl,tick,policet=2,60,60
   local _i=0
@@ -1107,7 +1104,7 @@ end
 
 local function gameinit()
  poke(0x5f5c,5) -- note: set auto-repeat delay for btnp
- msgs,tick,alertlvl,seenaddend={},0,1,-1
+ msgs,tick,alertlvl,seenaddend,seent={},0,1,-1
  local _playwalksfx
  _update=function()
   tick-=1
@@ -1519,7 +1516,6 @@ local function gameinit()
   -- intruder alert
   for _p in all(players) do
    if light[_p.y*32+_p.x] == 1 then
-    seenaddend=1
     setalertlvl2('intruder alert!',_p.x,_p.y)
    end
   end
@@ -1751,6 +1747,14 @@ local function gameinit()
    if not fog[_i] then
     local _x,_y=(_i&31)*4,(_i\32)*4
     rectfill(_x,_y,_x+3,_y+3,0)
+   end
+  end
+
+  -- draw seen icon
+  if seent and seent > 0 then
+   seent-=1
+   if seent%8 > 4 then
+    spr(246,seenx,seeny)
    end
   end
 
@@ -2215,13 +2219,13 @@ bbbbffffff4ff4ff000a0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 8888fffff551155f00aaa000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 8888ffff5ffffff50aaaaa00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 8888ffffff8ff8ffaaaaaaa0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-111ffffff551155fa0000000000a0000002222000088e800ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-111fffff5ffffff5aa00000000aa0000021222d008288e80ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-777fffffffbffbffaaa000000aaa0000012dde20028ee7e0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-777ffffff551155faaaa0000aaaa000002122d2008288ee0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-bbbfffff5ffffff5aaa000000aaa000002122d2008288ee0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-bbbfffffffffffffaa00000000aa00000d222d600d888e60ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-888fffffffffffffa0000000000a000000ddd60000666700ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+111ffffff551155fa0000000000a0000002222000088e800ff88e8ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+111fffff5ffffff5aa00000000aa0000021222d008288e80f8288e8fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+777fffffffbffbffaaa000000aaa0000012dde20028ee7e0f28ee7efffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+777ffffff551155faaaa0000aaaa000002122d2008288ee0f8288eefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+bbbfffff5ffffff5aaa000000aaa000002122d2008288ee0f8288eefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+bbbfffffffffffffaa00000000aa00000d222d600d888e60fd888e6fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+888fffffffffffffa0000000000a000000ddd60000666700ff6667ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 888fffffffffffff00000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 __sfx__
 000100001d050110400c0400204010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
