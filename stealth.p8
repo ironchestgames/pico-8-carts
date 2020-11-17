@@ -8,6 +8,18 @@ __lua__
 -- - local _x,_y=_i&31,_i\32
 
 --[[
+ cartdata layout:
+  0 - highscore
+  1 - cash
+  2 - day
+  3 - wantedness
+--]]
+
+--[[
+
+todo
+
+- change menus to work only with d-pad
 
 - increase chance of locked doors to room with safe?
 
@@ -46,7 +58,7 @@ __lua__
 
 --]]
 
-cartdata'ironchestgames_sneakystealy_v1_dev3'
+cartdata'ironchestgames_sneakystealy_v1_dev4'
 
 
 
@@ -1095,7 +1107,7 @@ end
 
 
 
-local function gameinit()
+local function initgame()
  poke(0x5f5c,5) -- note: set auto-repeat delay for btnp
  msgs,tick,alertlvl,seenaddend,seent={},0,1,-1
  local _playwalksfx
@@ -1795,7 +1807,7 @@ initpolice=function(_onpress)
    if _onpress then
     _onpress()
    else
-    dset(61,0)
+    dset(2,0) -- day
     initsplash()
    end
   end
@@ -1833,7 +1845,7 @@ initpolice=function(_onpress)
   if not _onpress then
    sspr(100,78,28,18,15,102)
    _s='caught!  \x8e to start over'
-   print('$'..dget(62),1,1,7)
+   print('$'..dget(1),1,1,7) -- cash
   end
   print(_s,16,122,10)
 
@@ -1850,70 +1862,33 @@ end
 
 
 local function initmapselect()
- palt()
- srand(dget(61)+seli)
+ palt() -- 0,false
+ -- srand(1000) -- set if test level
  mapgen()
  local _cash,_reconcost=0
  _update=function()
-  local _nextbuyi,_oldseli=dget(63),seli
-  _cash,_reconcost=dget(62),flr(_nextbuyi*6)
   if btnp(1) then
-   seli+=1
+   initgame()
   elseif btnp(0) then
-   seli-=1
-  end
-  seli=min(seli,60)
-  if seli != _oldseli then
-   seli=mid(1,seli,_nextbuyi)
-   srand(dget(61)+seli)
-   mapgen()
-  end
-  if btnp(2) or btnp(4) then
-   if seli == _nextbuyi then
-    if _cash >= _reconcost then
-     dset(62,_cash-_reconcost)
-     dset(63,_nextbuyi+1)
-    end
-   elseif dget(seli) != 1 then
-    dset(seli,1)
-    gameinit()
-   end
+   initstatus()
   end
  end
 
  _draw=function()
-  local _nextbuyi=dget(63)
   cls()
-  rectfill(0,0,46,6,3)
-  print('$'.._cash,2,1,11)
-  rectfill(15,15,114,104,5)
-  if seli > 1 then
-   spr(243,9,54)
+
+  rectfill(14,15,116,97,5)
+  print('next target',43,26,15)
+
+  for _i=1,#mapthings do
+   print(mapthings[_i],23,36+_i*7,7)
   end
-  if seli < _nextbuyi and seli < 60 then
-   spr(242,117,54)
+  if #mapthings == 0 then
+   print('(nothing much)',23,41,7)
   end
 
-  print('hit target '..seli,19,18,15)
-  if seli == _nextbuyi then
-   local _col=8
-   if _cash >= _reconcost then
-    _col=11
-    spr(226,61,104)
-   end
-   print('pay scout $'.._reconcost,23,37,_col)
-  elseif dget(seli) == 1 then
-   print('(already visited)',23,37,6)
-  else
-   print('scouted:',23,37,6)
-   for _i=1,#mapthings do
-    print(mapthings[_i],23,37+_i*7,7)
-   end
-   if #mapthings == 0 then
-    print('(nothing much)',23,44,7)
-   end
-   spr(226,61,104)
-  end
+  print('\x8b skip',8,113,10)
+  print('hit \x91',100,113,10)
  end
 end
 
@@ -1925,16 +1900,17 @@ end
 
 
 initstatus=function(_msg)
+ poke(0x5f5c,-1)
  sfx(16,-2)
  sfx(17,-2)
- local _rows={{'ingoing',dget(62)}}
+ local _rows={{'ingoing',dget(1)}} -- cash
  for _p in all(escapedplayers) do
   for _l in all(_p.loot) do
    _l[2]=flr(_l[2])
    add(_rows,_l)
   end
  end
- add(_rows,{'daily expenses',-(38+dget(63)*2)})
+ add(_rows,{'daily expenses',-dget(2)*2})
  local _cash=0
  for _r in all(_rows) do
   _cash+=_r[2]
@@ -1942,7 +1918,7 @@ initstatus=function(_msg)
  if _cash < -20000 then
   _cash=32767
  end
- dset(62,_cash)
+ dset(1,_cash)
  dset(0,max(_cash,dget(0)))
 
  for _p in all(escapedplayers) do
@@ -1951,7 +1927,7 @@ initstatus=function(_msg)
 
  -- init msg
  _msg=_msg or ''
- if dget(62) < 0 then
+ if dget(1) < 0 then
   _msg='no cash! \x8e to start over'
  end
 
@@ -1983,7 +1959,7 @@ initstatus=function(_msg)
    if _recognised then
     initpolice()
    elseif _cash < 0 then
-    dset(61,0)
+    dset(2,0)
     initsplash()
    else
     initmapselect()
@@ -2043,24 +2019,12 @@ function initsplash()
  sfx(17,-2)
  sfx(62)
  local _msg='continuing saved "career"'
- seli=dget(63)-1
- while dget(61) == 0 do
+ if dget(2) == 0 then -- day
 
-  -- 0 is highscore
-  -- 1-60 is unlocked status if corresponding maps
-  -- 61 is seed
-  -- 62 is cash
-  -- 63 is current maxseli
-  for _i=1,60 do
-   dset(_i,0)
-  end
-
-  dset(61,rnd())
-  dset(62,200)
-  dset(63,6)
-  seli,_msg=1,'started new "career"'
-  wantedness=0
-  -- debug('new seed',dget(61))
+  dset(1,200) -- cash
+  dset(2,1) -- day
+  dset(3,0) -- wantedness
+  _msg='started new "career"'
  end
 
  _update=function()
