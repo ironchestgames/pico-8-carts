@@ -58,7 +58,7 @@ todo
 
 --]]
 
-cartdata'ironchestgames_sneakystealy_v1_dev4'
+cartdata'ironchestgames_sneakystealy_v1_dev5'
 
 
 
@@ -1647,9 +1647,7 @@ local function initgame()
   end
 
   -- add border of premises
-  -- fillp(0b1010010110100101)
   rect(0,0,127,127,5)
-  -- fillp()
 
   pal()
   palt(0,false)
@@ -1782,7 +1780,18 @@ end
 
 
 
-
+local function drawstatusbar(_transparent)
+ local _hscol=7
+ if not _transparent then
+  rectfill(0,0,28,6,3)
+  rectfill(30,0,60,6,5)
+  rectfill(62,0,127,6,5)
+  _hscol=6
+ end
+ print('$'..dget(1),2,1,7)
+ print('day '..dget(2),32,1,7)
+ print('highscore $'..dget(0),64,1,_hscol)
+end
 
 
 
@@ -1840,12 +1849,13 @@ initpolice=function(_onpress)
   -- draw police car
   sspr(100,61,28,17,80,104)
 
-  -- draw armored truck for game over
   local _s='caught!  \x8e to pay bail'
+
+  -- draw armored truck for game over
   if not _onpress then
    sspr(100,78,28,18,15,102)
    _s='caught!  \x8e to start over'
-   print('$'..dget(1),1,1,7) -- cash
+   drawstatusbar(true)
   end
   print(_s,16,122,10)
 
@@ -1887,8 +1897,10 @@ local function initmapselect()
    print('(nothing much)',23,41,7)
   end
 
-  print('\x8b skip',8,113,10)
-  print('hit \x91',100,113,10)
+  print('\x8b skip',7,119,10)
+  print('hit! \x91',97,119,10)
+
+  drawstatusbar()
  end
 end
 
@@ -1899,18 +1911,19 @@ end
 
 
 
-initstatus=function(_msg)
+initstatus=function()
  poke(0x5f5c,-1)
  sfx(16,-2)
  sfx(17,-2)
- local _rows={{'ingoing',dget(1)}} -- cash
+ local _rows={{'ingoing balance',dget(1)}} -- cash
  for _p in all(escapedplayers) do
   for _l in all(_p.loot) do
    _l[2]=flr(_l[2])
    add(_rows,_l)
   end
  end
- add(_rows,{'daily expenses',-dget(2)*2})
+ dset(2,dget(2)+1) -- day
+ add(_rows,{'daily expenses',-dget(2)*2}) -- day
  local _cash=0
  for _r in all(_rows) do
   _cash+=_r[2]
@@ -1918,23 +1931,24 @@ initstatus=function(_msg)
  if _cash < -20000 then
   _cash=32767
  end
- dset(1,_cash)
- dset(0,max(_cash,dget(0)))
+ dset(1,_cash) -- cash
+ dset(0,max(_cash,dget(0))) -- highscore
 
  for _p in all(escapedplayers) do
   _p.i,_p.loot,players[_p.origi+1]=_p.origi,{},_p
  end
 
  -- init msg
- _msg=_msg or ''
+ local _msg='scout next target \x91'
  if dget(1) < 0 then
-  _msg='no cash! \x8e to start over'
+  _msg='no cash! start over \x91'
  end
 
  wantedness=mid(0,wantedness+seenaddend,4)
+ dset(3,wantedness)
  local _recognised=wantedness == 4
  if _recognised then
-  _msg='\x8e to leave hiding place...' -- todo: something better
+  _msg='dare to scout next target... \x91'
  end
 
  -- init players
@@ -1955,7 +1969,7 @@ initstatus=function(_msg)
  escapedplayers,playerinventory={},{}
 
  _update=function()
-  if btnp(4) then
+  if btnp(1) then
    if _recognised then
     initpolice()
    elseif _cash < 0 then
@@ -1970,19 +1984,15 @@ initstatus=function(_msg)
  _draw=function()
   cls()
 
-  rectfill(54,0,127,6,3)
-  local _s='highscore $'..dget(0)
-  print(_s,120-#_s*4,1,1)
-
   if _recognised and flr(t()*2)%2 == 1 then
    print('wanted',46,16,8)
   end
 
   for _i=0,3 do
-   spr(244+mid(0,wantedness-_i,1),9+_i*8,14)
+   spr(244+mid(0,wantedness-_i,1),9+_i*8,15)
   end
 
-  local _offy=29
+  local _offy=30
   for _r in all(_rows) do
    print(_r[1],10,_offy,6)
    local _r2,_col,_offx='$'.._r[2],11,0
@@ -2003,6 +2013,8 @@ initstatus=function(_msg)
   print(_s,98-#_s*2,110,_col)
 
   print(_msg,64-#_msg*2,119,10)
+
+  drawstatusbar()
  end
 end
 
@@ -2013,36 +2025,36 @@ end
 
 
 
--- splash
 function initsplash()
  sfx(16,-2)
  sfx(17,-2)
  sfx(62)
- local _msg='continuing saved "career"'
+ local _msg='continue saved "career" \x91'
+ printh(dget(2),'debug')
  if dget(2) == 0 then -- day
 
   dset(1,200) -- cash
-  dset(2,1) -- day
   dset(3,0) -- wantedness
-  _msg='started new "career"'
+  wantedness=0
+  _msg='start new "career" \x91'
  end
 
  _update=function()
-  if btnp(4) then
+  if btnp(1) then
    menuitem(1, 'rat on eachother', function()
     for _p in all(escapedplayers) do
      add(players,del(escapedplayers,_p))
     end
     initpolice()
    end)
-   initstatus(_msg)
+   initstatus()
   end
  end
  _draw=function()
   cls()
   print('sneaky stealy',39,46,2)
   print('sneaky stealy',38,45,7)
-  print('\x8e to start/continue game',13,119,10)
+  print(_msg,64-#_msg*2,119,10)
  end
 end
 
@@ -2138,14 +2150,14 @@ f1e1fff1e22f111fff111fff1e1fff1e22f111fff111fffff11fffffff1e1fffffffffffffffffff
 1e11fe1e1122111fff11fff1e11fe1e1122111fff11fffff1111ffff1fe1efffffffffffffffffffffffffffffffbbbbbbbbbb1101010110101115d55516dddb
 f111fff11122111fff111fff111fff11122111fff111ffff1111ffffef111ffffffffffffffffffffbbbbbbbbebebb1bbbbbbb11010101101011155d5551ddd7
 f1f1fff1f1ff1f1ff11f1fff1f1fff1f1ff1f1ff11f1fff111111ff1111f1ffffffffffffffffffffbbbbbbbb1b1bb11bbbbb5110101011010111111111111d7
-f1f1fff1f1ff1f1fffffffff1f1fff1f1ff1f1fffffffff111111ff111fffffffffffffffffffffffbbbbbbbb111bb9bbbbbb511111111111111111111111115
-f1f1fff1f1ff1f1fffffffff1f1fff1f1ff1f1ffffffff11feef11f111fffffffffffffffffffffffbbbbbbbb1e1bb9bbbbbb511110001111111111110001117
-fffffffffffffefefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbb111b111bbbbb581101110111111111101110117
-ff1ffffffffff1f1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbb111b1111b5bb581110001111111111110001115
-f1e1fffffffff111fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbb111bdd119b5b511100000111111111100000115
-11111ffffff001e1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbb1b1b111bbbbbb5550010055555555550010055b
-15151fffff000111fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbb221b1b1bb1bbbbbbbb00001bbbbbbbbbb00001bbb
-f151fffffffff111fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbb2221b111bb1bbbbbbbbb111bbbbbbbbbbbb111bbbb
+f1f1fff1f1ff1f1fffffffff1f1fff1f1ff1f1fffffffff111111ff111ffffffffffffffbb88e8bbbbbbbbbbb111bb9bbbbbb511111111111111111111111115
+f1f1fff1f1ff1f1fffffffff1f1fff1f1ff1f1ffffffff11feef11f111ffffffffffffffb8288e8bbbbbbbbbb1e1bb9bbbbbb511110001111111111110001117
+fffffffffffffefeffffffffffffffffffffffffffffffffffffffffffffffffffffffffb28ee7ebbbbbbbbbb111b111bbbbb581101110111111111101110117
+ff1ffffffffff1f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffb8288eebbbbbbbbbb111b1111b5bb581110001111111111110001115
+f1e1fffffffff111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffb8288eebbbbbbbbbb111bdd119b5b511100000111111111100000115
+11111ffffff001e1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffbd888e6bbbbbbbbbb1b1b111bbbbbb5550010055555555550010055b
+15151fffff000111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffbb6667bbbbbbbbb221b1b1bb1bbbbbbbb00001bbbbbbbbbb00001bbb
+f151fffffffff111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbbbbbbbbbbbbb2221b111bb1bbbbbbbbb111bbbbbbbbbbbb111bbbb
 f1f1fffffffff111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 f1f1fffffff221f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 f1f1ffffff2221f1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
