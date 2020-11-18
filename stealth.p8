@@ -3,16 +3,18 @@ version 29
 __lua__
 -- sneaky stealy
 
--- notes:
--- - any _i is the position, where the part before *32 is the y-axis, and the the one after *32+ is the x-axis
--- - local _x,_y=_i&31,_i\32
-
 --[[
- cartdata layout:
-  0 - highscore
-  1 - cash
-  2 - day
-  3 - wantedness
+
+notes:
+ - any _i is the position, where the part before *32 is the y-axis, and the the one after *32+ is the x-axis
+ - local _x,_y=_i&31,_i\32
+
+cartdata layout:
+ 0 - highscore
+ 1 - cash
+ 2 - day
+ 3 - wantedness
+
 --]]
 
 --[[
@@ -220,12 +222,13 @@ local function setalertlvl2(_m,_x,_y)
 end
 
 
-local function makesound(_p,_sfx)
+local function makesound(_p,_sfx,_loudness)
  sfx(_sfx)
  for _g in all(guards) do
   local _dx,_dy=_g.x-_p.x,_g.y-_p.y
   local _h=sqrt(_dx*_dx+_dy*_dy)
-  if _h < 6 then
+  _loudness=_loudness or 6
+  if _h < _loudness then
    local _newdir,_m=flr(rnd(4)),'!'
    _g.dx,_g.dy=guarddxdeltas[_newdir],guarddydeltas[_newdir]
    if alertlvl == 1 then
@@ -647,7 +650,7 @@ local function getbreakwindowfunc(_xmod)
  return function(_p,_o)
   if _o.typ == 22 then
    _o.typ+=1
-   makesound(_p,22)
+   makesound(_p,22,12)
   elseif _o.typ == 23 then
    _p.x+=2*_xmod
   end
@@ -658,7 +661,7 @@ local function getbreakwindowfunc(_xmod)
 end
 
 local function soundaction(_p)
- makesound(_p,0)
+ makesound(_p,0,8)
  _p.state,_p.action='standing'
 end
 
