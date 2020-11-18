@@ -941,7 +941,7 @@ function mapgen()
    _o.shadow={[0]=true}
    objs[_iplus1]={
     typ=27,
-    action={[2]=computer},
+    action={nil,computer},
     loot=shuffle{
      {'door access code'},
      {'cute cat pictures',1},
@@ -959,14 +959,14 @@ function mapgen()
    end
 
   elseif _typ == 5 then
-   _o.shadow={[0]=true}
-   objs[_iplus1]={typ=6,action={[0]=soundaction,[2]=camcontrol},shadow={}}
+   _o.shadow={[0]=true} -- todo: token hunt
+   objs[_iplus1]={typ=6,action={[0]=soundaction,nil,camcontrol},shadow={}}
    objs[_i+2]={typ=7,shadow={true}}
 
   elseif _typ == 8 then
    _safe=_o
    _o.shadow={[0]=true}
-   _o.action={[1]=soundaction,[2]=safe} -- todo: token hunt
+   _o.action={soundaction,safe}
 
    -- generate new code
    if not _o.code then
@@ -1007,7 +1007,7 @@ function mapgen()
       (floor[_iplus1] == 1 or floor[_imin1] == 1) and
       (floor[_iplus1] == 2 or floor[_imin1] == 2) then
     local _typ=flr(rnd(3))
-    local _o={typ=_typ,shadow={[2]=true,[3]=true}}
+    local _o={typ=_typ,shadow={nil,true,true}}
     objs[_i]=_o
    end
   end
@@ -1018,15 +1018,7 @@ function mapgen()
  for _i=0,arslen do
   local _o,_iplus1=objs[_i],_i+1
   if _o then
-   _o.light={}
-
-
-   _o.action=_o.action or {
-    [0]=soundaction,
-    [1]=soundaction,
-    [2]=soundaction,
-    [3]=soundaction,
-   }
+   _o.light,_o.action={},_o.action or {[0]=soundaction,soundaction,soundaction,soundaction}
 
    -- remove windows
    if _o.typ == 22 then
@@ -1041,7 +1033,7 @@ function mapgen()
     else
      objs[_i-32],
      objs[_iplus1]=
-       {action={[3]=doorfromabove},adjaction={[3]=doorpeekfromabove}},
+       {action={nil,nil,doorfromabove},adjaction={nil,nil,doorpeekfromabove}},
        {typ=14}
 
      -- switch to locked
