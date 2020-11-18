@@ -19,7 +19,7 @@ __lua__
 
 todo
 
-- change menus to work only with d-pad
+- show golden statuettes in mapselect
 
 - increase chance of locked doors to room with safe?
 
@@ -999,6 +999,7 @@ function mapgen()
     _hasgoldenstatuette=true
     _o.typ=29
     _o.loot={'golden statuette',100+rnd(99)}
+    add(mapthings,'some art')
    end
   end
  end
@@ -1783,14 +1784,14 @@ end
 local function drawstatusbar(_transparent)
  local _hscol=7
  if not _transparent then
-  rectfill(0,0,28,6,3)
-  rectfill(30,0,60,6,5)
-  rectfill(62,0,127,6,5)
+  rectfill(0,0,27,6,3)
+  rectfill(29,0,59,6,5)
+  rectfill(61,0,127,6,5)
   _hscol=6
  end
  print('$'..dget(1),2,1,7)
- print('day '..dget(2),32,1,7)
- print('highscore $'..dget(0),64,1,_hscol)
+ print('day '..dget(2),31,1,7)
+ print('highscore $'..dget(0),63,1,_hscol)
 end
 
 
@@ -1923,7 +1924,7 @@ initstatus=function()
   end
  end
  dset(2,dget(2)+1) -- day
- add(_rows,{'daily expenses',-dget(2)*2}) -- day
+ add(_rows,{'daily expenses',-dget(2)*3}) -- day
  local _cash=0
  for _r in all(_rows) do
   _cash+=_r[2]
