@@ -543,7 +543,7 @@ end
 local function lockeddoor(_p,_o,_tmp,_doorobj,_dy,_forstop)
  if _doorobj.typ == 15 then
   for _l in all(playerinventory) do
-   if _l[1] ==  'door access code' then
+   if _l[1] ==  'door pin on post-it' then
     _doorobj.typ=16
     _p.state,_p.action='standing'
     makesound(_p,24)
@@ -681,6 +681,14 @@ local function stealstatuette(_p,_o,_tmp)
  _o.typ,_o.action=31,{[0]=soundaction,soundaction,soundaction,soundaction}
  _p.state,_p.action='standing'
 end
+
+local function searchdesk(_p,_o,_tmp)
+ makesound(_p,0)
+ playerloots(_p,_o)
+ _p.state,_p.action='standing'
+end
+
+
 
 local function iswallclose(_x,_y,_dx,_dy)
  local _c=0
@@ -938,12 +946,17 @@ function mapgen()
   objs[_i]=_o
 
   if _typ == 26 then
-   _o.shadow={[0]=true}
+   local _wallets=shuffle{{'wallet',rnd(50)},nil}
+   local _deskactions,_dooraccesscode={[0]=soundaction,soundaction,searchdesk},{'door pin on post-it'}
+   _o.shadow,_o.action,_o.loot=
+     {[0]=true},
+     _deskactions,
+     shuffle{nil,nil,_dooraccesscode,_wallets[1]}[1]
+
    objs[_iplus1]={
     typ=27,
     action={nil,computer},
     loot=shuffle{
-     {'door access code'},
      {'cute cat pictures',1},
      {'blackmail material',rnd(400)},
      {'company secrets',rnd(800)},
@@ -951,7 +964,7 @@ function mapgen()
      }[1],
     shadow={},
    }
-   objs[_i+2]={typ=28,shadow={true}}
+   objs[_i+2]={typ=28,shadow={true},action=_deskactions,loot=shuffle{nil,nil,_dooraccesscode,_wallets[2]}[1]}
 
    computercount+=1
    if computercount == 2 then
