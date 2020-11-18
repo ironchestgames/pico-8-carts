@@ -19,8 +19,6 @@ __lua__
 
 todo
 
-- show golden statuettes in mapselect
-
 - increase chance of locked doors to room with safe?
 
 - msg.y's should not be in same interval
@@ -28,10 +26,6 @@ todo
 - add door access cards to be found (maybe on desks?)
 
 - clearer texts of why the alarm goes of (maybe do different values for when lighted by camera or guard, then have text "camera: statuette gone!")
-
-- remove map selection, maybe it's just "scouted", then you can choose to
-  enter or skip, if you skip you go back to status (new day.) this change
-  would impact wantedness (as a new day would drive down wantedness)
 
 - set label
 
@@ -51,8 +45,6 @@ todo
  - hide under
 
 - busting out of jail???
-
-- window broken glass
 
 - names: johnny, jimmy, tommy, timmy, benny, lenny, ray, jay, donny, sonny, fred, ted, zed, tony, vince, roy
 
@@ -923,7 +915,7 @@ function mapgen()
  -- 30 - statuette
  -- 31 - stolen statuette
 
- local _types,_hasgoldenstatuette=s2t'0;0;26;8;30;'
+ local _types,_hasgoldenstatuette,_safe=s2t'0;0;26;8;30;'
 
  if #cameras > 0 then
   add(_types,5)
@@ -969,6 +961,7 @@ function mapgen()
    objs[_i+2]={typ=7,shadow={true}}
 
   elseif _typ == 8 then
+   _safe=_o
    _o.shadow={[0]=true}
    _o.action={[1]=soundaction,[2]=safe} -- todo: token hunt
 
@@ -980,17 +973,7 @@ function mapgen()
     end
    end
 
-   local _goodcash={'good cash',400+rnd(200)}
-   _o.loot=shuffle{
-    _goodcash,_goodcash,
-    {'gold bars',600+rnd(600)},
-    {'diamonds',1200+rnd(900)},
-    {'important documents',rnd(1200)},
-   }[1]
-
    objs[_iplus1]={typ=9,shadow={true}}
-
-   add(mapthings,'crackable safe')
 
   elseif _typ == 30 then
    _o.action={[0]=stealstatuette,stealstatuette,stealstatuette,stealstatuette}
@@ -1059,7 +1042,7 @@ function mapgen()
        {typ=14}
 
      -- switch to locked
-     if rnd() > 0.70 then
+     if rnd() > 0.7 then
       objs[_i].typ,
       objs[_i].action[2],
       objs[_i-32].action[3],
@@ -1093,6 +1076,28 @@ function mapgen()
   if _g.isarmed == 1 then
    add(mapthings,'guards might be armed')
    break
+  end
+ end
+
+ -- set safe loot
+ if _safe then
+  if #guards > 1 or #cameras > 2 then
+   local _goldbars={'gold bars',500+rnd(500)}
+   _safe.loot=shuffle{
+    _goldbars,
+    _goldbars,
+    {'diamonds',1000+rnd(500)},
+   }[1]
+   add(mapthings,'loaded safe')
+  else
+   local _goodcash={'good cash',300+rnd(200)}
+   _safe.loot=shuffle{
+    _goodcash,
+    _goodcash,
+    _goodcash,
+    {'important documents',100+rnd(300)}
+   }[1]
+   add(mapthings,'crackable safe')
   end
  end
 
