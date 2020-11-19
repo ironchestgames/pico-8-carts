@@ -205,7 +205,7 @@ local function playerloots(_p,_o)
    add(playerinventory,_o.loot) -- no value, it's information
   end
  end
- add(msgs,{_p.x,_p.y-1,_m,1,40})
+ add(msgs,{_p.x,_p.y-1,_m,1,20})
  _o.loot=nil
 end
 
@@ -1934,7 +1934,7 @@ initstatus=function()
   end
  end
  dset(2,dget(2)+1) -- day
- add(_rows,{'daily expenses',-dget(2)*3}) -- day
+ add(_rows,{'daily expenses',-48-dget(2)*2}) -- day
  local _cash=0
  for _r in all(_rows) do
   _cash+=_r[2]
