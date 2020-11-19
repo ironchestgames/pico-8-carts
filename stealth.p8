@@ -675,16 +675,13 @@ local function newwindow()
  }
 end
 
-local function stealstatuette(_p,_o,_tmp)
+local function searchsteal(_p,_o,_tmp)
  makesound(_p,0)
  playerloots(_p,_o)
- _o.typ,_o.action=31,{[0]=soundaction,soundaction,soundaction,soundaction}
- _p.state,_p.action='standing'
-end
-
-local function searchdesk(_p,_o,_tmp)
- makesound(_p,0)
- playerloots(_p,_o)
+ if _o.typ == 29 or _o.typ == 30 then
+  _o.typ=31
+ end
+ _o.action={[0]=soundaction,soundaction,soundaction,soundaction}
  _p.state,_p.action='standing'
 end
 
@@ -947,7 +944,7 @@ function mapgen()
 
   if _typ == 26 then
    local _wallets=shuffle{{'wallet',rnd(50)},nil}
-   local _deskactions,_dooraccesscode={[0]=soundaction,soundaction,searchdesk},{'door pin on post-it'}
+   local _deskactions,_dooraccesscode={[0]=soundaction,soundaction,searchsteal},{'door pin on post-it'}
    _o.shadow,_o.action,_o.loot=
      {[0]=true},
      _deskactions,
@@ -992,7 +989,7 @@ function mapgen()
    objs[_iplus1]={typ=9,shadow={true}}
 
   elseif _typ == 30 then
-   _o.action={[0]=stealstatuette,stealstatuette,stealstatuette,stealstatuette}
+   _o.action={[0]=searchsteal,searchsteal,searchsteal,searchsteal}
    _o.loot={'statuette',50+rnd(49)}
    if rnd() > 0.8 and not _hasgoldenstatuette then
     _hasgoldenstatuette=true
