@@ -943,7 +943,7 @@ function mapgen()
   objs[_i]=_o
 
   if _typ == 26 then
-   local _wallets=shuffle{{'wallet',rnd(50)},nil}
+   local _wallets=shuffle{nil,{'wallet',rnd(60)}}
    local _deskactions,_dooraccesscode={[0]=soundaction,soundaction,searchsteal},{'door pin on post-it'}
    _o.shadow,_o.action,_o.loot=
      {[0]=true},
@@ -957,7 +957,7 @@ function mapgen()
      {'cute cat pictures',1},
      {'blackmail material',rnd(400)},
      {'company secrets',rnd(800)},
-     {'classified files',rnd(1400)},
+     {'classified files',rnd(1200)},
      }[1],
     shadow={},
    }
@@ -1956,6 +1956,7 @@ initstatus=function()
  end
 
  wantedness=mid(0,wantedness+seenaddend,4)
+ seenaddend=-1
  dset(3,wantedness)
  local _recognised=wantedness == 4
  if _recognised then
