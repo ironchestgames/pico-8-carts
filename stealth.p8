@@ -541,7 +541,7 @@ end
 local function lockeddoor(_p,_o,_tmp,_doorobj,_dy,_forstop)
  if _doorobj.typ == 17 then
   for _l in all(playerinventory) do
-   if _l[1] ==  'door pin on post-it' then
+   if _l[1] ==  'door pin' then
     _doorobj.typ=18
     _p.state,_p.action='standing'
     makesound(_p,24)
@@ -626,6 +626,25 @@ local function fusebox(_p,_o,_tmp)
     _o.typ=17
    end
   end
+ end
+end
+
+local function locker(_p,_o,_tmp)
+ if not _tmp.opened then
+  makesound(_p,23)
+  _tmp.opened=true
+  _o.typ=6
+  _p.workingstate='hacking'
+ end
+
+ if btnp(2,_p.i) then
+  makesound(_p,0)
+  playerloots(_p,_o)
+ end
+
+ if btnp(3,_p.i) then
+  -- reset player and obj
+  _p.state,_o.typ,_p.action='standing',5
  end
 end
 
@@ -914,6 +933,7 @@ function mapgen()
  -- 2 - boxes
  -- 3 - chair (right)
  -- 4 - chair (left)
+ -- 5 - locker (closed)
  -- 7 - camcontrol
  -- 10 - safe
  -- 26 - computer
@@ -934,19 +954,18 @@ function mapgen()
   end
 
   if _typ == 0 then
-   _typ=flr(rnd(5))
+   _typ=flr(rnd(6))
   end
 
-  local _o={typ=_typ,shadow={[0]=true,true}}
+  local _o,_doorpin={typ=_typ,shadow={[0]=true,true}},{'door pin'}
   objs[_i]=_o
 
   if _typ == 26 then
-   local _wallets=shuffle{nil,{'wallet',rnd(60)}}
-   local _deskactions,_dooraccesscode={[0]=soundaction,soundaction,searchsteal},{'door pin on post-it'}
+   local _deskactions,_wallets={[0]=soundaction,soundaction,searchsteal},shuffle{nil,{'wallet',rnd(60)}}
    _o.shadow,_o.action,_o.loot=
      {[0]=true},
      _deskactions,
-     shuffle{nil,nil,_dooraccesscode,_wallets[1]}[1]
+     shuffle{nil,nil,_doorpin,_wallets[1]}[1]
 
    objs[_iplus1]={
     typ=27,
@@ -959,12 +978,16 @@ function mapgen()
      }[1],
     shadow={},
    }
-   objs[_i+2]={typ=28,shadow={true},action=_deskactions,loot=shuffle{nil,nil,_dooraccesscode,_wallets[2]}[1]}
+   objs[_i+2]={typ=28,shadow={true},action=_deskactions,loot=shuffle{nil,nil,_doorpin,_wallets[2]}[1]}
 
    computercount+=1
    if computercount == 2 then
     add(mapthings,'hackable computers')
    end
+
+  elseif _typ == 5 then
+   _o.action={[0]=soundaction,soundaction,locker}
+   _o.loot=shuffle{nil,nil,_doorpin,{'a really nice tie',10+rnd(20)},{'wallet',rnd(60)}}[1]
 
   elseif _typ == 7 then
    _o.shadow={[0]=true} -- todo: token hunt
