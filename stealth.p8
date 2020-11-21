@@ -240,14 +240,13 @@ end
 
 
 
-local hacklength=s2t'.cute cat pictures;1;.blackmail material;3;.company secrets;5;.classified files;8;'
 local function computer(_p,_o,_tmp)
  _p.workingstate='hacking'
  if ispoweron then
   if not _tmp.action_c then
    _tmp.seq,_tmp.action_c,_tmp.state={},0,'booting'
    makesound(_p,11)
-   local _l=hacklength['company secrets']+flr(rnd(4))
+   local _l=6+flr(rnd(8))
    for _i=1,_l do
     local _n=0
     repeat
@@ -845,6 +844,11 @@ function mapgen()
    end
   end
  end
+
+ -- add pillar
+ local _pillarx,_pillary=flr(rnd(32)),flr(rnd(31))
+ floor[_pillary*32+_pillarx]=2
+ floor[(_pillary+1)*32+_pillarx]=2
 
  -- add outside fusebox
  local _fbi=(_ystart+_h-1)*32+_xstart+2
