@@ -25,8 +25,6 @@ todo
 
 - msg.y's should not be in same interval
 
-- add door access cards to be found (maybe on desks?)
-
 - clearer texts of why the alarm goes of (maybe do different values for when lighted by camera or guard, then have text "camera: statuette gone!")
 
 - set label
@@ -242,14 +240,14 @@ end
 
 
 
-
+local hacklength=s2t'.cute cat pictures;1;.blackmail material;3;.company secrets;5;.classified files;8;'
 local function computer(_p,_o,_tmp)
  _p.workingstate='hacking'
  if ispoweron then
   if not _tmp.action_c then
    _tmp.seq,_tmp.action_c,_tmp.state={},0,'booting'
    makesound(_p,11)
-   local _l=6+flr(rnd(8))
+   local _l=hacklength['company secrets']+flr(rnd(4))
    for _i=1,_l do
     local _n=0
     repeat
@@ -1094,6 +1092,9 @@ function mapgen()
     {'diamonds',1000+rnd(500)},
    }[1]
    add(mapthings,'loaded safe')
+   if _safe.loot[1] == 'diamonds' then
+    add(mapthings,'rumors of diamonds')
+   end
   else
    local _goodcash={'good cash',300+rnd(200)}
    _safe.loot=shuffle{
@@ -2042,7 +2043,6 @@ function initsplash()
  sfx(17,-2)
  sfx(62)
  local _msg='continue saved "career" \x91'
- printh(dget(2),'debug')
  if dget(2) == 0 then -- day
 
   dset(1,200) -- cash
