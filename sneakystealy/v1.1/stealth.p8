@@ -21,8 +21,6 @@ cartdata layout:
 
 todo
 
-- unescape
-
 - remove fog for when turning off camera in camcontrol
 
 - fix splash text for pico 0.2.2
@@ -1207,7 +1205,14 @@ local function initgame()
     _p.i=_p.i^^1
     if _p.i == 0 then
      add(msgs,{_p.x,_p.y,'.',1,15})
+    elseif #escapedplayers > 0 then
+     local _ep=escapedplayers[1]
+     add(msgs,{_ep.x,_ep.y,'\x97 unescape ',1,23})
     end
+   end
+
+   if btnp(5) and _p.i == 1 and #escapedplayers > 0 then
+    add(players,del(escapedplayers,escapedplayers[1]))
    end
 
    -- input
@@ -1837,12 +1842,12 @@ local function initgame()
 
 
   -- draw fog
-  -- for _i=0,arslen do
-  --  if not fog[_i] then
-  --   local _x,_y=(_i&31)*4,(_i\32)*4
-  --   rectfill(_x,_y,_x+3,_y+3,0)
-  --  end
-  -- end
+  for _i=0,arslen do
+   if false and not fog[_i]  then
+    local _x,_y=(_i&31)*4,(_i\32)*4
+    rectfill(_x,_y,_x+3,_y+3,0)
+   end
+  end
 
   -- draw messages
   local _coli=1
