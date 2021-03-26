@@ -21,8 +21,6 @@ cartdata layout:
 
 todo
 
-- fix camcontrol power off bug
-
 - unescape
 
 - remove fog for when turning off camera in camcontrol
@@ -389,7 +387,7 @@ local function camcontrol(_p,_o,_tmp)
   _p.state,_p.action,_o.draw='standing'
 
   -- reset all cameras
-  if _tmp.pos then
+  if ispoweron and _tmp.pos then
    for _i=1,4 do
     _tmp.pos[_i].state=1
     local _c=cameras[_i]
