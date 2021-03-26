@@ -21,7 +21,7 @@ cartdata layout:
 
 todo
 
-- remove fog for when turning off camera in camcontrol
+- change buttons for status screen
 
 - fix splash text for pico 0.2.2
 
@@ -320,7 +320,9 @@ end
 -- 3 - system alarm (camcontrol) (not used)
 local function camcontrol(_p,_o,_tmp)
  _p.workingstate='hacking'
+ ishackingcameras=nil
  if ispoweron then
+  ishackingcameras=true
   if not _tmp.sel then
    _tmp.sel,_tmp.pos=0,camcontrolscreenpos
 
@@ -385,6 +387,7 @@ local function camcontrol(_p,_o,_tmp)
   _p.state,_p.action,_o.draw='standing'
 
   -- reset all cameras
+  ishackingcameras=nil
   if ispoweron and _tmp.pos then
    for _i=1,4 do
     _tmp.pos[_i].state=1
@@ -1434,85 +1437,89 @@ local function initgame()
   -- add cameras light
   -- todo: token hunt???
   for _c in all(cameras) do
-   if _c.state != 0 then
-    local _dx=1
-    if floor[_c.y*32+_c.x+1] == 2 then
-     _dx=-1
-    end
-    local _x,_y,_ldown,_lside=_c.x,_c.y,32,32
-    repeat
-     local _bx,_by=_x,_y
-     local _bydown,_bldown=_by,1
-     while floor[_bydown*32+_bx] != 2 and _bldown <= _ldown do
-      local _o=objs[_bydown*32+_bx]
+   local _dx=1
+   if floor[_c.y*32+_c.x+1] == 2 then
+    _dx=-1
+   end
+   local _x,_y,_ldown,_lside=_c.x,_c.y,32,32
+   repeat
+    local _bx,_by=_x,_y
+    local _bydown,_bldown=_by,1
+    while floor[_bydown*32+_bx] != 2 and _bldown <= _ldown do
+     local _o=objs[_bydown*32+_bx]
+
+     if _c.state != 0 then
       if _o then
        add(_o.light,{x=0,y=-1})
       end
 
       light[_bydown*32+_bx]=1
-
-      -- remove fog if selected in camcontrol
-      if _c.state == 2 then
-       fog[_bydown*32+_bx]=0
-
-       local _i=(_bydown+1)*32+_bx
-       if floor[_i] == 2 then
-        fog[_i]=0
-       end
-
-       _i=_bydown*32+_bx+1
-       if floor[_i] == 2 then
-        fog[_i]=0
-       end
-
-       _i=_i-2
-       if floor[_i] == 2 then
-        fog[_i]=0
-       end
-      end
-
-      _bydown+=1
-      _bldown+=1
      end
 
-     local _bxside,_blside=_bx,1
-     while floor[_by*32+_bxside] != 2 and _blside <= _lside do
-      local _o=objs[_by*32+_bxside]
+     -- remove fog if hacking camcontrol
+     if ishackingcameras then
+      fog[_bydown*32+_bx]=0
+
+      local _i=(_bydown+1)*32+_bx
+      if floor[_i] == 2 then
+       fog[_i]=0
+      end
+
+      _i=_bydown*32+_bx+1
+      if floor[_i] == 2 then
+       fog[_i]=0
+      end
+
+      _i=_i-2
+      if floor[_i] == 2 then
+       fog[_i]=0
+      end
+     end
+
+     _bydown+=1
+     _bldown+=1
+    end
+
+    local _bxside,_blside=_bx,1
+    while floor[_by*32+_bxside] != 2 and _blside <= _lside do
+     local _o=objs[_by*32+_bxside]
+
+     if _c.state != 0 then
       if _o then
        add(_o.light,{x=-_dx,y=0})
       end
 
       light[_by*32+_bxside]=1
+     end
 
-      -- remove fog if selected in camcontrol
-      if _c.state == 2 then
-       if _by == _y then
-        fog[(_by-1)*32+_bxside]=0
-       end
-
-       fog[_by*32+_bxside]=0
-
-       local _i=(_by+1)*32+_bxside
-       if floor[_i] == 2 then
-        fog[_i]=0
-       end
-
-       _i=_by*32+_bxside+_dx
-       if floor[_i] == 2 then
-        fog[_i]=0
-       end
+     -- remove fog if hacking camcontrol
+     if ishackingcameras then
+      if _by == _y then
+       fog[(_by-1)*32+_bxside]=0
       end
 
-      _bxside+=_dx
-      _blside+=1
+      fog[_by*32+_bxside]=0
+
+      local _i=(_by+1)*32+_bxside
+      if floor[_i] == 2 then
+       fog[_i]=0
+      end
+
+      _i=_by*32+_bxside+_dx
+      if floor[_i] == 2 then
+       fog[_i]=0
+      end
      end
-     _lside,_ldown=_blside-2,_bldown-2
-     _y+=1
-     _x+=_dx
-    until floor[_y*32+_x] == 2 or
-          floor[(_y-1)*32+_x] == 2 or
-          floor[_y*32+_x-_dx] == 2
-   end
+
+     _bxside+=_dx
+     _blside+=1
+    end
+    _lside,_ldown=_blside-2,_bldown-2
+    _y+=1
+    _x+=_dx
+   until floor[_y*32+_x] == 2 or
+         floor[(_y-1)*32+_x] == 2 or
+         floor[_y*32+_x-_dx] == 2
   end
 
   -- shine guards flashlights
@@ -1843,7 +1850,7 @@ local function initgame()
 
   -- draw fog
   for _i=0,arslen do
-   if false and not fog[_i]  then
+   if not fog[_i]  then
     local _x,_y=(_i&31)*4,(_i\32)*4
     rectfill(_x,_y,_x+3,_y+3,0)
    end
