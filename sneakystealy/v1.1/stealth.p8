@@ -21,13 +21,13 @@ cartdata layout:
 
 todo
 
-- remove wantedness
-
 - fix camcontrol power off bug
 
 - unescape
 
 - remove fog for when turning off camera in camcontrol
+
+- fix splash text for pico 0.2.2
 
 - increase chance of locked doors to room with safe?
 
@@ -128,9 +128,7 @@ local fogdirs,
  msgcols,
  fog,
  arslen,
- policet,
- wantedness,
- seenaddend={
+ policet={
   s2t'.x;1;.y;0;.dx;1;.dy;1;', -- fogdirs
   s2t'.x;1;.y;0;.dx;1;.dy;-1;',
   s2t'.x;-1;.y;0;.dx;-1;.dy;1;',
@@ -161,9 +159,7 @@ local fogdirs,
  {s2t'6;13;',s2t'9;10;'}, -- msgcols
  {}, -- fog
  1023, -- arslen, note: 32*32-1
- 0, -- policet
- 0, -- wantedness
- 0 -- seenaddend
+ 0 -- policet
 
 
 -- helper funcs
@@ -1197,7 +1193,7 @@ end
 
 local function initgame()
  poke(0x5f5c,5) -- note: set auto-repeat delay for btnp
- msgs,tick,alertlvl,seenaddend,seent={},0,1,-1
+ msgs,tick,alertlvl={},0,1
  local _playwalksfx
  _update=function()
   tick-=1
@@ -1607,12 +1603,6 @@ local function initgame()
   -- intruder alert
   for _p in all(players) do
    if light[_p.y*32+_p.x] == 1 then
-    if not seent then
-     seenaddend,seenx,seeny,seent=1,_p.x*4-2,_p.y*4-8,60
-     if wantedness >= 3 then
-      add(msgs,{_p.x,_p.y-1,'we\'ve seen your face now!',2})
-     end
-    end
     setalertlvl2('intruder alert!',_p.x,_p.y)
    end
   end
@@ -1856,14 +1846,6 @@ local function initgame()
   --  end
   -- end
 
-  -- draw seen icons
-  if seent and seent > 0 then
-   seent-=1
-   if seent%8 > 4 then
-    spr(246,seenx,seeny)
-   end
-  end
-
   -- draw messages
   local _coli=1
   if tick%8 >= 4 then
@@ -1909,7 +1891,6 @@ initpolice=function(_onpress)
  palt(0)
  palt(15,false)
  palt(11,true)
- wantedness,seenaddend=3,0
 
  -- sort players on x
  if #players == 2 and players[1].x > players[2].x then
@@ -2049,14 +2030,6 @@ initstatus=function()
   _msg='no cash! start over \x91'
  end
 
- wantedness=mid(0,wantedness+seenaddend,4)
- seenaddend=-1
- dset(3,wantedness)
- local _recognised=wantedness == 4
- if _recognised then
-  _msg='dare to scout next target... \x91'
- end
-
  -- init players
  players={{},{}}
  for _i=0,1 do
@@ -2076,9 +2049,7 @@ initstatus=function()
 
  _update=function()
   if btnp(1) then
-   if _recognised then
-    initpolice()
-   elseif _cash < 0 then
+   if _cash < 0 then
     dset(2,0)
     initsplash()
    else
@@ -2090,15 +2061,7 @@ initstatus=function()
  _draw=function()
   cls()
 
-  if _recognised and flr(t()*2)%2 == 1 then
-   print('wanted',46,16,8)
-  end
-
-  for _i=0,3 do
-   spr(244+mid(0,wantedness-_i,1),9+_i*8,15)
-  end
-
-  local _offy=30
+  local _offy=22
   for _r in all(_rows) do
    print(_r[1],10,_offy,6)
    local _r2,_col,_offx='$'.._r[2],11,0
@@ -2109,14 +2072,14 @@ initstatus=function()
    _offy+=7
   end
 
-  print('total',10,110,5)
+  print('total',10,108,5)
 
   local _col=11
   if _cash < 0 then
    _col=14
   end
   local _s='$'.._cash
-  print(_s,98-#_s*2,110,_col)
+  print(_s,98-#_s*2,108,_col)
 
   print(_msg,64-#_msg*2,119,10)
 
@@ -2139,8 +2102,6 @@ function initsplash()
  if dget(2) == 0 then -- day
 
   dset(1,200) -- cash
-  dset(3,0) -- wantedness
-  wantedness=0
   _msg='start new "career" \x91'
  end
 
