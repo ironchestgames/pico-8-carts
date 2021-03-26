@@ -2152,7 +2152,7 @@ function initsplash()
  end
  _draw=function()
   cls()
-  print('sneaky stealy',39,46,1)
+  print('sneaky stealy',37,44,1)
   print('sneaky stealy',38,45,13)
   print(_msg,64-#_msg*2,119,10)
  end
