@@ -21,7 +21,7 @@ cartdata layout:
 
 todo
 
-- change buttons for status screen
+- fix 2p unescape
 
 - fix splash text for pico 0.2.2
 
