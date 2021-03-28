@@ -2035,9 +2035,9 @@ initstatus=function()
  end
 
  -- init msg
- local _msg='scout next target \x91'
+ local _msg='scout next target \x8e'
  if dget(1) < 0 then
-  _msg='no cash! start over \x91'
+  _msg='no cash! start over \x8e'
  end
 
  -- init players
@@ -2058,7 +2058,7 @@ initstatus=function()
  escapedplayers,playerinventory={},{}
 
  _update=function()
-  if btnp(1) then
+  if btnp(4) then
    if _cash < 0 then
     dset(2,0)
     initsplash()
@@ -2108,15 +2108,15 @@ function initsplash()
  sfx(16,-2)
  sfx(17,-2)
  sfx(62)
- local _msg='continue saved "career" \x91'
+ local _msg='continue saved "career" \x8e'
  if dget(2) == 0 then -- day
 
   dset(1,200) -- cash
-  _msg='start new "career" \x91'
+  _msg='start new "career" \x8e'
  end
 
  _update=function()
-  if btnp(1) then
+  if btnp(4) then
    menuitem(1, 'rat on eachother', function()
     for _p in all(escapedplayers) do
      add(players,del(escapedplayers,_p))
