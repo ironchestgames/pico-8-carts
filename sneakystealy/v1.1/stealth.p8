@@ -1208,12 +1208,14 @@ local function initgame()
     _p.i=_p.i^^1
     if _p.i == 0 then
      add(msgs,{_p.x,_p.y,'.',1,15})
+    elseif #escapedplayers > 0 then
+     local _ep=escapedplayers[1]
+     add(msgs,{_ep.x,_ep.y,'\x97 unescape ',1,23})
     end
-   elseif (btnp(5,0) or btnp(5,1)) and #escapedplayers > 0 then
-    local _otherp=del(escapedplayers,escapedplayers[1])
-    _otherp.i=_p.i^^1
-    add(players,_otherp)
-    add(msgs,{_otherp.x,_otherp.y,'unescaped',1,18})
+   end
+
+   if btnp(5) and _p.i == 1 and #escapedplayers > 0 then
+    add(players,del(escapedplayers,escapedplayers[1]))
    end
 
    -- input
