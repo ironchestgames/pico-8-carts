@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
-version 29
+version 32
 __lua__
--- sneaky stealy 1.2
+-- sneaky stealy 1.3
 -- by ironchest games
 
 --[[
@@ -49,7 +49,6 @@ todo
 --]]
 
 cartdata'ironchestgames_sneakystealy_v1'
-
 
 
 -- s2t usage:
@@ -157,8 +156,8 @@ local fogdirs,
 -- helper funcs
 
 local function curry3(_f,_a,_b,_c)
- return function()
-  _f(_a,_b,_c)
+ return function(_d)
+  _f(_a,_b,_c,_d)
  end
 end
 
@@ -310,6 +309,7 @@ end
 
 
 -- states:
+-- -1 - disabled
 -- 0 - off
 -- 1 - on
 -- 2 - selected/on (camcontrol)
@@ -326,7 +326,7 @@ local function camcontrol(_p,_o,_tmp)
    for _i=1,4 do
     local _c=cameras[_i]
     _tmp.pos[_i].state=1
-    if _c then
+    if _c and _c.state >= 0 then
      _c.state=1
     end
    end
@@ -364,7 +364,9 @@ local function camcontrol(_p,_o,_tmp)
   end
 
   for _c in all(cameras) do
-   _c.state=_tmp.pos[_c.i].state
+   if _c.state >= 0 then
+    _c.state=_tmp.pos[_c.i].state
+   end
   end
 
   local _count=0
@@ -388,7 +390,7 @@ local function camcontrol(_p,_o,_tmp)
    for _i=1,4 do
     _tmp.pos[_i].state=1
     local _c=cameras[_i]
-    if _c then
+    if _c and _c.state >= 0 then
      _c.state=1
     end
    end
@@ -455,6 +457,12 @@ local function safe(_p,_o,_tmp)
   _p.state,_p.action,_o.draw='standing'
  end
 
+end
+
+local function disablecam(_i,_,__,_p)
+ sfx(27)
+ add(msgs,{_p.x,_p.y,'disabled',1,15})
+ cameras[_i].state,_p.state,_p.action=-1,'standing'
 end
 
 --[[
@@ -871,6 +879,7 @@ function mapgen()
  for _j=#cameras,1,-1 do
   local _c=cameras[_j]
   local _i=_c.y*32+_c.x
+  _c.obji=_i
   if objs[_i] or
      objs[_i-31] or
      objs[_i-1] or
@@ -892,7 +901,11 @@ function mapgen()
 
  -- add i for cameras
  for _i=1,#cameras do
-  cameras[_i].i=_i
+  local _c=cameras[_i]
+  _c.i=_i
+
+  -- add obj to disable cams
+  objs[_c.obji-32]={action={[2]=curry3(disablecam,_i)}}
  end
 
  -- create objs positions
@@ -1216,16 +1229,20 @@ local function initgame()
    if _p.state == 'working' then
     local waspoweron=ispoweron
     _p.workingstate='hacking'
-    _p.action()
+    _p.action() -- note: this can change ispoweron
 
     -- update from ispoweron
     if ispoweron and not waspoweron then
      for _c in all(cameras) do
-      _c.state=1
+      if _c.state >= 0 then
+       _c.state=1
+      end
      end
     elseif waspoweron and not ispoweron then
      for _c in all(cameras) do
-      _c.state=0
+      if _c.state >= 0 then
+       _c.state=0
+      end
      end
 
      for _i=0,arslen do
@@ -1442,7 +1459,7 @@ local function initgame()
     while floor[_bydown*32+_bx] != 2 and _bldown <= _ldown do
      local _o=objs[_bydown*32+_bx]
 
-     if _c.state != 0 then
+     if _c.state > 0 then
       if _o then
        add(_o.light,{x=0,y=-1})
       end
@@ -1451,7 +1468,7 @@ local function initgame()
      end
 
      -- remove fog if hacking camcontrol
-     if ishackingcameras then
+     if ishackingcameras and _c.state >= 0 then
       fog[_bydown*32+_bx]=0
 
       local _i=(_bydown+1)*32+_bx
@@ -1478,7 +1495,7 @@ local function initgame()
     while floor[_by*32+_bxside] != 2 and _blside <= _lside do
      local _o=objs[_by*32+_bxside]
 
-     if _c.state != 0 then
+     if _c.state > 0 then
       if _o then
        add(_o.light,{x=-_dx,y=0})
       end
@@ -1487,7 +1504,7 @@ local function initgame()
      end
 
      -- remove fog if hacking camcontrol
-     if ishackingcameras then
+     if ishackingcameras and _c.state >= 0 then
       if _by == _y then
        fog[(_by-1)*32+_bxside]=0
       end
@@ -1765,7 +1782,7 @@ local function initgame()
 
   -- draw cameras
   for _c in all(cameras) do
-   sspr(cameradirs[floor[_c.y*32+_c.x+1]],116+_c.state*3,4,3,_c.x*4,_c.y*4-4)
+   sspr(cameradirs[floor[_c.y*32+_c.x+1]],119+_c.state*3,4,3,_c.x*4,_c.y*4-4)
   end
 
   -- draw players
@@ -2249,17 +2266,17 @@ b333ffffdddd02220000111122220202ffffffffffffffffffffffffffffffffffffffffffffffff
 bbbbffffffffffff00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff55ffff55fffff22f
 bbbbffffffffffff00000000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff55fffff2ffffff2ff
 bbbbffffff4ff4ff000a0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff55fff55fffff22ff
-8888fffff551155f00aaa000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5fffff2ffffff22f
+8888fffff500005f00aaa000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5fffff2ffffff22f
 8888ffff5ffffff50aaaaa00fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5555fff255ffff2ff
-8888ffffff8ff8ffaaaaaaa0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5555ff5555fffff2ff
+8888ffffff4ff4ffaaaaaaa0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5555ff5555fffff2ff
 111ffffff551155fa0000000000a0000002222000088e800ff88e8ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff555ff5255fff22ff
 111fffff5ffffff5aa00000000aa0000021222d008288e80f8288e8ffffffffffffffffffffffffffffffffffffffffffffffffffffffff55555f52555f2f22f
-777fffffffbffbffaaa000000aaa0000012dde20028ee7e0f28ee7efffffffffffffffffffffffffffffffffffffffffffffffffffffff5555ff5555fffff2f2
+777fffffff8ff8ffaaa000000aaa0000012dde20028ee7e0f28ee7efffffffffffffffffffffffffffffffffffffffffffffffffffffff5555ff5555fffff2f2
 777ffffff551155faaaa0000aaaa000002122d2008288ee0f8288eefffffffffffffffffffffffffffffffffffffffffffffffffffffffff55ffff55fffff2ff
 bbbfffff5ffffff5aaa000000aaa000002122d2008288ee0f8288eeffffffffffffffffffffffffffffffffffffffffffffffffffffffff5555ff5555fff222f
-bbbfffffffffffffaa00000000aa00000d222d600d888e60fd888e6fffffffffffffffffffffffffffffffffffffffffffffffffffffff555555555555f2f2f2
-888fffffffffffffa0000000000a000000ddd60000666700ff6667ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff22ffff22fffff2ff
-888fffffffffffff00000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff22ffff22fffff2ff
+bbbfffffffbffbffaa00000000aa00000d222d600d888e60fd888e6fffffffffffffffffffffffffffffffffffffffffffffffffffffff555555555555f2f2f2
+888ffffff551155fa0000000000a000000ddd60000666700ff6667ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff22ffff22fffff2ff
+888fffff5ffffff500000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff22ffff22fffff2ff
 __label__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -2385,9 +2402,10 @@ __label__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00ddd0ddd00dd0dd000dd0d0d0ddd00dd0ddd000000dd0ddd0ddd0ddd00dd0000000000000000000000000000000000000000000000000d0d0dd000000ddd000
 000d00d0d0d0d0d0d0d000d0d0d000d0000d000000d000d0d0ddd0d000d000000000000000000000000000000000000000000000000000d0d00d00000000d000
-000d00dd00d0d0d0d0d000ddd0dd00ddd00d000000d000ddd0d0d0dd00ddd0000000000000000000000000000000000000000000000000d0d00d000000ddd000
-000d00d0d0d0d0d0d0d000d0d0d00000d00d000000d0d0d0d0d0d0d00000d0000000000000000000000000000000000000000000000000ddd00d000000d00000
+000d00dd00d0d0d0d0d000ddd0dd00ddd00d000000d000ddd0d0d0dd00ddd0000000000000000000000000000000000000000000000000d0d00d0000000dd000
+000d00d0d0d0d0d0d0d000d0d0d00000d00d000000d0d0d0d0d0d0d00000d0000000000000000000000000000000000000000000000000ddd00d00000000d000
 00ddd0d0d0dd00d0d00dd0d0d0ddd0dd000d000000ddd0d0d0d0d0ddd0dd000000000000000000000000000000000000000000000000000d00ddd00d00ddd000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 
 __sfx__
 000100001d050110400c0400204010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -2417,7 +2435,7 @@ __sfx__
 000b0000211552a155361550010537105301052910500105001050010523105211052710522105211052110500105001050010500105001050010500105001050010500105001050010500105001050010500105
 0015000002160021000d1000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00020000183201a3201832015320133200e3200732000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
