@@ -2,7 +2,8 @@ pico-8 cartridge // http://www.pico-8.com
 version 32
 __lua__
 
-debugdraw=true
+debugdraw=false
+-- debugdraw=true
 menuitem(1,'debugdraw',function () debugdraw=not debugdraw end)
 
 printh('debug started','debug',true)
@@ -49,6 +50,16 @@ function norm(n)
  return n == 0 and 0 or sgn(n)
 end
 
+function sortony(_t)
+ for _i=1,#_t do
+  local _j = _i
+  while _j > 1 and _t[_j-1].y > _t[_j].y do
+   _t[_j],_t[_j-1]=_t[_j-1],_t[_j]
+   _j=_j-1
+  end
+ end
+end
+
 function dist(x1,y1,x2,y2)
  local dx,dy=(x2-x1)*0.1,(y2-y1)*0.1
  return sqrt(dx*dx+dy*dy)*10
@@ -67,7 +78,22 @@ local avatar={
  foffx=3,foffy=4,
 }
 
-local worldw,worldh=256,256
+local enemy={
+ ai=1,counter=1,
+ spd=0.1,
+ x=64,y=64,
+ dx=0,dy=0,
+ r=3,
+ f1x=0,f1y=9,f1w=7,f1h=7,
+ f2x=7,f2y=9,f2w=7,f2h=7,
+ f3x=14,f3y=9,f3w=7,f3h=7,
+ f4x=21,f4y=9,f4w=7,f4h=7,
+ foffx=3,foffy=4,
+}
+
+local actors
+
+local worldw,worldh=200,200
 
 function _init()
 end
@@ -97,17 +123,64 @@ function _update60()
   if _btn0 or _btn1 then
    avatar.flipx=_btn0
   end
-
-  -- move
-  avatar.x+=avatar.dx
-  avatar.y+=avatar.dy
+ else
+  avatar.dx,avatar.dy=0,0
  end
 
  local _skillbuttondown=btn(4) and 1 or btn(5) and 2 or nil
 
- -- move avatar
- avatar.x=mid(0,avatar.x,worldw-avatar.f1w)
- avatar.y=mid(0,avatar.y,worldh-avatar.f1h)
+ -- update actors
+ actors={avatar,enemy}
+ for _a in all(actors) do
+  --[[
+   ai:
+   if state counter is 0:
+   if affliction
+    start getting rid of affliction
+   elseif should perform
+    start performing
+   else
+    pick new target and start moving
+
+   update by state:
+   moving - moving towards target
+   performing - is in either pre- or post-perform of an action/attack
+  --]]
+  if _a.ai then
+   _a.counter-=1
+
+   -- make decision
+   if _a.counter <= 0 then
+    if _a.affliction then
+    elseif dist(_a.x,_a.y,avatar.x,avatar.y) <= 10 then
+     debug('attack!')
+    else
+     -- pick new target
+     _a.targetx=avatar.x
+     _a.targety=avatar.y
+     _a.state='moving'
+     _a.counter=30
+    end
+   end
+  end
+
+  -- resolve states
+  if _a.state == 'moving' then
+   local _angle=atan2(_a.targetx-_a.x,_a.targety-_a.y)
+   _a.dx,_a.dy=cos(_angle)*_a.spd,sin(_angle)*_a.spd
+
+  elseif _a.state == 'performing' then
+
+  end
+
+  -- find next pos
+  local _nextx,_nexty=_a.x+_a.dx,_a.y+_a.dy
+  _nextx=mid(8+_a.foffx,_nextx,worldw-8-_a.foffx)
+  _nexty=mid(8+_a.foffy,_nexty,worldh-8-_a.foffy)
+
+  _a.x=_nextx
+  _a.y=_nexty
+ end
 
  -- move camera
  local _camx,_camy=avatar.x-64,avatar.y-64
@@ -121,7 +194,7 @@ function _draw()
  palt(0,false)
  palt(11,true)
 
- -- draw some stones
+ -- draw edges
  for _i=0,worldw,8 do
   spr(32,_i-4,0)
   spr(32,_i-4,worldh-8)
@@ -129,21 +202,24 @@ function _draw()
   spr(32,worldw-8,_i)
  end
 
- -- draw avatar
- local _f=avatar[1]
- sspr(
-  avatar.f1x,
-  avatar.f1y,
-  avatar.f1w,
-  avatar.f1h,
-  avatar.x-avatar.foffx,
-  avatar.y-avatar.foffy,
-  avatar.f1w,
-  avatar.f1h,
-  avatar.flipx)
+ -- draw actors
+ sortony(actors)
+ for _a in all(actors) do
+  local _f=_a[1]
+  sspr(
+   _a.f1x,
+   _a.f1y,
+   _a.f1w,
+   _a.f1h,
+   _a.x-_a.foffx,
+   _a.y-_a.foffy,
+   _a.f1w,
+   _a.f1h,
+   _a.flipx)
 
- if debugdraw then
-  circ(avatar.x,avatar.y,avatar.r,8)
+  if debugdraw then
+   circ(_a.x,_a.y,_a.r,8)
+  end
  end
 end
 
@@ -157,12 +233,12 @@ b0ff0bbb0ff0bbb0ff0bbb0ff0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 b02200b020020bb02000b020020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb00bbbbb00bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b0330bbb03300bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b0330bbb033060bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b0330bb0333360bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b04460bb04400bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b0330bb030030bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbb00bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
