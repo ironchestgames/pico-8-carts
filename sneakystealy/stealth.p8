@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 32
 __lua__
--- sneaky stealy 1.3
+-- sneaky stealy 1.4
 -- by ironchest games
 
 --[[
@@ -48,7 +48,7 @@ todo
 
 --]]
 
-cartdata'ironchestgames_sneakystealy_dev33'
+cartdata'ironchestgames_sneakystealy_v1'
 
 
 -- s2t usage:
@@ -96,6 +96,7 @@ local guards
 
 local seli
 local ispoweron
+local hasbeenseen
 local mapthings
 
 local initpolice
@@ -1201,7 +1202,7 @@ end
 
 local function initgame()
  poke(0x5f5c,5) -- note: set auto-repeat delay for btnp
- msgs,tick,alertlvl={},0,1
+ msgs,tick,alertlvl,hasbeenseen={},0,1
  local _playwalksfx
  _update=function()
   tick-=1
@@ -1625,6 +1626,7 @@ local function initgame()
   for _p in all(players) do
    if light[_p.y*32+_p.x] == 1 then
     setalertlvl2('intruder alert!',_p.x,_p.y)
+    hasbeenseen=true
    end
   end
   if alertlvl == 1 then
@@ -2020,6 +2022,7 @@ initstatus=function()
  poke(0x5f5c,-1)
  sfx(16,-2)
  sfx(17,-2)
+ sfx(21,-2)
  local _rows={{'ingoing balance',dget(1)}} -- cash
  for _p in all(escapedplayers) do
   for _l in all(_p.loot) do
@@ -2047,6 +2050,8 @@ initstatus=function()
  local _msg='\fascout next target \x8e'
  if dget(1) < 0 then
   _msg='\fano cash! start over \x8e'
+ elseif hasbeenseen then
+  _msg='\falay low for a day \x8e'
  end
 
  -- init players
@@ -2071,6 +2076,9 @@ initstatus=function()
    if _cash < 0 then
     dset(2,0)
     initsplash()
+   elseif hasbeenseen then
+    hasbeenseen=nil
+    initstatus()
    else
     initmapselect()
    end
