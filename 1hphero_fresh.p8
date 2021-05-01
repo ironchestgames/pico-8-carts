@@ -46,6 +46,31 @@ function s2t(s)
  return _t
 end
 
+local actors
+local attacks
+local walls={
+ {
+  x=48,y=48,
+  r=3,
+  f1x=0,f1y=16,f1w=8,f1h=8,
+  foffx=4,foffy=4,
+ },
+ {
+  x=100,y=180,
+  r=3,
+  f1x=8,f1y=16,f1w=8,f1h=16,
+  foffx=4,foffy=12,
+ },
+ {
+  x=100,y=50,
+  r=3,
+  f1x=8,f1y=16,f1w=8,f1h=16,
+  foffx=4,foffy=12,
+ }
+}
+
+local worldw,worldh=200,200
+
 function norm(n)
  return n == 0 and 0 or sgn(n)
 end
@@ -63,6 +88,50 @@ end
 function dist(x1,y1,x2,y2)
  local dx,dy=(x2-x1)*0.1,(y2-y1)*0.1
  return sqrt(dx*dx+dy*dy)*10
+end
+
+function iscirclescollide(_c1x,_c1y,_c1r,_c2x,_c2y,_c2r)
+ return dist(_c1x,_c1y,_c2x,_c2y) <= _c1r + _c2r
+end
+
+function isinsiderect(_x,_y,_rx1,_ry1,_rx2,_ry2)
+ return _x >= _rx1 and _x <= _rx2 and _y >= _ry1 and _y <= _ry2
+end
+
+function isintersectcircle(_cx,_cy,_r,_x1,_y1,_x2,_y2)
+ local _h=dist(_x1,_y1,_x2,_y2)
+ local _steps=-flr(-(_h/_r))
+ local _a=atan2(_x2-_x1,_y2-_y1)
+
+ for _i=0,_steps,1 do
+  local _hh=min(_i*_r,_h)
+
+  -- point on the line
+  local _x=_x1+cos(_a)*_hh
+  local _y=_y1+sin(_a)*_hh
+  
+  -- check if circle xy is inside box
+  local _rx1=_x-_r
+  local _rx2=_x+_r
+  local _ry1=_y-_r
+  local _ry2=_y+_r
+  if isinsiderect(_cx,_cy,_rx1,_ry1,_rx2,_ry2) then
+   return true
+  end
+ end
+ return false
+end
+
+function haslos(_x1,_y1,_x2,_y2)
+ local _h=dist(_x1,_y1,_x2,_y2)
+ -- if _h < 64 then -- todo: blinded here?!
+ for _w in all(walls) do
+  if isintersectcircle(_w.x,_w.y,_w.r,_x1,_y1,_x2,_y2) then
+   return false
+  end
+ end
+ -- end
+ return true
 end
 
 
@@ -91,11 +160,9 @@ local enemy={
  foffx=3,foffy=4,
 }
 
-local actors
-
-local worldw,worldh=200,200
-
 function _init()
+ attacks={}
+ actors={avatar,enemy}
 end
 
 btnmasktoa={
@@ -109,14 +176,27 @@ btnmasktoa={
  [0x000a]=0.875, -- down/right
 }
 
+avatartargets={
+ [0]={10,0}, -- right
+ [0.125]={10,-10}, -- right/up
+ [0.25]={0,-10}, -- up
+ [0.375]={-10,-10}, -- up/left
+ [0.5]={-10,0}, -- left
+ [0.625]={-10,10}, -- left/down
+ [0.75]={0,10}, -- down
+ [0.875]={10,10}, -- down/right
+}
+
 function _update60()
 
  -- input
- local angle=btnmasktoa[band(btn(),0b1111)] -- note: filter out o/x buttons from dpad input
- if angle then
+ local _angle=btnmasktoa[band(btn(),0b1111)] -- note: filter out o/x buttons from dpad input
+ if _angle then
 
-  -- set deltas
-  avatar.a,avatar.dx,avatar.dy=angle,norm(cos(angle)),norm(sin(angle))
+  -- set target
+  local _target=avatartargets[_angle]
+  avatar.a,avatar.targetx,avatar.targety=_angle,avatar.x+_target[1],avatar.y+_target[2]
+  avatar.state='moving'
 
   -- flipx
   _btn0,_btn1=btn(0),btn(1)
@@ -124,13 +204,21 @@ function _update60()
    avatar.flipx=_btn0
   end
  else
-  avatar.dx,avatar.dy=0,0
+  avatar.targetx=nil
+  avatar.state='idling'
  end
 
- local _skillbuttondown=btn(4) and 1 or btn(5) and 2 or nil
+ -- local _skillbuttondown=btn(4) and 1 or btn(5) and 2 or nil
+
+ if btn(4) then
+  if avatar.state != 'performing' then
+   avatar.state='performing'
+   avatar.substate='pre'
+   avatar.counter=30
+  end
+ end
 
  -- update actors
- actors={avatar,enemy}
  for _a in all(actors) do
   --[[
    ai:
@@ -148,38 +236,98 @@ function _update60()
   --]]
   if _a.ai then
    _a.counter-=1
+   _a.aggrotarget=avatar
 
    -- make decision
    if _a.counter <= 0 then
+    local _ishaslos = _a.aggrotarget.x and haslos(_a.x,_a.y,_a.aggrotarget.x,_a.aggrotarget.y)
+
     if _a.affliction then
-    elseif dist(_a.x,_a.y,avatar.x,avatar.y) <= 10 then
-     debug('attack!')
+    elseif _ishaslos and dist(_a.x,_a.y,_a.aggrotarget.x,_a.aggrotarget.y) <= 10 then
+     -- debug('attack!')
     else
+     if _a.iscolliding or (_a.targetx and dist(_a.x,_a.y,_a.targetx,_a.targety) < _a.spd * 2) then
+      _a.targetx=nil
+     end
+     
      -- pick new target
-     _a.targetx=avatar.x
-     _a.targety=avatar.y
+     if _ishaslos then
+      _a.targetx=_a.aggrotarget.x
+      _a.targety=_a.aggrotarget.y
+      _a.counter=30
+     elseif not _a.targetx then
+      _a.targetx=rnd(worldw)
+      _a.targety=rnd(worldh)
+      _a.counter=30
+     end
      _a.state='moving'
-     _a.counter=30
     end
    end
   end
 
   -- resolve states
   if _a.state == 'moving' then
-   local _angle=atan2(_a.targetx-_a.x,_a.targety-_a.y)
-   _a.dx,_a.dy=cos(_angle)*_a.spd,sin(_angle)*_a.spd
+   local _dx=_a.targetx-_a.x
+   local _dy=_a.targety-_a.y
+   if abs(_dx) > _a.spd and abs(_dy) > _a.spd then
+    local _angle=atan2(_dx,_dy)
+    _a.dx,_a.dy=cos(_angle)*_a.spd,sin(_angle)*_a.spd
+   else
+    _a.dx,_a.dy=0,0
+   end
 
   elseif _a.state == 'performing' then
-
+   _a.counter-=1
+   if _a.counter <= 0 then
+    if _a.substate == 'pre' then
+     add(attacks,{
+      x=_a.x,
+      y=_a.y,
+      r=10,
+      counter=10,
+      })
+     _a.substate='post'
+     _a.counter=30
+    elseif _a.substate == 'post' then
+     _a.state='moving'
+    end
+   end
   end
 
   -- find next pos
+  _a.iscolliding=nil
   local _nextx,_nexty=_a.x+_a.dx,_a.y+_a.dy
   _nextx=mid(8+_a.foffx,_nextx,worldw-8-_a.foffx)
   _nexty=mid(8+_a.foffy,_nexty,worldh-8-_a.foffy)
 
+  for _w in all(walls) do
+   if iscirclescollide(_nextx,_a.y,_a.r,_w.x,_w.y,_w.r) then
+    _nextx=_a.x-_a.dx*0.02
+    _a.iscolliding=true
+   end
+   if iscirclescollide(_a.x,_nexty,_a.r,_w.x,_w.y,_w.r) then
+    _nexty=_a.y-_a.dy*0.02
+    _a.iscolliding=true
+   end
+  end
+
   _a.x=_nextx
   _a.y=_nexty
+ end
+
+ -- update attacks
+ for _at in all(attacks) do
+  _at.counter-=1
+  if _at.counter <= 0 then
+   _at.removeme=true
+  end
+ end
+
+ -- remove attacks
+ for _at in all(attacks) do
+  if _at.removeme then
+   del(attacks,_at)
+  end
  end
 
  -- move camera
@@ -190,7 +338,7 @@ function _update60()
 end
 
 function _draw()
- cls(1)
+ cls(2)
  palt(0,false)
  palt(11,true)
 
@@ -202,10 +350,16 @@ function _draw()
   spr(32,worldw-8,_i)
  end
 
- -- draw actors
- sortony(actors)
+ -- draw actors and walls
+ local _mapstuff={}
  for _a in all(actors) do
-  local _f=_a[1]
+  add(_mapstuff,_a)
+ end
+ for _w in all(walls) do
+  add(_mapstuff,_w)
+ end
+ sortony(_mapstuff)
+ for _a in all(_mapstuff) do
   sspr(
    _a.f1x,
    _a.f1y,
@@ -219,8 +373,28 @@ function _draw()
 
   if debugdraw then
    circ(_a.x,_a.y,_a.r,8)
+   pset(_a.x,_a.y,8)
   end
  end
+
+ if debugdraw then
+  -- draw attacks
+  for _at in all(attacks) do
+   circ(_at.x,_at.y,_at.r,8)
+  end
+ end
+
+ -- circlex,circley=64,64
+ -- radius=4
+ -- x1,y1=10,10
+ -- x2,y2=avatar.x,avatar.y
+ -- circ(circlex,circley,radius,15)
+ -- line(x1,y1,x2,y2,12)
+ -- print(isintersectcircle(circlex,circley,radius,x1,y1,x2,y2),0,0,10)
+ -- for _r in all(rects) do
+ --  rect(_r[1],_r[2],_r[3],_r[4],10)
+ -- end
+ print(stat(1),100,0,7)
 end
 
 __gfx__
@@ -240,22 +414,22 @@ b0330bb0333360bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 b04460bb04400bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 b0330bb030030bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb00bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb0660bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb06d60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b06ddd0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b06ddd60bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-06dd66d0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-06ddddd0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbb0bbbbbbb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb0d0bbbbb0d0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb0d20bbbbb020bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b0d2d0bbbb0d20bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b0d22d0bbb0d20bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b022220bbb0d2d0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+0d2222d0bb022d0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+0d22dd20bb02d20bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbb0d2d20bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbb022d20bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbb02d220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbb0222d0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbb02d2d0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbb02d22d0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbb022d22d0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbb02d22220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
