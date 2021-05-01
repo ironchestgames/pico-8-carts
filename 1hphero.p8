@@ -30,22 +30,6 @@ function flrrnd(_n)
  return flr(rnd(_n))
 end
 
--- note: last char needs to be ','
--- function pfn(s)
---  local t,_s={},''
---  while #s > 0 do
---   local d=sub(s,1,1)
---   if d != ',' then
---    _s=_s..d
---   else
---    add(t,tonum(_s))
---    _s=''
---   end
---   s=sub(s,2)
---  end
---  return t
--- end
-
 -- s2t usage:
 -- t=s2t'1;2;3;4;5;6;7;hej pa dig din gamle gries;'
 -- t=s2t'.x;1;.y;2;'
@@ -98,7 +82,7 @@ function isaabbscolliding(a,b)
   a.y-a.hh < b.y+b.hh and a.y+a.hh > b.y-b.hh and b
 end
 
-wallaabb={hw=4,hh=4}
+wallaabb=s2t'.hw;4;.hh;4;'
 function isinsidewall(aabb)
  local x1,y1,x2,y2=
   aabb.x-aabb.hw,aabb.y-aabb.hh,
@@ -441,19 +425,22 @@ end
 
 -- enemy factories
 function newmeleetroll(x,y)
- return actfact{
-  x=x,y=y,
-  hw=1.5,
-  spd=0.45,
-  hp=2,
-  att_preprfm=50,
-  att_postprfm=20,
-  prfmatt=performenemymelee,
-  idling={s2t'40;91;4;5;-2;-3;'},
-  moving={animspd=0.18,s2t'40;91;4;5;-2;-3;',s2t'44;91;4;5;-2;-3;'},
-  attacking={animspd=0,s2t'48;91;4;5;-2;-3;',s2t'51;91;6;5;-3;-3;'},
-  recovering={s2t'40;91;4;5;-2;-3;'}
- }
+ local _e=s2t'.hw;1.5;.spd;0.45;.hp;2;.att_preprfm;50;.att_postprfm;20;';
+ _e.x,
+ _e.y,
+ _e.prfmatt,
+ _e.idling,
+ _e.moving,
+ _e.attacking,
+ _e.recovering=
+  x,
+  y,
+  performenemymelee,
+  {s2t'40;91;4;5;-2;-3;'},
+  {animspd=0.18,s2t'40;91;4;5;-2;-3;',s2t'44;91;4;5;-2;-3;'},
+  {animspd=0,s2t'48;91;4;5;-2;-3;',s2t'51;91;6;5;-3;-3;'},
+  {s2t'40;91;4;5;-2;-3;'}
+ return actfact(_e)
 end
 
 function casterfactory(_hp,_cols,_idlef,_attackf,_boltskill)
