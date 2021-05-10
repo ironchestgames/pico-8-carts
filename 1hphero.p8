@@ -932,7 +932,7 @@ function mapinit()
 
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,enemies,steps,angles=
-  avatarx,avatary,0,10,{},({250,500,600,700})[theme],
+  avatarx,avatary,0,20,{},({250,500,600,700})[theme],
    ({s2t'0.25;-0.25;',s2t'0;0;0;0;0;0.5;0.25;-0.25;',
     s2t'0;0;0.5;0.25;',s2t'0.25;'})[theme]
  local step_c,_theme=steps,themes[theme]
@@ -1663,7 +1663,7 @@ function dungeondraw()
   print(curinteractable.text,
    mid(0,
      curinteractable.x-#curinteractable.text*2,
-     124-#curinteractable.text*4),
+     (worldw*8-4)-#curinteractable.text*4),
    max(8,curinteractable.y-8),
    10)
  end
