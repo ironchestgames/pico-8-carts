@@ -4,7 +4,7 @@ __lua__
 -- 1 hp hero
 -- by ironchest games
 
-cartdata'ironchestgames_1hphero_dev1'
+cartdata'ironchestgames_1hphero_dev2'
 
 function _sfx(_s)
  sfx(tonum(_s))
@@ -897,12 +897,15 @@ avatar=actfact{
  idling={idleframe},
  moving={idleframe,s2t'3;10;3;4;-1;-2;'},
  attacking={animspd=0,s2t'6;10;3;4;-1;-2;',idleframe},
- recovering={idleframe}
+ recovering={idleframe},
+ skill1=swordattackskillfactory(7),
 }
 
 for k,v in pairs(slots) do
  avatar.items[v]=loaditem(k)
 end
+
+worldw,worldh=32,32
 
 function dungeoninit()
  _update60,_draw,
@@ -920,9 +923,9 @@ tick,kills,curenemyi=0,0,1
 
 function mapinit()
  local basemap={}
- for _y=0xffff,16 do
+ for _y=-1,worldh do
   basemap[_y]={}
-  for _x=0xffff,16 do
+  for _x=-1,worldw do
    basemap[_y][_x]=9
   end
  end
@@ -938,8 +941,8 @@ function mapinit()
  while step_c > 0 do
   local nextx,nexty=curx+cos(a),cury+sin(a)
   if flrrnd(3) == 0 or
-     nextx <= 0 or nextx > 14 or
-     nexty <= 0 or nexty > 14 then
+     nextx <= 0 or nextx > worldw-2 or
+     nexty <= 0 or nexty > worldh-2 then
    a+=angles[flrrnd(#angles)+1]
   elseif step_c != 0 and step_c % (steps / enemy_c) == 0 then
    add(enemies,{x=curx,y=cury,typ=flrrnd(3)+1})
@@ -976,9 +979,9 @@ function mapinit()
   10,15,
   1,0,{},{},{},{},{},{}
 
- for _y=0,16 do
+ for _y=0,worldh do
   walls[_y]={}
-  for _x=0,16 do
+  for _x=0,worldw do
    local _col,ax,ay=basemap[_y][_x],_x*8+4,_y*8+4
 
    if _col == 15 then
@@ -1665,26 +1668,32 @@ function dungeondraw()
    10)
  end
 
+ -- move camera
+ local _camx,_camy=avatar.x-64,avatar.y-64
+ _camx=mid(0,_camx,(worldw*8)-128)
+ _camy=mid(0,_camy,(worldh*8)-128)
+ camera(_camx,_camy)
+
  -- draw gui
  for _i=0,avatar.hp-1 do
-  print('\x87',121-_i*6,1,8)
+  print('\f8\x87',121-_i*6+_camx,1+_camy)
   offset=(_i+1)*6-1
  end
 
  for _i=0,avatar.startarmor-1 do
   x=_i >= avatar.armor and 53 or 48
-  sspr(x,40,5,5,121-offset-_i*6,1)
+  sspr(x,40,5,5,121-offset-_i*6+_camx,1+_camy)
  end
 
  if dungeonlvl > 0 then
-  print('level '..dungeonlvl,3,1,6)
+  print('\f6level '..dungeonlvl,3+_camx,1+_camy)
  end
 
  if avatar.hp <= 0 then
-  print('a deadly blow',40,60,8)
+  print('\f8a deadly blow',40+_camx,60+_camy)
   if tick-deathts > 150 then
-   print('(you\'ve lost your inventory)',12,72,8)
-   print('press \x8e to continue',26,80,8)
+   print('\f8(you\'ve lost your inventory)',12+_camx,72+_camy)
+   print('\f8press \x8e to continue',26+_camx,80+_camy)
   end
  end
 
@@ -1695,6 +1704,9 @@ function dungeondraw()
   print(boss.name,64-#boss.name*2,122,15)
  end
 
+ -- debug draw
+ print(stat(1),40+_camx,0+_camy,7)
+
 end
 
 
@@ -1702,286 +1714,286 @@ end
 
 -- equip scene
 
-function equipinit()
- _update60,
- _draw,
- inventorycur,
- equippedcur,
- availableskillscur,
- sectioncur,
- spdfactornr,
- equipped,
- availableskills=
-   equipupdate,equipdraw,1,1,1,4,0,{},{}
-end
+-- function equipinit()
+--  _update60,
+--  _draw,
+--  inventorycur,
+--  equippedcur,
+--  availableskillscur,
+--  sectioncur,
+--  spdfactornr,
+--  equipped,
+--  availableskills=
+--    equipupdate,equipdraw,1,1,1,4,0,{},{}
+-- end
 
-function equipupdate()
- btnp0,btnp1,btnp4,btnp5,
- avatar.startarmor,
- avatar.spdfactor,
- avatar.att_spd_dec,
- avatar_items,
- spdfactornr,
- equipped,
- avatar.passiveskills,
- availableskills=
-  btnp(0),btnp(1),btnp(4),btnp(5),
-  0,1,0,avatar.items,0,{},{},{}
+-- function equipupdate()
+--  btnp0,btnp1,btnp4,btnp5,
+--  avatar.startarmor,
+--  avatar.spdfactor,
+--  avatar.att_spd_dec,
+--  avatar_items,
+--  spdfactornr,
+--  equipped,
+--  avatar.passiveskills,
+--  availableskills=
+--   btnp(0),btnp(1),btnp(4),btnp(5),
+--   0,1,0,avatar.items,0,{},{},{}
 
-  -- init equipped items
- for _,item in pairs(avatar_items) do
-  add(equipped,item)
-  if item.armor then
-   avatar.startarmor+=item.armor
-  end
-  if item.spdfactor then
-   avatar.spdfactor+=item.spdfactor
-   spdfactornr+=-flr(item.spdfactor*0xff9c)
-  end
-  avatar.att_spd_dec+=item.att_spd_dec
- end
+--   -- init equipped items
+--  for _,item in pairs(avatar_items) do
+--   add(equipped,item)
+--   if item.armor then
+--    avatar.startarmor+=item.armor
+--   end
+--   if item.spdfactor then
+--    avatar.spdfactor+=item.spdfactor
+--    spdfactornr+=-flr(item.spdfactor*0xff9c)
+--   end
+--   avatar.att_spd_dec+=item.att_spd_dec
+--  end
 
- -- init available active skills
- for item in all(equipped) do
-  if item.prefix and item.prefix.skill and
-     item.prefix.skill.perform then
-   add(availableskills,item.prefix.skill)
-  end
-  if item.suffix and item.suffix.skill and
-     item.suffix.skill.perform then
-   add(availableskills,item.suffix.skill)
-  end
- end
+--  -- init available active skills
+--  for item in all(equipped) do
+--   if item.prefix and item.prefix.skill and
+--      item.prefix.skill.perform then
+--    add(availableskills,item.prefix.skill)
+--   end
+--   if item.suffix and item.suffix.skill and
+--      item.suffix.skill.perform then
+--    add(availableskills,item.suffix.skill)
+--   end
+--  end
 
- -- init available passive skills
- for item in all(equipped) do
-  local _prefix,_suffix=item.prefix,item.suffix
-  if _prefix == amuletprefix[1] or
-     _prefix and _prefix.skill and
-     (not _prefix.skill.perform) then
-   add(availableskills,_prefix.skill)
-   add(avatar.passiveskills,_prefix.skill)
-  end
-  if _suffix and _suffix.skill and
-     (not _suffix.skill.perform) then
-   add(availableskills,_suffix.skill)
-   add(avatar.passiveskills,_suffix.skill)
-  end
- end
+--  -- init available passive skills
+--  for item in all(equipped) do
+--   local _prefix,_suffix=item.prefix,item.suffix
+--   if _prefix == amuletprefix[1] or
+--      _prefix and _prefix.skill and
+--      (not _prefix.skill.perform) then
+--    add(availableskills,_prefix.skill)
+--    add(avatar.passiveskills,_prefix.skill)
+--   end
+--   if _suffix and _suffix.skill and
+--      (not _suffix.skill.perform) then
+--    add(availableskills,_suffix.skill)
+--    add(avatar.passiveskills,_suffix.skill)
+--   end
+--  end
 
- -- changing sections
- _d=btnp(2) and 1 or btnp(3) and 0xffff or nil
- if _d then
-  sectioncur=mid(1,sectioncur-_d,4)
-  _sfx'7'
- end
+--  -- changing sections
+--  _d=btnp(2) and 1 or btnp(3) and 0xffff or nil
+--  if _d then
+--   sectioncur=mid(1,sectioncur-_d,4)
+--   _sfx'7'
+--  end
 
- -- init inventory
- for item in all(avatar.inventory) do
-  if avatar_items[item.slot] == item then
-   del(avatar.inventory,item)
-  end
- end
+--  -- init inventory
+--  for item in all(avatar.inventory) do
+--   if avatar_items[item.slot] == item then
+--    del(avatar.inventory,item)
+--   end
+--  end
 
- -- inventory
- inventoryn=#avatar.inventory
- if sectioncur == 1 then
-  _d=btnp0 and 1 or btnp1 and 0xffff or 0
-  inventorycur=mid(1,inventorycur-_d,inventoryn)
-  if _d != 0 then
-   sellcur=nil
-   _sfx'7'
-  end
+--  -- inventory
+--  inventoryn=#avatar.inventory
+--  if sectioncur == 1 then
+--   _d=btnp0 and 1 or btnp1 and 0xffff or 0
+--   inventorycur=mid(1,inventorycur-_d,inventoryn)
+--   if _d != 0 then
+--    sellcur=nil
+--    _sfx'7'
+--   end
 
-  if inventoryn > 0 then
-   if btnp4 then
-    selecteditem,avatar.skill1,avatar.skill2=avatar.inventory[inventorycur]
+--   if inventoryn > 0 then
+--    if btnp4 then
+--     selecteditem,avatar.skill1,avatar.skill2=avatar.inventory[inventorycur]
 
-    if avatar_items[selecteditem.slot] then
-     add(avatar.inventory,avatar_items[selecteditem.slot])
-    end
-    avatar_items[selecteditem.slot]=selecteditem
+--     if avatar_items[selecteditem.slot] then
+--      add(avatar.inventory,avatar_items[selecteditem.slot])
+--     end
+--     avatar_items[selecteditem.slot]=selecteditem
 
-    if selecteditem.twohand then
-     add(avatar.inventory,avatar_items.offhand)
-     avatar_items.offhand=nil
-    end
+--     if selecteditem.twohand then
+--      add(avatar.inventory,avatar_items.offhand)
+--      avatar_items.offhand=nil
+--     end
 
-    if selecteditem.slot == 'offhand' and
-       avatar_items.weapon and
-       avatar_items.weapon.twohand then
-     add(avatar.inventory,avatar_items.weapon)
-     avatar_items.weapon=nil
-    end
-    inventorycur=mid(1,inventorycur,inventoryn-1)
-    _sfx'8'
+--     if selecteditem.slot == 'offhand' and
+--        avatar_items.weapon and
+--        avatar_items.weapon.twohand then
+--      add(avatar.inventory,avatar_items.weapon)
+--      avatar_items.weapon=nil
+--     end
+--     inventorycur=mid(1,inventorycur,inventoryn-1)
+--     _sfx'8'
 
-   elseif btnp5 then
-    if sellcur then
-     del(avatar.inventory,avatar.inventory[sellcur])
-     sellcur,avatar.skill1,avatar.skill2=nil
-     inventorycur=min(inventorycur,inventoryn-1)
-     _sfx'29'
-    else
-     sellcur=inventorycur
-    end
-   end
-  end
+--    elseif btnp5 then
+--     if sellcur then
+--      del(avatar.inventory,avatar.inventory[sellcur])
+--      sellcur,avatar.skill1,avatar.skill2=nil
+--      inventorycur=min(inventorycur,inventoryn-1)
+--      _sfx'29'
+--     else
+--      sellcur=inventorycur
+--     end
+--    end
+--   end
 
- -- equipped
- elseif sectioncur == 2 then
-  sellcur=nil
-  _d=btnp0 and 1 or btnp1 and 0xffff or nil
-  if _d then
-   equippedcur=mid(1,equippedcur-_d,#slots)
-   _sfx'7'
-  end
+--  -- equipped
+--  elseif sectioncur == 2 then
+--   sellcur=nil
+--   _d=btnp0 and 1 or btnp1 and 0xffff or nil
+--   if _d then
+--    equippedcur=mid(1,equippedcur-_d,#slots)
+--    _sfx'7'
+--   end
 
-  if btnp4 or btnp5 then
-   if #avatar.inventory >= 10 then
-    _sfx'6'
-   else
-    local selecteditem=avatar_items[slots[equippedcur]]
-    if selecteditem then
-     avatar_items[selecteditem.slot],avatar.skill1,avatar.skill2=nil
-     add(avatar.inventory,selecteditem)
-    end
-    _sfx'8'
-   end
-  end
+--   if btnp4 or btnp5 then
+--    if #avatar.inventory >= 10 then
+--     _sfx'6'
+--    else
+--     local selecteditem=avatar_items[slots[equippedcur]]
+--     if selecteditem then
+--      avatar_items[selecteditem.slot],avatar.skill1,avatar.skill2=nil
+--      add(avatar.inventory,selecteditem)
+--     end
+--     _sfx'8'
+--    end
+--   end
 
- -- available skills
- elseif sectioncur == 3 then
-  _d=btnp0 and 1 or btnp1 and 0xffff or nil
-  if _d then
-   availableskillscur=mid(1,availableskillscur-_d,#availableskills)
-   _sfx'7'
-  end
+--  -- available skills
+--  elseif sectioncur == 3 then
+--   _d=btnp0 and 1 or btnp1 and 0xffff or nil
+--   if _d then
+--    availableskillscur=mid(1,availableskillscur-_d,#availableskills)
+--    _sfx'7'
+--   end
 
-  local selectedskill=availableskills[availableskillscur]
-  if selectedskill then
-   if btnp4 then
-    if selectedskill.perform then
-     avatar.skill1=selectedskill
-     if avatar.skill2 == avatar.skill1 then
-      avatar.skill2=nil
-     end
-     _sfx'8'
-    else
-     _sfx'6'
-    end
-   end
-   if btnp5 then
-    if selectedskill.perform then
-     avatar.skill2=selectedskill
-     if avatar.skill1 == avatar.skill2 then
-      avatar.skill1=nil
-     end
-     _sfx'8'
-    else
-     _sfx'6'
-    end
-   end
-  end
+--   local selectedskill=availableskills[availableskillscur]
+--   if selectedskill then
+--    if btnp4 then
+--     if selectedskill.perform then
+--      avatar.skill1=selectedskill
+--      if avatar.skill2 == avatar.skill1 then
+--       avatar.skill2=nil
+--      end
+--      _sfx'8'
+--     else
+--      _sfx'6'
+--     end
+--    end
+--    if btnp5 then
+--     if selectedskill.perform then
+--      avatar.skill2=selectedskill
+--      if avatar.skill1 == avatar.skill2 then
+--       avatar.skill1=nil
+--      end
+--      _sfx'8'
+--     else
+--      _sfx'6'
+--     end
+--    end
+--   end
 
- -- exit
- elseif sectioncur == 4 then
-  if btnp4 then
-   if avatar.skill1 or avatar.skill2 then
-    for k,v in pairs(slots) do
-     if avatar_items[v] then
-      saveitem(k,avatar_items[v].class,has(
-          itemclasses[avatar_items[v].class].prefix or
-          prefix,avatar_items[v].prefix),
-        has(suffix,avatar_items[v].suffix))
-     else
-      saveitem(k,0,0,0)
-     end
-    end
+--  -- exit
+--  elseif sectioncur == 4 then
+--   if btnp4 then
+--    if avatar.skill1 or avatar.skill2 then
+--     for k,v in pairs(slots) do
+--      if avatar_items[v] then
+--       saveitem(k,avatar_items[v].class,has(
+--           itemclasses[avatar_items[v].class].prefix or
+--           prefix,avatar_items[v].prefix),
+--         has(suffix,avatar_items[v].suffix))
+--      else
+--       saveitem(k,0,0,0)
+--      end
+--     end
     
-    if theme then
-     _update60,_draw=dungeonupdate,dungeondraw
-    else
-     dungeoninit()
-    end
-   else
-    sectioncur=3
-    _sfx'6'
-   end
-  end
- end
-end
+--     if theme then
+--      _update60,_draw=dungeonupdate,dungeondraw
+--     else
+--      dungeoninit()
+--     end
+--    else
+--     sectioncur=3
+--     _sfx'6'
+--    end
+--   end
+--  end
+-- end
 
-function equipdraw()
- cls()
+-- function equipdraw()
+--  cls()
 
- -- draw inventory section
- local offsetx,i=0,1
- print('saddlebags',4,8,sectioncur == 1 and 10 or 4)
- for item in all(avatar.inventory) do
-  spr(item.sprite,6+offsetx,17)
-  if sectioncur == 1 and i == inventorycur then
-   rect(4+offsetx,15,15+offsetx,26,10)
-   if i == sellcur then
-    sspr(58,40,5,5,offsetx+4,15)
-   end
-   print(item.name,4,29,7)
-  end
-  offsetx+=12
-  i+=1
- end
+--  -- draw inventory section
+--  local offsetx,i=0,1
+--  print('saddlebags',4,8,sectioncur == 1 and 10 or 4)
+--  for item in all(avatar.inventory) do
+--   spr(item.sprite,6+offsetx,17)
+--   if sectioncur == 1 and i == inventorycur then
+--    rect(4+offsetx,15,15+offsetx,26,10)
+--    if i == sellcur then
+--     sspr(58,40,5,5,offsetx+4,15)
+--    end
+--    print(item.name,4,29,7)
+--   end
+--   offsetx+=12
+--   i+=1
+--  end
 
- -- draw equipped section
- offsetx,i=0,1
- print('equipped',4,43,sectioncur == 2 and 10 or 4)
- print('+'..spdfactornr..'% spd',41,43,13)
- print(avatar.att_spd_dec..' -af',79,43,3)
- for _i=0,avatar.startarmor-1 do
-  sspr(48,40,5,5,121-_i*6,43)
- end
- for k,v in pairs(slots) do
-  local item=avatar.items[v]
-  if item then
-   spr(item.sprite,6+offsetx,52)
-  else
-   spr(k,6+offsetx,52)
-  end
-  if sectioncur == 2 and k == equippedcur then
-   rect(4+offsetx,50,15+offsetx,61,10)
-   if item then
-    print(item.name,4,64,7)
-   end
-  end
-  offsetx+=12
- end
+--  -- draw equipped section
+--  offsetx,i=0,1
+--  print('equipped',4,43,sectioncur == 2 and 10 or 4)
+--  print('+'..spdfactornr..'% spd',41,43,13)
+--  print(avatar.att_spd_dec..' -af',79,43,3)
+--  for _i=0,avatar.startarmor-1 do
+--   sspr(48,40,5,5,121-_i*6,43)
+--  end
+--  for k,v in pairs(slots) do
+--   local item=avatar.items[v]
+--   if item then
+--    spr(item.sprite,6+offsetx,52)
+--   else
+--    spr(k,6+offsetx,52)
+--   end
+--   if sectioncur == 2 and k == equippedcur then
+--    rect(4+offsetx,50,15+offsetx,61,10)
+--    if item then
+--     print(item.name,4,64,7)
+--    end
+--   end
+--   offsetx+=12
+--  end
 
- -- draw availableskills section
- offsetx,i=0,1
- print('skills',4,79,sectioncur == 3 and 10 or 4)
- for skill in all(availableskills) do
-  local offsetx6=offsetx+6
-  spr(skill.sprite,offsetx6,88)
-  if sectioncur == 3 and i == availableskillscur then
-   rect(4+offsetx,86,15+offsetx,97,10)
-   if skill then
-    print(skill.desc,4,109,7)
-   end
-  end
-  if skill == avatar.skill1 then
-   spr(24,offsetx6,100)
-   print('\fb\x8e',7+offsetx,100)
-  end
-  if skill == avatar.skill2 then
-   spr(24,offsetx6,100)
-   print('\f8\x97',7+offsetx,100)
-  end
-  offsetx+=12
-  i+=1
- end
+--  -- draw availableskills section
+--  offsetx,i=0,1
+--  print('skills',4,79,sectioncur == 3 and 10 or 4)
+--  for skill in all(availableskills) do
+--   local offsetx6=offsetx+6
+--   spr(skill.sprite,offsetx6,88)
+--   if sectioncur == 3 and i == availableskillscur then
+--    rect(4+offsetx,86,15+offsetx,97,10)
+--    if skill then
+--     print(skill.desc,4,109,7)
+--    end
+--   end
+--   if skill == avatar.skill1 then
+--    spr(24,offsetx6,100)
+--    print('\fb\x8e',7+offsetx,100)
+--   end
+--   if skill == avatar.skill2 then
+--    spr(24,offsetx6,100)
+--    print('\f8\x97',7+offsetx,100)
+--   end
+--   offsetx+=12
+--   i+=1
+--  end
 
- -- draw exit button
- print('exit',57,120,sectioncur == 4 and 10 or 4)
-end
+--  -- draw exit button
+--  print('exit',57,120,sectioncur == 4 and 10 or 4)
+-- end
 
 -- function splash()
 --  music()
@@ -2005,7 +2017,7 @@ end
 --  end
 -- end
 
-_init=equipinit
+_init=dungeoninit
 
 __gfx__
 0000000000000055055555500550055005555500555055000555550000555550111111111d11111111111ddd111111d111111166111111441111111111111111
