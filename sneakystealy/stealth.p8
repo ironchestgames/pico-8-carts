@@ -1984,10 +1984,8 @@ local function initmapselect()
  mapgen()
  local _cash,_reconcost=0
  _update=function()
-  if btnp(1) then
+  if btnp(4) then
    initgame()
-  elseif btnp(0) then
-   initstatus()
   end
  end
 
@@ -2004,8 +2002,7 @@ local function initmapselect()
    print('\f7(nothing much)',23,41)
   end
 
-  print('\fa\x8b skip',7,119)
-  print('\fahit! \x91',97,119)
+  print('\fahit! \x8e',53,119)
 
   drawstatusbar()
  end
