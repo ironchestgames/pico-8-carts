@@ -70,6 +70,7 @@ local walls={
 }
 
 local worldw,worldh=200,200
+local camx,camy
 
 function norm(n)
  return n == 0 and 0 or sgn(n)
@@ -136,7 +137,7 @@ end
 
 
 local avatar={
- spd=0.5,
+ spd=0.75,
  x=32,y=32,
  dx=0,dy=0,
  r=3,
@@ -149,7 +150,7 @@ local avatar={
 
 local enemy={
  ai=1,counter=1,
- spd=0.1,
+ spd=0.4,
  x=64,y=64,
  dx=0,dy=0,
  r=3,
@@ -195,17 +196,15 @@ function _update60()
 
   -- set target
   local _target=avatartargets[_angle]
-  avatar.a,avatar.targetx,avatar.targety=_angle,avatar.x+_target[1],avatar.y+_target[2]
+  avatar.targetx,
+  avatar.targety=
+    avatar.x+_target[1],
+    avatar.y+_target[2]
   avatar.state='moving'
 
-  -- flipx
-  _btn0,_btn1=btn(0),btn(1)
-  if _btn0 or _btn1 then
-   avatar.flipx=_btn0
-  end
  else
-  avatar.targetx=nil
   avatar.state='idling'
+  avatar.dx,avatar.dy=0,0
  end
 
  -- local _skillbuttondown=btn(4) and 1 or btn(5) and 2 or nil
@@ -265,33 +264,46 @@ function _update60()
    end
   end
 
+  -- calc angle
+  _a.angle=0
+  local _dx,_dy=0,0
+  if _a.targetx then
+   _dx=_a.targetx-_a.x
+   _dy=_a.targety-_a.y
+   _a.angle=atan2(_dx,_dy)
+  end
+
   -- resolve states
   if _a.state == 'moving' then
-   local _dx=_a.targetx-_a.x
-   local _dy=_a.targety-_a.y
-   if abs(_dx) > _a.spd and abs(_dy) > _a.spd then
-    local _angle=atan2(_dx,_dy)
-    _a.dx,_a.dy=cos(_angle)*_a.spd,sin(_angle)*_a.spd
+   if abs(_dx) > _a.spd or abs(_dy) > _a.spd then
+    _a.dx,_a.dy=cos(_a.angle)*_a.spd,sin(_a.angle)*_a.spd
    else
     _a.dx,_a.dy=0,0
+    _a.targetx=nil
    end
 
-  elseif _a.state == 'performing' then
-   _a.counter-=1
-   if _a.counter <= 0 then
-    if _a.substate == 'pre' then
-     add(attacks,{
-      x=_a.x,
-      y=_a.y,
-      r=10,
-      counter=10,
-      })
-     _a.substate='post'
-     _a.counter=30
-    elseif _a.substate == 'post' then
-     _a.state='moving'
-    end
-   end
+  -- elseif _a.state == 'performing' then
+  --  _a.counter-=1
+  --  if _a.counter <= 0 then
+  --   if _a.substate == 'pre' then
+  --    add(attacks,{
+  --     x=_a.x,
+  --     y=_a.y,
+  --     r=10,
+  --     counter=10,
+  --     })
+  --    _a.substate='post'
+  --    _a.counter=30
+  --   elseif _a.substate == 'post' then
+  --    _a.state='moving'
+  --   end
+  --  end
+  end
+
+  -- flip
+  debug(_a.angle)
+  if _a.angle != 0.25 and _a.angle != 0.75 then
+   _a.flipx=_a.angle > 0.25 and _a.angle < 0.75
   end
 
   -- find next pos
@@ -331,10 +343,9 @@ function _update60()
  end
 
  -- move camera
- local _camx,_camy=avatar.x-64,avatar.y-64
- _camx=mid(0,_camx,worldw-128)
- _camy=mid(0,_camy,worldh-128)
- camera(_camx,_camy)
+ camx=mid(0,avatar.x-64,worldw-128)
+ camy=mid(0,avatar.y-64,worldh-128)
+ camera(camx,camy)
 end
 
 function _draw()
@@ -394,7 +405,7 @@ function _draw()
  -- for _r in all(rects) do
  --  rect(_r[1],_r[2],_r[3],_r[4],10)
  -- end
- print(stat(1),100,0,7)
+ print(stat(1),camx+100,camy,7)
 end
 
 __gfx__
