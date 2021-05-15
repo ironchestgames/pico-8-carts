@@ -162,9 +162,13 @@ local function curry3(_f,_a,_b,_c)
  end
 end
 
+function flrrnd(n)
+ return flr(rnd(n))
+end
+
 local function shuffle(_l)
  for _i=#_l,2,-1 do
-  local _j=flr(rnd(_i))+1
+  local _j=flrrnd(_i)+1
   _l[_i],_l[_j]=_l[_j],_l[_i]
  end
  return _l
@@ -231,11 +235,11 @@ local function makesound(_p,_sfx,_loudness)
   local _h=sqrt(_dx*_dx+_dy*_dy)
   _loudness=_loudness or 6
   if _h < _loudness then
-   local _newdir,_m=flr(rnd(4)),'!'
+   local _newdir,_m=flrrnd(4),'!'
    _g.dx,_g.dy=guarddxdeltas[_newdir],guarddydeltas[_newdir]
    if alertlvl == 1 then
     _g.state,_m='listening','?'
-    _g.state_c+=flr(rnd(3))+5
+    _g.state_c+=flrrnd(3)+5
    end
    add(msgs,{_g.x,_g.y,_m,2,30})
   end
@@ -249,11 +253,11 @@ local function computer(_p,_o,_tmp)
   if not _tmp.action_c then
    _tmp.seq,_tmp.action_c,_tmp.state={},0,'booting'
    makesound(_p,11)
-   local _l=6+flr(rnd(8))
+   local _l=6+flrrnd(8)
    for _i=1,_l do
     local _n=0
     repeat
-     _n=flr(rnd(3))
+     _n=flrrnd(3)
     until _n != _tmp.seq[_i-1]
     _tmp.seq[_i]=_n
    end
@@ -750,6 +754,7 @@ function mapgen()
  end
  for _p in all(players) do
   _p.x,_p.y=_x+_p.i,_y+_p.i
+  _p.starti=_p.x+_p.y*32 -- note: player start position of floor/obj
  end
 
  for _i=0,arslen do
@@ -770,8 +775,8 @@ function mapgen()
  local _xmin,_ymin,_ystart=2,3,3
 
  repeat
-  local _w,_h=flr(rnd(19))+10, flr(rnd(5))+6
-  local _xstart=2+flr(rnd(28-_w))
+  local _w,_h=flrrnd(19)+10,flrrnd(5)+6
+  local _xstart=2+flrrnd(28-_w)
 
   for _y=0,_h-1 do
    for _x=0,_w-1 do
@@ -789,10 +794,10 @@ function mapgen()
   if rnd() > 0.5 then
    _xoff=_w-1
   end
-  objs[(_ystart+2+flr(rnd(_h-5)))*32+_xstart+_xoff]=newwindow()
+  objs[(_ystart+2+flrrnd(_h-5))*32+_xstart+_xoff]=newwindow()
 
   -- add top door
-  objs[_ystart*32+_xstart+2+flr(rnd(_w-5))]={
+  objs[_ystart*32+_xstart+2+flrrnd(_w-5)]={
    typ=14,
    action={[2]=doorfromunder},
    adjaction={[2]=doorpeekfromunder}
@@ -821,7 +826,7 @@ function mapgen()
 
   -- add bottom door
   if _ystart < 31 then
-   objs[_ystart*32+_xstart+2+flr(rnd(_w-5))]={
+   objs[_ystart*32+_xstart+2+flrrnd(_w-5)]={
     typ=14,
     action={[2]=doorfromunder},
     adjaction={[2]=doorpeekfromunder}
@@ -831,8 +836,8 @@ function mapgen()
  until _ystart+_h-1 > 27
 
  -- add corridor
- local _w,_h=flr(rnd(5))+6, flr(rnd(18))+10
- local _xstart,_ystart=2+flr(rnd(28-_w)),3
+ local _w,_h=flrrnd(5)+6, flrrnd(18)+10
+ local _xstart,_ystart=2+flrrnd(28-_w),3
 
  for _y=0,_h-1 do
   for _x=0,_w-1 do
@@ -857,18 +862,43 @@ function mapgen()
  end
 
  -- add pillar
- local _pillarx,_pillary=flr(rnd(32)),flr(rnd(31))
- floor[_pillary*32+_pillarx]=2
- floor[(_pillary+1)*32+_pillarx]=2
+ -- local _pillarx,_pillary=flrrnd(32),flrrnd(31)
+ -- floor[_pillary*32+_pillarx]=2
+ -- floor[(_pillary+1)*32+_pillarx]=2
 
- -- add trees
- for _i=0,6 do
-  local _i=(1+flr(rnd(30)))*(1+flr(rnd(30)))
-  if floor[_i] == 0 then
-   floor[_i]=3
-   objs[_i]={typ=110,shadow={}}
+ -- add fence
+ function makefence(_xy,_horizontal,_bw)
+  local _inc,_start,_end=1,0,31
+  if _bw then
+   _inc,_start,_end=-1,31,0
+  end
+  for _j=_start,_end,_inc do
+   local _i=_xy+_j*32
+   if _horizontal == 1 then
+    _i=_j+_xy*32
+   end
+   if floor[_i] != 0 or floor[_i+32*_horizontal] != 0 or _j == _end then
+    local _hole=-flrrnd(_j)-1
+    if _bw then
+     _hole=flrrnd(_start-_j)+1
+    end
+    if _horizontal == 0 then
+     _hole=_hole*32
+    end
+    floor[_i+_hole]=0
+    floor[_i+_hole+32*_horizontal]=0
+    return
+   end
+   floor[_i]=2
+   floor[_i+32*_horizontal]=2
   end
  end
+
+ makefence(7+flrrnd(17),1)
+ makefence(7+flrrnd(17),1)
+ makefence(7+flrrnd(17),1,true)
+ makefence(7+flrrnd(17),1,true)
+ makefence(7+flrrnd(17),0,true)
 
  -- add outside fusebox
  local _fbi=(_ystart+_h-1)*32+_xstart+2
@@ -912,7 +942,7 @@ function mapgen()
  -- create objs positions
  local _pos={}
  for _y=2,29 do
-  local _x=flr(rnd(4))+2
+  local _x=flrrnd(4)+2
   while _x < 29 do
    local _i,_remove=_y*32+_x
    for _c in all(cameras) do
@@ -948,7 +978,7 @@ function mapgen()
    elseif _remove == true then
     _x+=2
    else
-    _x+=flr(rnd(6))+1
+    _x+=flrrnd(6)+1
    end
   end
  end
@@ -977,13 +1007,13 @@ function mapgen()
  end
 
  for _i in all(_pos) do
-  local _typ,_iplus1=_types[flr(rnd(#_types))+1],_i+1
+  local _typ,_iplus1=_types[flrrnd(#_types)+1],_i+1
   if _typ == 10 or _typ == 7 then
    del(_types,_typ)
   end
 
   if _typ == 0 then
-   _typ=flr(rnd(6))
+   _typ=flrrnd(6)
   end
 
   local _o,_doorpin={typ=_typ,shadow=s2t'.0;1;.1;1;'},{'door pin'}
@@ -1050,7 +1080,7 @@ function mapgen()
 
    -- generate new code
    for _i=1,5 do
-    add(_o.code,flr(rnd(5))+1)
+    add(_o.code,flrrnd(5)+1)
    end
 
    objs[_iplus1]={typ=11,shadow={1}}
@@ -1077,7 +1107,7 @@ function mapgen()
  -- add plants and watercoolers and boxes vertically
  for _x=2,29 do
   for _j=1,3 do
-   local _y=flr(rnd(29))+2
+   local _y=flrrnd(29)+2
    local _i=_y*32+_x
    local _imin1,_iplus1=_i-1,_i+1
    if not (objs[_i] or
@@ -1090,7 +1120,7 @@ function mapgen()
       floor[_i+32] == 1 and
       (floor[_iplus1] == 1 or floor[_imin1] == 1) and
       (floor[_iplus1] == 2 or floor[_imin1] == 2) then
-    local _typ=flr(rnd(3))
+    local _typ=flrrnd(3)
     local _o={typ=_typ,shadow=s2t'.2;1;.3;1;'} -- todo: fix flashlight bug
     objs[_i]=_o
    end
@@ -1764,17 +1794,13 @@ local function initgame()
    local _o=objs[_i]
    if _o and _o.typ then
     local _sx,_sy=(_i&31)*4,(_i\32)*4
-    if _o.typ > 100 then -- draw trees
-     sspr(_o.typ,112,6,16,_sx-1,_sy-12)
-    else
-     sspr(
-      _o.typ*4,
-      light[_i]*13,
-      4,
-      13,
-      _sx,
-      _sy-5)
-    end
+    sspr(
+     _o.typ*4,
+     light[_i]*13,
+     4,
+     13,
+     _sx,
+     _sy-5)
    end
    _o=objs[_i-1]
    if _o and _o.draw then
@@ -1824,13 +1850,6 @@ local function initgame()
    if _o and _o.typ then
     local _l=light[_i+32]
     sspr(_o.typ*4,_l*13,4,13,_px,_py+4)
-   end
-
-   for _j=1,4 do
-    local _o=objs[_i+32*_j]
-    if _o and _o.typ and _o.typ > 100 then -- draw trees
-     sspr(_o.typ,112,6,16,_px-1,_py-3+4*(_j-1))
-    end
    end
   end
 
