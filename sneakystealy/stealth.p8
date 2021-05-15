@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 32
 __lua__
--- sneaky stealy 1.4
+-- sneaky stealy 1.5 rc
 -- by ironchest games
 
 --[[
