@@ -743,18 +743,9 @@ function mapgen()
  floor,objs,guards,cameras,mapthings,ispoweron={},{},{},{},{},true
  local computercount=0
 
- local _r=rnd()
- local _x,_y=30,30
- if _r < 0.25 then
-  _x,_y=0,2
- elseif _r < 0.5 then
-  _y=2
- elseif _r < 0.75 then
-  _x=0
- end
+ local _startpos,_r=s2t'.x0;30;.x1;0;.x2;30;.x3;0;.y0;30;.y1;2;.y2;2;.y3;30;',flrrnd(4)
  for _p in all(players) do
-  _p.x,_p.y=_x+_p.i,_y+_p.i
-  _p.starti=_p.x+_p.y*32 -- note: player start position of floor/obj
+  _p.x,_p.y=_startpos['x'.._r]+_p.i,_startpos['y'.._r]+_p.i
  end
 
  for _i=0,arslen do
