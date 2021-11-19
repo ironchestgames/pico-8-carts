@@ -113,6 +113,11 @@ funs={
   input=function(_obj)
   end,
   update=function(_obj)
+   _obj.power=400
+   local _cnodepow=_obj.power/#_obj.cnodes
+   for _i=1,#_obj.cnodes do
+    _obj.cnodepows[_i]=_cnodepow
+   end
   end,
   draw=function(_obj)
    drawbase(_obj)
@@ -127,7 +132,11 @@ funs={
    
   end,
   update=function(_obj)
-
+   local _cnodepow=_obj.power/#_obj.cnodes
+   for _i=1,#_obj.cnodes do
+    _obj.cnodepows[_i]=_cnodepow
+   end
+   _obj.power-=1
   end,
   draw=function(_obj)
    local _offx,_offy=drawbase(_obj)
@@ -136,40 +145,39 @@ funs={
   end,
  },
 
- onoffbutton={
-  init=function(_obj)
-   _obj.b=newrandombtn(_obj.entrycode)
-  end,
-  input=function(_obj)
-   if btnp(_obj.b) then
-    -- if _obj.status == 'ok' then
-    --  _obj.status='problem'
-    -- elseif _obj.status == 'problem' then
-    --  _obj.status='ok'
-    -- end
-   end
-  end,
-  update=function(_obj)
-   
-   -- if _obj.inflow < 1 then
-   --  _obj.status='problem'
-   -- elseif _obj.outflow < 1 then
-   --  _obj.status='ok'
-   -- end
-  end,
-  draw=function(_obj)
-   local _offx,_offy=drawbase(_obj)
+ -- onoffbutton={
+ --  init=function(_obj)
+ --   _obj.b=newrandombtn(_obj.entrycode)
+ --  end,
+ --  input=function(_obj)
+ --   if btnp(_obj.b) then
+ --    -- if _obj.status == 'ok' then
+ --    --  _obj.status='problem'
+ --    -- elseif _obj.status == 'problem' then
+ --    --  _obj.status='ok'
+ --    -- end
+ --   end
+ --  end,
+ --  update=function(_obj)
+ --   -- if _obj.inflow < 1 then
+ --   --  _obj.status='problem'
+ --   -- elseif _obj.outflow < 1 then
+ --   --  _obj.status='ok'
+ --   -- end
+ --  end,
+ --  draw=function(_obj)
+ --   local _offx,_offy=drawbase(_obj)
 
-   print(btn2symbol[_obj.b],_offx+2,_offy+7,6)
-   rectfill(_offx+6,_offy+6,_offx+10,_offy+10,1)
+ --   print(btn2symbol[_obj.b],_offx+2,_offy+7,6)
+ --   rectfill(_offx+6,_offy+6,_offx+10,_offy+10,1)
 
-   local _col=1
-   if _obj.status == 'ok' then
-    _col=11
-   end
-   rectfill(_offx+7,_offy+7,_offx+9,_offy+9,_col)
-  end,
- },
+ --   local _col=1
+ --   if _obj.status == 'ok' then
+ --    _col=11
+ --   end
+ --   rectfill(_offx+7,_offy+7,_offx+9,_offy+9,_col)
+ --  end,
+ -- },
 
  -- channelbuttons={
  --  init=function(_obj)
@@ -256,33 +264,37 @@ root={
  w=10,h=10,
  entrycode={2},
  fun='powergen',
- left={
-  w=13,h=13,
-  entrycode={5},
-  fun='pulseshow',
-  left={
+ cnodes={{
    w=13,h=13,
-   entrycode={1},
+   entrycode={5},
    fun='pulseshow',
-   right={
-    w=13,h=13,
-    entrycode={3},
-    fun='pulseshow',
-   },
+   cnodes={},
   },
- },
- right={
-  w=13,h=13,
-  entrycode={4},
-  fun='onoffbutton',
+  {
+   w=13,h=13,
+   entrycode={5},
+   fun='pulseshow',
+   cnodes={{
+    w=13,h=13,
+    entrycode={1},
+    fun='pulseshow',
+    cnodes={{
+     w=13,h=13,
+     entrycode={3},
+     fun='pulseshow',
+     cnodes={},
+    }},
+   }},
+  },
  },
 }
 
 function travtree(_n,_f)
  if _n then
   _f(_n)
-  travtree(_n.left,_f)
-  travtree(_n.right,_f)
+  for _cnode in all(_n.cnodes) do
+   travtree(_cnode,_f)
+  end
  end
 end
 
@@ -291,25 +303,14 @@ cotravtree=cocreate(function ()
   local _stack={}
   add(_stack,root)
 
-  local pulse=root.power
-
   while #_stack > 0 do
    local _n=_stack[#_stack]
    del(_stack,_n)
 
-   pulse-=_n.usage
-   _n.power+=_n.usage
-
-   if pulse <= 0 then
-    yield()
-    break
-   end
-
-   if _n.right then
-    add(_stack,_n.right)
-   end
-   if _n.left then
-    add(_stack,_n.left)
+   for _i=1,#_n.cnodes do
+    local _cnode=_n.cnodes[_i]
+    _cnode.power+=max(_n.cnodepows[_i],0)
+    add(_stack,_cnode)
    end
 
    yield()
@@ -330,7 +331,7 @@ _init=function()
   _p.status='ok'
   _p.blink=0
   _p.power=0
-  _p.usage=1
+  _p.cnodepows={}
 
   if _x+_p.w > 128 then
    _x,_y=0,_maxy
@@ -358,37 +359,39 @@ tick=0
 _update=function()
  tick+=1
  
- if curpanel then
-  local _count=0
-  for _b in all(curpanel.entrycode) do
-   if btnp(_b) then
-    _count+=1
-   end
-  end
-  if _count == #curpanel.entrycode then
-   curpanel=nil
-  end
- else
-  travtree(root,function(_p)
-   local _count=0
-   for _b in all(_p.entrycode) do
-    if btnp(_b) then
-     _count+=1
-    end
-   end
-   if _count == #_p.entrycode then
-   -- if _p.status != 'blocked' and _count == #_p.entrycode then
-    curpanel=_p
-   end
-   end)
- end
+ -- if curpanel then
+ --  local _count=0
+ --  for _b in all(curpanel.entrycode) do
+ --   if btnp(_b) then
+ --    _count+=1
+ --   end
+ --  end
+ --  if _count == #curpanel.entrycode then
+ --   curpanel=nil
+ --  end
+ -- else
+ --  travtree(root,function(_p)
+ --   local _count=0
+ --   for _b in all(_p.entrycode) do
+ --    if btnp(_b) then
+ --     _count+=1
+ --    end
+ --   end
+ --   if _count == #_p.entrycode then
+ --   -- if _p.status != 'blocked' and _count == #_p.entrycode then
+ --    curpanel=_p
+ --   end
+ --   end)
+ -- end
 
- if curpanel then
-  curpanel.input(curpanel)
- end
+ -- if curpanel then
+ --  curpanel.input(curpanel)
+ -- end
 
  travtree(root,function(_p)
   _p.update(_p)
+  _p.power=max(_p.power,0)
+  debug('power '.._p.power)
   end)
 
  if tick % 30 == 0 then
