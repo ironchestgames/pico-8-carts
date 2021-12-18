@@ -415,21 +415,51 @@ panels={
   w=10,h=10,
  },
  {
+  fun='buffer',
+  w=17,h=19,
+ },
+ {
+  fun='buffer',
+  w=17,h=19,
+ },
+ {
+  fun='buffer',
+  w=17,h=19,
+ },
+ {
+  fun='buffer',
+  w=17,h=19,
+ },
+ {
+  fun='buffer',
+  w=17,h=19,
+ },
+ {
+  fun='buffer',
+  w=17,h=19,
+ },
+ {
+  fun='buffer',
+  w=17,h=19,
+ },
+ {
+  fun='buffer',
+  w=17,h=19,
+ },
+ {
+  fun='buffer',
+  w=17,h=19,
+ },
+ {
+  fun='buffer',
+  w=17,h=19,
+ },
+ {
   fun='codeinput',
   w=25,h=15,
   entrycode={0},
-  status='ok',
-  c=10,
   code={1,2,2,5,1},
   pos=1,
- },
- {
-  fun='buffer',
-  w=17,h=19,
- },
- {
-  fun='buffer',
-  w=17,h=19,
  },
  {
   fun='onoffbutton',
@@ -442,22 +472,14 @@ panels={
   entrycode={2},
  },
  {
-  fun='buffer',
-  w=17,h=19,
- },
- {
-  fun='timetrigger',
-  w=15,h=22,
-  entrycode={3},
- },
- {
   fun='onoffbuttonwbuffer',
   w=13,h=18,
   entrycode={4},
  },
  {
-  fun='buffer',
-  w=17,h=19,
+  fun='timetrigger',
+  w=15,h=22,
+  entrycode={3},
  },
  {
   fun='timetrigger',
@@ -478,6 +500,9 @@ end
 
 _init=function()
 
+ first=panels[1]
+ panels=shuffle(panels)
+
  local _x,_y,_maxy=1,1,0
 
  for _p in all(panels) do
@@ -496,22 +521,21 @@ _init=function()
    add(triggerfuncs,function() _p.trigger(_p) end)
   end
 
-  if _x+_p.w > 128 then
+  if _x+_p.w > 127 then
    _x,_y=1,_maxy
   end
   _p.x=_x
   _p.y=_y
 
-  if _p.w+_p.y > _maxy then
-   _maxy=_p.w+_p.y
+  if _p.h+_p.y > _maxy then
+   _maxy=_p.h+_p.y+1
   end
 
   _x+=_p.w+1
  end
 
- first=del(panels,panels[1])
-
- local _panels=clone(shuffle(panels))
+ local _panels=clone(panels)
+ del(_panels,first)
  while #_panels > 0 do
   local _p=del(_panels,_panels[1])
   travlist(first,function(_n)
