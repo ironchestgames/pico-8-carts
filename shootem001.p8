@@ -22,18 +22,9 @@ local function shuffle(_l,_len)
  return _l
 end
 
-local ship={x=64,y=110,spd=1,firespd=10,firetim=0,passivecount=60,hp=2,passive='boost'} -- shield / cloak / boost
+local pickerscene
 
-if ship.passive == 'shield' then
- ship.s=0
- ship.boffs={-4,3,-1}
-elseif ship.passive == 'boost' then
- ship.s=2
- ship.boffs={-3,2,-6}
-elseif ship.passive == 'cloak' then
- ship.s=4
- ship.boffs={-2,1,-4}
-end
+local ship
 
 local bullets={}
 
@@ -229,305 +220,355 @@ local function newburningp(_x,_y,_ydir)
 end
 
 local isgameover
-function _update60()
+local function gamescene()
+ _update60=function()
 
- -- spawn new
- if #enemies == 0 and spawnqueue[60] == nil then
-  for _i=1,25 do
-   local _typ=shuffle(types,#types)[1]
-   add(spawnqueue,{
-    typ=_typ,
+  -- spawn new
+  if #enemies == 0 and spawnqueue[60] == nil then
+   for _i=1,25 do
+    local _typ=shuffle(types,#types)[1]
+    add(spawnqueue,{
+     typ=_typ,
+     x=rnd()*128,y=-4,
+     dy=0.5,dx=0,
+     c=0,
+     hp=enemyhps[_typ],
+     f=enemyupdate[_typ],
+     ifactor=rnd(),
+    })
+   end
+
+   shuffle(spawnqueue,60)
+
+   -- boss
+   spawnqueue[60]={
+    typ=1,
+    isboss=true,
     x=rnd()*128,y=-4,
     dy=0.5,dx=0,
     c=0,
-    hp=enemyhps[_typ],
-    f=enemyupdate[_typ],
+    hp=100,
+    f=enemyupdate[32],
     ifactor=rnd(),
-   })
+   }
   end
 
-  shuffle(spawnqueue,60)
-
-  -- boss
-  spawnqueue[60]={
-   typ=1,
-   isboss=true,
-   x=rnd()*128,y=-4,
-   dy=0.5,dx=0,
-   c=0,
-   hp=100,
-   f=enemyupdate[32],
-   ifactor=rnd(),
-  }
- end
-
- -- update particles
- shuffle(ps,#ps)
- for _p in all(ps) do
-  _p.x+=_p.spdx
-  _p.y+=_p.spdy
-  _p.r+=_p.spdr
-  _p.lifec-=1
-  _p.col=_p.colors[flr(#_p.colors*((_p.life-_p.lifec)/_p.life))+1]
-  if _p.lifec<0 then
-   del(ps,_p)
-   if _p.ondeath then
-    _p.ondeath(_p.x,_p.y)
+  -- update particles
+  shuffle(ps,#ps)
+  for _p in all(ps) do
+   _p.x+=_p.spdx
+   _p.y+=_p.spdy
+   _p.r+=_p.spdr
+   _p.lifec-=1
+   _p.col=_p.colors[flr(#_p.colors*((_p.life-_p.lifec)/_p.life))+1]
+   if _p.lifec<0 then
+    del(ps,_p)
+    if _p.ondeath then
+     _p.ondeath(_p.x,_p.y)
+    end
    end
   end
- end
- 
- if isgameover then
-  return
- end
-
- -- stars
- for _s in all(stars) do
-  _s.y+=_s.spd
-  if _s.y>130 then
-   _s.y=-3
-   _s.x=flr(rnd()*128)
+  
+  if isgameover then
+   return
   end
- end
 
- -- spawn enemies
- local _flrt=flr(t()*3)
- if spawnqueue[_flrt] then
-  add(enemies,spawnqueue[_flrt])
-  spawnqueue[_flrt]=nil
- end
- 
- -- ship moving
- local _newx=ship.x
- local _newy=ship.y
-
- ship.spd=1
- if ship.boost then
-  ship.spd=2
- end
- 
- if btn(0) then
-  _newx+=-ship.spd
- end
- if btn(1) then
-  _newx+=ship.spd
- end
- if btn(2) then
-  _newy+=-ship.spd
- end
- if btn(3) then
-  _newy+=ship.spd
- end
- 
- ship.x=mid(4,_newx,124)
- ship.y=mid(4,_newy,119)
- 
- -- ship fire
- ship.frame=0
- if btn(4) then
-  ship.firetim-=1
-
-  ship.passivecount+=0.125
-  ship[ship.passive]=nil
-
-  if ship.firetim <= 1 then
-   add(bullets,{x=ship.x+ship.boffs[1],y=ship.y+ship.boffs[3],spdx=0,spdy=-3,s=45,friendly=true})
-   add(bullets,{x=ship.x+ship.boffs[2],y=ship.y+ship.boffs[3],spdx=0,spdy=-3,s=45,friendly=true})
-   ship.firetim=ship.firespd
-   ship.frame=1
+  -- stars
+  for _s in all(stars) do
+   _s.y+=_s.spd
+   if _s.y>130 then
+    _s.y=-3
+    _s.x=flr(rnd()*128)
+   end
   end
- else
-  ship.firetim=0
 
-  if ship.hp > 1 and ship.passivecount > 0 then
-   ship[ship.passive]=true
-   ship.passivecount-=1
-  else
+  -- spawn enemies
+  local _flrt=flr(t()*3)
+  if spawnqueue[_flrt] then
+   add(enemies,spawnqueue[_flrt])
+   spawnqueue[_flrt]=nil
+  end
+  
+  -- ship moving
+  local _newx=ship.x
+  local _newy=ship.y
+
+  ship.spd=1
+  if ship.boost then
+   ship.spd=2
+  end
+  
+  if btn(0) then
+   _newx+=-ship.spd
+  end
+  if btn(1) then
+   _newx+=ship.spd
+  end
+  if btn(2) then
+   _newy+=-ship.spd
+  end
+  if btn(3) then
+   _newy+=ship.spd
+  end
+  
+  ship.x=mid(4,_newx,124)
+  ship.y=mid(4,_newy,119)
+  
+  -- ship fire
+  ship.frame=0
+  if btn(4) then
+   ship.firetim-=1
+
+   ship.passivecount+=0.125
    ship[ship.passive]=nil
+
+   if ship.firetim <= 1 then
+    add(bullets,{x=ship.x+ship.boffs[1],y=ship.y+ship.boffs[3],spdx=0,spdy=-3,s=45,friendly=true})
+    add(bullets,{x=ship.x+ship.boffs[2],y=ship.y+ship.boffs[3],spdx=0,spdy=-3,s=45,friendly=true})
+    ship.firetim=ship.firespd
+    ship.frame=1
+   end
+  else
+   ship.firetim=0
+
+   if ship.hp > 1 and ship.passivecount > 0 then
+    ship[ship.passive]=true
+    ship.passivecount-=1
+   else
+    ship[ship.passive]=nil
+   end
   end
- end
 
- ship.passivecount=mid(0,ship.passivecount,120)
+  ship.passivecount=mid(0,ship.passivecount,120)
 
- -- bullets
- for _b in all(bullets) do
-  _b.x+=_b.spdx
-  _b.y+=_b.spdy
+  -- bullets
+  for _b in all(bullets) do
+   _b.x+=_b.spdx
+   _b.y+=_b.spdy
 
-  if _b.friendly then
-   local _life=rnd()*4+4
-   add(ps,{
-    x=_b.x,
-    y=_b.y+4,
-    r=0.1,
-    spdx=0,
-    spdy=rnd()*-0.1,
-    spdr=0,
-    colors=bulletcolors,
-    life=_life,
-    lifec=_life,
-   })
-  elseif _b.s == 46 then
-   for _i=-1,1 do
+   if _b.friendly then
     local _life=rnd()*4+4
     add(ps,{
-     x=_b.x+_i,
+     x=_b.x,
      y=_b.y+4,
      r=0.1,
      spdx=0,
      spdy=rnd()*-0.1,
      spdr=0,
-     colors=enemybulletcolors,
+     colors=bulletcolors,
      life=_life,
      lifec=_life,
     })
+   elseif _b.s == 46 then
+    for _i=-1,1 do
+     local _life=rnd()*4+4
+     add(ps,{
+      x=_b.x+_i,
+      y=_b.y+4,
+      r=0.1,
+      spdx=0,
+      spdy=rnd()*-0.1,
+      spdr=0,
+      colors=enemybulletcolors,
+      life=_life,
+      lifec=_life,
+     })
+    end
    end
-  end
 
-  if _b.friendly then
-   for _e in all(enemies) do
-    local _dx=_e.x-_b.x
-    local _dy=_e.y-_b.y
+   if _b.friendly then
+    for _e in all(enemies) do
+     local _dx=_e.x-_b.x
+     local _dy=_e.y-_b.y
+     if sqrt(_dx^2+_dy^2) < 6 then
+      _e.hp-=1
+      newhit(_e.x,_e.y)
+      del(bullets,_b)
+     end
+    end
+   else
+    local _dx=ship.x-_b.x
+    local _dy=ship.y-_b.y
     if sqrt(_dx^2+_dy^2) < 6 then
-     _e.hp-=1
-     newhit(_e.x,_e.y)
+     newexplosion(ship.x,ship.y)
+     if not ship.shield then
+      ship.hp-=1
+     end
      del(bullets,_b)
     end
    end
-  else
-   local _dx=ship.x-_b.x
-   local _dy=ship.y-_b.y
-   if sqrt(_dx^2+_dy^2) < 6 then
-    newexplosion(ship.x,ship.y)
-    if not ship.shield then
-     ship.hp-=1
-    end
+
+   if _b.x<0 or _b.x>128 or
+     _b.y<0 or _b.y>128 then
     del(bullets,_b)
    end
   end
 
-  if _b.x<0 or _b.x>128 or
-    _b.y<0 or _b.y>128 then
-   del(bullets,_b)
-  end
- end
+  -- enemies
+  for _e in all(enemies) do
+   _e.f(_e)
+   _e.x+=_e.dx
+   _e.y+=_e.dy
 
- -- enemies
- for _e in all(enemies) do
-  _e.f(_e)
-  _e.x+=_e.dx
-  _e.y+=_e.dy
-
-  if _e.hp <= 0 then
-   newexplosion(_e.x,_e.y)
-   del(enemies,_e)
-   if _e.isboss then
-    newexplosion(_e.x+10,_e.y+10)
-    newexplosion(_e.x-10,_e.y+10)
-    newexplosion(_e.x-10,_e.y-10)
-    newexplosion(_e.x+10,_e.y-10)
+   if _e.hp <= 0 then
+    newexplosion(_e.x,_e.y)
+    del(enemies,_e)
+    if _e.isboss then
+     newexplosion(_e.x+10,_e.y+10)
+     newexplosion(_e.x-10,_e.y+10)
+     newexplosion(_e.x-10,_e.y-10)
+     newexplosion(_e.x+10,_e.y-10)
+    end
+   elseif _e.typ == 16 and _e.hp <= 2 then
+    newburningp(_e.x,_e.y,-1)
    end
-  elseif _e.typ == 16 and _e.hp <= 2 then
-   newburningp(_e.x,_e.y,-1)
+
+   local _dx=ship.x-_e.x
+   local _dy=ship.y-_e.y
+   if sqrt(_dx^2+_dy^2) < 6 and not ship.cloak then
+    newexplosion(ship.x,ship.y)
+    ship.hp=0
+    del(enemies,_e)
+   end
+
+   if _e.y > 132 then
+    _e.y=-16
+    _e.dy=0.25
+    _e.x+=(rnd()-0.5)*5
+    _e.c=0
+   end
   end
 
-  local _dx=ship.x-_e.x
-  local _dy=ship.y-_e.y
-  if sqrt(_dx^2+_dy^2) < 6 and not ship.cloak then
-   newexplosion(ship.x,ship.y)
-   ship.hp=0
-   del(enemies,_e)
-  end
-
-  if _e.y > 132 then
-   _e.y=-16
-   _e.dy=0.25
-   _e.x+=(rnd()-0.5)*5
-   _e.c=0
-  end
- end
-
- if ship.boost then
-  newexhaustp(ship.x,ship.y+4,boostexhaustcolors)
-  newexhaustp(ship.x,ship.y+4,boostexhaustcolors)
- elseif not ship.cloak then
-  newexhaustp(ship.x,ship.y+4)
-  newexhaustp(ship.x,ship.y+4)
- end
-
- if ship.hp == 1 then
-  newburningp(ship.x-2,ship.y+2,1)
- elseif ship.hp <= 0 then
-  isgameover=true
- end
-
-end
-
-function _draw()
- cls(0)
- 
- -- draw stars
- for _s in all(stars) do
-  if _s.spd<=1 then
-   pset(_s.x,_s.y,1)
-  end
- end
-
- -- draw ship
- if not isgameover then
-  spr(ship.s+ship.frame,ship.x-4,ship.y-4)
-
-  if ship.cloak then
-   palt(0,false)
-   fillp(rnd()*32767)
-   circfill(ship.x+rnd()*2-1,ship.y+rnd()*2-1,6,1)
-   circfill(ship.x+rnd()*2-1,ship.y+rnd()*2-1,6,0)
-   fillp()
-   palt(0,true)
-
-  elseif ship.shield then
-   circ(ship.x,ship.y,6,1)
-   fillp(rnd()*32767)
-   circ(ship.x+rnd()*2-1,ship.y+rnd()*2-1,6,12)
-   fillp()
-  end
- end
-
- -- draw enemies
- for _e in all(enemies) do
-  if _e.isboss then
-   sspr(0,_e.typ*16,16,16,_e.x-8,_e.y-8)
+  if ship.boost then
+   newexhaustp(ship.x,ship.y+4,boostexhaustcolors)
+   newexhaustp(ship.x,ship.y+4,boostexhaustcolors)
+  elseif ship.passive == 'cloak' then
+   newexhaustp(ship.x+2,ship.y+4)
+   newexhaustp(ship.x+2,ship.y+4)
+   newexhaustp(ship.x-2,ship.y+4)
+   newexhaustp(ship.x-2,ship.y+4)
   else
-   spr(_e.typ,_e.x-4,_e.y-4)
+   newexhaustp(ship.x,ship.y+4)
+   newexhaustp(ship.x,ship.y+4)
+  end
+
+  if ship.hp == 1 then
+   newburningp(ship.x-2,ship.y+2,1)
+  elseif ship.hp <= 0 then
+   isgameover=true
   end
  end
- 
- -- draw bullets
- for _b in all(bullets) do
-  spr(_b.s,_b.x-3,_b.y)
- end
 
- -- draw particles
- for _p in all(ps) do
-  circfill(_p.x,_p.y,_p.r,_p.col)
- end
-
- if ship.hp == 1 then
-  rect(3,123,63,127,2)
-  print('warning',35,123,8+flr(t()*2)%2)
-
- else
-  rectfill(3,123,63,127,1)
-  if ship.passivecount > 0 then
-   rectfill(3,123,3+(ship.passivecount/2),127,3)
+ _draw=function()
+  cls(0)
+  
+  -- draw stars
+  for _s in all(stars) do
+   if _s.spd<=1 then
+    pset(_s.x,_s.y,1)
+   end
   end
-  local _col=7
-  if ship.cloak or ship.shield or ship.boost then
-   _col=3+(flr(t()*12)%2)*8
+
+  -- draw ship
+  if not isgameover then
+   spr(ship.s+ship.frame,ship.x-4,ship.y-4)
+
+   if ship.cloak then
+    palt(0,false)
+    fillp(rnd()*32767)
+    circfill(ship.x+rnd()*2-1,ship.y+rnd()*2-1,6,1)
+    circfill(ship.x+rnd()*2-1,ship.y+rnd()*2-1,6,0)
+    fillp()
+    palt(0,true)
+
+   elseif ship.shield then
+    circ(ship.x,ship.y,6,1)
+    fillp(rnd()*32767)
+    circ(ship.x+rnd()*2-1,ship.y+rnd()*2-1,6,12)
+    fillp()
+   end
   end
-  print(ship.passive,5,123,_col)
+
+  -- draw enemies
+  for _e in all(enemies) do
+   if _e.isboss then
+    sspr(0,_e.typ*16,16,16,_e.x-8,_e.y-8)
+   else
+    spr(_e.typ,_e.x-4,_e.y-4)
+   end
+  end
+  
+  -- draw bullets
+  for _b in all(bullets) do
+   spr(_b.s,_b.x-3,_b.y)
+  end
+
+  -- draw particles
+  for _p in all(ps) do
+   circfill(_p.x,_p.y,_p.r,_p.col)
+  end
+
+  if ship.hp == 1 then
+   rect(3,123,63,127,2)
+   print('warning',35,123,8+flr(t()*2)%2)
+
+  else
+   rectfill(3,123,63,127,1)
+   if ship.passivecount > 0 then
+    rectfill(3,123,3+(ship.passivecount/2),127,3)
+   end
+   local _col=7
+   if ship.cloak or ship.shield or ship.boost then
+    _col=3+(flr(t()*12)%2)*8
+   end
+   print(ship.passive,5,123,_col)
+  end
  end
 end
+
+pickerscene=function()
+ local _seli=1
+ local _passives={'shield','boost','cloak'}
+ _update60=function()
+  if btnp(0) then
+   _seli-=1
+  elseif btnp(1) then
+   _seli+=1
+  end
+  _seli=mid(1,_seli,3)
+
+  if btnp(4) then
+
+   ship={x=64,y=110,spd=1,frame=0,firespd=10,firetim=0,passivecount=60,hp=2,passive=_passives[_seli]} -- shield / cloak / boost
+
+   if ship.passive == 'shield' then
+    ship.s=0
+    ship.boffs={-4,3,-1}
+   elseif ship.passive == 'boost' then
+    ship.s=2
+    ship.boffs={-3,2,-6}
+   elseif ship.passive == 'cloak' then
+    ship.s=4
+    ship.boffs={-2,1,-4}
+   end
+   gamescene()
+  end
+ end
+
+ _draw=function()
+  cls()
+  for _i=0,2 do
+   spr(_i*2,32+_i*27,64)
+   if _i+1 == _seli then
+    pset(36+_i*27,60,10)
+   end
+  end
+  local _s=_passives[_seli]
+  print(_s,64-#_s*2,90,10)
+ end
+end
+
+_init=pickerscene
 
 
 __gfx__
