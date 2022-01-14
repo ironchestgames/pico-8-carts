@@ -37,8 +37,8 @@ function perfselect(_cur,_items)
  local _closest=nil
  for _item in all(_items) do
   if _item != _cur then
-   local _a=atan2(_item.follow.x-_cur.follow.x,_item.follow.y-_cur.follow.y)%1
-   local _d=dist(_item.follow.x,_item.follow.y,_cur.follow.x,_cur.follow.y)
+   local _a=atan2(_item.x-_cur.x,_item.y-_cur.y)%1
+   local _d=dist(_item.x,_item.y,_cur.x,_cur.y)
    if _d < _closestd and
       -- ((btnp(0) and _a >= 0.3125 and _a <= 0.6875) or -- left
       --  (btnp(1) and (_a >= 0.8125 or _a <= 0.1875)) or -- right
@@ -58,36 +58,10 @@ function perfselect(_cur,_items)
  return _closest or _cur
 end
 
-function addperfmenu(_player,_items)
- local _plperfmenu=perfmenus[_player]
- _plperfmenu[#_plperfmenu+1]={
-  sel=_items[1],
-  items=_items,
- }
-end
-
-function setshiptarget(_ship,_target)
+function shipgoto(_ship,_target)
  _ship.targetx=_target.x
  _ship.targety=_target.y
- -- todo: check for free move mode
  _ship.target=_target
-end
-
-function colonize(_perfmenu,_shipitem,_planetitem)
- add(_perfmenu.items,_planetitem)
- _planetitem.action=function(_perfmenu)
-  local _items={
-   {x=10,y=100},
-   {x=100,y=100},
-   {x=100,y=10},
-  }
-  add(_perfmenu,{
-   sel=_items[1],
-   items=_items,
-  })
- end
- _planetitem.item.owner=_shipitem.item.owner
- return true
 end
 
 planets={
@@ -109,11 +83,72 @@ for _p in all(planets) do
  _p.isplanet=true
 end
 
-perfmenus={
- [1]={},
+players={
+ [1]={
+  owner=13,
+  ships={},
+  curlevel=1,
+  sel1=nil,
+  getitems1=function(_pl)
+   _pl.sel2=nil
+   local _items={}
+
+   -- add player ships
+   for _ship in all(_pl.ships) do
+    _ship.text=nil
+    _ship.action=function()
+     _pl.sel2=_ship
+     _pl.curlevel=2
+    end
+   end
+   _items=clone(_pl.ships)
+
+   -- add player planets
+   -- todo
+
+   return _items
+  end,
+  sel2=nil,
+  getitems2=function(_pl)
+   local _items={}
+   if _pl.sel1.isplanet then
+    -- todo: create build menu
+   else
+    -- add this ship for toggle free move
+    _pl.sel1.text='toggle free move'
+    add(_items,_pl.sel1)
+
+    -- add free/enemy planets
+    for _planet in all(planets) do
+     _planet.text=nil
+     if _planet.owner == _pl.owner then
+      _planet.text='go to'
+      _planet.action=function()
+       shipgoto(_pl.sel1,_planet)
+       _pl.sel1.orders=nil
+       _pl.curlevel=1
+      end
+     elseif not _planet.owner then
+      _planet.text='colonize'
+      _planet.action=function()
+       shipgoto(_pl.sel1,_planet)
+       _pl.sel1.orders='colonize'
+       _pl.curlevel=1
+      end
+     end
+     add(_items,_planet)
+    end
+
+    -- add enemy ships
+
+   end
+
+   return _items
+  end,
+ }
 }
 
-pl1ships={
+players[1].ships={
  {
   x=rnd(128),y=rnd(128),
  },
@@ -121,127 +156,63 @@ pl1ships={
   x=rnd(128),y=rnd(128),
  },
 }
--- perfmenus[1][1].sel.item=pl1ships[1]
--- local _items={}
--- for _ship in all(pl1ships) do
---  local _action=function(_perfmenus)
---   local _cursel=_perfmenus[#_perfmenus]
---   local _items={}
---   add(_items,{
---    item=_ship,
---    text='toggle free move',
---    action=function(_perfmenus)
 
---    end,
---   })
---   for _p in all(planets) do
---    add(_items,{
---     item=_p,
---     action=function(_perfmenus)
---      _ship.targetx=_p.x
---      _ship.targety=_p.y
---      _ship.target=_p
---      deli(_perfmenus,#_perfmenus)
---      _ship.order=function()
---       colonize(_perfmenus,_cursel.sel,{
---        item=_p,
---        })
---      end
---     end,
---    })
---   end
---   add(_perfmenus,{
---    source=_cursel.sel,
---    sel=_cursel.sel,
---    text='',
---    items=_items,
---   })
---  end
-
---  add(_items,{
---   item=_ship,
---   action=_action,
---  })
--- end
--- perfmenus[1][1].items=_items
-
-for _ship in all(pl1ships) do
+for _ship in all(players[1].ships) do
  _ship.targetx,_ship.targety=_ship.x,_ship.y
- _ship.spd=0.02
- _ship.owner=13
+ _ship.spd=0.05
+ _ship.owner=players[1].owner
  _ship.name='destroyer'
 end
 
-function newplperfmenu(_player)
- local _items={}
- for _ship in all(pl1ships) do
-  add(_items,{
-   follow=_ship,
-   text=_ship.name,
-   action=function()
-    -- get legal targets and their possible action
-    local _targets=concat({_ship},clone(planets))
-
-    local _items={}
-    for _target in all(_targets) do
-     local _text='toggle free move'
-     local _action=function()
-      -- todo: toggle free move
-     end
-     if _target.isplanet then
-      _text='colonize'
-      _action=function()
-       setshiptarget(_ship,_target)
-       _ship.order=function()
-        -- todo: show message
-        _target.owner=_ship.owner
-       end
-       perfmenus[_player]={newplperfmenu(_player)}
-      end
-     end
-     add(_items,{
-      follow=_target,
-      text=_text,
-      action=_action,
-     })
-    end
-    addperfmenu(_player,_items)
-   end,
-  })
- end
- return {
-  sel=_items[1],
-  items=_items,
- }
-end
-
-perfmenus[1][1]=newplperfmenu(1)
-
-
 function _update60()
 
- local _curperfmenu=perfmenus[1][#perfmenus[1]]
- if band(btnp(),0b1111) != 0 then
-  _curperfmenu.sel=perfselect(_curperfmenu.sel,_curperfmenu.items)
- elseif btnp(4) then
-  _curperfmenu.sel.action()
- elseif btnp(5) and #perfmenus[1] > 1 then
-  deli(perfmenus[1],#perfmenus[1])
+ for _i=1,#players do
+  local _player=players[_i]
+  local _btnpi=_i-1
+  if _player.curlevel == 0 then
+   if btnp(4,_btnpi) then
+    _player.curlevel=1
+   end
+  else
+  
+   local _selkey='sel'.._player.curlevel
+   local _items=_player['getitems'.._player.curlevel](_player)
+
+   -- set initial selection
+   if not _player[_selkey] then
+    _player[_selkey]=_items[1]
+   end
+
+   if btnp(0,_btnpi) or btnp(1,_btnpi) or btnp(2,_btnpi) or btnp(3,_btnpi) then
+    _player[_selkey]=perfselect(_player[_selkey],_items)
+   elseif btnp(4,_btnpi) then
+    _player[_selkey].action()
+   elseif btnp(5,_btnpi) then
+    _player.curlevel=mid(0,_player.curlevel-1,2)
+   end
+
+  end
  end
 
  -- move ships
- for _ship in all(pl1ships) do
-  if dist(_ship.x,_ship.y,_ship.targetx,_ship.targety) < 4 then
-   _ship.targetx,_ship.targety=_ship.x,_ship.y
-   if _ship.target then
-    if _ship.order(_ship,_ship.target) then
-     -- todo: message
+ for _player in all(players) do
+  for _ship in all(_player.ships) do
+   if dist(_ship.x,_ship.y,_ship.targetx,_ship.targety) < 4 then
+    _ship.targetx,_ship.targety=_ship.x,_ship.y
+    if _ship.target then
+     if _ship.orders == 'colonize' then
+      if _ship.target.owner then
+       -- todo: fail message
+      else
+       _ship.target.owner=_ship.owner
+      end
+     end
     end
+   else
+    local _a=atan2(_ship.targetx-_ship.x,_ship.targety-_ship.y)
+    _ship.x+=cos(_a)*_ship.spd
+    _ship.y+=sin(_a)*_ship.spd
    end
-  else
-   local _a=atan2(_ship.targetx-_ship.x,_ship.targety-_ship.y)
-   _ship.x+=cos(_a)*_ship.spd
-   _ship.y+=sin(_a)*_ship.spd
   end
  end
 end
@@ -259,19 +230,25 @@ function _draw()
   end
  end
 
- -- -- draw ships
- for _ship in all(pl1ships) do
-  pal(1,_ship.owner)
-  spr(2,_ship.x,_ship.y)
+ -- draw ships
+ for _player in all(players) do
+  for _ship in all(_player.ships) do
+   pal(1,_ship.owner)
+   spr(2,_ship.x,_ship.y)
+  end
+  pal(1,1)
  end
- pal(1,1)
 
- -- draw perfmenus
- pal(1,13)
- local _cursel=perfmenus[1][#perfmenus[1]].sel
- sspr(40,8,12,12,_cursel.follow.x-3,_cursel.follow.y-1)
- print(_cursel.text or '',_cursel.follow.x-3,_cursel.follow.y-7,1)
- pal(1,1)
+ -- draw selection
+ for _player in all(players) do
+  if _player.curlevel > 0 then
+   pal(1,_player.owner)
+   local _cursel=_player['sel'.._player.curlevel]
+   sspr(40,8,12,12,_cursel.x-3,_cursel.y-1)
+   print(_cursel.text or _cursel.name or '',_cursel.x-3,_cursel.y-7,1)
+   pal(1,1)
+  end
+ end
 end
 
 __gfx__
