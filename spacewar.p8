@@ -32,7 +32,7 @@ function dist(x1,y1,x2,y2)
  return sqrt(dx*dx+dy*dy)*10
 end
 
-function perfselect(_cur,_items)
+function perfselect(_btnpi,_cur,_items)
  local _closestd=999
  local _closest=nil
  for _item in all(_items) do
@@ -40,16 +40,16 @@ function perfselect(_cur,_items)
    local _a=atan2(_item.x-_cur.x,_item.y-_cur.y)%1
    local _d=dist(_item.x,_item.y,_cur.x,_cur.y)
    if _d < _closestd and
-      -- ((btnp(0) and _a >= 0.3125 and _a <= 0.6875) or -- left
-      --  (btnp(1) and (_a >= 0.8125 or _a <= 0.1875)) or -- right
-      -- (btnp(3) and _a >= 0.5625 and _a <= 0.9375) or -- down
-      --  (btnp(2) and _a >= 0.0625 and _a <= 0.4375)) then -- up
-      ((btnp(0) and _a >= 0.375 and _a <= 0.625) or -- left
-       (btnp(1) and (_a >= 0.875 or _a <= 0.125)) or -- right
-      (btnp(3) and _a >= 0.625 and _a <= 0.875) or -- down
-       (btnp(2) and _a >= 0.125 and _a <= 0.375)) then -- up
-      -- (btnp(3) and _a >= 0.55 and _a <= 0.95) or -- down
-       -- (btnp(2) and _a >= 0.05 and _a <= 0.45)) then -- up
+      -- ((btnp(0,_btnpi) and _a >= 0.3125 and _a <= 0.6875) or -- left
+      --  (btnp(1,_btnpi) and (_a >= 0.8125 or _a <= 0.1875)) or -- right
+      -- (btnp(3,_btnpi) and _a >= 0.5625 and _a <= 0.9375) or -- down
+      --  (btnp(2,_btnpi) and _a >= 0.0625 and _a <= 0.4375)) then -- up
+      ((btnp(0,_btnpi) and _a >= 0.375 and _a <= 0.625) or -- left
+       (btnp(1,_btnpi) and (_a >= 0.875 or _a <= 0.125)) or -- right
+      (btnp(3,_btnpi) and _a >= 0.625 and _a <= 0.875) or -- down
+       (btnp(2,_btnpi) and _a >= 0.125 and _a <= 0.375)) then -- up
+      -- (btnp(3,_btnpi) and _a >= 0.55 and _a <= 0.95) or -- down
+       -- (btnp(2,_btnpi) and _a >= 0.05 and _a <= 0.45)) then -- up
     _closestd=_d
     _closest=_item
    end
@@ -151,9 +151,17 @@ function getitems2(_pl)
   end
 
  else
-  -- add this ship for toggle free move
-  -- _pl.sel1.text='toggle free move'
-  -- add(_items,_pl.sel1)
+
+  _pl.sel1.text=nil
+  if _pl.sel1 == _pl.sel2 then
+   _pl.sel1.text='toggle free move'
+  end
+  _pl.sel1.action=function()
+   _pl.curlevel=3
+   _pl.sel1.text=''
+   _pl.sel3=_pl.sel1
+  end
+  add(_items,_pl.sel1)
 
   -- add free/enemy planets
   for _planet in all(planets) do
@@ -187,6 +195,47 @@ function getitems2(_pl)
  return _items
 end
 
+function getitems3(_pl)
+ local _items={}
+ for _c=1,14 do
+  for _r=1,14 do
+   local _x,_y=_c*8,_r*8
+   local _item={
+    x=_x,
+    y=_y,
+    text='move here',
+    action=function()
+     _pl.sel2.targetx=_x
+     _pl.sel2.targety=_y
+     _pl.sel2.target=nil
+     _pl.curlevel=1
+    end,
+   }
+   local _tooclose=false
+   for _planet in all(planets) do
+    if dist(_planet.x,_planet.y,_item.x,_item.y) <= 8 then
+     _tooclose=true
+    end
+   end
+   for _p in all(players) do
+    for _ship in all(_p.ships) do
+     if dist(_ship.x,_ship.y,_item.x,_item.y) <= 8 then
+      _tooclose=true
+     end
+    end
+   end
+   if _pl.sel3 and _pl.sel3.x == _item.x and _pl.sel3.y == _item.y then
+    _pl.sel3=_item
+   end
+   if not _tooclose then
+    add(_items,_item)
+   end
+  end
+ end
+
+ return _items
+end
+
 local angles={
  [0]={0,1},
  {1,1},
@@ -203,19 +252,19 @@ players={
     name='fighters',
     sprite=4,
     spd=0.05,
-    duration=320,
+    duration=1200,
    },
    {
     name='corvettes',
     sprite=8,
     spd=0.04,
-    duration=320,
+    duration=1200,
    },
    {
     name='dreadnought',
     sprite=0,
     spd=0.025,
-    duration=320,
+    duration=1200,
    },
   },
   ships={},
@@ -224,25 +273,72 @@ players={
   getitems1=getitems1,
   sel2=nil,
   getitems2=getitems2,
+  getitems3=getitems3,
+ },
+ [2]={
+  owner=2,
+  col=2,
+  shiptypes={
+   {
+    name='fighters',
+    sprite=4,
+    spd=0.05,
+    duration=1200,
+   },
+   {
+    name='corvettes',
+    sprite=8,
+    spd=0.04,
+    duration=1200,
+   },
+   {
+    name='dreadnought',
+    sprite=0,
+    spd=0.025,
+    duration=1200,
+   },
+  },
+  ships={},
+  curlevel=1,
+  sel1=nil,
+  getitems1=getitems1,
+  sel2=nil,
+  getitems2=getitems2,
+  getitems3=getitems3,
  }
 }
 
 players[1].ships={
  {
   x=rnd(128),y=rnd(128),
+  owner=1,
  },
- -- {
- --  x=rnd(128),y=rnd(128),
- -- },
+ {
+  x=rnd(128),y=rnd(128),
+  owner=1,
+ },
 }
 
-for _ship in all(players[1].ships) do
+players[2].ships={
+ {
+  x=rnd(128),y=rnd(128),
+  owner=2,
+ },
+ {
+  x=rnd(128),y=rnd(128),
+  owner=2,
+ },
+}
+
+local allships=concat(players[1].ships,players[2].ships)
+
+for _ship in all(allships) do
  _ship.targetx,_ship.targety=_ship.x,_ship.y
  _ship.spd=0.05
- _ship.owner=players[1].owner
  _ship.name='dreadnought'
  _ship.sprite=0
 end
+
 
 function _update60()
 
@@ -260,7 +356,7 @@ function _update60()
    _player.items=_items
 
    if btnp(0,_btnpi) or btnp(1,_btnpi) or btnp(2,_btnpi) or btnp(3,_btnpi) then
-    _player[_selkey]=perfselect(_player[_selkey],_items)
+    _player[_selkey]=perfselect(_btnpi,_player[_selkey],_items)
    elseif btnp(4,_btnpi) then
     _player[_selkey].action()
    elseif btnp(5,_btnpi) then
@@ -305,6 +401,7 @@ function _update60()
        _ship.target.owner=_ship.owner
       end
      end
+     _ship.target=nil
     end
    else
     local _a=atan2(_ship.targetx-_ship.x,_ship.targety-_ship.y)
