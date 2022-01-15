@@ -83,68 +83,132 @@ for _p in all(planets) do
  _p.isplanet=true
 end
 
+
+function getitems1(_pl)
+ _pl.sel2=nil
+ local _items={}
+
+ -- add player ships
+ for _ship in all(_pl.ships) do
+  _ship.text=nil
+  _ship.action=function()
+   _pl.curlevel=2
+  end
+ end
+ _items=clone(_pl.ships)
+
+ -- add player planets
+ for _planet in all(planets) do
+  if _planet.owner == _pl.owner then
+   _planet.text='build'
+   _planet.action=function()
+    _pl.curlevel=2
+   end
+   add(_items,_planet)
+  end
+ end
+
+ if not _pl.sel1 then
+  _pl.sel1=_items[1]
+ end
+
+ return _items
+end
+
+local shiptypeoffsets={
+ {x=-11,y=-11},
+ {x=11,y=-11},
+ {x=-11,y=11},
+ {x=11,y=11},
+}
+
+function getitems2(_pl)
+ local _items={}
+
+ -- add shiptypes
+ if _pl.sel1.isplanet then
+  local _planet=_pl.sel1
+  for _i=1,#_pl.shiptypes do
+   local _shiptype=_pl.shiptypes[_i]
+   local _offset=shiptypeoffsets[_i]
+   add(_items,{ -- todo: creating table here -> not same ref in perfsel same-check then
+    x=_planet.x+_offset.x,
+    y=_planet.y+_offset.y,
+    sprite=_shiptype.sprite,
+    text=_shiptype.name,
+    action=function()
+     _planet.orders=_shiptype.name
+     _planet.duration=_shiptype.duration
+     _planet.c=0
+     _pl.curlevel=1
+    end,
+   })
+  end
+
+ else
+  -- add this ship for toggle free move
+  _pl.sel1.text='toggle free move'
+  add(_items,_pl.sel1)
+
+  -- add free/enemy planets
+  for _planet in all(planets) do
+   _planet.text=nil
+   if _planet.owner == _pl.owner then
+    _planet.text='go to'
+    _planet.action=function()
+     shipgoto(_pl.sel1,_planet)
+     _pl.sel1.orders=nil
+     _pl.curlevel=1
+    end
+   elseif not _planet.owner then
+    _planet.text='colonize'
+    _planet.action=function()
+     shipgoto(_pl.sel1,_planet)
+     _pl.sel1.orders='colonize'
+     _pl.curlevel=1
+    end
+   end
+   add(_items,_planet)
+  end
+
+  -- add enemy ships
+
+ end
+
+ if not _pl.sel2 then
+  _pl.sel2=_items[1]
+ end
+
+ return _items
+end
+
 players={
  [1]={
-  owner=13,
+  owner=1,
+  col=13,
+  shiptypes={
+   {
+    name='fighters',
+    sprite=0,
+    duration=320,
+   },
+   {
+    name='corvettes',
+    sprite=1,
+    duration=320,
+   },
+   {
+    name='destroyer',
+    sprite=2,
+    duration=320,
+   },
+  },
   ships={},
   curlevel=1,
   sel1=nil,
-  getitems1=function(_pl)
-   _pl.sel2=nil
-   local _items={}
-
-   -- add player ships
-   for _ship in all(_pl.ships) do
-    _ship.text=nil
-    _ship.action=function()
-     _pl.sel2=_ship
-     _pl.curlevel=2
-    end
-   end
-   _items=clone(_pl.ships)
-
-   -- add player planets
-   -- todo
-
-   return _items
-  end,
+  getitems1=getitems1,
   sel2=nil,
-  getitems2=function(_pl)
-   local _items={}
-   if _pl.sel1.isplanet then
-    -- todo: create build menu
-   else
-    -- add this ship for toggle free move
-    _pl.sel1.text='toggle free move'
-    add(_items,_pl.sel1)
-
-    -- add free/enemy planets
-    for _planet in all(planets) do
-     _planet.text=nil
-     if _planet.owner == _pl.owner then
-      _planet.text='go to'
-      _planet.action=function()
-       shipgoto(_pl.sel1,_planet)
-       _pl.sel1.orders=nil
-       _pl.curlevel=1
-      end
-     elseif not _planet.owner then
-      _planet.text='colonize'
-      _planet.action=function()
-       shipgoto(_pl.sel1,_planet)
-       _pl.sel1.orders='colonize'
-       _pl.curlevel=1
-      end
-     end
-     add(_items,_planet)
-    end
-
-    -- add enemy ships
-
-   end
-
-   return _items
-  end,
+  getitems2=getitems2,
  }
 }
 
@@ -177,11 +241,7 @@ function _update60()
   
    local _selkey='sel'.._player.curlevel
    local _items=_player['getitems'.._player.curlevel](_player)
-
-   -- set initial selection
-   if not _player[_selkey] then
-    _player[_selkey]=_items[1]
-   end
+   _player.items=_items
 
    if btnp(0,_btnpi) or btnp(1,_btnpi) or btnp(2,_btnpi) or btnp(3,_btnpi) then
     _player[_selkey]=perfselect(_player[_selkey],_items)
@@ -191,6 +251,16 @@ function _update60()
     _player.curlevel=mid(0,_player.curlevel-1,2)
    end
 
+  end
+ end
+
+ -- update planets
+ for _planet in all(planets) do
+  if _planet.duration then
+   _planet.c+=1
+   if _planet.c >= _planet.duration then
+    -- todo: add ship
+   end
   end
  end
 
@@ -222,19 +292,23 @@ function _draw()
 
  -- draw planets
  for _p in all(planets) do
-  spr(5,_p.x,_p.y)
+  local _x,_y=_p.x-3,_p.y-3
+  spr(5,_x,_y)
   if _p.owner then
-   local _y=_p.y+9
-   line(_p.x,_y,_p.x+7,_y,1)
-   pset(_p.x,_y,_p.owner)
+   local _y2=_y+9
+   line(_x,_y2,_x+7,_y2,1)
+   if _p.c then
+    line(_x,_y2,_x+(_p.c/_p.duration)*7,_y2,players[_p.owner].col)
+   end
+   pset(_x,_y2,players[_p.owner].col)
   end
  end
 
  -- draw ships
  for _player in all(players) do
   for _ship in all(_player.ships) do
-   pal(1,_ship.owner)
-   spr(2,_ship.x,_ship.y)
+   pal(1,players[_ship.owner].col)
+   spr(2,_ship.x-3,_ship.y-3)
   end
   pal(1,1)
  end
@@ -242,10 +316,19 @@ function _draw()
  -- draw selection
  for _player in all(players) do
   if _player.curlevel > 0 then
-   pal(1,_player.owner)
+   pal(1,_player.col)
+   for _item in all(_player.items) do
+    if _item.sprite then
+     spr(_item.sprite,_item.x-3,_item.y-3)
+    end
+   end
    local _cursel=_player['sel'.._player.curlevel]
-   sspr(40,8,12,12,_cursel.x-3,_cursel.y-1)
-   print(_cursel.text or _cursel.name or '',_cursel.x-3,_cursel.y-7,1)
+   if _cursel then
+    sspr(40,8,12,12,_cursel.x-5,_cursel.y-5)
+    local _str=_cursel.text or _cursel.name or ''
+    local _x=mid(0,_cursel.x-(#_str*2)+1,128-(#_str*4))
+    print(_str,_x,_cursel.y-11,1)
+   end
    pal(1,1)
   end
  end
@@ -253,12 +336,12 @@ end
 
 __gfx__
 00000000000010000000000000000000000000000066660000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00010000000111000000000000000000000000000666666000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00110000000011000001100000000000000000005666666600000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000010000000000011100000000000000000005666666600000000000000000000000000000000000000000000000000000000000000000000000000000000
+00010000000111000001100000000000000000000666666000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00110000000011000011100000000000000000005666666600000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000010000000000111110000000000000000005666666600000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000110000100000111110000000000000000005566666600000000000000000000000000000000000000000000000000000000000000000000000000000000
-00010000001110000111110000000000000000005556666600000000000000000000000000000000000000000000000000000000000000000000000000000000
-00110000000110000001110000000000000000000555566000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00010000001110000001110000000000000000005556666600000000000000000000000000000000000000000000000000000000000000000000000000000000
+00110000000110000000000000000000000000000555566000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000055550000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000001111110000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000010000001000000000000000000000000000000000000000000000000000000000000000000000000000000
