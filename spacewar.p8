@@ -129,9 +129,9 @@ function getitems2(_pl)
  if _pl.sel1.isplanet then
   local _planet=_pl.sel1
   for _i=1,#_pl.shiptypes do
-   local _shiptype=_pl.shiptypes[_i]
    local _offset=shiptypeoffsets[_i]
-   add(_items,{ -- todo: creating table here -> not same ref in perfsel same-check then
+   local _shiptype=_pl.shiptypes[_i]
+   local _item={
     x=_planet.x+_offset.x,
     y=_planet.y+_offset.y,
     sprite=_shiptype.sprite,
@@ -141,8 +141,12 @@ function getitems2(_pl)
      _planet.duration=_shiptype.duration
      _planet.c=0
      _pl.curlevel=1
-    end,
-   })
+    end
+   }
+   if _pl.sel2 and _pl.sel2.x == _item.x and _pl.sel2.y == _item.y then
+    _pl.sel2=_item
+   end
+   add(_items,_item)
   end
 
  else
