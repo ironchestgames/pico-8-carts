@@ -163,7 +163,7 @@ function getitems2(_pl)
   end
   add(_items,_pl.sel1)
 
-  -- add free/enemy planets
+  -- add planets
   for _planet in all(planets) do
    _planet.text=nil
    if _planet.owner == _pl.owner then
@@ -178,6 +178,13 @@ function getitems2(_pl)
     _planet.action=function()
      shipgoto(_pl.sel1,_planet)
      _pl.sel1.orders='colonize'
+     _pl.curlevel=1
+    end
+   elseif _planet.owner and _planet.owner != _pl.owner then
+    _planet.text='invade'
+    _planet.action=function()
+     shipgoto(_pl.sel1,_planet)
+     _pl.sel1.orders='invade'
      _pl.curlevel=1
     end
    end
@@ -400,8 +407,14 @@ function _update60()
       else
        _ship.target.owner=_ship.owner
       end
+      _ship.target=nil
+     elseif _ship.orders == 'invade' then
+      _ship.target.c-=2
+      if _ship.target.c < 0 then
+       _ship.target.owner=_ship.owner
+       _ship.target=nil
+      end
      end
-     _ship.target=nil
     end
    else
     local _a=atan2(_ship.targetx-_ship.x,_ship.targety-_ship.y)
