@@ -81,11 +81,14 @@ planets={
 
 for _p in all(planets) do
  _p.isplanet=true
+ _p.spr=240+flr(rnd(12))
+ _p.text={}
+ _p.action={}
  _p.items={
-  {x=_p.x-11,y=_p.y-11},
-  {x=_p.x+11,y=_p.y-11},
-  {x=_p.x-11,y=_p.y+11},
-  {x=_p.x+11,y=_p.y+11},
+  {x=_p.x-11,y=_p.y-11,text={},action={}},
+  {x=_p.x+11,y=_p.y-11,text={},action={}},
+  {x=_p.x-11,y=_p.y+11,text={},action={}},
+  {x=_p.x+11,y=_p.y+11,text={},action={}},
  }
 end
 
@@ -96,8 +99,8 @@ function getitems1(_pl)
 
  -- add player ships
  for _ship in all(_pl.ships) do
-  _ship.text=nil
-  _ship.action=function()
+  _ship.text[_pl.owner]=nil
+  _ship.action[_pl.owner]=function()
    _pl.curlevel=2
   end
  end
@@ -106,8 +109,8 @@ function getitems1(_pl)
  -- add player planets
  for _planet in all(planets) do
   if _planet.owner == _pl.owner then
-   _planet.text='build'
-   _planet.action=function()
+   _planet.text[_pl.owner]='build'
+   _planet.action[_pl.owner]=function()
     _pl.curlevel=2
    end
    add(_items,_planet)
@@ -130,8 +133,8 @@ function getitems2(_pl)
   for _i=1,#_pl.shiptypes do
    local _shiptype=_pl.shiptypes[_i]
    _planet.items[_i].sprite=_shiptype.sprite
-   _planet.items[_i].text=_shiptype.name
-   _planet.items[_i].action=function()
+   _planet.items[_i].text[_pl.owner]=_shiptype.name
+   _planet.items[_i].action[_pl.owner]=function()
     _planet.orders='build'
     _planet.shiptype=_shiptype
     _planet.duration=_shiptype.duration
@@ -144,37 +147,37 @@ function getitems2(_pl)
 
  else
 
-  _pl.sel1.text=nil
+  _pl.sel1.text[_pl.owner]=nil
   if _pl.sel1 == _pl.sel2 then
-   _pl.sel1.text='toggle free move'
+   _pl.sel1.text[_pl.owner]='toggle free move'
   end
-  _pl.sel1.action=function()
+  _pl.sel1.action[_pl.owner]=function()
    _pl.curlevel=3
-   _pl.sel1.text=''
+   _pl.sel1.text[_pl.owner]=''
    _pl.sel3=_pl.sel1
   end
   add(_items,_pl.sel1)
 
   -- add planets
   for _planet in all(planets) do
-   _planet.text=nil
+   _planet.text[_pl.owner]=nil
    if _planet.owner == _pl.owner then
-    _planet.text='go to'
-    _planet.action=function()
+    _planet.text[_pl.owner]='go to'
+    _planet.action[_pl.owner]=function()
      shipgoto(_pl.sel1,_planet)
      _pl.sel1.orders=nil
      _pl.curlevel=1
     end
    elseif not _planet.owner then
-    _planet.text='colonize'
-    _planet.action=function()
+    _planet.text[_pl.owner]='colonize'
+    _planet.action[_pl.owner]=function()
      shipgoto(_pl.sel1,_planet)
      _pl.sel1.orders='colonize'
      _pl.curlevel=1
     end
    elseif _planet.owner and _planet.owner != _pl.owner then
-    _planet.text='invade'
-    _planet.action=function()
+    _planet.text[_pl.owner]='invade'
+    _planet.action[_pl.owner]=function()
      shipgoto(_pl.sel1,_planet)
      _pl.sel1.orders='invade'
      _pl.curlevel=1
@@ -186,7 +189,7 @@ function getitems2(_pl)
   -- add enemy ships
   -- for _other in all(players) do
   --  if _other != _pl then
-    
+
   --  end
   -- end
 
@@ -207,13 +210,13 @@ function getitems3(_pl)
    local _item={
     x=_x,
     y=_y,
-    text='move here',
-    action=function()
+    text={[_pl.owner]='move here'},
+    action={[_pl.owner]=function()
      _pl.sel2.targetx=_x
      _pl.sel2.targety=_y
      _pl.sel2.target=nil
      _pl.curlevel=1
-    end,
+    end},
    }
    local _tooclose=false
    for _planet in all(planets) do
@@ -251,22 +254,29 @@ players={
  [1]={
   owner=1,
   col=13,
+  lasercol=12,
   shiptypes={
    {
     name='fighters',
     sprite=4,
+    hp=4,
+    range=8,
     spd=0.05,
     duration=1200,
    },
    {
     name='corvettes',
     sprite=8,
+    hp=6,
+    range=8,
     spd=0.04,
     duration=1200,
    },
    {
     name='dreadnought',
     sprite=0,
+    hp=8,
+    range=8,
     spd=0.025,
     duration=1200,
    },
@@ -282,10 +292,12 @@ players={
  [2]={
   owner=2,
   col=2,
+  lasercol=8,
   shiptypes={
    {
     name='fighters',
     sprite=4,
+    hp=4,
     range=8,
     spd=0.05,
     duration=1200,
@@ -293,6 +305,7 @@ players={
    {
     name='corvettes',
     sprite=8,
+    hp=6,
     range=8,
     spd=0.04,
     duration=1200,
@@ -300,6 +313,7 @@ players={
    {
     name='dreadnought',
     sprite=0,
+    hp=8,
     range=8,
     spd=0.025,
     duration=1200,
@@ -342,9 +356,12 @@ local allships=concat(players[1].ships,players[2].ships)
 for _ship in all(allships) do
  _ship.targetx,_ship.targety=_ship.x,_ship.y
  _ship.spd=0.05
+ _ship.hp=8
  _ship.range=8
  _ship.name='dreadnought'
  _ship.sprite=0
+ _ship.text={}
+ _ship.action={}
 end
 
 
@@ -366,7 +383,7 @@ function _update60()
    if btnp(0,_btnpi) or btnp(1,_btnpi) or btnp(2,_btnpi) or btnp(3,_btnpi) then
     _player[_selkey]=perfselect(_btnpi,_player[_selkey],_items)
    elseif btnp(4,_btnpi) then
-    _player[_selkey].action()
+    _player[_selkey].action[_player.owner]()
    elseif btnp(5,_btnpi) then
     _player.curlevel=mid(0,_player.curlevel-1,2)
    end
@@ -387,6 +404,8 @@ function _update60()
     _ship.targetx=_x
     _ship.targety=_y
     _ship.owner=_planet.owner
+    _ship.text={}
+    _ship.action={}
     add(_player.ships,_ship)
     _planet.c=0
    end
@@ -394,8 +413,38 @@ function _update60()
  end
 
  -- move ships
+ local _allships={}
+ for _player in all(players) do
+  _allships=concat(_allships,_player.ships)
+ end
  for _player in all(players) do
   for _ship in all(_player.ships) do
+   if _ship.hp <= 0 then
+    goto continue
+   end
+   local _isattacking=nil
+   for _othership in all(_allships) do
+    if _othership.owner != _ship.owner and 
+       dist(_ship.x,_ship.y,_othership.x,_othership.y) < _ship.range then
+     _ship.shoottarget=_othership
+     if _ship.shootc == nil or _ship.shootc < 0 then
+      _ship.shootc=90+flr(rnd(20))-10
+     end
+     _ship.shootc-=1
+     _isattacking=true
+     if _ship.shootc == 10 then
+      -- play sound effect
+      _othership.hp-=1
+     end
+     break
+    end
+   end
+   if _isattacking then
+    goto continue
+   end
+   _ship.shootc=nil
+   _ship.shoottarget=nil
+
    if dist(_ship.x,_ship.y,_ship.targetx,_ship.targety) < 4 then
     _ship.targetx,_ship.targety=_ship.x,_ship.y
     if _ship.target then
@@ -419,8 +468,6 @@ function _update60()
       end
      elseif _ship.orders == 'bomb' then
       -- pass
-     elseif _ship.orders == 'attack' then
-
      end
     end
    else
@@ -428,8 +475,25 @@ function _update60()
     _ship.x+=cos(_a)*_ship.spd
     _ship.y+=sin(_a)*_ship.spd
    end
+   ::continue::
   end
  end
+
+ -- remove destroyed ships
+ for _player in all(players) do
+  for _ship in all(_player.ships) do
+   if _ship.hp <= 0 then
+    del(_player.ships,_ship)
+    if _player.sel1 == _ship then
+     _player.sel1=nil
+    end
+    if _player.sel2 == _ship then
+     _player.sel2=nil
+    end
+   end
+  end
+ end
+
 end
 
 
@@ -443,7 +507,7 @@ function _draw()
  -- draw planets
  for _p in all(planets) do
   local _x,_y=_p.x-3,_p.y-3
-  spr(240,_x,_y)
+  spr(_p.spr,_x,_y)
   if _p.owner then
    local _y2=_y+9
    line(_x,_y2,_x+7,_y2,1)
@@ -464,6 +528,16 @@ function _draw()
   pal(1,1)
  end
 
+ -- draw lasers
+ for _player in all(players) do
+  for _ship in all(_player.ships) do
+   if _ship.shootc and _ship.shootc <= 10 then
+    line(_ship.x,_ship.y,_ship.shoottarget.x,_ship.shoottarget.y,_player.lasercol)
+    circfill(_ship.shoottarget.x,_ship.shoottarget.y,2,_player.lasercol)
+   end
+  end
+ end
+ 
  -- draw selection
  for _player in all(players) do
   if _player.curlevel > 0 then
@@ -471,8 +545,8 @@ function _draw()
    local _cursel=_player['sel'.._player.curlevel]
    if _cursel then
     if _player.curlevel == 2 then
-     if not _player.sel1.isplanet then
-      local _str=_player.sel1.text or _player.sel1.name or ''
+     if _player.sel1 and not _player.sel1.isplanet then
+      local _str=_player.sel1.text[_player.owner] or _player.sel1.name or ''
       print(_str,getstrx(_str,_player.sel1.x),_player.sel1.y-11,1)
      else
       for _item in all(_player.items) do
@@ -489,12 +563,15 @@ function _draw()
     else -- is ship
      sspr(12,48,11,11,_cursel.x-5,_cursel.y-5)
     end
-    local _str=_cursel.text or _cursel.name or ''
+    local _str=_cursel.text[_player.owner] or _cursel.name or ''
     print(_str,getstrx(_str,_cursel.x),_cursel.y-11,1)
    end
    pal(1,1)
   end
  end
+
+ -- print(stat(0),0,0,5)
+ -- print(stat(1),0,6,5)
 end
 
 __gfx__
@@ -618,11 +695,11 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00666600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-06666660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-56666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-56666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-55666666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-55566666000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-05555660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00555500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+006666000044440000dd990000ccbb0000eeff000088880000eeee0000aaaa0000ffff000077770000dddd000022220000777700000000000000000000000000
+06666660044444400dddd9900ccccbb00eeeeff0099999800fffffe0099999a009999ff00666677003333dd0044442200cccc770000000000000000000000000
+1666666614444444299ddddd3bbccccc4ffeeeee188889991eeeefff2aaaa9991ff9999f177666671dd3333d12244442177cccc7000000000000000000000000
+1666666614444444299999dd3bbbbbcc4fffffee299998882ffffeee49999aaa1fffffff177777771ddddddd1222222217777777000000000000000000000000
+116666661144444422999dd933bbbccb44fffeef1189999911efffff22a999991199ff99116677661133dd331144224411cc77cc000000000000000000000000
+111666661114444412299d99133bbcbb244ffeff22188888221eeeee444aaaaa111999ff11166677111333dd11144422111ccc77000000000000000000000000
+011116600111144001122dd001133cc002244ee00222299002222ff00224499001111ff00111177001111dd00111122001111770000000000000000000000000
+00111100001111000011110000111100002222000011220000112200002222000011110000111100001111000011110000111100000000000000000000000000
