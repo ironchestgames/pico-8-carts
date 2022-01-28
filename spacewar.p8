@@ -58,37 +58,58 @@ function perfselect(_btnpi,_cur,_items)
  return _closest or _cur
 end
 
+function newship(_shiptype,_player,_x,_y)
+ local _x,_y=_x-4,_y-4
+ local _ship=clone(_shiptype)
+ _ship.x=_x
+ _ship.y=_y
+ _ship.targetx=_x
+ _ship.targety=_y
+ _ship.owner=_player.owner
+ _ship.text={}
+ _ship.action={}
+ return _ship
+end
+
 function shipgoto(_ship,_target)
  _ship.targetx=_target.x
  _ship.targety=_target.y
  _ship.target=_target
 end
 
-planets={
- {
-  x=16+flr(rnd(12))*8,y=16+flr(rnd(12))*8,
- },
- {
-  x=16+flr(rnd(12))*8,y=16+flr(rnd(12))*8,
- },
- {
-  x=16+flr(rnd(12))*8,y=16+flr(rnd(12))*8,
- },
- {
-  x=16+flr(rnd(12))*8,y=16+flr(rnd(12))*8,
- },
-}
+playercount=2
 
-for _p in all(planets) do
- _p.isplanet=true
- _p.spr=240+flr(rnd(12))
- _p.text={}
- _p.action={}
- _p.items={
-  {x=_p.x-11,y=_p.y-11,text={},action={}},
-  {x=_p.x+11,y=_p.y-11,text={},action={}},
-  {x=_p.x-11,y=_p.y+11,text={},action={}},
-  {x=_p.x+11,y=_p.y+11,text={},action={}},
+planets={}
+
+for _i=1,4+flr(rnd(playercount*2)) do
+ local _quad=(_i-1)*0.25
+ local _a=max(_quad,_quad+rnd(0.25))
+ local _x,_y
+ repeat
+  _x,_y=64+cos(_a)*flr(rnd(55)),64+sin(_a)*flr(rnd(55))
+  if #planets < 1 then
+   break
+  end
+  local _tooclose=nil
+  for _p in all(planets) do
+   if dist(_x,_y,_p.x,_p.y) < 20 then
+    _tooclose=true
+   end
+  end
+ until (not _tooclose)
+ planets[_i]={
+  x=_x,
+  y=_y,
+  isplanet=true,
+  spr=240+flr(rnd(13)),
+  text={},
+  action={},
+  items={
+   {x=_x-11,y=_y-11,text={},action={}},
+   {x=_x+11,y=_y-11,text={},action={}},
+   {x=_x-11,y=_y+11,text={},action={}},
+   {x=_x+11,y=_y+11,text={},action={}},
+  },
  }
 end
 
@@ -128,7 +149,7 @@ function getitems2(_pl)
  local _items={}
 
  -- add shiptypes
- if _pl.sel1.isplanet then
+ if _pl.sel1 and _pl.sel1.isplanet then
   local _planet=_pl.sel1
   for _i=1,#_pl.shiptypes do
    local _shiptype=_pl.shiptypes[_i]
@@ -145,7 +166,7 @@ function getitems2(_pl)
 
   _items=clone(_planet.items)
 
- else
+ elseif _pl.sel1 then
 
   _pl.sel1.text[_pl.owner]=nil
   if _pl.sel1 == _pl.sel2 then
@@ -187,11 +208,19 @@ function getitems2(_pl)
   end
 
   -- add enemy ships
-  -- for _other in all(players) do
-  --  if _other != _pl then
-
-  --  end
-  -- end
+  for _other in all(players) do
+   if _other != _pl then
+    for _othership in all(_other.ships) do
+     _othership.text[_pl.owner]='attack'
+     _othership.action[_pl.owner]=function()
+      shipgoto(_pl.sel1,_othership)
+      _pl.sel1.orders='attack'
+      _pl.curlevel=1
+     end
+     add(_items,_othership)
+    end
+   end
+  end
 
  end
 
@@ -243,16 +272,8 @@ function getitems3(_pl)
  return _items
 end
 
-local angles={
- [0]={0,1},
- {1,1},
- {1,0},
- {0,0},
-}
-
-players={
+factions={
  [1]={
-  owner=1,
   col=13,
   lasercol=12,
   shiptypes={
@@ -261,8 +282,8 @@ players={
     sprite=4,
     hp=4,
     range=8,
-    spd=0.05,
-    duration=1200,
+    spd=0.1,
+    duration=1500,
    },
    {
     name='corvettes',
@@ -281,16 +302,8 @@ players={
     duration=1200,
    },
   },
-  ships={},
-  curlevel=1,
-  sel1=nil,
-  getitems1=getitems1,
-  sel2=nil,
-  getitems2=getitems2,
-  getitems3=getitems3,
  },
  [2]={
-  owner=2,
   col=2,
   lasercol=8,
   shiptypes={
@@ -319,51 +332,50 @@ players={
     duration=1200,
    },
   },
-  ships={},
-  curlevel=1,
-  sel1=nil,
-  getitems1=getitems1,
-  sel2=nil,
-  getitems2=getitems2,
-  getitems3=getitems3,
+ },
+}
+
+playerblueprint={
+ curlevel=1,
+ -- sel1=nil,
+ -- sel2=nil,
+ getitems1=getitems1,
+ getitems2=getitems2,
+ getitems3=getitems3,
+}
+
+players={}
+
+
+local _r=rnd()
+for _i=1,playercount do
+ local _p=clone(playerblueprint)
+ _p.shiptypes=factions[_i].shiptypes
+ _p.owner=_i
+ _p.col=factions[_i].col
+ _p.lasercol=factions[_i].lasercol
+ local _a=_r+(_i-1)*0.5
+ local _x,_y=67+cos(_a)*58,67+sin(_a)*58
+ _p.ships={
+  newship(_p.shiptypes[3],_p,_x,_y)
  }
-}
-
-players[1].ships={
- {
-  x=rnd(128),y=rnd(128),
-  owner=1,
- },
- {
-  x=rnd(128),y=rnd(128),
-  owner=1,
- },
-}
-
-players[2].ships={
- {
-  x=rnd(128),y=rnd(128),
-  owner=2,
- },
- {
-  x=rnd(128),y=rnd(128),
-  owner=2,
- },
-}
-
-local allships=concat(players[1].ships,players[2].ships)
-
-for _ship in all(allships) do
- _ship.targetx,_ship.targety=_ship.x,_ship.y
- _ship.spd=0.05
- _ship.hp=8
- _ship.range=8
- _ship.name='dreadnought'
- _ship.sprite=0
- _ship.text={}
- _ship.action={}
+ add(players,_p)
 end
 
+-- local allships=concat(players[1].ships,players[2].ships)
+
+-- for _ship in all(allships) do
+--  _ship.targetx,_ship.targety=_ship.x,_ship.y
+--  _ship.spd=0.05
+--  _ship.hp=8
+--  _ship.range=8
+--  _ship.name='dreadnought'
+--  _ship.sprite=0
+--  _ship.text={}
+--  _ship.action={}
+-- end
+
+players[1].ships.range=20
 
 function _update60()
 
@@ -398,14 +410,7 @@ function _update60()
    if _planet.c >= _planet.duration then
     local _player=players[_planet.owner]
     local _x,_y=_planet.x-4,_planet.y-4
-    local _ship=clone(_planet.shiptype)
-    _ship.x=_x
-    _ship.y=_y
-    _ship.targetx=_x
-    _ship.targety=_y
-    _ship.owner=_planet.owner
-    _ship.text={}
-    _ship.action={}
+    local _ship=newship(_planet.shiptype,_player,_x,_y)
     add(_player.ships,_ship)
     _planet.c=0
    end
@@ -435,6 +440,8 @@ function _update60()
      if _ship.shootc == 10 then
       -- play sound effect
       _othership.hp-=1
+      _othership.target=_ship
+      _othership.orders='attack'
      end
      break
     end
@@ -445,6 +452,10 @@ function _update60()
    _ship.shootc=nil
    _ship.shoottarget=nil
 
+   if _ship.orders == 'attack' then
+    _ship.targetx,_ship.targety=_ship.target.x,_ship.target.y
+   end
+
    if dist(_ship.x,_ship.y,_ship.targetx,_ship.targety) < 4 then
     _ship.targetx,_ship.targety=_ship.x,_ship.y
     if _ship.target then
@@ -453,6 +464,7 @@ function _update60()
        -- todo: fail message
       else
        _ship.target.owner=_ship.owner
+       _ship.target.showquestionmark=true
       end
       _ship.target=nil
      elseif _ship.orders == 'invade' then
@@ -486,9 +498,11 @@ function _update60()
     del(_player.ships,_ship)
     if _player.sel1 == _ship then
      _player.sel1=nil
+     _player.curlevel=1
     end
     if _player.sel2 == _ship then
      _player.sel2=nil
+     _player.curlevel=2
     end
    end
   end
@@ -515,6 +529,9 @@ function _draw()
     line(_x,_y2,_x+(_p.c/_p.duration)*7,_y2,players[_p.owner].col)
    end
    pset(_x,_y2,players[_p.owner].col)
+   if _p.showquestionmark then
+    print('?',_p.x,_p.y-11,players[_p.owner].col)
+   end
   end
  end
 
@@ -558,6 +575,7 @@ function _draw()
     end
     if _cursel.isplanet and _cursel.owner != nil then
      sspr(23,48,12,14,_cursel.x-5,_cursel.y-5)
+     _cursel.showquestionmark=nil
     elseif _cursel.isplanet then
      sspr(0,48,12,12,_cursel.x-5,_cursel.y-5)
     else -- is ship
