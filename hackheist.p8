@@ -15,11 +15,13 @@ function clone(_t)
  return t
 end
 
-window={
- typ='window'
-}
-
 -- max mansion total: w: 122, h: 48
+
+function dist(x1,y1,x2,y2)
+ local dx,dy=(x2-x1)*0.1,(y2-y1)*0.1
+ return sqrt(dx*dx+dy*dy)*10
+end
+
 
 -- create rooms
 
@@ -29,19 +31,19 @@ rooms={
   w=24,h=48,
   walls={
    { -- west
-    { typ='camera', id=1 },
+    {},
     {},
    },
    { -- north
+    { typ='camera', id=1, xoff=12, yoff=2 },
     {},
-    clone(window),
    },
    { -- east
-    { typ='door', leadsto=2 },
+    { typ='door', leadsto=2, relative='left', xoff=24, yoff=6 },
     {},
    },
    { -- south
-    clone(window),
+    { typ='window', xoff=14, yoff=47 },
     {},
    },
   },
@@ -51,16 +53,40 @@ rooms={
   w=24,h=24,
   walls={
    { -- west
-    { typ='camera', id=2 },
-    { typ='door', leadsto=1 },
+    { typ='door', leadsto=1, relative='far side', xoff=0, yoff=6 },
+    {},
    },
    { -- north
     {},
-    clone(window),
+    { typ='window', xoff=4, yoff=-1 },
    },
    { -- east
+    { typ='camera', id=2, xoff=20, yoff=10 },
     {},
+   },
+   { -- south
+    { typ='door', leadsto=3, relative='left', xoff=6, yoff=24 },
     {},
+   },
+  },
+ },
+ {
+  x=24,y=24,
+  w=24,h=24,
+  walls={
+   { -- west
+    { typ='computer', loot={ 'cute cat pictures', worth=5 }, xoff=2, yoff=3 },
+    {},
+   },
+   { -- north
+    { typ='door', leadsto=2, relative='right', xoff=6, yoff=0 },
+    {},
+   },
+   { -- east
+    -- { typ='window', xoff=23, yoff=3 },
+    -- { typ='window', xoff=23, yoff=15 },
+    {},
+    { typ='camera', id=3, xoff=20, yoff=10 },
    },
    { -- south
     {},
@@ -70,9 +96,192 @@ rooms={
  },
 }
 
+partner={
+ room=1,
+ xoff=5,
+ yoff=10,
+ c=0,
+ state='idling',
+}
+
+msgstr='ok, i\'m in! what now?'
+
+cursel=1
+menu={}
+
 
 
 function _update60()
+
+ -- create menu
+ menu={}
+ local _escapeadded,_hideadded
+ local _curroom=rooms[partner.room]
+ for _wall in all(_curroom.walls) do
+  for _item in all(_wall) do
+   if _item.typ == 'window' and not _escapeadded then
+    add(menu,{
+     str='escape thru window',
+     f=function()
+      partner.item=_item
+      partner.state='escaping'
+      partner.c=120
+      partner.ismoving=true
+      msgstr='moving...'
+     end,
+    })
+    _escapeadded=true
+
+   elseif _item.typ == 'door' then
+    add(menu,{
+     str='go thru door on your '.._item.relative,
+     f=function()
+      partner.item=_item
+      partner.state='roomchanging'
+      partner.c=60
+      partner.ismoving=true
+      msgstr='moving...'
+     end,
+    })
+
+   elseif _item.typ == 'computer' then
+
+    if _item.loot and partner.state != 'hacking' then
+     add(menu,{
+      str='hack computer',
+      f=function()
+       partner.item=_item
+       partner.state='hacking'
+       partner.c=240
+       partner.ismoving=true
+       msgstr='moving...'
+      end,
+     })
+    end
+
+    if _hideadded == nil and partner.state != 'prehiding' then
+     add(menu,{
+      str='hide!',
+      f=function()
+       partner.item=_item
+       partner.state='prehiding'
+       partner.c=120
+       partner.ismoving=true
+       msgstr='moving...'
+      end,
+     })
+    end
+   end
+  end
+ end
+
+ if partner.state == 'hiding' then
+  menu={{
+   str='it\'s safe to come out',
+   f=function()
+    msgstr='ok, i\'m coming out'
+    partner.state='unhiding'
+    partner.c=120
+   end,
+  }}
+
+ elseif partner.state == 'unhiding' then
+  menu={{
+   str='hide!',
+   f=function()
+    partner.item=_item
+    partner.state='prehiding'
+    partner.c=120
+   end,
+  }}
+
+ elseif partner.state == 'prehiding' and not partner.ismoving then
+  menu={}
+ elseif partner.state == 'roomchanging' and not partner.ismoving then
+  menu={}
+ end
+
+ -- input
+ if btnp(3) then
+  cursel+=1
+ elseif btnp(2) then
+  cursel-=1
+ end
+ cursel=mid(1,cursel,#menu)
+
+ if btnp(4) and menu[cursel] and menu[cursel].f then
+  menu[cursel].f()
+ end
+
+ -- update partner
+ if partner.ismoving then
+  local _a=atan2(partner.item.xoff-partner.xoff,partner.item.yoff-partner.yoff)
+  partner.xoff+=cos(_a)*0.1
+  partner.yoff+=sin(_a)*0.1
+  if dist(partner.xoff,partner.yoff,partner.item.xoff,partner.item.yoff) < 2 then
+   partner.ismoving=nil
+  end
+
+ else
+  partner.c-=1
+
+  if partner.state == 'escaping' then
+   msgstr='breaking window...'
+  elseif partner.state == 'roomchanging' then
+   msgstr='...'
+  elseif partner.state == 'hacking' then
+   msgstr='hacking...'
+  elseif partner.state == 'prehiding' then
+   msgstr='i\'m squeezing in...'
+  elseif partner.state == 'unhiding' then
+   msgstr='phew...'
+  end
+
+  if partner.c <= 0 then
+
+   if partner.state == 'roomchanging' then
+    local _oldroom=partner.room
+    partner.room=partner.item.leadsto
+    local _curroom=rooms[partner.room]
+    for _wall in all(_curroom.walls) do
+     for _item in all(_wall) do
+      if _item.leadsto == _oldroom then
+       partner.item=nil
+       partner.xoff=_item.xoff
+       partner.yoff=_item.yoff
+      end
+     end
+    end
+
+    partner.state='idling'
+    msgstr='in next room, what now?'
+
+   elseif partner.state == 'hacking' then
+    add(partner.loot,partner.item.loot)
+    partner.item.loot=nil
+
+    msgstr='got the goods!'
+    partner.state='idling'
+
+   elseif partner.state == 'escaping' then
+    partner.state='escaped'
+    partner.c=100
+    msgstr='i made it out!'
+
+   elseif partner.state == 'prehiding' then
+    partner.state='hiding'
+    msgstr='ok, i\'m in hiding'
+
+   elseif partner.state == 'unhiding' then
+    partner.state='idling'
+    msgstr='next move'
+
+   elseif partner.state == 'escaped' then
+    
+   end
+  end
+ end
+
 end
 
 pal(15,140,1) -- flesh -> blueprint blue
@@ -104,33 +313,76 @@ function _draw()
 
    for _j=1,2 do
     local _item=_wall[_j]
-    local _itemx=_room.w/5+(_room.w/5)*(_j-1)*2
-    local _itemy=_room.h/5+(_room.h/5)*(_j-1)*2
 
-    if _item.typ == 'camera' then
-     if _horiz then
-      print(_item.id,_x+2+(_j-1)*(_room.w-6),_y+2+_offsetfactor*(_room.h-8),12)
-     else
-      print(_item.id,_x+2+_offsetfactor*(_room.w-6),_y+2+(_j-1)*(_room.h-8),12)
-     end
+    if _item.worth then
+     print('?',_x+_item.xoff,_y+_item.yoff,7)
+
+    elseif _item.typ == 'camera' then
+     print(_item.id,_x+_item.xoff,_y+_item.yoff,12)
 
     elseif _item.typ == 'window' then
      if _horiz then
-      sspr(0,0,7,3,_x+_itemx,_y-1+(_offsetfactor*_room.h))
+      sspr(0,0,7,3,_x+_item.xoff,_y+_item.yoff)
      else
-      sspr(7,0,3,7,_x-1+(_offsetfactor*_room.w),_y+_itemy)
+      sspr(7,0,3,7,_x+_item.xoff,_y+_item.yoff)
      end
 
     elseif _item.typ == 'door' then
      if _horiz then
-      sspr(15,0,7,5,_x+_itemx,_y+(_offsetfactor*_room.h))
+      sspr(15,0,7,5,_x+_item.xoff,_y+_item.yoff)
      else
-      sspr(10,0,5,7,_x+(_offsetfactor*_room.w),_y+_itemy)
+      sspr(10,0,5,7,_x+_item.xoff,_y+_item.yoff)
      end
     end
+
+    -- local _itemx=_room.w/5+(_room.w/5)*(_j-1)*2
+    -- local _itemy=_room.h/5+(_room.h/5)*(_j-1)*2
+
+    -- if _item.typ == 'camera' then
+    --  if _horiz then
+    --   print(_item.id,_x+2+(_j-1)*(_room.w-6),_y+2+_offsetfactor*(_room.h-8),12)
+    --  else
+    --   print(_item.id,_x+2+_offsetfactor*(_room.w-6),_y+2+(_j-1)*(_room.h-8),12)
+    --  end
+
+    -- elseif _item.typ == 'window' then
+    --  if _horiz then
+    --   sspr(0,0,7,3,_x+_itemx,_y-1+(_offsetfactor*_room.h))
+    --  else
+    --   sspr(7,0,3,7,_x-1+(_offsetfactor*_room.w),_y+_itemy)
+    --  end
+
+    -- elseif _item.typ == 'door' then
+    --  if _horiz then
+    --   sspr(15,0,7,5,_x+_itemx,_y+(_offsetfactor*_room.h))
+    --  else
+    --   sspr(10,0,5,7,_x+(_offsetfactor*_room.w),_y+_itemy)
+    --  end
+    -- end
    end
   end
  end
+
+ -- debug draw partner in blueprint
+ print(partner.room,1,1,10)
+ pset(3+rooms[partner.room].x+partner.xoff,36+rooms[partner.room].y+partner.yoff,10)
+
+ -- draw partner message
+ print(msgstr,5,90,7)
+
+ -- draw menu
+ local _menux,_menuy,_rowoff=5,99,7
+
+ for _i=1,#menu do
+  local _item=menu[_i]
+  local _y=_menuy+(_i-1)*_rowoff
+  print(_item.str,_menux,_y,_i == cursel and 11 or 3)
+ end
+
+ if partner.state == 'escaped' and partner.c <= 0 then
+  print('level done!',10,10,6)
+ end
+
 end
 
 __gfx__
