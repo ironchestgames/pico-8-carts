@@ -7,6 +7,10 @@ function debug(s)
  printh(tostr(s),'debug',false)
 end
 
+function flrrnd(n)
+ return flr(rnd(n))
+end
+
 function clone(_t)
  local t={}
  for k,v in pairs(_t) do
@@ -94,83 +98,6 @@ rooms={
  },
 }
 
-function _init()
- local _maxtotw,_maxtoth=122,48
- -- init rooms
- rooms={}
-
- local _totw,_toth=0,0
- local _prevroom=nil
- local _roomi=1
-
- while true do
-  -- determine room(s) width
-  local _roomw=24
-  _totw+=_roomw
-
-  -- determine room count
-  local _roomcount=1
-
-  -- determine room(s) height 
-  local _roomh=24
-
-  -- if mansion would be too big, stop
-  if _totw > _maxtotw then
-   break
-  end
-
-  -- create west
-  local _west={{},{}}
-  -- create doors to previous column
-  if _prevroom then
-   _west[1]={ typ='door', leadsto=_prevroom.id, relative='to the right', xoff=2, yoff=6 }
-   _prevroom.walls[3][1]={ typ='door', leadsto=_roomi, relative='to the left', xoff=24, yoff=6 }
-  end
-
-  -- create north
-  local _north={{},{}}
-
-  -- create east
-  local _east={{},{}}
-
-  -- create south
-  local _south={{},{}}
-
-  -- create door to same column
-  -- todo
-
-  -- create camera
-  _north[1]={ typ='camera', id=_roomi, xoff=12, yoff=2 }
-
-  -- create windows
-  _south[1]={ typ='window', xoff=14, yoff=23 }
-
-  -- create room
-  local _room={
-   id=_roomi,
-   x=_totw-_roomw,
-   y=0,
-   w=_roomw,
-   h=_roomh,
-   walls={
-    _west,
-    _north,
-    _east,
-    _south,
-   },
-  }
-
-  rooms[_roomi]=_room
-
-  _roomi+=1
-  _prevroom=_room
-
- end
-
- -- randomize camera ids
-
-end
-
 
 partner={
  room=1,
@@ -181,6 +108,163 @@ partner={
 }
 
 msgstr='ok, i\'m in! what now?'
+
+
+function _init()
+ rooms={}
+
+ local _rooms={}
+ for _i=0,9 do
+  _rooms[_i+1]={
+   id=_i+1,
+   x=(_i%5)*24,
+   y=flr(_i/5)*24,
+   w=24,
+   h=24,
+   walls={
+    {{},{}}, -- west
+    {{},{}}, -- north
+    {{},{}}, -- east
+    {{},{}}, -- south
+   }
+  }
+ end
+
+ local _stepcount=12
+ local _x=flrrnd(5)
+ local _y=flrrnd(2)
+
+ partner.room=1+_x+_y*5
+
+ local _dirs={-1,1}
+ local _i=1
+ while _i <= _stepcount do
+  local _nextx=_x
+  local _nexty=_y
+  if rnd() > .5 then
+   _nexty+=_dirs[flrrnd(2)+1]
+  else
+   _nextx+=_dirs[flrrnd(2)+1]
+  end
+
+  if _nextx < 5 and _nextx >= 0 and _nexty < 2 and _nexty >= 0 then
+   local _curroom=_rooms[1+_x+_y*5]
+   local _nextroom=_rooms[1+_nextx+_nexty*5]
+
+   if _nexty - _y == 1 then -- down
+    _curroom.walls[4][1]={ typ='door', leadsto=_nextroom.id, relative='', xoff=4, yoff=24 }
+    _nextroom.walls[2][1]={ typ='door', leadsto=_curroom.id, relative='', xoff=4, yoff=0 }
+   elseif _nexty - _y == -1 then -- up
+    _curroom.walls[2][1]={ typ='door', leadsto=_nextroom.id, relative='', xoff=4, yoff=0 }
+    _nextroom.walls[4][1]={ typ='door', leadsto=_curroom.id, relative='', xoff=4, yoff=24 }
+   elseif _nextx - _x == 1 then -- left
+    _curroom.walls[3][1]={ typ='door', leadsto=_nextroom.id, relative='', xoff=24, yoff=4 }
+    _nextroom.walls[1][1]={ typ='door', leadsto=_curroom.id, relative='', xoff=0, yoff=4 }
+   elseif _nextx - _x == -1 then -- right
+    _curroom.walls[1][1]={ typ='door', leadsto=_nextroom.id, relative='', xoff=0, yoff=4 }
+    _nextroom.walls[3][1]={ typ='door', leadsto=_curroom.id, relative='', xoff=24, yoff=4 }
+   end
+
+   _x=_nextx
+   _y=_nexty
+   _i+=1
+  end
+ end
+
+ -- put camera on doorless wall
+ local _pos={
+  {x=2,y=10}, -- west
+  {x=8,y=2}, -- north
+  {x=20,y=10}, -- east
+  {x=8,y=18}, -- south
+ }
+ local _camrelstrs={
+  { -- west
+   nil, -- west
+   'go thru door to the left', -- north
+   'go thru door at the back', -- east
+   'go thru door to the right', -- south
+  },
+  { -- north
+   'go thru door to the right', -- west
+   nil, -- north
+   'go thru door to the left', -- east
+   'go thru door at the back', -- south
+  },
+  { -- east
+   'go thru door at the back', -- west
+   'go thru door to the right', -- north
+   nil, -- east
+   'go thru door to the left', -- south
+  },
+  { -- south
+   'go thru door to the left', -- west
+   'go thru door at the back', -- north
+   'go thru door to the right', -- east
+   nil, -- south
+  },
+ }
+
+ for _room in all(_rooms) do
+  for _i=1,4 do
+   local _wall=_room.walls[_i]
+   if not (_wall[1].typ == 'door' or _wall[2].typ == 'door') then
+    _wall[1]={ typ='camera', id=_room.id, xoff=_pos[_i].x, yoff=_pos[_i].y }
+
+    -- add relative string to doors
+    for _j=1,4 do
+     local _otherwall=_room.walls[_j]
+     if _wall != _otherwall then
+      for _item in all(_otherwall) do
+       if _item.typ == 'door' then
+        _item.str=_camrelstrs[_i][_j]
+       end
+      end
+     end
+    end
+
+    break
+   end
+  end
+ end
+
+
+ -- add only rooms w doors
+ for _room in all(_rooms) do
+  local _hasdoor
+  for _wall in all(_room.walls) do
+   if _wall[1].typ == 'door' or _wall[2].typ == 'door' then
+    _hasdoor=true
+    break
+   end
+  end
+
+  if _hasdoor then
+   rooms[_room.id]=_room
+  end
+ end
+
+ local _min1window
+ for _i=1,10 do
+  local _room=rooms[_i]
+  if _room and (rnd() > .5 or not _min1window) then
+   if (_i == 6 or rooms[_i-1] == nil) and _room.walls[1][1].typ != 'camera' then -- west
+    _room.walls[1][1]={ typ='window', xoff=-1, yoff=8 }
+    _min1window=true
+   elseif (_i <= 5 or rooms[_i-5] == nil) and _room.walls[2][1].typ != 'camera' then  -- north
+    _room.walls[2][1]={ typ='window', xoff=8, yoff=-1 }
+    _min1window=true
+   elseif (_i == 5 or rooms[_i+1] == nil) and _room.walls[3][1].typ != 'camera' then -- east
+    _room.walls[3][1]={ typ='window', xoff=23, yoff=8 }
+    _min1window=true
+   elseif (_i > 5 or rooms[_i+5] == nil) and _room.walls[4][1].typ != 'camera' then -- south
+    _room.walls[4][1]={ typ='window', xoff=8, yoff=23 }
+    _min1window=true
+   end
+  end
+ end
+
+end
 
 cursel=1
 menu={}
@@ -210,7 +294,7 @@ function _update60()
 
    elseif _item.typ == 'door' then
     add(menu,{
-     str='go thru door '.._item.relative,
+     str=_item.str,
      f=function()
       partner.item=_item
       partner.state='roomchanging'
@@ -369,73 +453,79 @@ function _draw()
  -- draw blueprint
  rectfill(1,34,126,86,15)
 
- for _room in all(rooms) do
-  local _x=3+_room.x
-  local _y=36+_room.y
-  local _x2=_x+_room.w
-  local _y2=_y+_room.h
+ for _i=1,10 do
+  local _room=rooms[_i]
+  if _room then
+   local _x=3+_room.x
+   local _y=36+_room.y
+   local _x2=_x+_room.w
+   local _y2=_y+_room.h
 
-  rect(_x,_y,_x2,_y2,12)
+   rect(_x,_y,_x2,_y2,12)
+  end
  end
 
 
- for _room in all(rooms) do
-  local _x=3+_room.x
-  local _y=36+_room.y
+ for _i=1,10 do
+  local _room=rooms[_i]
+  if _room then
+   local _x=3+_room.x
+   local _y=36+_room.y
 
-  for _i=1,4 do
-   local _wall=_room.walls[_i]
-   local _horiz=_i%2 == 0
-   -- local _offsetfactor=_i > 2 and 1 or 0
+   for _i=1,4 do
+    local _wall=_room.walls[_i]
+    local _horiz=_i%2 == 0
+    -- local _offsetfactor=_i > 2 and 1 or 0
 
-   for _item in all(_wall) do
-    if _item.worth then
-     print('?',_x+_item.xoff,_y+_item.yoff,7)
+    for _item in all(_wall) do
+     if _item.worth then
+      print('?',_x+_item.xoff,_y+_item.yoff,7)
 
-    elseif _item.typ == 'camera' then
-     print(_item.id,_x+_item.xoff,_y+_item.yoff,12)
+     elseif _item.typ == 'camera' then
+      print(_item.id-1,_x+_item.xoff,_y+_item.yoff,12)
 
-    elseif _item.typ == 'window' then
-     if _horiz then
-      sspr(0,0,7,3,_x+_item.xoff,_y+_item.yoff)
-     else
-      sspr(7,0,3,7,_x+_item.xoff,_y+_item.yoff)
+     elseif _item.typ == 'window' then
+      if _horiz then
+       sspr(0,0,7,3,_x+_item.xoff,_y+_item.yoff)
+      else
+       sspr(7,0,3,7,_x+_item.xoff,_y+_item.yoff)
+      end
+
+     elseif _item.typ == 'door' then
+      if _horiz then
+       sspr(15,0,7,5,_x+_item.xoff,_y+_item.yoff)
+      else
+       sspr(10,0,5,7,_x+_item.xoff,_y+_item.yoff)
+      end
      end
 
-    elseif _item.typ == 'door' then
-     if _horiz then
-      sspr(15,0,7,5,_x+_item.xoff,_y+_item.yoff)
-     else
-      sspr(10,0,5,7,_x+_item.xoff,_y+_item.yoff)
-     end
+     -- for _j=1,2 do
+     -- local _item=_wall[_j]
+     -- local _itemx=_room.w/5+(_room.w/5)*(_j-1)*2
+     -- local _itemy=_room.h/5+(_room.h/5)*(_j-1)*2
+
+     -- if _item.typ == 'camera' then
+     --  if _horiz then
+     --   print(_item.id,_x+2+(_j-1)*(_room.w-6),_y+2+_offsetfactor*(_room.h-8),12)
+     --  else
+     --   print(_item.id,_x+2+_offsetfactor*(_room.w-6),_y+2+(_j-1)*(_room.h-8),12)
+     --  end
+
+     -- elseif _item.typ == 'window' then
+     --  if _horiz then
+     --   sspr(0,0,7,3,_x+_itemx,_y-1+(_offsetfactor*_room.h))
+     --  else
+     --   sspr(7,0,3,7,_x-1+(_offsetfactor*_room.w),_y+_itemy)
+     --  end
+
+     -- elseif _item.typ == 'door' then
+     --  if _horiz then
+     --   sspr(15,0,7,5,_x+_itemx,_y+(_offsetfactor*_room.h))
+     --  else
+     --   sspr(10,0,5,7,_x+(_offsetfactor*_room.w),_y+_itemy)
+     --  end
+     -- end
     end
-
-    -- for _j=1,2 do
-    -- local _item=_wall[_j]
-    -- local _itemx=_room.w/5+(_room.w/5)*(_j-1)*2
-    -- local _itemy=_room.h/5+(_room.h/5)*(_j-1)*2
-
-    -- if _item.typ == 'camera' then
-    --  if _horiz then
-    --   print(_item.id,_x+2+(_j-1)*(_room.w-6),_y+2+_offsetfactor*(_room.h-8),12)
-    --  else
-    --   print(_item.id,_x+2+_offsetfactor*(_room.w-6),_y+2+(_j-1)*(_room.h-8),12)
-    --  end
-
-    -- elseif _item.typ == 'window' then
-    --  if _horiz then
-    --   sspr(0,0,7,3,_x+_itemx,_y-1+(_offsetfactor*_room.h))
-    --  else
-    --   sspr(7,0,3,7,_x-1+(_offsetfactor*_room.w),_y+_itemy)
-    --  end
-
-    -- elseif _item.typ == 'door' then
-    --  if _horiz then
-    --   sspr(15,0,7,5,_x+_itemx,_y+(_offsetfactor*_room.h))
-    --  else
-    --   sspr(10,0,5,7,_x+(_offsetfactor*_room.w),_y+_itemy)
-    --  end
-    -- end
    end
   end
  end
