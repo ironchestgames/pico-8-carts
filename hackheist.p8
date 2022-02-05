@@ -115,8 +115,8 @@ function _init()
 
  local _rooms={}
  for _i=0,9 do
-  _rooms[_i+1]={
-   id=_i+1,
+  _rooms[_i]={
+   id=_i,
    x=(_i%5)*24,
    y=flr(_i/5)*24,
    w=24,
@@ -134,7 +134,7 @@ function _init()
  local _x=flrrnd(5)
  local _y=flrrnd(2)
 
- partner.room=1+_x+_y*5
+ partner.room=_x+_y*5
 
  local _dirs={-1,1}
  local _i=1
@@ -148,8 +148,8 @@ function _init()
   end
 
   if _nextx < 5 and _nextx >= 0 and _nexty < 2 and _nexty >= 0 then
-   local _curroom=_rooms[1+_x+_y*5]
-   local _nextroom=_rooms[1+_nextx+_nexty*5]
+   local _curroom=_rooms[_x+_y*5]
+   local _nextroom=_rooms[_nextx+_nexty*5]
 
    if _nexty - _y == 1 then -- down
     _curroom.walls[4][1]={ typ='door', leadsto=_nextroom.id, relative='', xoff=4, yoff=24 }
@@ -205,19 +205,20 @@ function _init()
   },
  }
 
- for _room in all(_rooms) do
-  for _i=1,4 do
-   local _wall=_room.walls[_i]
+ for _i=0,9 do
+  _room=_rooms[_i]
+  for _j=1,4 do
+   local _wall=_room.walls[_j]
    if not (_wall[1].typ == 'door' or _wall[2].typ == 'door') then
-    _wall[1]={ typ='camera', id=_room.id, xoff=_pos[_i].x, yoff=_pos[_i].y }
+    _wall[1]={ typ='camera', id=_room.id, xoff=_pos[_j].x, yoff=_pos[_j].y }
 
     -- add relative string to doors
-    for _j=1,4 do
-     local _otherwall=_room.walls[_j]
+    for _k=1,4 do
+     local _otherwall=_room.walls[_k]
      if _wall != _otherwall then
       for _item in all(_otherwall) do
        if _item.typ == 'door' then
-        _item.str=_camrelstrs[_i][_j]
+        _item.str=_camrelstrs[_j][_k]
        end
       end
      end
@@ -230,7 +231,8 @@ function _init()
 
 
  -- add only rooms w doors
- for _room in all(_rooms) do
+ for _i=0,9 do
+  _room=_rooms[_i]
   local _hasdoor
   for _wall in all(_room.walls) do
    if _wall[1].typ == 'door' or _wall[2].typ == 'door' then
@@ -245,7 +247,7 @@ function _init()
  end
 
  local _min1window
- for _i=1,10 do
+ for _i=0,9 do
   local _room=rooms[_i]
   if _room and (rnd() > .5 or not _min1window) then
    if (_i == 6 or rooms[_i-1] == nil) and _room.walls[1][1].typ != 'camera' then -- west
@@ -266,21 +268,33 @@ function _init()
 
 end
 
-cursel=1
-menu={}
+cursels={
+ [-1]=1,
+ [0]=1,
+ [1]=1,
+}
 
+menus={
+ [-1]={},
+ [0]={},
+ [1]={},
+}
 
+screensel=0
 
 function _update60()
 
- -- create menu
- menu={}
+ -- create computer menu
+
+
+ -- create blueprint menu
+ menus[0]={}
  local _escapeadded,_hideadded
  local _curroom=rooms[partner.room]
  for _wall in all(_curroom.walls) do
   for _item in all(_wall) do
    if _item.typ == 'window' and not _escapeadded then
-    add(menu,{
+    add(menus[0],{
      str='escape thru window',
      f=function()
       partner.item=_item
@@ -293,7 +307,7 @@ function _update60()
     _escapeadded=true
 
    elseif _item.typ == 'door' then
-    add(menu,{
+    add(menus[0],{
      str=_item.str,
      f=function()
       partner.item=_item
@@ -307,7 +321,7 @@ function _update60()
    elseif _item.typ == 'computer' then
 
     if _item.loot and partner.state != 'hacking' then
-     add(menu,{
+     add(menus[0],{
       str='hack computer',
       f=function()
        partner.item=_item
@@ -320,7 +334,7 @@ function _update60()
     end
 
     if _hideadded == nil and partner.state != 'prehiding' then
-     add(menu,{
+     add(menus[0],{
       str='hide!',
       f=function()
        partner.item=_item
@@ -336,7 +350,7 @@ function _update60()
  end
 
  if partner.state == 'hiding' then
-  menu={{
+  menus[0]={{
    str='it\'s safe to come out',
    f=function()
     msgstr='ok, i\'m coming out'
@@ -346,7 +360,7 @@ function _update60()
   }}
 
  elseif partner.state == 'unhiding' then
-  menu={{
+  menus[0]={{
    str='hide!',
    f=function()
     partner.item=_item
@@ -356,21 +370,34 @@ function _update60()
   }}
 
  elseif partner.state == 'prehiding' and not partner.ismoving then
-  menu={}
+  menus[0]={}
  elseif partner.state == 'roomchanging' and not partner.ismoving then
-  menu={}
+  menus[0]={}
  end
+
+ -- create cam menu
+ 
 
  -- input
- if btnp(3) then
-  cursel+=1
- elseif btnp(2) then
-  cursel-=1
+ if btnp(1) then
+  screensel+=1
+ elseif btnp(0) then
+  screensel-=1
  end
- cursel=mid(1,cursel,#menu)
+ screensel=mid(-1,screensel,1)
 
- if btnp(4) and menu[cursel] and menu[cursel].f then
-  menu[cursel].f()
+ if btnp(3) then
+  cursels[screensel]+=1
+ elseif btnp(2) then
+  cursels[screensel]-=1
+ end
+
+ cursels[screensel]=mid(1,cursels[screensel],#menus[screensel])
+
+ camera(screensel*64,0)
+
+ if btnp(4) and menus[screensel][cursels[screensel]] and menus[screensel][cursels[screensel]].f then
+  menus[screensel][cursels[screensel]].f()
  end
 
  -- update partner
@@ -450,10 +477,13 @@ pal(2,131,1) -- wine -> dark green
 function _draw()
  cls(0)
 
+
+ -- draw screen 0
+
  -- draw blueprint
  rectfill(1,34,126,86,15)
 
- for _i=1,10 do
+ for _i=0,9 do
   local _room=rooms[_i]
   if _room then
    local _x=3+_room.x
@@ -466,7 +496,7 @@ function _draw()
  end
 
 
- for _i=1,10 do
+ for _i=0,9 do
   local _room=rooms[_i]
   if _room then
    local _x=3+_room.x
@@ -482,7 +512,7 @@ function _draw()
       print('?',_x+_item.xoff,_y+_item.yoff,7)
 
      elseif _item.typ == 'camera' then
-      print(_item.id-1,_x+_item.xoff,_y+_item.yoff,12)
+      print(_item.id,_x+_item.xoff,_y+_item.yoff,12)
 
      elseif _item.typ == 'window' then
       if _horiz then
@@ -534,7 +564,7 @@ function _draw()
  print(partner.room,1,1,10)
  pset(3+rooms[partner.room].x+partner.xoff,36+rooms[partner.room].y+partner.yoff,10)
 
- -- draw menu
+ -- draw menus[0]
  rectfill(2,88,125,126,2)
 
  -- draw partner message
@@ -543,10 +573,10 @@ function _draw()
  -- draw options
  local _menux,_menuy,_rowoff=5,99,7
 
- for _i=1,#menu do
-  local _item=menu[_i]
+ for _i=1,#menus[0] do
+  local _item=menus[0][_i]
   local _y=_menuy+(_i-1)*_rowoff
-  print(_item.str,_menux,_y,_i == cursel and 11 or 3)
+  print(_item.str,_menux,_y,_i == cursels[0] and 11 or 3)
  end
 
  if partner.state == 'escaped' and partner.c <= 0 then
