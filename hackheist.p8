@@ -15,8 +15,6 @@ function clone(_t)
  return t
 end
 
--- max mansion total: w: 122, h: 48
-
 function dist(x1,y1,x2,y2)
  local dx,dy=(x2-x1)*0.1,(y2-y1)*0.1
  return sqrt(dx*dx+dy*dy)*10
@@ -39,7 +37,7 @@ rooms={
     {},
    },
    { -- east
-    { typ='door', leadsto=2, relative='left', xoff=24, yoff=6 },
+    { typ='door', leadsto=2, relative='to the left', xoff=24, yoff=6 },
     {},
    },
    { -- south
@@ -53,7 +51,7 @@ rooms={
   w=24,h=24,
   walls={
    { -- west
-    { typ='door', leadsto=1, relative='far side', xoff=0, yoff=6 },
+    { typ='door', leadsto=1, relative='at the back', xoff=0, yoff=6 },
     {},
    },
    { -- north
@@ -65,7 +63,7 @@ rooms={
     {},
    },
    { -- south
-    { typ='door', leadsto=3, relative='left', xoff=6, yoff=24 },
+    { typ='door', leadsto=3, relative='to the left', xoff=6, yoff=24 },
     {},
    },
   },
@@ -79,7 +77,7 @@ rooms={
     {},
    },
    { -- north
-    { typ='door', leadsto=2, relative='right', xoff=6, yoff=0 },
+    { typ='door', leadsto=2, relative='to the right', xoff=6, yoff=0 },
     {},
    },
    { -- east
@@ -95,6 +93,84 @@ rooms={
   },
  },
 }
+
+function _init()
+ local _maxtotw,_maxtoth=122,48
+ -- init rooms
+ rooms={}
+
+ local _totw,_toth=0,0
+ local _prevroom=nil
+ local _roomi=1
+
+ while true do
+  -- determine room(s) width
+  local _roomw=24
+  _totw+=_roomw
+
+  -- determine room count
+  local _roomcount=1
+
+  -- determine room(s) height 
+  local _roomh=24
+
+  -- if mansion would be too big, stop
+  if _totw > _maxtotw then
+   break
+  end
+
+  -- create west
+  local _west={{},{}}
+  -- create doors to previous column
+  if _prevroom then
+   _west[1]={ typ='door', leadsto=_prevroom.id, relative='to the right', xoff=2, yoff=6 }
+   _prevroom.walls[3][1]={ typ='door', leadsto=_roomi, relative='to the left', xoff=24, yoff=6 }
+  end
+
+  -- create north
+  local _north={{},{}}
+
+  -- create east
+  local _east={{},{}}
+
+  -- create south
+  local _south={{},{}}
+
+  -- create door to same column
+  -- todo
+
+  -- create camera
+  _north[1]={ typ='camera', id=_roomi, xoff=12, yoff=2 }
+
+  -- create windows
+  _south[1]={ typ='window', xoff=14, yoff=23 }
+
+  -- create room
+  local _room={
+   id=_roomi,
+   x=_totw-_roomw,
+   y=0,
+   w=_roomw,
+   h=_roomh,
+   walls={
+    _west,
+    _north,
+    _east,
+    _south,
+   },
+  }
+
+  rooms[_roomi]=_room
+
+  _roomi+=1
+  _prevroom=_room
+
+ end
+
+ -- randomize camera ids
+
+end
+
 
 partner={
  room=1,
@@ -134,7 +210,7 @@ function _update60()
 
    elseif _item.typ == 'door' then
     add(menu,{
-     str='go thru door on your '.._item.relative,
+     str='go thru door '.._item.relative,
      f=function()
       partner.item=_item
       partner.state='roomchanging'
@@ -285,9 +361,10 @@ function _update60()
 end
 
 pal(15,140,1) -- flesh -> blueprint blue
+pal(2,131,1) -- wine -> dark green
 
 function _draw()
- cls(1)
+ cls(0)
 
  -- draw blueprint
  rectfill(1,34,126,86,15)
@@ -309,11 +386,9 @@ function _draw()
   for _i=1,4 do
    local _wall=_room.walls[_i]
    local _horiz=_i%2 == 0
-   local _offsetfactor=_i > 2 and 1 or 0
+   -- local _offsetfactor=_i > 2 and 1 or 0
 
-   for _j=1,2 do
-    local _item=_wall[_j]
-
+   for _item in all(_wall) do
     if _item.worth then
      print('?',_x+_item.xoff,_y+_item.yoff,7)
 
@@ -335,6 +410,8 @@ function _draw()
      end
     end
 
+    -- for _j=1,2 do
+    -- local _item=_wall[_j]
     -- local _itemx=_room.w/5+(_room.w/5)*(_j-1)*2
     -- local _itemy=_room.h/5+(_room.h/5)*(_j-1)*2
 
@@ -367,10 +444,13 @@ function _draw()
  print(partner.room,1,1,10)
  pset(3+rooms[partner.room].x+partner.xoff,36+rooms[partner.room].y+partner.yoff,10)
 
+ -- draw menu
+ rectfill(2,88,125,126,2)
+
  -- draw partner message
  print(msgstr,5,90,7)
 
- -- draw menu
+ -- draw options
  local _menux,_menuy,_rowoff=5,99,7
 
  for _i=1,#menu do
