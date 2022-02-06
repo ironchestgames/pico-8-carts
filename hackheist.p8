@@ -31,7 +31,7 @@ rooms={
  {
   x=0,y=0,
   w=24,h=48,
-  walls={
+  objs={
    { -- west
     {},
     {},
@@ -53,7 +53,7 @@ rooms={
  {
   x=24,y=0,
   w=24,h=24,
-  walls={
+  objs={
    { -- west
     { typ='door', leadsto=1, relative='at the back', xoff=0, yoff=6 },
     {},
@@ -75,7 +75,7 @@ rooms={
  {
   x=24,y=24,
   w=24,h=24,
-  walls={
+  objs={
    { -- west
     { typ='computer', loot={ 'cute cat pictures', worth=5 }, xoff=2, yoff=3 },
     {},
@@ -101,6 +101,7 @@ rooms={
 
 partner={
  room=1,
+ lastroom=1,
  xoff=5,
  yoff=10,
  c=0,
@@ -113,24 +114,24 @@ msgstr='ok, i\'m in! what now?'
 function _init()
  rooms={}
 
+ -- west - 1,2
+ -- north - 3,4
+ -- east - 5,6
+ -- south - 7,8
+
  local _rooms={}
  for _i=0,14 do
   _rooms[_i]={
    id=_i,
    x=(_i%5)*24,
-   y=flr(_i/5)*24,
+   y=flr(_i/5)*25,
    w=24,
-   h=24,
-   walls={
-    {{},{}}, -- west
-    {{},{}}, -- north
-    {{},{}}, -- east
-    {{},{}}, -- south
-   }
+   h=25,
+   objs={{},{},{},{},{},{},{},{},},
   }
  end
 
- local _stepcount=12
+ local _stepcount=20
  local _x=flrrnd(5)
  local _y=flrrnd(3)
 
@@ -139,6 +140,7 @@ function _init()
  local _dirs={-1,1}
  local _i=1
  while _i <= _stepcount do
+  ::continue::
   local _nextx=_x
   local _nexty=_y
   if rnd() > .5 then
@@ -147,22 +149,38 @@ function _init()
    _nextx+=_dirs[flrrnd(2)+1]
   end
 
-  if _nextx < 5 and _nextx >= 0 and _nexty < 2 and _nexty >= 0 then
-   local _curroom=_rooms[_x+_y*5]
-   local _nextroom=_rooms[_nextx+_nexty*5]
+  local _curroom=_rooms[_x+_y*5]
+  local _nextroom=_rooms[_nextx+_nexty*5]
+  local _doorcount=0
+  local _doorcountnext=0
 
+  for _j=1,8 do
+   if _curroom.objs[_j].typ == 'door' then
+    _doorcount+=1
+   end
+   if _nextroom and _nextroom.objs[_j].typ == 'door' then
+    _doorcountnext+=1
+   end
+
+   if _doorcount > 3 or _doorcountnext > 3 then
+    _i+=1
+    goto continue
+   end
+  end
+
+  if _nextx < 5 and _nextx >= 0 and _nexty < 3 and _nexty >= 0 then
    if _nexty - _y == 1 then -- down
-    _curroom.walls[4][1]={ typ='door', leadsto=_nextroom.id, relative='', xoff=4, yoff=24 }
-    _nextroom.walls[2][1]={ typ='door', leadsto=_curroom.id, relative='', xoff=4, yoff=0 }
+    _curroom.objs[7]={ typ='door', leadsto=_nextroom.id, xoff=4, yoff=25 }
+    _nextroom.objs[3]={ typ='door', leadsto=_curroom.id, xoff=4, yoff=0 }
    elseif _nexty - _y == -1 then -- up
-    _curroom.walls[2][1]={ typ='door', leadsto=_nextroom.id, relative='', xoff=4, yoff=0 }
-    _nextroom.walls[4][1]={ typ='door', leadsto=_curroom.id, relative='', xoff=4, yoff=24 }
-   elseif _nextx - _x == 1 then -- left
-    _curroom.walls[3][1]={ typ='door', leadsto=_nextroom.id, relative='', xoff=24, yoff=4 }
-    _nextroom.walls[1][1]={ typ='door', leadsto=_curroom.id, relative='', xoff=0, yoff=4 }
-   elseif _nextx - _x == -1 then -- right
-    _curroom.walls[1][1]={ typ='door', leadsto=_nextroom.id, relative='', xoff=0, yoff=4 }
-    _nextroom.walls[3][1]={ typ='door', leadsto=_curroom.id, relative='', xoff=24, yoff=4 }
+    _curroom.objs[3]={ typ='door', leadsto=_nextroom.id, xoff=4, yoff=0 }
+    _nextroom.objs[7]={ typ='door', leadsto=_curroom.id, xoff=4, yoff=25 }
+   elseif _nextx - _x == 1 then -- right
+    _curroom.objs[5]={ typ='door', leadsto=_nextroom.id, xoff=24, yoff=4 }
+    _nextroom.objs[1]={ typ='door', leadsto=_curroom.id, xoff=0, yoff=4 }
+   elseif _nextx - _x == -1 then -- left
+    _curroom.objs[1]={ typ='door', leadsto=_nextroom.id, xoff=0, yoff=4 }
+    _nextroom.objs[5]={ typ='door', leadsto=_curroom.id, xoff=24, yoff=4 }
    end
 
    _x=_nextx
@@ -172,55 +190,69 @@ function _init()
  end
 
  -- put camera on doorless wall
- local _pos={
-  {x=2,y=10}, -- west
-  {x=8,y=2}, -- north
-  {x=20,y=10}, -- east
-  {x=8,y=18}, -- south
- }
  local _camrelstrs={
-  { -- west
+  [1]={ -- west
+   nil, -- west
    nil, -- west
    'go thru door to the left', -- north
+   'go thru door to the left', -- north
+   'go thru door at the back', -- east
    'go thru door at the back', -- east
    'go thru door to the right', -- south
+   'go thru door to the right', -- south
   },
-  { -- north
+  [3]={ -- north
+   'go thru door to the right', -- west
    'go thru door to the right', -- west
    nil, -- north
+   nil, -- north
+   'go thru door to the left', -- east
    'go thru door to the left', -- east
    'go thru door at the back', -- south
+   'go thru door at the back', -- south
   },
-  { -- east
+  [5]={ -- east
+   'go thru door at the back', -- west
    'go thru door at the back', -- west
    'go thru door to the right', -- north
+   'go thru door to the right', -- north
+   nil, -- east
    nil, -- east
    'go thru door to the left', -- south
+   'go thru door to the left', -- south
   },
-  { -- south
+  [7]={ -- south
+   'go thru door to the left', -- west
    'go thru door to the left', -- west
    'go thru door at the back', -- north
+   'go thru door at the back', -- north
    'go thru door to the right', -- east
+   'go thru door to the right', -- east
+   nil, -- south
    nil, -- south
   },
  }
 
- for _i=0,14 do
-  _room=_rooms[_i]
-  for _j=1,4 do
-   local _wall=_room.walls[_j]
-   if not (_wall[1].typ == 'door' or _wall[2].typ == 'door') then
-    _wall[1]={ typ='camera', id=_room.id, xoff=_pos[_j].x, yoff=_pos[_j].y }
+ local _pos={
+  [1]={x=2,y=10}, -- west
+  [3]={x=8,y=2}, -- north
+  [5]={x=20,y=10}, -- east
+  [7]={x=8,y=18}, -- south
+ }
 
-    -- add relative string to doors
-    for _k=1,4 do
-     local _otherwall=_room.walls[_k]
-     if _wall != _otherwall then
-      for _item in all(_otherwall) do
-       if _item.typ == 'door' then
-        _item.str=_camrelstrs[_j][_k]
-       end
-      end
+ local _dirs={1,3,5,7}
+
+ for _i=0,14 do
+  local _room=_rooms[_i]
+  for _dir in all(_dirs) do
+   if _room.objs[_dir].typ != 'door' then
+    _room.objs[_dir]={ typ='camera', id=_room.id, xoff=_pos[_dir].x, yoff=_pos[_dir].y }
+
+    -- add string to doors
+    for _k=1,8 do
+     local _obj=_room.objs[_k]
+     if _obj.typ == 'door' then
+      _obj.str=_camrelstrs[_dir][_k]
      end
     end
 
@@ -232,10 +264,10 @@ function _init()
 
  -- add only rooms w doors
  for _i=0,14 do
-  _room=_rooms[_i]
+  local _room=_rooms[_i]
   local _hasdoor
-  for _wall in all(_room.walls) do
-   if _wall[1].typ == 'door' or _wall[2].typ == 'door' then
+  for _obj in all(_room.objs) do
+   if _obj.typ == 'door' then
     _hasdoor=true
     break
    end
@@ -246,22 +278,20 @@ function _init()
   end
  end
 
+ -- add windows
  local _min1window
  for _i=0,14 do
   local _room=rooms[_i]
   if _room and (rnd() > .5 or not _min1window) then
-   if (_i == 6 or _i == 11 or rooms[_i-1] == nil) and _room.walls[1][1].typ != 'camera' then -- west
-    _room.walls[1][1]={ typ='window', xoff=-1, yoff=8 }
-    _min1window=true
-   elseif (_i <= 5 or rooms[_i-5] == nil) and _room.walls[2][1].typ != 'camera' then  -- north
-    _room.walls[2][1]={ typ='window', xoff=8, yoff=-1 }
-    _min1window=true
-   elseif (_i == 5 or _i == 10 or rooms[_i+1] == nil) and _room.walls[3][1].typ != 'camera' then -- east
-    _room.walls[3][1]={ typ='window', xoff=23, yoff=8 }
-    _min1window=true
-   elseif (_i > 5 or rooms[_i+5] == nil) and _room.walls[4][1].typ != 'camera' then -- south
-    _room.walls[4][1]={ typ='window', xoff=8, yoff=23 }
-    _min1window=true
+   if _i == 5 or _i == 10 or rooms[_i-1] == nil and _room.objs[1].typ != 'camera' then -- west
+    _room.objs[1]={ typ='window', xoff=-1, yoff=8 }
+   elseif (_i == 4 or _i == 9 or rooms[_i+1] == nil) and _room.objs[5].typ != 'camera' then -- east
+    _room.objs[5]={ typ='window', xoff=23, yoff=8 }
+   elseif (_i <= 5 or rooms[_i-5] == nil) and _room.objs[3].typ != 'camera' then  -- north
+    _room.objs[3]={ typ='window', xoff=8, yoff=-1 }
+   elseif (_i >= 10 or rooms[_i+5] == nil) and _room.objs[7].typ != 'camera' then -- south
+    _room.objs[7]={ typ='window', xoff=8, yoff=24 }
+   --  _min1window=true
    end
   end
  end
@@ -292,60 +322,58 @@ function _update60()
  menus[0]={}
  local _escapeadded,_hideadded
  local _curroom=rooms[partner.room]
- for _wall in all(_curroom.walls) do
-  for _item in all(_wall) do
-   if _item.typ == 'window' and not _escapeadded then
+ for _obj in all(_curroom.objs) do
+  if _obj.typ == 'window' and not _escapeadded then
+   add(menus[0],{
+    str='escape thru window',
+    f=function()
+     partner.obj=_obj
+     partner.state='escaping'
+     partner.c=120
+     partner.ismoving=true
+     msgstr='moving...'
+    end,
+   })
+   _escapeadded=true
+
+  elseif _obj.typ == 'door' then
+   add(menus[0],{
+    str=_obj.str,
+    f=function()
+     partner.obj=_obj
+     partner.state='roomchanging'
+     partner.c=60
+     partner.ismoving=true
+     msgstr='moving...'
+    end,
+   })
+
+  elseif _obj.typ == 'computer' then
+
+   if _obj.loot and partner.state != 'hacking' then
     add(menus[0],{
-     str='escape thru window',
+     str='hack computer',
      f=function()
-      partner.item=_item
-      partner.state='escaping'
+      partner.obj=_obj
+      partner.state='hacking'
+      partner.c=240
+      partner.ismoving=true
+      msgstr='moving...'
+     end,
+    })
+   end
+
+   if _hideadded == nil and partner.state != 'prehiding' then
+    add(menus[0],{
+     str='hide!',
+     f=function()
+      partner.obj=_obj
+      partner.state='prehiding'
       partner.c=120
       partner.ismoving=true
       msgstr='moving...'
      end,
     })
-    _escapeadded=true
-
-   elseif _item.typ == 'door' then
-    add(menus[0],{
-     str=_item.str,
-     f=function()
-      partner.item=_item
-      partner.state='roomchanging'
-      partner.c=60
-      partner.ismoving=true
-      msgstr='moving...'
-     end,
-    })
-
-   elseif _item.typ == 'computer' then
-
-    if _item.loot and partner.state != 'hacking' then
-     add(menus[0],{
-      str='hack computer',
-      f=function()
-       partner.item=_item
-       partner.state='hacking'
-       partner.c=240
-       partner.ismoving=true
-       msgstr='moving...'
-      end,
-     })
-    end
-
-    if _hideadded == nil and partner.state != 'prehiding' then
-     add(menus[0],{
-      str='hide!',
-      f=function()
-       partner.item=_item
-       partner.state='prehiding'
-       partner.c=120
-       partner.ismoving=true
-       msgstr='moving...'
-      end,
-     })
-    end
    end
   end
  end
@@ -364,7 +392,7 @@ function _update60()
   menus[0]={{
    str='hide!',
    f=function()
-    partner.item=_item
+    partner.obj=_obj
     partner.state='prehiding'
     partner.c=120
    end,
@@ -402,15 +430,17 @@ function _update60()
 
  -- update camera
  local _camendx=screensel*128
- camerax+=(_camendx-camerax)/6
+ if abs(_camendx-camerax) > 0 then
+  camerax+=(_camendx-camerax)/4
+ end
  camera(camerax,0)
 
  -- update partner
  if partner.ismoving then
-  local _a=atan2(partner.item.xoff-partner.xoff,partner.item.yoff-partner.yoff)
+  local _a=atan2(partner.obj.xoff-partner.xoff,partner.obj.yoff-partner.yoff)
   partner.xoff+=cos(_a)*0.1
   partner.yoff+=sin(_a)*0.1
-  if dist(partner.xoff,partner.yoff,partner.item.xoff,partner.item.yoff) < 2 then
+  if dist(partner.xoff,partner.yoff,partner.obj.xoff,partner.obj.yoff) < 2 then
    partner.ismoving=nil
   end
 
@@ -432,16 +462,14 @@ function _update60()
   if partner.c <= 0 then
 
    if partner.state == 'roomchanging' then
-    local _oldroom=partner.room
-    partner.room=partner.item.leadsto
+    partner.lastroom=partner.room
+    partner.room=partner.obj.leadsto
     local _curroom=rooms[partner.room]
-    for _wall in all(_curroom.walls) do
-     for _item in all(_wall) do
-      if _item.leadsto == _oldroom then
-       partner.item=nil
-       partner.xoff=_item.xoff
-       partner.yoff=_item.yoff
-      end
+    for _obj in all(_curroom.objs) do
+     if _obj.leadsto == partner.lastroom then
+      partner.obj=nil
+      partner.xoff=_obj.xoff
+      partner.yoff=_obj.yoff
      end
     end
 
@@ -449,8 +477,8 @@ function _update60()
     msgstr='in next room, what now?'
 
    elseif partner.state == 'hacking' then
-    add(partner.loot,partner.item.loot)
-    partner.item.loot=nil
+    add(partner.loot,partner.obj.loot)
+    partner.obj.loot=nil
 
     msgstr='got the goods!'
     partner.state='idling'
@@ -502,8 +530,8 @@ function _draw()
  for _i=0,14 do
   local _room=rooms[_i]
   if _room then
-   local _x=3+_room.x
-   local _y=3+_room.y
+   local _x=4+_room.x
+   local _y=4+_room.y
    local _x2=_x+_room.w
    local _y2=_y+_room.h
 
@@ -514,62 +542,32 @@ function _draw()
  for _i=0,14 do
   local _room=rooms[_i]
   if _room then
-   local _x=3+_room.x
-   local _y=3+_room.y
+   local _x=4+_room.x
+   local _y=4+_room.y
 
-   for _i=1,4 do
-    local _wall=_room.walls[_i]
-    local _horiz=_i%2 == 0
-    -- local _offsetfactor=_i > 2 and 1 or 0
+   for _j=1,8 do
+    local _obj=_room.objs[_j]
+    local _horiz=-flr(-(_j/2))%2 == 0
 
-    for _item in all(_wall) do
-     if _item.worth then
-      print('?',_x+_item.xoff,_y+_item.yoff,7)
+    if _obj.worth then
+     print('?',_x+_obj.xoff,_y+_obj.yoff,7)
 
-     elseif _item.typ == 'camera' then
-      print(_item.id,_x+_item.xoff,_y+_item.yoff,12)
+    elseif _obj.typ == 'camera' then
+     print(_obj.id,_x+_obj.xoff,_y+_obj.yoff,12)
 
-     elseif _item.typ == 'window' then
-      if _horiz then
-       sspr(0,0,7,3,_x+_item.xoff,_y+_item.yoff)
-      else
-       sspr(7,0,3,7,_x+_item.xoff,_y+_item.yoff)
-      end
-
-     elseif _item.typ == 'door' then
-      if _horiz then
-       sspr(15,0,7,5,_x+_item.xoff,_y+_item.yoff)
-      else
-       sspr(10,0,5,7,_x+_item.xoff,_y+_item.yoff)
-      end
+    elseif _obj.typ == 'window' then
+     if _horiz then
+      sspr(0,0,7,3,_x+_obj.xoff,_y+_obj.yoff)
+     else
+      sspr(7,0,3,7,_x+_obj.xoff,_y+_obj.yoff)
      end
 
-     -- for _j=1,2 do
-     -- local _item=_wall[_j]
-     -- local _itemx=_room.w/5+(_room.w/5)*(_j-1)*2
-     -- local _itemy=_room.h/5+(_room.h/5)*(_j-1)*2
-
-     -- if _item.typ == 'camera' then
-     --  if _horiz then
-     --   print(_item.id,_x+2+(_j-1)*(_room.w-6),_y+2+_offsetfactor*(_room.h-8),12)
-     --  else
-     --   print(_item.id,_x+2+_offsetfactor*(_room.w-6),_y+2+(_j-1)*(_room.h-8),12)
-     --  end
-
-     -- elseif _item.typ == 'window' then
-     --  if _horiz then
-     --   sspr(0,0,7,3,_x+_itemx,_y-1+(_offsetfactor*_room.h))
-     --  else
-     --   sspr(7,0,3,7,_x-1+(_offsetfactor*_room.w),_y+_itemy)
-     --  end
-
-     -- elseif _item.typ == 'door' then
-     --  if _horiz then
-     --   sspr(15,0,7,5,_x+_itemx,_y+(_offsetfactor*_room.h))
-     --  else
-     --   sspr(10,0,5,7,_x+(_offsetfactor*_room.w),_y+_itemy)
-     --  end
-     -- end
+    elseif _obj.typ == 'door' then
+     if _horiz then
+      sspr(15,0,7,5,_x+_obj.xoff,_y+_obj.yoff)
+     else
+      sspr(10,0,5,7,_x+_obj.xoff,_y+_obj.yoff)
+     end
     end
    end
   end
@@ -577,7 +575,7 @@ function _draw()
 
  -- debug draw partner in blueprint
  print(partner.room,0,0,10)
- pset(3+rooms[partner.room].x+partner.xoff,3+rooms[partner.room].y+partner.yoff,10)
+ pset(4+rooms[partner.room].x+partner.xoff,4+rooms[partner.room].y+partner.yoff,10)
 
  -- draw menus[0]
  rectfill(2,88,125,126,7)
@@ -608,12 +606,12 @@ function _draw()
 end
 
 __gfx__
-ceeeeeccccceeeecffffffee7e000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-cccccccecefceeeeceeeeee777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-ceeeeececefeceeeeceeeee77e000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000ecefeeceeeeceeeee77000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000ecefeeeceeeeceee777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000ecefeeee0000000ee7e000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ceeeeeccccceeeecffffffeee7e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+cccccccecefceeeeceeeeeee77700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ceeeeececefeceeeeceeeeee77e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000ecefeeceeeeceeeeee7700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000ecefeeeceeeeceeee77700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000ecefeeee0000000eee7e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000cccfeeee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -663,15 +661,15 @@ ceeeeececefeceeeeceeeee77e000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000044444eee44444eee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000004aaa4eee41114eee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000004aaa4eee41114eee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-eeaaaee04aaa4eee41114eee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-eaeeeae044444eee44444eee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000041114eee4aaa4eee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+eeaaaee041114eee4aaa4eee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+eaeeeae041114eee4aaa4eee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+aeeeeea044444eee44444eee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 aeeeeea0eeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 aeeeeea0eeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 aeeeeea0eeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-aeeeeea0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 aeeeeea0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 eaeeeae0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 eeaaaee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
