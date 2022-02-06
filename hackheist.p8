@@ -7,6 +7,8 @@ function debug(s)
  printh(tostr(s),'debug',false)
 end
 
+menuitem(1,'debug',function() _debug=not _debug end)
+
 function flrrnd(n)
  return flr(rnd(n))
 end
@@ -19,13 +21,20 @@ function clone(_t)
  return t
 end
 
+function shuffle(_t)
+ for _i=#_t,2,-1 do
+  local _j=flrrnd(_i)+1
+  _t[_i],_t[_j]=_t[_j],_t[_i]
+ end
+ return _t
+end
+
 function dist(x1,y1,x2,y2)
  local dx,dy=(x2-x1)*0.1,(y2-y1)*0.1
  return sqrt(dx*dx+dy*dy)*10
 end
 
-
--- create rooms
+windows={}
 
 rooms={
  {
@@ -101,18 +110,19 @@ rooms={
 
 partner={
  room=1,
- lastroom=1,
+ prevroom=1,
  xoff=5,
  yoff=10,
  c=0,
  state='idling',
 }
 
-msgstr='ok, i\'m in! what now?'
+msgstr=''
 
 
 function _init()
  rooms={}
+ windows={}
 
  -- west - 1,2
  -- north - 3,4
@@ -127,15 +137,13 @@ function _init()
    y=flr(_i/5)*25,
    w=24,
    h=25,
-   objs={{},{},{},{},{},{},{},{},},
+   objs={{},{},{},{},{},{},{},{}},
   }
  end
 
  local _stepcount=20
  local _x=flrrnd(5)
  local _y=flrrnd(3)
-
- partner.room=_x+_y*5
 
  local _dirs={-1,1}
  local _i=1
@@ -170,17 +178,17 @@ function _init()
 
   if _nextx < 5 and _nextx >= 0 and _nexty < 3 and _nexty >= 0 then
    if _nexty - _y == 1 then -- down
-    _curroom.objs[7]={ typ='door', leadsto=_nextroom.id, xoff=4, yoff=25 }
+    _curroom.objs[8]={ typ='door', leadsto=_nextroom.id, xoff=4, yoff=25 }
     _nextroom.objs[3]={ typ='door', leadsto=_curroom.id, xoff=4, yoff=0 }
    elseif _nexty - _y == -1 then -- up
     _curroom.objs[3]={ typ='door', leadsto=_nextroom.id, xoff=4, yoff=0 }
-    _nextroom.objs[7]={ typ='door', leadsto=_curroom.id, xoff=4, yoff=25 }
+    _nextroom.objs[8]={ typ='door', leadsto=_curroom.id, xoff=4, yoff=25 }
    elseif _nextx - _x == 1 then -- right
-    _curroom.objs[5]={ typ='door', leadsto=_nextroom.id, xoff=24, yoff=4 }
-    _nextroom.objs[1]={ typ='door', leadsto=_curroom.id, xoff=0, yoff=4 }
+    _curroom.objs[6]={ typ='door', leadsto=_nextroom.id, xoff=24, yoff=14 }
+    _nextroom.objs[1]={ typ='door', leadsto=_curroom.id, xoff=0, yoff=14 }
    elseif _nextx - _x == -1 then -- left
-    _curroom.objs[1]={ typ='door', leadsto=_nextroom.id, xoff=0, yoff=4 }
-    _nextroom.objs[5]={ typ='door', leadsto=_curroom.id, xoff=24, yoff=4 }
+    _curroom.objs[1]={ typ='door', leadsto=_nextroom.id, xoff=0, yoff=14 }
+    _nextroom.objs[6]={ typ='door', leadsto=_curroom.id, xoff=24, yoff=14 }
    end
 
    _x=_nextx
@@ -189,78 +197,26 @@ function _init()
   end
  end
 
- -- put camera on doorless wall
- local _camrelstrs={
-  [1]={ -- west
-   nil, -- west
-   nil, -- west
-   'go thru door to the left', -- north
-   'go thru door to the left', -- north
-   'go thru door at the back', -- east
-   'go thru door at the back', -- east
-   'go thru door to the right', -- south
-   'go thru door to the right', -- south
-  },
-  [3]={ -- north
-   'go thru door to the right', -- west
-   'go thru door to the right', -- west
-   nil, -- north
-   nil, -- north
-   'go thru door to the left', -- east
-   'go thru door to the left', -- east
-   'go thru door at the back', -- south
-   'go thru door at the back', -- south
-  },
-  [5]={ -- east
-   'go thru door at the back', -- west
-   'go thru door at the back', -- west
-   'go thru door to the right', -- north
-   'go thru door to the right', -- north
-   nil, -- east
-   nil, -- east
-   'go thru door to the left', -- south
-   'go thru door to the left', -- south
-  },
-  [7]={ -- south
-   'go thru door to the left', -- west
-   'go thru door to the left', -- west
-   'go thru door at the back', -- north
-   'go thru door at the back', -- north
-   'go thru door to the right', -- east
-   'go thru door to the right', -- east
-   nil, -- south
-   nil, -- south
-  },
- }
-
+ -- add cameras
  local _pos={
-  [1]={x=2,y=10}, -- west
-  [3]={x=8,y=2}, -- north
-  [5]={x=20,y=10}, -- east
-  [7]={x=8,y=18}, -- south
+  [1]={x=2,y=10,otheri=2}, -- west
+  [3]={x=8,y=2,otheri=4}, -- north
+  [6]={x=20,y=10,otheri=5}, -- east
+  [8]={x=8,y=18,otheri=7}, -- south
  }
 
- local _dirs={1,3,5,7}
+ local _dirs={1,3,6,8}
+ local _addcampreds={}
 
  for _i=0,14 do
   local _room=_rooms[_i]
   for _dir in all(_dirs) do
-   if _room.objs[_dir].typ != 'door' then
+   if _room.objs[_dir].typ != 'door' and _room.objs[_pos[_dir].otheri].typ != 'door' then
     _room.objs[_dir]={ typ='camera', id=_room.id, xoff=_pos[_dir].x, yoff=_pos[_dir].y }
-
-    -- add string to doors
-    for _k=1,8 do
-     local _obj=_room.objs[_k]
-     if _obj.typ == 'door' then
-      _obj.str=_camrelstrs[_dir][_k]
-     end
-    end
-
     break
    end
   end
  end
-
 
  -- add only rooms w doors
  for _i=0,14 do
@@ -269,7 +225,6 @@ function _init()
   for _obj in all(_room.objs) do
    if _obj.typ == 'door' then
     _hasdoor=true
-    break
    end
   end
 
@@ -278,23 +233,60 @@ function _init()
   end
  end
 
- -- add windows
- local _min1window
+ -- fix camera ids
+ local _roomswithcam={}
  for _i=0,14 do
   local _room=rooms[_i]
-  if _room and (rnd() > .5 or not _min1window) then
-   if _i == 5 or _i == 10 or rooms[_i-1] == nil and _room.objs[1].typ != 'camera' then -- west
-    _room.objs[1]={ typ='window', xoff=-1, yoff=8 }
-   elseif (_i == 4 or _i == 9 or rooms[_i+1] == nil) and _room.objs[5].typ != 'camera' then -- east
-    _room.objs[5]={ typ='window', xoff=23, yoff=8 }
-   elseif (_i <= 5 or rooms[_i-5] == nil) and _room.objs[3].typ != 'camera' then  -- north
-    _room.objs[3]={ typ='window', xoff=8, yoff=-1 }
-   elseif (_i >= 10 or rooms[_i+5] == nil) and _room.objs[7].typ != 'camera' then -- south
-    _room.objs[7]={ typ='window', xoff=8, yoff=24 }
-   --  _min1window=true
+  if _room then
+   for _obj in all(_room.objs) do
+    if _obj.typ == 'camera' then
+     add(_roomswithcam,_room)
+    end
    end
   end
  end
+
+ shuffle(_roomswithcam)
+
+ for _i=1,#_roomswithcam do
+  local _room=_roomswithcam[_i]
+  if _i <= 9 then
+   for _obj in all(_roomswithcam[_i].objs) do
+    if _obj.typ == 'camera' then
+     _obj.id=_i
+    end
+   end
+  else
+   for _j=1,#_room.objs do
+    if _room.objs[_j].typ == 'camera' then
+     _room.objs[_j]={}
+    end
+   end
+  end
+ end
+
+ -- add windows
+ for _i=0,14 do
+  local _room=rooms[_i]
+  if _room then
+   if (rooms[_i-1] == nil or _i == 5 or _i == 10) and _room.objs[1].typ != 'camera' then -- west
+    _room.objs[2]={ typ='window', xoff=-1, yoff=4, roomid=_room.id }
+    add(windows,_room.objs[2])
+   elseif (rooms[_i+1] == nil or _i == 4 or _i == 9) and _room.objs[6].typ != 'camera' then -- east
+    _room.objs[6]={ typ='window', xoff=23, yoff=14, roomid=_room.id }
+    add(windows,_room.objs[6])
+   elseif (rooms[_i-5] == nil or _i <= 4) and _room.objs[3].typ != 'camera' then  -- north
+    _room.objs[4]={ typ='window', xoff=14, yoff=-1, roomid=_room.id }
+    add(windows,_room.objs[4])
+   elseif (rooms[_i+5] == nil or _i >= 10) and _room.objs[8].typ != 'camera' then -- south
+    _room.objs[8]={ typ='window', xoff=3, yoff=24, roomid=_room.id }
+    add(windows,_room.objs[8])
+   end
+  end
+ end
+
+ partner.state='windowsearching'
+ partner.windowid=flrrnd(#windows-1)+1
 
 end
 
@@ -313,6 +305,14 @@ menus={
 screensel=0
 camerax=0
 
+local skipstates={
+ windowsearching_sneaking=true,
+ breaking_in=true,
+ escaped=true,
+ prehiding=true,
+ roomchanging=true,
+}
+
 function _update60()
 
  -- create computer menu
@@ -320,88 +320,152 @@ function _update60()
 
  -- create blueprint menu
  menus[0]={}
- local _escapeadded,_hideadded
- local _curroom=rooms[partner.room]
- for _obj in all(_curroom.objs) do
-  if _obj.typ == 'window' and not _escapeadded then
-   add(menus[0],{
-    str='escape thru window',
-    f=function()
-     partner.obj=_obj
-     partner.state='escaping'
-     partner.c=120
-     partner.ismoving=true
-     msgstr='moving...'
-    end,
-   })
-   _escapeadded=true
 
-  elseif _obj.typ == 'door' then
-   add(menus[0],{
-    str=_obj.str,
-    f=function()
-     partner.obj=_obj
-     partner.state='roomchanging'
-     partner.c=60
-     partner.ismoving=true
-     msgstr='moving...'
-    end,
-   })
-
-  elseif _obj.typ == 'computer' then
-
-   if _obj.loot and partner.state != 'hacking' then
-    add(menus[0],{
-     str='hack computer',
-     f=function()
-      partner.obj=_obj
-      partner.state='hacking'
-      partner.c=240
-      partner.ismoving=true
-      msgstr='moving...'
-     end,
-    })
+ if skipstates[partner.state] and not partner.ismoving then
+  -- pass
+ elseif partner.state == 'windowsearching' then
+  local _doorcount=0
+  debug(partner.windowid)
+  debug(#windows)
+  for _obj in all(rooms[windows[partner.windowid].roomid].objs) do
+   if _obj.typ == 'door' then
+    _doorcount+=1
    end
+  end
+  if _doorcount == 1 then
+   msgstr='i see 1 door'
+  else
+   msgstr='i see '.._doorcount..' doors'
+  end
 
-   if _hideadded == nil and partner.state != 'prehiding' then
+  add(menus[0],{
+   str='break in',
+   f=function()
+    partner.state='breaking_in'
+    partner.c=120
+   end,
+  })
+
+  add(menus[0],{
+   str='check next window',
+   f=function()
+    partner.state='windowsearching_sneaking'
+    partner.c=100
+   end,
+  })
+
+ else
+  local _escapeadded,_hideadded
+  local _curroom=rooms[partner.roomid]
+
+  for _i=1,#_curroom.objs do
+   local _obj=_curroom.objs[_i]
+   if _obj.typ == 'window' and not _escapeadded then
     add(menus[0],{
-     str='hide!',
+     str='escape thru window',
      f=function()
       partner.obj=_obj
-      partner.state='prehiding'
+      partner.state='escaping'
       partner.c=120
       partner.ismoving=true
       msgstr='moving...'
      end,
     })
+    _escapeadded=true
+
+   elseif _obj.typ == 'door' then
+
+    _str='take door'
+    local _nextobj=_curroom.objs[(_i+1)%#_curroom.objs]
+    local _previ=_i-1
+    if _previ == 0 then
+     _previ=#_curroom.objs
+    end
+    local _prevobj=_curroom.objs[_previ]
+    if _prevobj and _prevobj.typ and _prevobj.typ != 'camera' then
+     _str='take door next to '.._prevobj.typ
+     if _prevobj.typ == 'door' then
+      _str='take door next to other door'
+      if _prevobj.leadsto == partner.prevroom then
+       _str='take door next to previous room'
+      end
+     end
+    elseif _nextobj and _nextobj.typ and _nextobj.typ != 'camera' then
+     _str='take door next to '.._nextobj.typ
+     if _nextobj.typ == 'door' then
+      _str='take door next to other door'
+      if _nextobj.leadsto == partner.prevroom then
+       _str='take door next to previous room'
+      end
+     end
+    end
+
+    if partner.prevroom == _obj.leadsto then
+     _str='take door to previous room'
+    end
+
+    add(menus[0],{
+     str=_str,
+     f=function()
+      partner.obj=_obj
+      partner.state='roomchanging'
+      partner.c=60
+      partner.ismoving=true
+      msgstr='moving...'
+     end,
+    })
+
+   elseif _obj.typ == 'computer' then
+
+    if _obj.loot and partner.state != 'hacking' then
+     add(menus[0],{
+      str='hack computer',
+      f=function()
+       partner.obj=_obj
+       partner.state='hacking'
+       partner.c=240
+       partner.ismoving=true
+       msgstr='moving...'
+      end,
+     })
+    end
+
+    if _hideadded == nil and partner.state != 'prehiding' then
+     add(menus[0],{
+      str='hide!',
+      f=function()
+       partner.obj=_obj
+       partner.state='prehiding'
+       partner.c=120
+       partner.ismoving=true
+       msgstr='moving...'
+      end,
+     })
+    end
    end
   end
- end
 
- if partner.state == 'hiding' then
-  menus[0]={{
-   str='it\'s safe to come out',
-   f=function()
-    msgstr='ok, i\'m coming out'
-    partner.state='unhiding'
-    partner.c=120
-   end,
-  }}
+  if partner.state == 'hiding' then
+   menus[0]={{
+    str='it\'s safe to come out',
+    f=function()
+     msgstr='ok, i\'m coming out'
+     partner.state='unhiding'
+     partner.c=120
+    end,
+   }}
 
- elseif partner.state == 'unhiding' then
-  menus[0]={{
-   str='hide!',
-   f=function()
-    partner.obj=_obj
-    partner.state='prehiding'
-    partner.c=120
-   end,
-  }}
+  elseif partner.state == 'unhiding' then
+   menus[0]={{
+    str='hide!',
+    f=function()
+     partner.obj=_obj
+     partner.state='prehiding'
+     partner.c=120
+    end,
+   }}
 
- elseif partner.state == 'prehiding' and not partner.ismoving then
-  menus[0]={}
- elseif partner.state == 'roomchanging' and not partner.ismoving then
-  menus[0]={}
+  end
  end
 
  -- create cam menu
@@ -447,7 +511,11 @@ function _update60()
  else
   partner.c-=1
 
-  if partner.state == 'escaping' then
+  if partner.state == 'windowsearching_sneaking' then
+   msgstr='sneaking to next window...'
+  elseif partner.state == 'breaking_in' then
+   msgstr='breaking in...'
+  elseif partner.state == 'escaping' then
    msgstr='breaking window...'
   elseif partner.state == 'roomchanging' then
    msgstr='...'
@@ -461,12 +529,25 @@ function _update60()
 
   if partner.c <= 0 then
 
-   if partner.state == 'roomchanging' then
-    partner.lastroom=partner.room
-    partner.room=partner.obj.leadsto
-    local _curroom=rooms[partner.room]
+   if partner.state == 'windowsearching_sneaking' then
+    partner.windowid+=1
+    if partner.windowid > #windows then
+     partner.windowid=1
+    end
+    partner.state='windowsearching'
+
+   elseif partner.state == 'breaking_in' then
+    partner.roomid=windows[partner.windowid].roomid
+    partner.prevroom=partner.roomid
+    partner.state='idling'
+    msgstr='i\'m in, what now?'
+
+   elseif partner.state == 'roomchanging' then
+    partner.prevroom=partner.roomid
+    partner.roomid=partner.obj.leadsto
+    local _curroom=rooms[partner.roomid]
     for _obj in all(_curroom.objs) do
-     if _obj.leadsto == partner.lastroom then
+     if _obj.leadsto == partner.prevroom then
       partner.obj=nil
       partner.xoff=_obj.xoff
       partner.yoff=_obj.yoff
@@ -484,6 +565,7 @@ function _update60()
     partner.state='idling'
 
    elseif partner.state == 'escaping' then
+    partner.roomid=nil
     partner.state='escaped'
     partner.c=100
     msgstr='i made it out!'
@@ -574,8 +656,10 @@ function _draw()
  end
 
  -- debug draw partner in blueprint
- print(partner.room,0,0,10)
- pset(4+rooms[partner.room].x+partner.xoff,4+rooms[partner.room].y+partner.yoff,10)
+ if _debug then
+  print(partner.roomid,0,0,10)
+  pset(4+rooms[partner.roomid].x+partner.xoff,4+rooms[partner.roomid].y+partner.yoff,10)
+ end
 
  -- draw menus[0]
  rectfill(2,88,125,126,7)
