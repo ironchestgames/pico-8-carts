@@ -141,14 +141,15 @@ function _init()
   }
  end
 
- local _stepcount=20
+ local _stepcount=12
  local _x=flrrnd(5)
  local _y=flrrnd(3)
 
  local _dirs={-1,1}
  local _i=1
+
+ ::continue::
  while _i <= _stepcount do
-  ::continue::
   local _nextx=_x
   local _nexty=_y
   if rnd() > .5 then
@@ -162,7 +163,7 @@ function _init()
   local _doorcount=0
   local _doorcountnext=0
 
-  for _j=1,8 do
+  for _j=1,#_curroom.objs do
    if _curroom.objs[_j].typ == 'door' then
     _doorcount+=1
    end
@@ -190,11 +191,11 @@ function _init()
     _curroom.objs[1]={ typ='door', leadsto=_nextroom.id, xoff=0, yoff=14 }
     _nextroom.objs[6]={ typ='door', leadsto=_curroom.id, xoff=24, yoff=14 }
    end
-
    _x=_nextx
    _y=_nexty
-   _i+=1
   end
+
+   _i+=1
  end
 
  -- add cameras
@@ -325,18 +326,25 @@ function _update60()
   -- pass
  elseif partner.state == 'windowsearching' then
   local _doorcount=0
-  debug(partner.windowid)
-  debug(#windows)
+  local _seecomputer
   for _obj in all(rooms[windows[partner.windowid].roomid].objs) do
    if _obj.typ == 'door' then
     _doorcount+=1
+   elseif _obj.typ == 'computer' then
+    _seecomputer=true
    end
   end
+
   if _doorcount == 1 then
    msgstr='i see 1 door'
   else
    msgstr='i see '.._doorcount..' doors'
   end
+
+  if _seecomputer then
+   msgstr=msgstr..', a computer'
+  end
+
 
   add(menus[0],{
    str='break in',
