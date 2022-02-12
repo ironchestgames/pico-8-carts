@@ -9,6 +9,22 @@ end
 
 menuitem(1,'debug',function() _debug=not _debug end)
 
+poke(0x5600,4)    -- char width
+poke(0x5601,8)    -- char width for high cars
+poke(0x5602,5)    -- char height
+poke(0x5603,0)    -- draw x offset
+poke(0x5604,0)    -- draw y offset
+
+-- custom font 0x80 (computer caret)
+poke(0x80*8+0x5600,7)
+poke(0x80*8+0x5601,7)
+poke(0x80*8+0x5602,7)
+poke(0x80*8+0x5603,7)
+poke(0x80*8+0x5604,7)
+
+-- custom font 0x90 (better ellipsis)
+poke(0x90*8+0x5604,21)
+
 function flrrnd(n)
  return flr(rnd(n))
 end
@@ -303,7 +319,7 @@ function _update60()
  menus[-1]={}
  if computerstate == 'booting' then
   computerstatec-=1
-  computermsg='booting...'
+  computermsg='booting\014\x90\015'
   if computerstatec <= 0 then
    computerstate='booted'
    add(computerlog,'booted',1)
@@ -311,7 +327,7 @@ function _update60()
   end
 
  elseif computerstate == 'targetlocating' then
-  computermsg='locating target...'
+  computermsg='locating target\014\x90\015'
   computerstatec-=1
 
   if computerstatec <= 0 then
@@ -345,7 +361,7 @@ function _update60()
   end
 
  elseif computerstate == 'tracechecking' then
-  computermsg='checking tracing...'
+  computermsg='checking tracing\014\x90\015'
   computerstatec-=1
   if computerstatec <= 0 then
    add(computerlog,'cyber police tracing '..computertraced..'/'..computertracedmax,1)
@@ -354,7 +370,7 @@ function _update60()
   end
 
  elseif computerstate == 'tracereducing' then
-  computermsg='reducing cyber trace...'
+  computermsg='reducing cyber trace\014\x90\015'
   computerstatec-=1
   if computerstatec <= 0 then
    computertraced=max(0,computertraced-1)
@@ -364,7 +380,7 @@ function _update60()
   end
 
  elseif computerstate == 'datareceiving' then
-  computermsg='receiving data...'
+  computermsg='receiving data\014\x90\015'
   partner.state='hacking_sending'
   partner.c=100
   computerstatec-=1
@@ -473,7 +489,7 @@ function _update60()
       partner.state='escaping'
       partner.c=120
       partner.ismoving=true
-      partnermsg='moving...'
+      partnermsg='moving\014\x90\015'
      end,
     })
     _escapeadded=true
@@ -516,7 +532,7 @@ function _update60()
       partner.state='roomchanging'
       partner.c=60
       partner.ismoving=true
-      partnermsg='moving...'
+      partnermsg='moving\014\x90\015'
      end,
     })
 
@@ -530,7 +546,7 @@ function _update60()
        partner.state='hacking'
        partner.c=240
        partner.ismoving=true
-       partnermsg='moving...'
+       partnermsg='moving\014\x90\015'
       end,
      })
     end
@@ -543,7 +559,7 @@ function _update60()
        partner.state='prehiding'
        partner.c=120
        partner.ismoving=true
-       partnermsg='moving...'
+       partnermsg='moving\014\x90\015'
       end,
      })
     end
@@ -626,7 +642,7 @@ function _update60()
  else
 
   if partner.state == 'windowsearching_sneaking' then
-   partnermsg='sneaking to next window...'
+   partnermsg='sneaking to next window\014\x90\015'
    partner.c-=1
 
    if partner.c <= 0 then
@@ -638,7 +654,7 @@ function _update60()
    end
 
   elseif partner.state == 'breaking_in' then
-   partnermsg='breaking in...'
+   partnermsg='breaking in\014\x90\015'
    partner.c-=1
 
    if partner.c <= 0 then
@@ -649,7 +665,7 @@ function _update60()
    end
 
   elseif partner.state == 'roomchanging' then
-   partnermsg='...'
+   partnermsg='\014\x90\015'
    partner.c-=1
 
    if partner.c <= 0 then
@@ -669,7 +685,7 @@ function _update60()
    end
 
   elseif partner.state == 'hacking' then
-   partnermsg='hacking...'
+   partnermsg='hacking\014\x90\015'
    partner.c-=1
 
    if partner.c <= 0 then
@@ -677,10 +693,10 @@ function _update60()
    end
 
   elseif partner.state == 'hacking_ready' then
-   partnermsg='ready to send data...'
+   partnermsg='ready to send data\014\x90\015'
 
   elseif partner.state == 'hacking_sending' then
-   partnermsg='sending data...'
+   partnermsg='sending data\014\x90\015'
    partner.c-=1
 
    if partner.c <= 0 then
@@ -691,7 +707,7 @@ function _update60()
    end
 
   elseif partner.state == 'escaping' then
-   partnermsg='breaking window...'
+   partnermsg='breaking window\014\x90\015'
    partner.c-=1
 
    if partner.c <= 0 then
@@ -702,7 +718,7 @@ function _update60()
    end
 
   elseif partner.state == 'prehiding' then
-   partnermsg='i\'m squeezing in...'
+   partnermsg='i\'m squeezing in\014\x90\015'
    partner.c-=1
 
    if partner.c <= 0 then
@@ -711,7 +727,7 @@ function _update60()
    end
 
   elseif partner.state == 'unhiding' then
-   partnermsg='phew...'
+   partnermsg='phew\014\x90\015'
    partner.c-=1
 
    if partner.c <= 0 then
@@ -779,7 +795,11 @@ function _draw()
   for _i=1,#menus[-1] do
    local _item=menus[-1][_i]
    local _y=_menuy+(_i-1)*_rowoff
-   print(_item.str,_menux,_y,_i == cursels[-1] and 11 or 3)
+   local _str=_item.str
+   if _i == cursels[-1] and flr(time()*4) % 2 == 0 then
+    _str=_item.str..'\014\x80\015'
+   end
+   print(_str,_menux,_y,_i == cursels[-1] and 11 or 3)
   end
  end
 
