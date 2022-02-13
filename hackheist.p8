@@ -57,6 +57,8 @@ loot={}
 local computerstate,computerstatec,computermsg,computerlog,computertraced,computertracedmax
 
 sirenc=nil
+roomw=24
+roomh=25
 
 function _init()
  loot,rooms,windows={},{},{}
@@ -756,9 +758,18 @@ function _update60()
    partnerc-=1
 
    if partnerc <= 0 then
-
     partnerroomid=windows[partnerwindowid].roomid
     partnerprevroomid=partnerroomid
+
+    local _curroom=rooms[partnerroomid]
+    for _obj in all(_curroom.objs) do
+     if _obj == windows[partnerwindowid] then
+      partnerxoff=_obj.xoff
+      partneryoff=_obj.yoff
+      break
+     end
+    end
+
     partnerstate='idling'
     partnermsg='i\'m in, what now?'
    end
@@ -770,12 +781,14 @@ function _update60()
    if partnerc <= 0 then
     partnerprevroomid=partnerroomid
     partnerroomid=partnerobj.leadsto
+    partnerobj=nil
+
     local _curroom=rooms[partnerroomid]
     for _obj in all(_curroom.objs) do
      if _obj.leadsto == partnerprevroomid then
-      partnerobj=nil
       partnerxoff=_obj.xoff
       partneryoff=_obj.yoff
+      break
      end
     end
 
@@ -1003,11 +1016,12 @@ function _draw()
  for _i=0,14 do
   local _room=rooms[_i]
   if _room then
-   local _camid,_cam=nil,nil
+   local _camid,_cam,_cami=nil,nil,nil
    for _j=1,#_room.objs do
     local _obj=_room.objs[_j]
     if _obj and _obj.typ == 'camera' then
      _camid=_obj.id-1
+     _cami=_j
      _cam=_obj
      _camcount+=1
     end
@@ -1040,6 +1054,28 @@ function _draw()
         _sprpos.flipx)
       end
      end
+    end
+
+    if _room.id == partnerroomid then
+     local _px=_x-3+4
+     local _py=_y-11+7
+     local _xoff=(partnerxoff/roomw)*30
+     local _yoff=(partneryoff/roomh)*23
+     if _cami == 1 or _cami == 2 then
+      _px+=_yoff
+      _py+=_xoff
+     elseif _cami == 3 or _cami == 4 then
+      _px+=30-_xoff
+      _py+=23-_yoff
+     elseif _cami == 5 or _cami == 6 then
+      _px+=30-_yoff
+      _py+=23-_xoff
+     elseif _cami == 7 or _cami == 8 then
+      _px+=_xoff
+      _py+=_yoff
+     end
+
+     sspr(7,_room.islit and 45 or 56,7,11,_px,_py)
     end
 
    else
@@ -1122,28 +1158,28 @@ eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eee9999eee099dddddd9900000000000000000000000000
 eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eee99999ee0deeeeeeeed0000000000000000000000000000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
 eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eee999999e0deeeeeeeed0eedeeeeeedeeeeeedeeeee00000000000000000000000000e9eeeeeeeeee0e9eeeeeeeeee
 eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eee99999990deeeeeeeed0eeddeeeeeddeeeeeddeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000ee7eeeeee7eeeeee7eeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee7e7eee00000000ee7eeeeee7eeeeee7eeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eeeedeeeeeeedeeeeeedeeeeeeeeeeeeeededeee00000000edddeeeedddeeeeddde00e00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eeee7eeeeeee7eeeeee7eeeeeeedeeeeeedddeee00000000dddddeedddddeeddddd7ee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eeedddeeeeedddeeeedddeeeeed7deeeeed7deee00000000d7667eed766e7ed766eeee00000000000000000000000000ee9eeeeeeeee0ee9eeeeeeeee
-0000000eedddddeeedddddeeedddeeeeedddeeeeedddeee00000000edddeeeedddeeeedddeeee00000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
-0000000eed7d7dee7edd7deeeddddeeee7d7eeeeedddeee00000000ededeeeededeeeededeeee00000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
-0000000eeedddeeeeedddeeeedddeeeeedddeeeeedddeee00000000ededeeeddedeeeededeeee00000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
-0000000eeededeeeeededeeeededeeeeededeeeeededeee00000000ededeeeeeedeeeededeeee00000000000000000000000000e9eeeeeeeeee0e9eeeeeeeeee
-0000000eeededeeeeddedeeeededeeeeeeeeeeeeededeee00000000eeeeeeeeeeeeeeeeeeeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eeededeeeeeeedeeeededeeeeeeeeeeeeededeee00000000ee9eeeeee9eeeeee9eeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000ee99eeeee99eeeee99eeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeededeee00000000eedeeeeeedeeeeeedeeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-eeaaaeeeeee9eeeeeee9eeeeee9eeeeeee9eeeeee9e9eee00000000eedeeeeeedeeeeeedeeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-ea000aeeeeedeeeeeeedeeeeeedeeeeee9d9eeeee999eee00000000e999eeee999eeee999e00e00000000000000000000000000ee9eeeeeeeee0ee9eeeeeeeee
-a00000aeee999eeeee999eeee999eeeee999eeeee9d9eee0000000099999d799999eee9999dee00000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
-a00000aee99999eee99999eee999eeeeed9deeeee999eee000000009d99eee9d99ed7e999d7ee000000000000000000000000000000000000000000000000000
-a00000aee9d9d9eede99d9eee9999eeee999eeeee999eee00000000e999eeee999eeee999eeee000000000000000000000000000000000000000000000000000
-a00000aeee999eeeee999eeee999eeeee9e9eeeee999eee00000000e9e9eeee9e9eeee9e9eeee000000000000000000000000000000000000000000000000000
-a00000aeee9e9eeeee9e9eeee9e9eeeeeeeeeeeee9e9eee00000000e9e9eee99e9eeee9e9eeee000000000000000000000000000000000000000000000000000
-ea000aeeee9e9eeee99e9eeee9e9eeeeeeeeeeeee9e9eee00000000e9e9eeeeee9eeee9e9eeee000000000000000000000000000000000000000000000000000
-eeaaaeeeee9e9eeeeeee9eeee9e9eeeeeeeeeeeee9e9eee00000000eeeeeeeeeeeeeeeeeeeeee000000000000000000000000000000000000000000000000000
+0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000ee7eeeeee7eeeeee7eeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeee7e7ee0000000000000ee7eeeeee7eeeeee7eeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eeedeeeeeedeeeeeedeeeeeeeeeeeededee0000000000000edddeeeedddeeeeddde00e00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eee7eeeeee7eeeeee7eeeeeedeeeeedddee0000000000000dddddeedddddeeddddd7ee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eedddeeeedddeeeedddeeeed7deeeed7dee0000000000000d7667eed766e7ed766eeee00000000000000000000000000ee9eeeeeeeee0ee9eeeeeeeee
+0000000edddddeedddddeeedddeeeedddeeeedddee0000000000000edddeeeedddeeeedddeeee00000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
+0000000ed7d7de7edd7deeeddddeee7d7eeeedddee0000000000000ededeeeededeeeededeeee00000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
+0000000eedddeeeedddeeeedddeeeedddeeeedddee0000000000000ededeeeddedeeeededeeee00000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
+0000000eededeeeededeeeededeeeededeeeededee0000000000000ededeeeeeedeeeededeeee00000000000000000000000000e9eeeeeeeeee0e9eeeeeeeeee
+0000000eededeeeddedeeeededeeeeeeeeeeededee0000000000000eeeeeeeeeeeeeeeeeeeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eededeeeeeedeeeededeeeeeeeeeeededee0000000000000ee9eeeeee9eeeeee9eeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000ee99eeeee99eeeee99eeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeededee0000000000000eedeeeeeedeeeeeedeeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+eeaaaeeeee9eeeeee9eeeeee9eeeeee9eeeee9e9ee0000000000000eedeeeeeedeeeeeedeeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+ea000aeeeedeeeeeedeeeeeedeeeee9d9eeee999ee0000000000000e999eeee999eeee999e00e00000000000000000000000000ee9eeeeeeeee0ee9eeeeeeeee
+a00000aee999eeee999eeee999eeee999eeee9d9ee000000000000099999d799999eee9999dee00000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
+a00000ae99999ee99999eee999eeeed9deeee999ee00000000000009d99eee9d99ed7e999d7ee000000000000000000000000000000000000000000000000000
+a00000ae9d9d9ede99d9eee9999eee999eeee999ee0000000000000e999eeee999eeee999eeee000000000000000000000000000000000000000000000000000
+a00000aee999eeee999eeee999eeee9e9eeee999ee0000000000000e9e9eeee9e9eeee9e9eeee000000000000000000000000000000000000000000000000000
+a00000aee9e9eeee9e9eeee9e9eeeeeeeeeee9e9ee0000000000000e9e9eee99e9eeee9e9eeee000000000000000000000000000000000000000000000000000
+ea000aeee9e9eee99e9eeee9e9eeeeeeeeeee9e9ee0000000000000e9e9eeeeee9eeee9e9eeee000000000000000000000000000000000000000000000000000
+eeaaaeeee9e9eeeeee9eeee9e9eeeeeeeeeee9e9ee0000000000000eeeeeeeeeeeeeeeeeeeeee000000000000000000000000000000000000000000000000000
 eeeeeeee4444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444eeeeeeee
 eeeeee44444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444eeeeee
 eeeee4444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444eeeee
