@@ -15,15 +15,18 @@ poke(0x5602,5)    -- char height
 poke(0x5603,0)    -- draw x offset
 poke(0x5604,0)    -- draw y offset
 
--- custom font 0x80 (computer caret)
+-- custom font 0x80*8+0x5600 (computer caret)
 poke(0x80*8+0x5600,7)
 poke(0x80*8+0x5601,7)
 poke(0x80*8+0x5602,7)
 poke(0x80*8+0x5603,7)
 poke(0x80*8+0x5604,7)
 
--- custom font 0x90 (better ellipsis)
+-- custom font 0x90*8+0x5604 (better ellipsis)
 poke(0x90*8+0x5604,21)
+
+-- custom font 0x2e*8+0x5604 (better punctuation dot)
+poke(0x2e*8+0x5604,1)
 
 function flrrnd(n)
  return flr(rnd(n))
@@ -49,6 +52,16 @@ function dist(x1,y1,x2,y2)
  local dx,dy=(x2-x1)*0.1,(y2-y1)*0.1
  return sqrt(dx*dx+dy*dy)*10
 end
+
+-- set palette
+pal(15,140,1) -- light-peach -> true-blue
+pal(9,133,1) -- orange -> darker-grey
+pal(4,128,1) -- brown -> brownish-black
+pal(2,141,1) -- dark-purple -> mauve
+pal(1,129,1) -- dark-blue -> darker-blue
+
+palt(0,false)
+palt(14,true)
 
 windows={}
 rooms={}
@@ -283,7 +296,8 @@ function _init()
      if _obj.typ == nil and rnd() < 0.5 then
       _room.objs[_j]={
        typ='computer',
-       xoff=2, yoff=3,
+       xoff=_pos[_j].x,
+       yoff=_pos[_j].y,
        loot={ 'cute cat pictures', worth=5 },
       }
       _computercount+=1
@@ -579,7 +593,7 @@ function _update60()
      if _prevobj.typ == 'door' then
       _str='take door next to other door'
       if _prevobj.leadsto == partnerprevroomid then
-       _str='take door next to previous room'
+       _str='take door next to prev room'
       end
      end
     elseif _nextobj and _nextobj.typ and _nextobj.typ != 'camera' and _prevobj.typ != 'nexttocamera' then
@@ -587,13 +601,13 @@ function _update60()
      if _nextobj.typ == 'door' then
       _str='take door next to other door'
       if _nextobj.leadsto == partnerprevroomid then
-       _str='take door next to previous room'
+       _str='take door next to prev room'
       end
      end
     end
 
     if partnerprevroomid == _obj.leadsto then
-     _str='take door to previous room'
+     _str='take door to prev room'
     end
 
 
@@ -718,7 +732,9 @@ function _update60()
  end
 
  if btnp(5) then
-  debug(cursels[screensel])
+  -- debug(cursels[screensel])
+  initpaper()
+  return
  end
 
  -- update camera
@@ -865,14 +881,6 @@ function _update60()
 end
 
 
-pal(15,140,1) -- light-peach -> true-blue
-pal(9,133,1) -- orange -> darker-grey
-pal(4,128,1) -- brown -> brownish-black
-pal(2,141,1) -- dark-purple -> mauve
-pal(1,129,1) -- dark-blue -> darker-blue
-palt(0,false)
-palt(14,true) -- pink -> transparent
-
 function _draw()
  cls(0)
  if sirenc != nil then
@@ -947,8 +955,8 @@ function _draw()
     local _obj=_room.objs[_j]
     local _horiz=-flr(-(_j/2))%2 == 0
 
-    if _obj.located then
-     print('$',_x+_obj.xoff,_y+_obj.yoff,7)
+    if _obj.located and _obj.loot then
+     sspr(24,0,3,6,_x+11,_y+9)
 
     elseif _obj.typ == 'camera' then
      print(_obj.id,_x+_obj.xoff,_y+_obj.yoff,12)
@@ -1057,25 +1065,39 @@ function _draw()
     end
 
     if _room.id == partnerroomid then
-     local _px=_x-3+4
-     local _py=_y-11+7
-     local _xoff=(partnerxoff/roomw)*30
-     local _yoff=(partneryoff/roomh)*23
+     local _cw=37
+     local _ch=30
+     local _rw=_room.w
+     local _rh=_room.h
+     local _xoff,_yoff
      if _cami == 1 or _cami == 2 then
-      _px+=_yoff
-      _py+=_xoff
+      _xoff=partneryoff/_rh
+      _yoff=(_rw-partneryoff)/_rw
      elseif _cami == 3 or _cami == 4 then
-      _px+=30-_xoff
-      _py+=23-_yoff
+      _xoff=(_rw-partnerxoff)/_rw
+      _yoff=(_rh-partneryoff)/_rh
      elseif _cami == 5 or _cami == 6 then
-      _px+=30-_yoff
-      _py+=23-_xoff
+      _xoff=(_rh-partneryoff)/_rh
+      _yoff=partnerxoff/_rw
      elseif _cami == 7 or _cami == 8 then
-      _px+=_xoff
-      _py+=_yoff
+      _xoff=partnerxoff/_rw
+      _yoff=partneryoff/_rh
      end
 
+     local _px=_x+_xoff*_cw
+     local _py=_y+_yoff*_ch
+
+     -- todo: add padding
+     -- local _px=_x-3+4
+     -- local _py=_y-11+7
+
      sspr(7,_room.islit and 45 or 56,7,11,_px,_py)
+
+     if _debug then
+      rect(_x-127,_y,_x+37-127,_y+30,_room.islit and 2 or 4)
+      sspr(7,_room.islit and 45 or 56,7,11,_px-127,_py)
+
+     end
     end
 
    else
@@ -1112,31 +1134,87 @@ function _draw()
 
 end
 
+
+-- the paper
+dot='\014\x2e\015'
+papertitle1='game over'
+papertitle2='burglars!'
+_article1pt2='\f9law enforcements says one\nshowed their \f2lit up face on\ncamera\f9, and the rest was\nsteady detective work to\nlocate their hideout'..dot
+paperarticle1='\f9a burglar band responsible\nfor at least \f2'..tostr(17)..'\f9 hack heists\nhas finally been caught'..dot..'\n\n'.._article1pt2
+paperarticle2='\fdofficials says this band did\nnot outperform the all-time\nrecord of '..tostr(100)..' consequtive\nhack heists last fall'..dot
+
+function initpaper()
+ camera(0,-128)
+ local _camendy=-128
+ _update60=function()
+   -- update camera
+  if abs(_camendy) > 0 then
+   _camendy-=_camendy/8
+   camera(0,_camendy)
+  end
+
+  if btnp(4) or btnp(5) then
+   camera(0,0)
+   -- initheist()
+  end
+ end
+ _draw=function()
+  cls(0)
+  rectfill(4,5,122,127,6)
+
+  line(123,8,123,127,5)
+  line(124,10,124,127,5)
+  line(125,12,125,127,5)
+
+  rectfill(6,7,7,8,13)
+  rectfill(9,7,16,8,13)
+  rectfill(101,7,106,8,13)
+  rectfill(108,7,115,8,13)
+  rectfill(117,7,120,8,13)
+
+  print('\fdthe',38,9)
+  sspr(68,58,35,9,50,9)
+
+  line(6,20,120,20,13)
+
+  print('\^w\f9'..papertitle1,62-#papertitle1*8/2,24)
+  print('\^w\f9'..papertitle2,62-#papertitle2*8/2,31)
+
+  print(paperarticle1,8,40)
+
+  line(6,97,120,97,13)
+
+  print(paperarticle2,8,102)
+ end
+end
+
+-- _init=initpaper
+
 __gfx__
-ceeeeeccccceeeecffffffeee7e00000ee6eeeee66666eee00000000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee0eeeeeeeeeeee0000eeeeeeeee
-cccccccecefceeeeceeeeeee77700000e666eeeee666eeee00000000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee0eeeeeeeeeeee0000ee777777e
-ceeeeececefeceeeeceeeeee77e0000066666eeeee6eeeee00000000000000000000000000000edeeeeeeeeee0e4eeeeeeeeee0e4eeeeeeeeee0000ee799997e
-0000000ecefeeceeeeceeeeee7700000eeeeeeeeeeeeeeee00000000000000000000000000000eddeeeeeeeee0e44eeeeeeeee0e44eeeeeeeee0000667999976
-0000000ecefeeeceeeeceeee77700000eeeeeeeeeeeeeeee00000000000000000000000000000ed6deeeeeeee0e444eeeeeeee0e444eeeeeeee0000667777776
-0000000ecefeeee0000000eee7e00000eeeeeeeeeeeeeeee00000000000000000000000000000edddeeeeeeee0e444eeeeeeee0e444eeeeeeee0000667676776
-0000000cccfeeee00000000000000000eeeeeeeeeeeeeeee00000000000000000000000000000edddeeeeeeee0e444eeeeeeee0e444eeeeeeee0000667767676
-00000000000000000000000000000000eeeeeeeeeeeeeeee00000000000000000000000000000edddeeeeeeee0eddddeeeeeee0ed44eeeeeeee0000667777776
-00000000000000000000000000000000000000000000000000000000000000000000000000000eeddeeeeeeee0eedd6deeeeee0eed4eeeeeeee0000edeeeeeed
-eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee00000000000000000000000eeedeeeeeeee0eeeddddeeeee0eeedeeeeeeee0000eedeeeeed
-eedddddeee0eedddddeee0eddddeeeee0ed444eeeee0ee777777ee00000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee0eeeeeeeeeeee0000eeeeeeeee
-eedddddeee0eedddddeee0eddddeeeee0edd44eeeee0ee799997ee00000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee0eeeeeeeeeeee0000eedddddde
-eedddddeee0eedddddeee0eddddeeeee0edd44eeeee0ee799997ee00000000000000000000000e9eeeeeeeeee0e4eeeeeeeeee0e4eeeeeeeeee0000eed4444de
-ee22222eee0ee22222eee0eddd6eeeee0edd44eeeee0667999976600000000000000000000000e99eeeeeeeee0e44eeeeeeeee0e44eeeeeeeee000099d4444d9
-eeeeeeeeee0eeeeeeeeee0eddddeeeee0ed644eeeee0667777776600000000000000000000000e9d9eeeeeeee0e444eeeeeeee0e444eeeeeeee000099dddddd9
-eeeeeeeeee0eeeeeeeeee0eddddeeeee0edd44eeeee0667676776600000000000000000000000e999eeeeeeee0e444eeeeeeee0e444eeeeeeee000099d9d9dd9
-eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eedeeeeeee0667767676600000000000000000000000e999eeeeeeee0e444eeeeeeee0e444eeeeeeee000099dd9d9d9
-eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0667777776600000000000000000000000e999eeeeeeee0e9999eeeeeee0e944eeeeeeee000099dddddd9
-eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0deeeeeeeed00000000000000000000000ee99eeeeeeee0ee99d9eeeeee0ee94eeeeeeee0000edeeeeeed
-eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0deeeeeeeed00000000000000000000000eee9eeeeeeee0eee9999eeeee0eee9eeeeeeee0000eedeeeeed
-eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0deeeeeeeed00000000000000000000000eeeeeeeeeeee0eeeeeeee9eee0eeeeeeee9eee0000eeeeeeeee
-eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee00000000000000000000000eeeeeeeeeeee0eeeeeee99eee0eeeeeee99eee0000eedddddde
-ee99999eee0ee99999eee0e9999eeeee0e9444eeeee0eeddddddee00000000000000000000000e9eeeeeeeeee0edeeee999eee0edeeee999eee0000eed4444de
-ee99999eee0ee99999eee0e9999eeeee0e9944eeeee0eed4444dee00000000000000000000000e99eeeeeeeee0eddee9999eee0eddee9999eee000099d4444d9
+ceeeeeccccceeeecffffffeee7e00000ee6eeeee66666eee000000eedeeeeeedeeeeeedeeeee0eeeeeeeeeeee0eeeeeeeeeeee0eeeeeeeeeeee0000eeeeeeeee
+cccccccecefceeeeceeeeeee77700000e666eeeee666eeee000000eeddeeeeeddeeeeeddeeee0eeeeeeeeeeee0eeeeeeeeeeee0eeeeeeeeeeee0000ee777777e
+ceeeeececefeceeeeceeeeee77e0000066666eeeee6eeeee000000ee7eeeeee7eeeeee7eeeee0edeeeeeeeeee0e4eeeeeeeeee0e4eeeeeeeeee0000ee799997e
+0000000ecefeeceeeeceeeeee7700000eeeeeeeeeeeeeeee000000ee7eeeeee7eeeeee7eeeee0eddeeeeeeeee0e44eeeeeeeee0e44eeeeeeeee0000667999976
+0000000ecefeeeceeeeceeee77700000eeeeeeeeeeeeeeee000000edddeeeedddeeeeddde00e0ed6deeeeeeee0e444eeeeeeee0e444eeeeeeee0000667777776
+0000000ecefeeee0000000eee7e00000eeeeeeeeeeeeeeee000000dddddeedddddeeddddd7ee0edddeeeeeeee0e444eeeeeeee0e444eeeeeeee0000667676776
+0000000cccfeeee00000000000000000eeeeeeeeeeeeeeee000000d7667eed766e7ed766eeee0edddeeeeeeee0e444eeeeeeee0e444eeeeeeee0000667767676
+00000000000000000000000000000000eeeeeeeeeeeeeeee000000edddeeeedddeeeedddeeee0edddeeeeeeee0eddddeeeeeee0ed44eeeeeeee0000667777776
+000000000000000000000000000000000000000000000000000000ededeeeededeeeededeeee0eeddeeeeeeee0eedd6deeeeee0eed4eeeeeeee0000edeeeeeed
+eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeeeededeeeddedeeeededeeee0eeedeeeeeeee0eeeddddeeeee0eeedeeeeeeee0000eedeeeeed
+eedddddeee0eedddddeee0eddddeeeee0ed444eeeee0ee777777eeededeeeeeedeeeededeeee0eeeeeeeeeeee0eeeeeeeeeeee0eeeeeeeeeeee0000eeeeeeeee
+eedddddeee0eedddddeee0eddddeeeee0edd44eeeee0ee799997eeeeeeeeeeeeeeeeeeeeeeee0eeeeeeeeeeee0eeeeeeeeeeee0eeeeeeeeeeee0000eedddddde
+eedddddeee0eedddddeee0eddddeeeee0edd44eeeee0ee799997eeee9eeeeee9eeeeee9eeeee0e9eeeeeeeeee0e4eeeeeeeeee0e4eeeeeeeeee0000eed4444de
+ee22222eee0ee22222eee0eddd6eeeee0edd44eeeee06679999766ee99eeeee99eeeee99eeee0e99eeeeeeeee0e44eeeeeeeee0e44eeeeeeeee000099d4444d9
+eeeeeeeeee0eeeeeeeeee0eddddeeeee0ed644eeeee06677777766eedeeeeeedeeeeeedeeeee0e9d9eeeeeeee0e444eeeeeeee0e444eeeeeeee000099dddddd9
+eeeeeeeeee0eeeeeeeeee0eddddeeeee0edd44eeeee06676767766eedeeeeeedeeeeeedeeeee0e999eeeeeeee0e444eeeeeeee0e444eeeeeeee000099d9d9dd9
+eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eedeeeeeee06677676766e999eeee999eeee999e00e0e999eeeeeeee0e444eeeeeeee0e444eeeeeeee000099dd9d9d9
+eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0667777776699999d799999eee9999dee0e999eeeeeeee0e9999eeeeeee0e944eeeeeeee000099dddddd9
+eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0deeeeeeeed9d99eee9d99ed7e999d7ee0ee99eeeeeeee0ee99d9eeeeee0ee94eeeeeeee0000edeeeeeed
+eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0deeeeeeeede999eeee999eeee999eeee0eee9eeeeeeee0eee9999eeeee0eee9eeeeeeee0000eedeeeeed
+eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0deeeeeeeede9e9eeee9e9eeee9e9eeee0eeeeeeeeeeee0eeeeeeee9eee0eeeeeeee9eee0000eeeeeeeee
+eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeeee9e9eee99e9eeee9e9eeee0eeeeeeeeeeee0eeeeeee99eee0eeeeeee99eee0000eedddddde
+ee99999eee0ee99999eee0e9999eeeee0e9444eeeee0eeddddddeee9e9eeeeee9eeee9e9eeee0e9eeeeeeeeee0edeeee999eee0edeeee999eee0000eed4444de
+ee99999eee0ee99999eee0e9999eeeee0e9944eeeee0eed4444deeeeeeeeeeeeeeeeeeeeeeee0e99eeeeeeeee0eddee9999eee0eddee9999eee000099d4444d9
 ee99999eee0ee99999eee0e9999eeeee0e9944eeeee0eed4444dee00000000000000000000000e9d9eeeeeeee0eddd99999eee0eddd99999eee000099dddddd9
 ee44444eee0ee44444eee0e999deeeee0e9944eeeee099d4444d9900000000000000000000000e999eeeeeeee0eddd99999eee0eddd99999eee000099d9d9dd9
 eeeeeeeeee0eeeeeeeeee0e9999eeeee0e9d44eeeee099dddddd9900000000000000000000000e999eeeeeeee0eddd99999eee0eddd99999eee000099dd9d9d9
@@ -1156,30 +1234,30 @@ eeeeeeeeee0eeeeeeeeee0e9999eeeee0e99ddeeeee099d9d9dd9900000000000000000000000000
 eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0ee9999eeee099dd9d9d990000000000000000000000000000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
 eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eee9999eee099dddddd990000000000000000000000000000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
 eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eee99999ee0deeeeeeeed0000000000000000000000000000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
-eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eee999999e0deeeeeeeed0eedeeeeeedeeeeeedeeeee00000000000000000000000000e9eeeeeeeeee0e9eeeeeeeeee
-eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eee99999990deeeeeeeed0eeddeeeeeddeeeeeddeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000ee7eeeeee7eeeeee7eeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeee7e7ee0000000000000ee7eeeeee7eeeeee7eeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eeedeeeeeedeeeeeedeeeeeeeeeeeededee0000000000000edddeeeedddeeeeddde00e00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eee7eeeeee7eeeeee7eeeeeedeeeeedddee0000000000000dddddeedddddeeddddd7ee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eedddeeeedddeeeedddeeeed7deeeed7dee0000000000000d7667eed766e7ed766eeee00000000000000000000000000ee9eeeeeeeee0ee9eeeeeeeee
-0000000edddddeedddddeeedddeeeedddeeeedddee0000000000000edddeeeedddeeeedddeeee00000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
-0000000ed7d7de7edd7deeeddddeee7d7eeeedddee0000000000000ededeeeededeeeededeeee00000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
-0000000eedddeeeedddeeeedddeeeedddeeeedddee0000000000000ededeeeddedeeeededeeee00000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
-0000000eededeeeededeeeededeeeededeeeededee0000000000000ededeeeeeedeeeededeeee00000000000000000000000000e9eeeeeeeeee0e9eeeeeeeeee
-0000000eededeeeddedeeeededeeeeeeeeeeededee0000000000000eeeeeeeeeeeeeeeeeeeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eededeeeeeedeeeededeeeeeeeeeeededee0000000000000ee9eeeeee9eeeeee9eeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000ee99eeeee99eeeee99eeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeededee0000000000000eedeeeeeedeeeeeedeeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-eeaaaeeeee9eeeeee9eeeeee9eeeeee9eeeee9e9ee0000000000000eedeeeeeedeeeeeedeeeee00000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-ea000aeeeedeeeeeedeeeeeedeeeee9d9eeee999ee0000000000000e999eeee999eeee999e00e00000000000000000000000000ee9eeeeeeeee0ee9eeeeeeeee
-a00000aee999eeee999eeee999eeee999eeee9d9ee000000000000099999d799999eee9999dee00000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
-a00000ae99999ee99999eee999eeeed9deeee999ee00000000000009d99eee9d99ed7e999d7ee000000000000000000000000000000000000000000000000000
-a00000ae9d9d9ede99d9eee9999eee999eeee999ee0000000000000e999eeee999eeee999eeee000000000000000000000000000000000000000000000000000
-a00000aee999eeee999eeee999eeee9e9eeee999ee0000000000000e9e9eeee9e9eeee9e9eeee000000000000000000000000000000000000000000000000000
-a00000aee9e9eeee9e9eeee9e9eeeeeeeeeee9e9ee0000000000000e9e9eee99e9eeee9e9eeee000000000000000000000000000000000000000000000000000
-ea000aeee9e9eee99e9eeee9e9eeeeeeeeeee9e9ee0000000000000e9e9eeeeee9eeee9e9eeee000000000000000000000000000000000000000000000000000
-eeaaaeeee9e9eeeeee9eeee9e9eeeeeeeeeee9e9ee0000000000000eeeeeeeeeeeeeeeeeeeeee000000000000000000000000000000000000000000000000000
+eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eee999999e0deeeeeeeed0000000000000000000000000000000000000000000000000e9eeeeeeeeee0e9eeeeeeeeee
+eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eee99999990deeeeeeeed0000000000000000000000000000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeee7e7ee0000000000000000000000000000000000000000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eeedeeeeeedeeeeeedeeeeeeeeeeeededee0000000000000000000000000000000000000000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eee7eeeeee7eeeeee7eeeeeedeeeeedddee0000000000000000000000000000000000000000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eedddeeeedddeeeedddeeeed7deeeed7dee0000000000000000000000000000000000000000000000000000000000000ee9eeeeeeeee0ee9eeeeeeeee
+0000000edddddeedddddeeedddeeeedddeeeedddee0000000000000000000000000000000000000000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
+0000000ed7d7de7edd7deeeddddeee7d7eeeedddee0000000000000000000000000000000000000000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
+0000000eedddeeeedddeeeedddeeeedddeeeedddee0000000000000000000000000000000000000000000000000000000000000eeeeeeeeeeee0eeeeeeeeeeee
+0000000eededeeeededeeeededeeeededeeeededee0000000000000000000000000000000000000000000000000000000000000e9eeeeeeeeee0e9eeeeeeeeee
+0000000eededeeeddedeeeededeeeeeeeeeeededee0000000000000000000000000000000000000000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eededeeeeeedeeeededeeeeeeeeeeededee0000000000000000000000000000000000000000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeededee0000000000000000000000000000000000000000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+eeaaaeeeee9eeeeee9eeeeee9eeeeee9eeeee9e9ee00000000000000000000000000ddddd6666d6666ddddd66dddddd6ddddd66e99eeeeeeeee0e99eeeeeeeee
+ea000aeeeedeeeeeedeeeeeedeeeee9d9eeee999ee000000000000000000000000006dd66d66d6d6666dd66d66dd66d66dd66d6ee9eeeeeeeee0ee9eeeeeeeee
+a00000aee999eeee999eeee999eeee999eeee9d9ee000000000000000000000000006dd66d66d6d6666dd66d66dd66666dd66d6eeeeeeeeeeee0eeeeeeeeeeee
+a00000ae99999ee99999eee999eeeed9deeee999ee000000000000000000000000006dd66d6dd66d666dd66d66dd6d666dd66d60000000000000000000000000
+a00000ae9d9d9ede99d9eee9999eee999eeee999ee000000000000000000000000006dddd66dd66d666dddd666dddd666dddd660000000000000000000000000
+a00000aee999eeee999eeee999eeee9e9eeee999ee000000000000000000000000006dd6666ddddd666dd66666dd6d666dd66d60000000000000000000000000
+a00000aee9e9eeee9e9eeee9e9eeeeeeeeeee9e9ee000000000000000000000000006dd6666dd66d666dd66666dd66666dd66d60000000000000000000000000
+ea000aeee9e9eee99e9eeee9e9eeeeeeeeeee9e9ee000000000000000000000000006dd6666dd66d666dd66666dd66d66dd66d60000000000000000000000000
+eeaaaeeee9e9eeeeee9eeee9e9eeeeeeeeeee9e9ee00000000000000000000000000ddd666ddd6ddd6ddd6666dddddd6ddd66dd0000000000000000000000000
 eeeeeeee4444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444eeeeeeee
 eeeeee44444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444eeeeee
 eeeee4444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444eeeee
