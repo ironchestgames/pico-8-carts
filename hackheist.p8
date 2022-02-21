@@ -356,7 +356,7 @@ function _init()
 
     if _camioffset and _obj and _typeswcoords[_obj.typ] then
      local _k=(_j-_camioffset)%8
-     _obj.sprpos=_typeswcoords[_obj.typ][_k]
+     _obj.camcoords=_typeswcoords[_obj.typ][_k]
     end
    end
   end
@@ -368,6 +368,12 @@ cursels={
  [-1]=1,
  [0]=1,
  [1]=1,
+}
+
+seloffsetsmax={
+ [-1]=3,
+ [0]=4,
+ [1]=0,
 }
 
 seloffsets={
@@ -722,8 +728,8 @@ function _update60()
 
  if seloffsets[screensel] > cursels[screensel]-1 then
   seloffsets[screensel]=cursels[screensel]-1
- elseif seloffsets[screensel] < cursels[screensel]-4 then
-  seloffsets[screensel]=cursels[screensel]-4
+ elseif seloffsets[screensel] < cursels[screensel]-seloffsetsmax[screensel] then
+  seloffsets[screensel]=cursels[screensel]-seloffsetsmax[screensel]
  end
 
  local _opt=menus[screensel][cursels[screensel]]
@@ -913,14 +919,26 @@ function _draw()
  if computermsg then
   print(computermsg,_menux,76,3)
  else
-  for _i=1,#menus[-1] do
-   local _item=menus[-1][_i]
-   local _y=_menuy+(_i-1)*_rowoff
-   local _str=_item.str
-   if _i == cursels[-1] and flr(time()*4) % 2 == 0 then
-    _str=_item.str..'\014\x80\015'
+
+  if seloffsets[-1] > 0 then
+   spr(118,-22,62)
+  end
+
+  if #menus[-1]-seloffsets[-1] > 3 then
+   spr(119,-22,78)
+  end
+
+  for _i=1,3 do
+   local _item=menus[-1][_i+seloffsets[-1]]
+   if _item then
+    local _y=_menuy+(_i-1)*_rowoff
+    local _str=_item.str
+    local _isselected=_i == cursels[-1]-seloffsets[-1]
+    if _isselected and flr(time()*4) % 2 == 0 then
+     _str=_item.str..'\014\x80\015'
+    end
+    print(_str,_menux,_y,_isselected and 11 or 3)
    end
-   print(_str,_menux,_y,_i == cursels[-1] and 11 or 3)
   end
  end
 
@@ -1048,18 +1066,18 @@ function _draw()
     for _j=1,#_room.objs do
      local _obj=_room.objs[_j]
      if _obj then
-      local _sprpos=_obj.sprpos
-      if _sprpos then
+      local _camcoords=_obj.camcoords
+      if _camcoords then
        sspr(
-        _sprpos.sx,
-        _room.islit and _sprpos.sy or _sprpos.sy+_sprpos.sh,
-        _sprpos.sw,
-        _sprpos.sh,
-        _x+_sprpos.xoff,
-        _y+_sprpos.yoff,
-        _sprpos.sw,
-        _sprpos.sh,
-        _sprpos.flipx)
+        _camcoords.sx,
+        _room.islit and _camcoords.sy or _camcoords.sy+_camcoords.sh,
+        _camcoords.sw,
+        _camcoords.sh,
+        _x+_camcoords.xoff,
+        _y+_camcoords.yoff,
+        _camcoords.sw,
+        _camcoords.sh,
+        _camcoords.flipx)
       end
      end
     end
@@ -1247,14 +1265,14 @@ eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eee99999990deeeeeeeed00000000000000000000000000
 0000000eededeeeededeeeededeeeededeeeededee0000000000000000000000000000000000000000000000000000000000000e9eeeeeeeeee0e9eeeeeeeeee
 0000000eededeeeddedeeeededeeeeeeeeeeededee0000000000000000000000000000000000000000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
 0000000eededeeeeeedeeeededeeeeeeeeeeededee0000000000000000000000000000000000000000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeededee0000000000000000000000000000000000000000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
-eeaaaeeeee9eeeeee9eeeeee9eeeeee9eeeee9e9ee00000000000000000000000000ddddd6666d6666ddddd66dddddd6ddddd66e99eeeeeeeee0e99eeeeeeeee
-ea000aeeeedeeeeeedeeeeeedeeeee9d9eeee999ee000000000000000000000000006dd66d66d6d6666dd66d66dd66d66dd66d6ee9eeeeeeeee0ee9eeeeeeeee
-a00000aee999eeee999eeee999eeee999eeee9d9ee000000000000000000000000006dd66d66d6d6666dd66d66dd66666dd66d6eeeeeeeeeeee0eeeeeeeeeeee
-a00000ae99999ee99999eee999eeeed9deeee999ee000000000000000000000000006dd66d6dd66d666dd66d66dd6d666dd66d60000000000000000000000000
-a00000ae9d9d9ede99d9eee9999eee999eeee999ee000000000000000000000000006dddd66dd66d666dddd666dddd666dddd660000000000000000000000000
-a00000aee999eeee999eeee999eeee9e9eeee999ee000000000000000000000000006dd6666ddddd666dd66666dd6d666dd66d60000000000000000000000000
+0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000ee3eeeee33333eee000000000000000000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeededee000000e333eeeee333eeee000000000000000000000000000000000000000e99eeeeeeeee0e99eeeeeeeee
+eeaaaeeeee9eeeeee9eeeeee9eeeeee9eeeee9e9ee00000033333eeeee3eeeee0000ddddd6666d6666ddddd66dddddd6ddddd66e99eeeeeeeee0e99eeeeeeeee
+ea000aeeeedeeeeeedeeeeeedeeeee9d9eeee999ee000000eeeeeeeeeeeeeeee00006dd66d66d6d6666dd66d66dd66d66dd66d6ee9eeeeeeeee0ee9eeeeeeeee
+a00000aee999eeee999eeee999eeee999eeee9d9ee000000eeeeeeeeeeeeeeee00006dd66d66d6d6666dd66d66dd66666dd66d6eeeeeeeeeeee0eeeeeeeeeeee
+a00000ae99999ee99999eee999eeeed9deeee999ee000000eeeeeeeeeeeeeeee00006dd66d6dd66d666dd66d66dd6d666dd66d60000000000000000000000000
+a00000ae9d9d9ede99d9eee9999eee999eeee999ee000000eeeeeeeeeeeeeeee00006dddd66dd66d666dddd666dddd666dddd660000000000000000000000000
+a00000aee999eeee999eeee999eeee9e9eeee999ee000000eeeeeeeeeeeeeeee00006dd6666ddddd666dd66666dd6d666dd66d60000000000000000000000000
 a00000aee9e9eeee9e9eeee9e9eeeeeeeeeee9e9ee000000000000000000000000006dd6666dd66d666dd66666dd66666dd66d60000000000000000000000000
 ea000aeee9e9eee99e9eeee9e9eeeeeeeeeee9e9ee000000000000000000000000006dd6666dd66d666dd66666dd66d66dd66d60000000000000000000000000
 eeaaaeeee9e9eeeeee9eeee9e9eeeeeeeeeee9e9ee00000000000000000000000000ddd666ddd6ddd6ddd6666dddddd6ddd66dd0000000000000000000000000
