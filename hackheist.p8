@@ -120,7 +120,14 @@ function _init()
  local _dirs={-1,1}
  local _i=1
 
- ::continue::
+ local _doorcoords={
+  [1]={xoff=0,yoff=14,sx=10,sy=0,sw=5,sh=7},
+  [3]={xoff=4,yoff=0,sx=15,sy=0,sw=7,sh=5},
+  [6]={xoff=24,yoff=14,sx=10,sy=0,sw=5,sh=7},
+  [8]={xoff=4,yoff=25,sx=15,sy=0,sw=7,sh=5},
+ }
+
+ ::continuecreaterooms::
  while _i <= _stepcount do
   local _nextx=_x
   local _nexty=_y
@@ -145,23 +152,23 @@ function _init()
 
    if _doorcount > 3 or _doorcountnext > 3 then
     _i+=1
-    goto continue
+    goto continuecreaterooms
    end
   end
 
   if _nextx < 5 and _nextx >= 0 and _nexty < 3 and _nexty >= 0 then
    if _nexty - _y == 1 then -- down
-    _curroom.objs[8]={ typ='door', leadsto=_nextroom.id, xoff=4, yoff=25 }
-    _nextroom.objs[3]={ typ='door', leadsto=_curroom.id, xoff=4, yoff=0 }
+    _curroom.objs[8]={ typ='door', leadsto=_nextroom.id, mapcoords=_doorcoords[8] }
+    _nextroom.objs[3]={ typ='door', leadsto=_curroom.id, mapcoords=_doorcoords[3] }
    elseif _nexty - _y == -1 then -- up
-    _curroom.objs[3]={ typ='door', leadsto=_nextroom.id, xoff=4, yoff=0 }
-    _nextroom.objs[8]={ typ='door', leadsto=_curroom.id, xoff=4, yoff=25 }
+    _curroom.objs[3]={ typ='door', leadsto=_nextroom.id, mapcoords=_doorcoords[3] }
+    _nextroom.objs[8]={ typ='door', leadsto=_curroom.id, mapcoords=_doorcoords[8] }
    elseif _nextx - _x == 1 then -- right
-    _curroom.objs[6]={ typ='door', leadsto=_nextroom.id, xoff=24, yoff=14 }
-    _nextroom.objs[1]={ typ='door', leadsto=_curroom.id, xoff=0, yoff=14 }
+    _curroom.objs[6]={ typ='door', leadsto=_nextroom.id, mapcoords=_doorcoords[6] }
+    _nextroom.objs[1]={ typ='door', leadsto=_curroom.id, mapcoords=_doorcoords[1] }
    elseif _nextx - _x == -1 then -- left
-    _curroom.objs[1]={ typ='door', leadsto=_nextroom.id, xoff=0, yoff=14 }
-    _nextroom.objs[6]={ typ='door', leadsto=_curroom.id, xoff=24, yoff=14 }
+    _curroom.objs[1]={ typ='door', leadsto=_nextroom.id, mapcoords=_doorcoords[1] }
+    _nextroom.objs[6]={ typ='door', leadsto=_curroom.id, mapcoords=_doorcoords[6] }
    end
    _x=_nextx
    _y=_nexty
@@ -188,8 +195,8 @@ function _init()
     _room.objs[_dir]={
      typ='camera',
      id=_room.id,
-     xoff=_pos[_dir].x,
-     yoff=_pos[_dir].y,
+     mapxoff=_pos[_dir].x,
+     mapyoff=_pos[_dir].y,
      ison=true,
     }
     _room.objs[_pos[_dir].otheri]={
@@ -248,20 +255,26 @@ function _init()
  end
 
  -- add windows
+ local _windowsprpos={
+  [2]={xoff=-1,yoff=4,sx=7,sy=0,sw=3,sh=7},
+  [4]={xoff=14,yoff=-1,sx=0,sy=0,sw=7,sh=3},
+  [6]={xoff=23,yoff=14,sx=7,sy=0,sw=3,sh=7},
+  [8]={xoff=3,yoff=24,sx=0,sy=0,sw=7,sh=3},
+ }
  for _i=0,14 do
   local _room=rooms[_i]
   if _room then
    if (rooms[_i-1] == nil or _i == 5 or _i == 10) and _room.objs[1].typ != 'camera' then -- west
-    _room.objs[2]={ typ='window', xoff=-1, yoff=4, roomid=_room.id }
+    _room.objs[2]={ typ='window', roomid=_room.id, mapcoords=_windowsprpos[2] }
     add(windows,_room.objs[2])
    elseif (rooms[_i+1] == nil or _i == 4 or _i == 9) and _room.objs[6].typ != 'camera' then -- east
-    _room.objs[6]={ typ='window', xoff=23, yoff=14, roomid=_room.id }
+    _room.objs[6]={ typ='window', roomid=_room.id, mapcoords=_windowsprpos[6] }
     add(windows,_room.objs[6])
    elseif (rooms[_i-5] == nil or _i <= 4) and _room.objs[3].typ != 'camera' then  -- north
-    _room.objs[4]={ typ='window', xoff=14, yoff=-1, roomid=_room.id }
+    _room.objs[4]={ typ='window', roomid=_room.id, mapcoords=_windowsprpos[4] }
     add(windows,_room.objs[4])
    elseif (rooms[_i+5] == nil or _i >= 10) and _room.objs[8].typ != 'camera' then -- south
-    _room.objs[8]={ typ='window', xoff=3, yoff=24, roomid=_room.id }
+    _room.objs[8]={ typ='window', roomid=_room.id, mapcoords=_windowsprpos[8] }
     add(windows,_room.objs[8])
    end
   end
@@ -298,7 +311,7 @@ function _init()
        typ='computer',
        xoff=_pos[_j].x,
        yoff=_pos[_j].y,
-       loot={ 'cute cat pictures', worth=5 },
+       loot={ name='cute cat pictures', worth=5 },
       }
       _computercount+=1
       break
@@ -309,7 +322,7 @@ function _init()
  end
 
  -- add cam coords to obj
- local _typeswcoords={
+ local _types2camcoords={
   computer={
    [0]={xoff=26+2,yoff=19,sx=119,sy=0,sw=9,sh=10,flipx=true},
    nil,nil,
@@ -354,9 +367,9 @@ function _init()
    for _j=1,#_room.objs do
     local _obj=_room.objs[_j]
 
-    if _camioffset and _obj and _typeswcoords[_obj.typ] then
+    if _camioffset and _obj and _types2camcoords[_obj.typ] then
      local _k=(_j-_camioffset)%8
-     _obj.camcoords=_typeswcoords[_obj.typ][_k]
+     _obj.camcoords=_types2camcoords[_obj.typ][_k]
     end
    end
   end
@@ -752,11 +765,11 @@ function _update60()
 
  -- update partner
  if partnerismoving then
-  local _a=atan2(partnerobj.xoff-partnerxoff,partnerobj.yoff-partneryoff)
+  local _a=atan2(partnerobj.camcoords.xoff-partnerxoff,partnerobj.camcoords.yoff-partneryoff)
   partnerxoff+=cos(_a)*0.1
   partneryoff+=sin(_a)*0.1
 
-  if dist(partnerxoff,partneryoff,partnerobj.xoff,partnerobj.yoff) < 2 then
+  if dist(partnerxoff,partneryoff,partnerobj.camcoords.xoff,partnerobj.camcoords.yoff) < 2 then
    partnerismoving=nil
   end
 
@@ -786,8 +799,8 @@ function _update60()
     local _curroom=rooms[partnerroomid]
     for _obj in all(_curroom.objs) do
      if _obj == windows[partnerwindowid] then
-      partnerxoff=_obj.xoff
-      partneryoff=_obj.yoff
+      partnerxoff=_obj.camcoords.xoff
+      partneryoff=_obj.camcoords.yoff
       break
      end
     end
@@ -808,8 +821,9 @@ function _update60()
     local _curroom=rooms[partnerroomid]
     for _obj in all(_curroom.objs) do
      if _obj.leadsto == partnerprevroomid then
-      partnerxoff=_obj.xoff
-      partneryoff=_obj.yoff
+      debug(_obj.typ) -- note: hard reproduce crash here
+      partnerxoff=_obj.camcoords.xoff
+      partneryoff=_obj.camcoords.yoff
       break
      end
     end
@@ -971,27 +985,25 @@ function _draw()
 
    for _j=1,8 do
     local _obj=_room.objs[_j]
-    local _horiz=-flr(-(_j/2))%2 == 0
+    local _mapcoords=_obj.mapcoords
 
     if _obj.located and _obj.loot then
      sspr(24,0,3,6,_x+11,_y+9)
 
     elseif _obj.typ == 'camera' then
-     print(_obj.id,_x+_obj.xoff,_y+_obj.yoff,12)
+     print(_obj.id,_x+_obj.mapxoff,_y+_obj.mapyoff,12)
 
-    elseif _obj.typ == 'window' then
-     if _horiz then
-      sspr(0,0,7,3,_x+_obj.xoff,_y+_obj.yoff)
-     else
-      sspr(7,0,3,7,_x+_obj.xoff,_y+_obj.yoff)
-     end
-
-    elseif _obj.typ == 'door' then
-     if _horiz then
-      sspr(15,0,7,5,_x+_obj.xoff,_y+_obj.yoff)
-     else
-      sspr(10,0,5,7,_x+_obj.xoff,_y+_obj.yoff)
-     end
+    elseif _mapcoords then
+     sspr(
+        _mapcoords.sx,
+        _mapcoords.sy,
+        _mapcoords.sw,
+        _mapcoords.sh,
+        _x+_mapcoords.xoff,
+        _y+_mapcoords.yoff,
+        _mapcoords.sw,
+        _mapcoords.sh,
+        _mapcoords.flipx)
     end
    end
   end
@@ -1083,31 +1095,35 @@ function _draw()
     end
 
     if _room.id == partnerroomid then
-     local _cw=37
-     local _ch=30
-     local _rw=_room.w
-     local _rh=_room.h
-     local _xoff,_yoff
-     if _cami == 1 or _cami == 2 then
-      _xoff=partneryoff/_rh
-      _yoff=(_rw-partneryoff)/_rw
-     elseif _cami == 3 or _cami == 4 then
-      _xoff=(_rw-partnerxoff)/_rw
-      _yoff=(_rh-partneryoff)/_rh
-     elseif _cami == 5 or _cami == 6 then
-      _xoff=(_rh-partneryoff)/_rh
-      _yoff=partnerxoff/_rw
-     elseif _cami == 7 or _cami == 8 then
-      _xoff=partnerxoff/_rw
-      _yoff=partneryoff/_rh
-     end
+     -- local _cw=37
+     -- local _ch=30
+     -- local _rw=_room.w
+     -- local _rh=_room.h
+     -- local _xoff,_yoff
+     -- if _cami == 1 or _cami == 2 then
+     --  _xoff=partneryoff/_rh
+     --  _yoff=(_rw-partneryoff)/_rw
+     -- elseif _cami == 3 or _cami == 4 then
+     --  _xoff=(_rw-partnerxoff)/_rw
+     --  _yoff=(_rh-partneryoff)/_rh
+     -- elseif _cami == 5 or _cami == 6 then
+     --  _xoff=(_rh-partneryoff)/_rh
+     --  _yoff=partnerxoff/_rw
+     -- elseif _cami == 7 or _cami == 8 then
+     --  _xoff=partnerxoff/_rw
+     --  _yoff=partneryoff/_rh
+     -- end
 
-     local _px=_x+_xoff*_cw
-     local _py=_y+_yoff*_ch
+     -- local _px=_x+_xoff*_cw
+     -- local _py=_y+_yoff*_ch
 
      -- todo: add padding
      -- local _px=_x-3+4
      -- local _py=_y-11+7
+
+
+     local _px=_x+partnerxoff
+     local _py=_y+partneryoff
 
      sspr(7,_room.islit and 45 or 56,7,11,_px,_py)
 
