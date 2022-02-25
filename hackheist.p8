@@ -63,6 +63,7 @@ pal(1,129,1) -- dark-blue -> darker-blue
 palt(0,false)
 palt(14,true)
 
+guards={}
 windows={}
 rooms={}
 loot={}
@@ -82,6 +83,7 @@ function _init()
  partnerwindowid=nil
  partnerxoff=5
  partneryoff=10
+ partnerflipx=nil
  partnerc=0
  partnerstate='idling'
  partnerismoving=nil
@@ -99,6 +101,9 @@ function _init()
  -- north - 3,4
  -- east - 5,6
  -- south - 7,8
+
+ -- map room w: 24, h: 25
+ -- cam room w: 37, h: 30
 
  local _rooms={}
  for _i=0,14 do
@@ -284,19 +289,7 @@ function _init()
  partnerwindowid=flrrnd(#windows-1)+1
 
  -- add computers
- local _pos={
-  [1]={x=2,y=10}, -- west
-  [2]={x=2,y=4}, -- west
-  [3]={x=8,y=2}, -- north
-  [4]={x=14,y=2}, -- north
-  [5]={x=20,y=4}, -- east
-  [6]={x=20,y=12}, -- east
-  [7]={x=4,y=18}, -- south
-  [8]={x=8,y=18}, -- south
- }
-
  local _computercount=0
-
  while _computercount == 0 do
   for _i=0,14 do
    if _computercount >= 2 then
@@ -309,8 +302,6 @@ function _init()
      if _obj.typ == nil and rnd() < 0.5 then
       _room.objs[_j]={
        typ='computer',
-       xoff=_pos[_j].x,
-       yoff=_pos[_j].y,
        loot={ name='cute cat pictures', worth=5 },
       }
       _computercount+=1
@@ -324,31 +315,31 @@ function _init()
  -- add cam coords to obj
  local _types2camcoords={
   computer={
-   [0]={xoff=26+2,yoff=19,sx=107,sy=0,sw=9,sh=10,flipx=true},
+   [0]={xoff=28,yoff=19,sx=107,sy=0,sw=9,sh=10,cx=4,cy=10,flipx=true},
    nil,nil,
-   {xoff=0+2,yoff=19,sx=107,sy=0,sw=9,sh=10},
-   {xoff=0+2,yoff=7,sx=107,sy=0,sw=9,sh=10},
-   {xoff=10,yoff=0,sx=96,sy=0,sw=10,sh=12},
-   {xoff=20,yoff=0,sx=96,sy=0,sw=10,sh=12},
-   {xoff=26+2,yoff=7,sx=107,sy=0,sw=9,sh=10,flipx=true},
+   {xoff=2,yoff=19,sx=107,sy=0,sw=9,sh=10,cx=6,cy=10},
+   {xoff=2,yoff=7,sx=107,sy=0,sw=9,sh=10,cx=6,cy=10},
+   {xoff=10,yoff=0,sx=96,sy=0,sw=10,sh=12,cx=6,cy=12},
+   {xoff=20,yoff=0,sx=96,sy=0,sw=10,sh=12,cx=6,cy=12},
+   {xoff=28,yoff=7,sx=107,sy=0,sw=9,sh=10,cx=4,cy=10,flipx=true},
   },
   window={
-   [0]={xoff=28,yoff=19,sx=22,sy=0,sw=10,sh=10,flipx=true},
+   [0]={xoff=28,yoff=19,sx=22,sy=0,sw=10,sh=10,cx=6,cy=8,flipx=true},
    nil,nil,
-   {xoff=0,yoff=19,sx=22,sy=0,sw=10,sh=10},
-   {xoff=0,yoff=7,sx=22,sy=0,sw=10,sh=10},
-   {xoff=10,yoff=0,sx=0,sy=0,sw=10,sh=12},
-   {xoff=20,yoff=0,sx=0,sy=0,sw=10,sh=12},
-   {xoff=28,yoff=7,sx=22,sy=0,sw=10,sh=10,flipx=true},
+   {xoff=0,yoff=19,sx=22,sy=0,sw=10,sh=10,cx=5,cy=8},
+   {xoff=0,yoff=7,sx=22,sy=0,sw=10,sh=10,cx=5,cy=8},
+   {xoff=10,yoff=0,sx=0,sy=0,sw=10,sh=12,cx=4,cy=8},
+   {xoff=20,yoff=0,sx=0,sy=0,sw=10,sh=12,cx=4,cy=8},
+   {xoff=28,yoff=7,sx=22,sy=0,sw=10,sh=10,cx=6,cy=8,flipx=true},
   },
   door={
-   [0]={xoff=29,yoff=19,sx=66,sy=0,sw=9,sh=10,flipx=true},
+   [0]={xoff=29,yoff=19,sx=66,sy=0,sw=9,sh=10,cx=4,cy=6,flipx=true},
    nil,nil,
-   {xoff=0,yoff=19,sx=66,sy=0,sw=9,sh=10},
-   {xoff=0,yoff=7,sx=66,sy=0,sw=9,sh=10},
-   {xoff=10,yoff=0,sx=44,sy=0,sw=10,sh=12},
-   {xoff=20,yoff=0,sx=44,sy=0,sw=10,sh=12},
-   {xoff=29,yoff=7,sx=66,sy=0,sw=9,sh=10,flipx=true},
+   {xoff=0,yoff=19,sx=66,sy=0,sw=9,sh=10,cx=5,cy=6},
+   {xoff=0,yoff=7,sx=66,sy=0,sw=9,sh=10,cx=5,cy=6},
+   {xoff=10,yoff=0,sx=44,sy=0,sw=10,sh=12,cx=4,cy=8},
+   {xoff=20,yoff=0,sx=44,sy=0,sw=10,sh=12,cx=4,cy=8},
+   {xoff=29,yoff=7,sx=66,sy=0,sw=9,sh=10,cx=4,cy=6,flipx=true},
   },
  }
 
@@ -372,6 +363,27 @@ function _init()
      _obj.camcoords=clone(_types2camcoords[_obj.typ][_k])
     end
    end
+  end
+ end
+
+ -- add guards
+ local _guardcount=0
+ for _i=0,14 do
+  local _room=rooms[_i]
+  if _room then
+   add(guards,{
+    roomid=_room.id,
+    xoff=17,
+    yoff=18,
+    targetx=17,
+    targety=18,
+    state='idling',
+    c=180,
+   })
+   _guardcount+=1
+  end
+  if _guardcount == 1 then
+   break
   end
  end
 
@@ -777,11 +789,19 @@ function _update60()
 
  -- update partner
  if partnerismoving then
-  local _a=atan2(partnerobj.camcoords.xoff-partnerxoff,partnerobj.camcoords.yoff-partneryoff)
-  partnerxoff+=cos(_a)*0.1
+  local _a=atan2(
+    partnerobj.camcoords.xoff+partnerobj.camcoords.cx-partnerxoff,
+    partnerobj.camcoords.yoff+partnerobj.camcoords.cy-partneryoff)
+  local _dx=cos(_a)*0.1
+  partnerflipx=_dx < 0
+  partnerxoff+=_dx
   partneryoff+=sin(_a)*0.1
 
-  if dist(partnerxoff,partneryoff,partnerobj.camcoords.xoff,partnerobj.camcoords.yoff) < 2 then
+  if dist(
+    partnerxoff,
+    partneryoff,
+    partnerobj.camcoords.xoff+partnerobj.camcoords.cx,
+    partnerobj.camcoords.yoff+partnerobj.camcoords.cy) < 2 then
    partnerismoving=nil
   end
 
@@ -813,8 +833,8 @@ function _update60()
      if _obj == windows[partnerwindowid] then
       _obj.isbroken=true
       _obj.camcoords.sx+=11
-      partnerxoff=_obj.camcoords.xoff
-      partneryoff=_obj.camcoords.yoff
+      partnerxoff=_obj.camcoords.xoff+_obj.camcoords.cx
+      partneryoff=_obj.camcoords.yoff+_obj.camcoords.cy
       break
      end
     end
@@ -836,8 +856,8 @@ function _update60()
     for _obj in all(_curroom.objs) do
      if _obj.leadsto == partnerprevroomid then
       debug(_obj.typ) -- note: hard reproduce crash here
-      partnerxoff=_obj.camcoords.xoff
-      partneryoff=_obj.camcoords.yoff
+      partnerxoff=_obj.camcoords.xoff+_obj.camcoords.cx
+      partneryoff=_obj.camcoords.yoff+_obj.camcoords.cy
       break
      end
     end
@@ -903,6 +923,60 @@ function _update60()
 
   elseif partnerstate == 'escaped' then
    
+  end
+ end
+
+ -- update guards
+ for _g in all(guards) do
+  _g.flashlightx=_g.xoff+cos(_a)*9*(_g.flipx and -1 or 1)
+  _g.flashlighty=_g.yoff-2+sin(_a)*9
+
+  if _g.ismoving then
+   local _a=atan2(_g.targetx-_g.xoff,_g.targety-_g.yoff)
+   local _dx=cos(_a)*0.1
+   _g.flipx=_dx < 0
+   _g.a=_a
+   _g.xoff+=_dx
+   _g.yoff+=sin(_a)*0.1
+
+   if dist(_g.xoff,_g.yoff,_g.targetx,_g.targety) < 2 then
+    _g.ismoving=nil
+   end
+
+  else
+   _g.c-=1
+   if _g.c <= 0 then
+
+    if _g.state == 'idling' then
+     local _curroom=rooms[_g.roomid]
+     for _obj in all(_curroom.objs) do
+      if _obj.typ == 'door' then
+       _g.state='roomchanging'
+       _g.c=100
+       _g.targetx=_obj.camcoords.xoff+_obj.camcoords.cx
+       _g.targety=_obj.camcoords.yoff+_obj.camcoords.cy
+       _g.target=_obj
+       _g.ismoving=true
+      end
+     end
+
+    elseif _g.state == 'roomchanging' then
+     local _nextroom=rooms[_g.target.leadsto]
+     for _obj in all(_nextroom.objs) do
+      if _obj.leadsto == _g.roomid then
+       _g.xoff=_obj.camcoords.xoff+_obj.camcoords.cx
+       _g.yoff=_obj.camcoords.yoff+_obj.camcoords.cy
+       _g.roomid=_nextroom.id
+       _g.state='idling'
+       _g.c=480+flrrnd(8)*60
+       _g.ismoving=true
+       _g.targetx=20
+       _g.targety=22
+      end
+     end
+    end
+
+   end
   end
  end
 
@@ -1006,7 +1080,7 @@ function _draw()
     local _mapcoords=_obj.mapcoords
 
     if _obj.located and _obj.loot then
-     sspr(24,0,3,6,_x+11,_y+9)
+     sspr(5,110,3,6,_x+11,_y+9)
 
     elseif _obj.typ == 'camera' then
      print(_obj.id,_x+_obj.mapxoff,_y+_obj.mapyoff,12)
@@ -1086,21 +1160,51 @@ function _draw()
     goto continuedrawnextroom
    end
 
+   local _guardsinroom={}
+   for _g in all(guards) do
+    if _room.id == _g.roomid then
+     add(_guardsinroom,_g)
+    end
+   end
+
    local _x=127+3+flr(_camid/3)*42
    local _y=2+(_camid%3)*34
 
    if _cam.ison then
     rectfill(_x,_y,_x+37,_y+30,_room.islit and 9 or 0)
+
+    for _g in all(_guardsinroom) do
+     if not _room.islit then
+      clip(_x-127,_y,37,31)
+      circfill(_x+_g.flashlightx,_y+_g.flashlighty,5,4)
+      clip()
+     end
+    end
+
     rectfill(_x+4,_y+7,_x+33,_y+30,_room.islit and 2 or 4)
+
+    for _g in all(_guardsinroom) do
+     if not _room.islit then
+      clip(_x-127+4,_y+7,30,24)
+      circfill(_x+_g.flashlightx,_y+_g.flashlighty,5,9)
+      clip()
+     end
+    end
 
     for _j=1,#_room.objs do
      local _obj=_room.objs[_j]
      if _obj then
       local _camcoords=_obj.camcoords
       if _camcoords then
+       local _islit=_room.islit
+       for _g in all(_guardsinroom) do
+        if dist(_camcoords.xoff+_camcoords.cx,_camcoords.yoff+_camcoords.cy,_g.flashlightx,_g.flashlighty) < 7 then
+         _islit=true
+        end
+       end
        sspr(
         _camcoords.sx,
-        _room.islit and _camcoords.sy or _camcoords.sy+_camcoords.sh,
+        _islit and _camcoords.sy or _camcoords.sy+_camcoords.sh,
         _camcoords.sw,
         _camcoords.sh,
         _x+_camcoords.xoff,
@@ -1112,15 +1216,35 @@ function _draw()
      end
     end
 
+    -- draw partner
     if _room.id == partnerroomid then
      local _px=_x+partnerxoff
      local _py=_y+partneryoff
+     local _frameoff=0
 
-     sspr(7,_room.islit and 45 or 56,7,11,_px,_py)
+     if partnerismoving then
+      _frameoff=7
+      if flr(time()*5) % 2 == 0 then
+       _frameoff=14
+      end
+     end
 
-     if _debug then
-      rect(_x-127,_y,_x+37-127,_y+30,_room.islit and 2 or 4)
-      sspr(7,_room.islit and 45 or 56,7,11,_px-127,_py)
+     sspr(7+_frameoff,_room.islit and 45 or 56,7,11,_px-3,_py-10,7,11,partnerflipx)
+    end
+
+    -- draw guards in room
+    for _g in all(guards) do
+     if _g.roomid == _room.id then
+
+      local _frameoff=0
+      if _g.ismoving then
+       _frameoff=8
+       if flr(time()*5) % 2 == 0 then
+        _frameoff=16
+       end
+      end
+
+      sspr(50+_frameoff,_room.islit and 45 or 56,8,11,_x+_g.xoff-3,_y+_g.yoff-10,8,11,_g.flipx)
      end
     end
 
@@ -1258,30 +1382,30 @@ ddddd6666d6666ddddd66dddddd6ddddd66000000000000000000000000000000000000000000000
 6dddd66dd66d666dddd666dddd666dddd66000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 6dd6666ddddd666dd66666dd6d666dd66d6000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 6dd6666dd66d666dd66666dd66666dd66d6000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-6dd6666dd66d666dd66666dd66d66dd66d600000000eedeeeeeedeeeeeedeeeee000000000000000000000000000000000000000000000000000000000000000
-ddd666ddd6ddd6ddd6666dddddd6ddd66dd00000000eeddeeeeeddeeeeeddeeee000000000000000000000000000000000000000000000000000000000000000
-0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0ee7eeeeee7eeeeee7eeeee000000000000000000000000000000000000000000000000000000000000000
-0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeee7e7ee0ee7eeeeee7eeeeee7eeeee000000000000000000000000000000000000000000000000000000000000000
-0000000eeedeeeeeedeeeeeedeeeeeeeeeeeededee0edddeeeedddeeeeddde00e000000000000000000000000000000000000000000000000000000000000000
-0000000eee7eeeeee7eeeeee7eeeeeedeeeeedddee0dddddeedddddeeddddd7ee000000000000000000000000000000000000000000000000000000000000000
-0000000eedddeeeedddeeeedddeeeed7deeeed7dee0d7667eed766e7ed766eeee000000000000000000000000000000000000000000000000000000000000000
-0000000edddddeedddddeeedddeeeedddeeeedddee0edddeeeedddeeeedddeeee000000000000000000000000000000000000000000000000000000000000000
-0000000ed7d7de7edd7deeeddddeee7d7eeeedddee0ededeeeededeeeededeeee000000000000000000000000000000000000000000000000000000000000000
-0000000eedddeeeedddeeeedddeeeedddeeeedddee0ededeeeddedeeeededeeee000000000000000000000000000000000000000000000000000000000000000
-0000000eededeeeededeeeededeeeededeeeededee0ededeeeeeedeeeededeeee000000000000000000000000000000000000000000000000000000000000000
-0000000eededeeeddedeeeededeeeeeeeeeeededee0eeeeeeeeeeeeeeeeeeeeee000000000000000000000000000000000000000000000000000000000000000
-0000000eededeeeeeedeeeededeeeeeeeeeeededee0ee9eeeeee9eeeeee9eeeee000000000000000000000000000000000000000000000000000000000000000
-0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0ee99eeeee99eeeee99eeee000000000000000000000000000000000000000000000000000000000000000
-0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeededee0eedeeeeeedeeeeeedeeeee000000000000000000000000000000000000000000000000000000000000000
-0000000eee9eeeeee9eeeeee9eeeeee9eeeee9e9ee0eedeeeeeedeeeeeedeeeee000000000000000000000000000000000000000000000000000000000000000
-0000000eeedeeeeeedeeeeeedeeeee9d9eeee999ee0e999eeee999eeee999e00e000000000000000000000000000000000000000000000000000000000000000
-0000000ee999eeee999eeee999eeee999eeee9d9ee099999d799999eee9999dee000000000000000000000000000000000000000000000000000000000000000
-0000000e99999ee99999eee999eeeed9deeee999ee09d99eee9d99ed7e999d7ee000000000000000000000000000000000000000000000000000000000000000
-0000000e9d9d9ede99d9eee9999eee999eeee999ee0e999eeee999eeee999eeee000000000000000000000000000000000000000000000000000000000000000
-0000000ee999eeee999eeee999eeee9e9eeee999ee0e9e9eeee9e9eeee9e9eeee000000000000000000000000000000000000000000000000000000000000000
-66666eeee9e9eeee9e9eeee9e9eeeeeeeeeee9e9ee0e9e9eee99e9eeee9e9eeee000000000000000000000000000000000000000000000000000000000000000
-e666eeeee9e9eee99e9eeee9e9eeeeeeeeeee9e9ee0e9e9eeeeee9eeee9e9eeee000000000000000000000000000000000000000000000000000000000000000
-ee6eeeeee9e9eeeeee9eeee9e9eeeeeeeeeee9e9ee0eeeeeeeeeeeeeeeeeeeeee000000000000000000000000000000000000000000000000000000000000000
+6dd6666dd66d666dd66666dd66d66dd66d6000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ddd666ddd6ddd6ddd6666dddddd6ddd66dd000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eeedeeeeeeedeeeeeeedeeeeeeedeeeee000000000000000000000000000000000000000000000
+0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee7e7ee0eeeddeeeeeeddeeeeeeddeeeeeeddeeee000000000000000000000000000000000000000000000
+0000000eeedeeeeeedeeeeeedeeeeeedeeeeeeeeeeeededee0eee7eeeeeee7eeeeeee7eeeeeee7eeeee000000000000000000000000000000000000000000000
+0000000eee7eeeeee7eeeeee7eeeeee7eeeeeedeeeeedddee0eee7eeeeeee7eeeeeee7eeeeeee7eeeee000000000000000000000000000000000000000000000
+0000000eedddeeeedddeeeedddeeeedddeeeed7deeeed7dee0eedddeeeeedddeeeeedddeeeeeddde00e000000000000000000000000000000000000000000000
+0000000edddddeedddddeedddddeeedddeeeedddeeeedddee0edddddeeedddddeeedddddeeeddddd7ee000000000000000000000000000000000000000000000
+0000000ed7d7deed7dd7e7edd7deeeddddeee7d7eeeedddee0ed7667eeed7667ee7e667deeed766eeee000000000000000000000000000000000000000000000
+0000000eedddeeeedddeeeedddeeeedddeeeedddeeeedddee0eedddeeeeedddeeeeedddeeeeedddeeee000000000000000000000000000000000000000000000
+0000000eededeeeededeeeeeddeeeededeeeededeeeededee0eededeeeeededeeeeeeddeeeeededeeee000000000000000000000000000000000000000000000
+0000000eededeeeddedeeeeedeeeeededeeeeeeeeeeededee0eededeeeeddedeeeeeedeeeeeededeeee000000000000000000000000000000000000000000000
+0000000eededeeeeeedeeeeedeeeeededeeeeeeeeeeededee0eededeeeeeeedeeeeeedeeeeeededeeee000000000000000000000000000000000000000000000
+0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eee9eeeeeee9eeeeeee9eeeeeee9eeeee000000000000000000000000000000000000000000000
+0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeededee0eee99eeeeee99eeeeee99eeeeee99eeee000000000000000000000000000000000000000000000
+0000000eee9eeeeee9eeeeee9eeeeee9eeeeee9eeeee9e9ee0eeedeeeeeeedeeeeeeedeeeeeeedeeeee000000000000000000000000000000000000000000000
+0000000eeedeeeeeedeeeeeedeeeeeedeeeee9d9eeee999ee0eeedeeeeeeedeeeeeeedeeeeeeedeeeee000000000000000000000000000000000000000000000
+0000000ee999eeee999eeee999eeee999eeee999eeee9d9ee0ee999eeeee999eeeee999eeeee999e00e000000000000000000000000000000000000000000000
+0000000e99999ee99999ee99999eee999eeeed9deeee999ee0e99999d7e99999eee99999eeee9999dee000000000000000000000000000000000000000000000
+0000000e9d9d9ee9d99dede99d9eee9999eee999eeee999ee0e9d99eeee9d99ed7de999ed7ee999d7ee000000000000000000000000000000000000000000000
+0000000ee999eeee999eeee999eeee999eeee9e9eeee999ee0ee999eeeee999eeeee999eeeee999eeee000000000000000000000000000000000000000000000
+66666eeee9e9eeee9e9eeeee99eeee9e9eeeeeeeeeee9e9ee0ee9e9eeeee9e9eeeeee99eeeee9e9eeee000000000000000000000000000000000000000000000
+e666eeeee9e9eee99e9eeeee9eeeee9e9eeeeeeeeeee9e9ee0ee9e9eeee99e9eeeeee9eeeeee9e9eeee000000000000000000000000000000000000000000000
+ee6eeeeee9e9eeeeee9eeeee9eeeee9e9eeeeeeeeeee9e9ee0ee9e9eeeeeee9eeeeee9eeeeee9e9eeee000000000000000000000000000000000000000000000
 eeeeeeeeeeee4444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444eeee
 eeeeeeeeee44444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444ee
 eeeeeeeee4444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444e
