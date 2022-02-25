@@ -78,6 +78,7 @@ function _init()
  loot,rooms,windows={},{},{}
 
  -- set globals
+ isgameover=nil
  partnerroomid=nil
  partnerprevroomid=nil
  partnerwindowid=nil
@@ -285,30 +286,40 @@ function _init()
   end
  end
 
- partnerstate='windowsearching'
- partnerwindowid=flrrnd(#windows-1)+1
-
  -- add computers
  local _computercount=0
  while _computercount == 0 do
   for _i=0,14 do
+
    if _computercount >= 2 then
     break
    end
+
    local _room=rooms[_i]
    if _room then
     for _j=1,#_room.objs do
      local _obj=_room.objs[_j]
+
      if _obj.typ == nil and rnd() < 0.5 then
       _room.objs[_j]={
        typ='computer',
        loot={ name='cute cat pictures', worth=5 },
       }
       _computercount+=1
+
+      for _j=1,#_room.objs do
+       local _obj=_room.objs[_j]
+       if _obj.typ == 'window' then
+        _room.objs[_j]={}
+        del(windows,_obj)
+       end
+      end
+
       break
      end
     end
    end
+
   end
  end
 
@@ -366,6 +377,10 @@ function _init()
   end
  end
 
+ -- set partner state
+ partnerstate='windowsearching'
+ partnerwindowid=flrrnd(#windows-1)+1
+
  -- add guards
  local _guardcount=0
  for _i=0,14 do
@@ -420,10 +435,13 @@ local skipstates={
  windowsearching_sneaking=true,
  breaking_in=true,
  escaped=true,
+ escaping=true,
  prehiding=true,
  roomchanging=true,
  hacking=true,
  hacking_sending=true,
+ arrested=true,
+ unhiding=true,
 }
 
 function _update60()
@@ -565,7 +583,9 @@ function _update60()
  elseif partnerstate == 'windowsearching' then
   local _doorcount=0
   local _seecomputer
-  for _obj in all(rooms[windows[partnerwindowid].roomid].objs) do
+  local _str='i see '
+  local _room=rooms[windows[partnerwindowid].roomid]
+  for _obj in all(_room.objs) do
    if _obj.typ == 'door' then
 
     _doorcount+=1
@@ -575,14 +595,24 @@ function _update60()
    end
   end
 
+  if _room.islit then
+   _str='room is lit, '
+  end
+
   if _doorcount == 1 then
-   partnermsg='i see 1 door'
+   partnermsg=_str..'1 door'
   else
-   partnermsg='i see '.._doorcount..' doors'
+   partnermsg=_str.._doorcount..' doors'
   end
 
   if _seecomputer then
    partnermsg=partnermsg..', a computer'
+  end
+
+  for _g in all(guards) do
+   if _g.roomid == _room.id then
+    partnermsg='i see a guard'
+   end
   end
 
 
@@ -594,13 +624,15 @@ function _update60()
    end,
   })
 
-  add(menus[0],{
-   str='check next window',
-   f=function()
-    partnerstate='windowsearching_sneaking'
-    partnerc=100
-   end,
-  })
+  if #windows > 1 then
+   add(menus[0],{
+    str='check next window',
+    f=function()
+     partnerstate='windowsearching_sneaking'
+     partnerc=100
+    end,
+   })
+  end
 
  else
   local _escapeadded,_hideadded
@@ -702,22 +734,11 @@ function _update60()
    menus[0]={{
     str='it\'s safe to come out',
     f=function()
-     partnermsg='ok, i\'m coming out'
-     partnerstate='unhiding'
+     partnermsg='ok, i\'m coming out\014\x90\015'
+     partnerstate='idling'
      partnerc=120
     end,
    }}
-
-  elseif partnerstate == 'unhiding' then
-   menus[0]={{
-    str='hide!',
-    f=function()
-     partnerobj=_obj
-     partnerstate='prehiding'
-     partnerc=120
-    end,
-   }}
-
   end
  end
 
@@ -774,8 +795,7 @@ function _update60()
   _opt.f()
  end
 
- if btnp(5) then
-  -- debug(cursels[screensel])
+ if isgameover and btnp(5) then
   initpaper()
   return
  end
@@ -840,7 +860,12 @@ function _update60()
     end
 
     partnerstate='idling'
-    partnermsg='i\'m in, what now?'
+
+    if _curroom.islit then
+     partnermsg='room is lit, is cam off?'
+    else
+     partnermsg='i\'m in, what now?'
+    end
    end
 
   elseif partnerstate == 'roomchanging' then
@@ -855,7 +880,7 @@ function _update60()
     local _curroom=rooms[partnerroomid]
     for _obj in all(_curroom.objs) do
      if _obj.leadsto == partnerprevroomid then
-      debug(_obj.typ) -- note: hard reproduce crash here
+      debug('875, '.._obj.typ) -- note: hard reproduce crash here
       partnerxoff=_obj.camcoords.xoff+_obj.camcoords.cx
       partneryoff=_obj.camcoords.yoff+_obj.camcoords.cy
       break
@@ -863,7 +888,11 @@ function _update60()
     end
 
     partnerstate='idling'
-    partnermsg='in next room, what now?'
+    if _curroom.islit then
+     partnermsg='room is lit, is cam off?'
+    else
+     partnermsg='in next room, what now?'
+    end
    end
 
   elseif partnerstate == 'hacking' then
@@ -899,7 +928,7 @@ function _update60()
    if partnerc <= 0 then
     partnerroomid=nil
     partnerstate='escaped'
-    partnerc=100
+    partnerc=150
     partnermsg='i made it out!'
    end
 
@@ -921,8 +950,14 @@ function _update60()
     partnermsg='next move'
    end
 
+  elseif partnerstate == 'arrested' then
+   partnermsg='i\'m caught!'
+   isgameover=true
+
   elseif partnerstate == 'escaped' then
-   
+   partnerc-=1
+   isleveldone=true
+
   end
  end
 
@@ -931,7 +966,22 @@ function _update60()
   _g.flashlightx=_g.xoff+cos(_a)*9*(_g.flipx and -1 or 1)
   _g.flashlighty=_g.yoff-2+sin(_a)*9
 
-  if _g.ismoving then
+  if _g.roomid == partnerroomid and (rooms[partnerroomid].islit or dist(_g.flashlightx,_g.flashlighty,partnerxoff,partneryoff) < 9) then
+   if partnerstate != 'arrested' then
+    partnerc=240
+    partnerstate='arrested'
+   end
+
+   partnerismoving=nil
+   _g.flashlightx=partnerxoff
+   _g.flashlighty=partneryoff
+   _g.a=atan2(partnerxoff-_g.xoff,partneryoff-_g.yoff)
+   _g.flipx=cos(_g.a) < 0
+   _g.ismoving=nil
+   _g.state='arresting'
+   _g.c=0
+
+  elseif _g.ismoving then
    local _a=atan2(_g.targetx-_g.xoff,_g.targety-_g.yoff)
    local _dx=cos(_a)*0.1
    _g.flipx=_dx < 0
@@ -964,6 +1014,7 @@ function _update60()
      local _nextroom=rooms[_g.target.leadsto]
      for _obj in all(_nextroom.objs) do
       if _obj.leadsto == _g.roomid then
+       debug('1015, '.._obj.typ) -- note: hard crash here
        _g.xoff=_obj.camcoords.xoff+_obj.camcoords.cx
        _g.yoff=_obj.camcoords.yoff+_obj.camcoords.cy
        _g.roomid=_nextroom.id
@@ -974,6 +1025,9 @@ function _update60()
        _g.targety=22
       end
      end
+
+    elseif _g.state == 'arresting' then
+     -- pass
     end
 
    end
@@ -986,7 +1040,11 @@ function _update60()
  end
 
  -- check for game over
- if sirenc == nil and computertraced >= computertracedmax then
+ if computertraced >= computertracedmax then
+  isgameover=true 
+ end
+
+ if sirenc == nil and isgameover then
   sirenc=time()
  end
 
@@ -1014,7 +1072,10 @@ function _draw()
  sspr(8,91,120,37,-124,91)
  sspr(8,92,10,10,-124,4,10,10,false,true)
  sspr(8,92,10,10,-14,4,10,10,true,true)
+
+ rectfill(-115,13,-15,87,15)
  rectfill(-114,14,-16,86,1)
+
  line(-113,59,-17,59,3)
 
  rectfill(-113,83,-17,85,3)
@@ -1139,6 +1200,7 @@ function _draw()
  end
 
  -- draw screen 1
+ rectfill(137,10,245,128,0)
  sspr(8,67,120,24,131,104)
 
  local _camcount=0
@@ -1191,6 +1253,7 @@ function _draw()
      end
     end
 
+    -- draw obj
     for _j=1,#_room.objs do
      local _obj=_room.objs[_j]
      if _obj then
@@ -1227,9 +1290,11 @@ function _draw()
       if flr(time()*5) % 2 == 0 then
        _frameoff=14
       end
+     elseif partnerstate == 'arrested' then
+      _frameoff=35
      end
 
-     sspr(7+_frameoff,_room.islit and 45 or 56,7,11,_px-3,_py-10,7,11,partnerflipx)
+     sspr(7+_frameoff,(_room.islit or partnerstate == 'arrested') and 45 or 56,7,11,_px-3,_py-10,7,11,partnerflipx)
     end
 
     -- draw guards in room
@@ -1242,6 +1307,8 @@ function _draw()
        if flr(time()*5) % 2 == 0 then
         _frameoff=16
        end
+      elseif _g.state == 'arresting' then
+       _frameoff=24
       end
 
       sspr(50+_frameoff,_room.islit and 45 or 56,8,11,_x+_g.xoff-3,_y+_g.yoff-10,8,11,_g.flipx)
@@ -1278,6 +1345,14 @@ function _draw()
 
  if menus[1][cursels[1]].ison then
   rectfill(127+26,112,127+28,114,10)
+ end
+
+ -- continue message
+ if isgameover or isleveldone then
+  local _x=camerax+36
+  rectfill(_x-4,0,_x+58,8,0)
+  rect(_x-4,0,_x+58,8,10)
+  print('\x97 to continue',_x,2,10)
  end
 
 end
