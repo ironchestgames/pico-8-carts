@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 34
+version 35
 __lua__
 
 printh('debug started','debug',true)
@@ -75,6 +75,12 @@ roomw=24
 roomh=25
 
 function _init()
+ local seed=rnd(32000)
+ -- local seed=30136.528 -- crash
+
+ debug('seed: '..tostr(seed))
+ srand(seed)
+
  loot,rooms,windows={},{},{}
 
  -- set globals
@@ -375,13 +381,13 @@ function _init()
  -- add cam coords to obj
  local _types2camcoords={
   computer={
-   [0]={xoff=28,yoff=19,sx=119,sy=0,sw=9,sh=10,cx=4,cy=11,flipx=true},
+   [0]={xoff=28,yoff=19,sx=107,sy=0,sw=9,sh=10,cx=4,cy=11,flipx=true},
    nil,nil,
-   {xoff=2,yoff=19,sx=119,sy=0,sw=9,sh=10,cx=6,cy=11},
-   {xoff=2,yoff=7,sx=119,sy=0,sw=9,sh=10,cx=6,cy=11},
-   {xoff=10,yoff=0,sx=108,sy=0,sw=10,sh=12,cx=6,cy=13},
-   {xoff=20,yoff=0,sx=108,sy=0,sw=10,sh=12,cx=6,cy=13},
-   {xoff=28,yoff=7,sx=119,sy=0,sw=9,sh=10,cx=4,cy=11,flipx=true},
+   {xoff=2,yoff=19,sx=107,sy=0,sw=9,sh=10,cx=6,cy=11},
+   {xoff=2,yoff=7,sx=107,sy=0,sw=9,sh=10,cx=6,cy=11},
+   {xoff=10,yoff=0,sx=96,sy=0,sw=10,sh=12,cx=6,cy=13},
+   {xoff=20,yoff=0,sx=96,sy=0,sw=10,sh=12,cx=6,cy=13},
+   {xoff=28,yoff=7,sx=107,sy=0,sw=9,sh=10,cx=4,cy=11,flipx=true},
   },
   window={
    [0]={xoff=28,yoff=19,sx=22,sy=0,sw=10,sh=10,cx=6,cy=8,flipx=true},
@@ -393,26 +399,26 @@ function _init()
    {xoff=28,yoff=7,sx=22,sy=0,sw=10,sh=10,cx=6,cy=8,flipx=true},
   },
   door={
-   [0]={xoff=29,yoff=19,sx=77,sy=0,sw=9,sh=10,cx=4,cy=8,flipx=true},
+   [0]={xoff=29,yoff=19,sx=66,sy=0,sw=9,sh=10,cx=4,cy=8,flipx=true},
    nil,nil,
-   {xoff=0,yoff=19,sx=77,sy=0,sw=9,sh=10,cx=5,cy=8},
-   {xoff=0,yoff=7,sx=77,sy=0,sw=9,sh=10,cx=5,cy=8},
+   {xoff=0,yoff=19,sx=66,sy=0,sw=9,sh=10,cx=5,cy=8},
+   {xoff=0,yoff=7,sx=66,sy=0,sw=9,sh=10,cx=5,cy=8},
    {xoff=10,yoff=0,sx=44,sy=0,sw=10,sh=12,cx=4,cy=8},
    {xoff=20,yoff=0,sx=44,sy=0,sw=10,sh=12,cx=4,cy=8},
-   {xoff=29,yoff=7,sx=77,sy=0,sw=9,sh=10,cx=4,cy=8,flipx=true},
+   {xoff=29,yoff=7,sx=66,sy=0,sw=9,sh=10,cx=4,cy=8,flipx=true},
   },
   wardrobe={
-   [5]={xoff=12,yoff=1,sx=116,sy=25,sw=7,sh=9,cx=4,cy=10},
-   [6]={xoff=20,yoff=1,sx=116,sy=25,sw=7,sh=9,cx=4,cy=10},
+   [5]={xoff=12,yoff=1,sx=117,sy=0,sw=7,sh=9,cx=4,cy=10},
+   [6]={xoff=20,yoff=1,sx=117,sy=0,sw=7,sh=9,cx=4,cy=10},
   },
   plant={
-   [0]={xoff=30,yoff=18,sx=124,sy=29,sw=4,sh=10,cx=2,cy=11,flipx=true},
+   [0]={xoff=30,yoff=18,sx=124,sy=0,sw=4,sh=10,cx=2,cy=11,flipx=true},
    nil,nil,
-   {xoff=4,yoff=18,sx=124,sy=29,sw=4,sh=10,cx=2,cy=11},
-   {xoff=4,yoff=6,sx=124,sy=29,sw=4,sh=10,cx=2,cy=11},
-   {xoff=10,yoff=1,sx=124,sy=49,sw=4,sh=9,cx=2,cy=10},
-   {xoff=25,yoff=1,sx=124,sy=49,sw=4,sh=9,cx=2,cy=10},
-   {xoff=30,yoff=7,sx=124,sy=29,sw=4,sh=10,cx=2,cy=11,flipx=true},
+   {xoff=4,yoff=18,sx=124,sy=0,sw=4,sh=10,cx=2,cy=11},
+   {xoff=4,yoff=6,sx=124,sy=0,sw=4,sh=10,cx=2,cy=11},
+   {xoff=10,yoff=1,sx=124,sy=20,sw=4,sh=9,cx=2,cy=10},
+   {xoff=25,yoff=1,sx=124,sy=20,sw=4,sh=9,cx=2,cy=10},
+   {xoff=30,yoff=7,sx=124,sy=0,sw=4,sh=10,cx=2,cy=11,flipx=true},
   },
  }
 
@@ -433,8 +439,9 @@ function _init()
 
     if _camioffset and _types2camcoords[_obj.typ] then
      local _k=(_j-_camioffset)%8
-     debug('camioffsets: '.._k..', _obj.typ: '.._obj.typ)
+     debug('camioffsets: '.._k..', _obj.typ: '.._obj.typ..', _obj.camcoords: '..tostr(_obj.camcoords))
      _obj.camcoords=clone(_types2camcoords[_obj.typ][_k])
+     debug('_obj.camcoords: '..tostr(_obj.camcoords))
     end
    end
   end
@@ -456,7 +463,7 @@ function _init()
     targetx=17,
     targety=18,
     state='idling',
-    c=180,
+    c=80,
    })
    _guardcount+=1
   end
@@ -1104,7 +1111,8 @@ function _update60()
     _nextroomdoor.isopen=true
 
     if _g.c <= 0 then
-     debug('1015, '.._nextroomdoor.typ) -- note: hard crash here
+     debug('1105, '.._nextroomdoor.typ) -- note: hard crash here
+     debug(_nextroomdoor.camcoords)
      _g.xoff=_nextroomdoor.camcoords.xoff+_nextroomdoor.camcoords.cx
      _g.yoff=_nextroomdoor.camcoords.yoff+_nextroomdoor.camcoords.cy
      _g.roomid=_nextroom.id
@@ -1165,7 +1173,7 @@ function _draw()
  sspr(8,92,10,10,-124,4,10,10,false,true)
  sspr(8,92,10,10,-14,4,10,10,true,true)
 
- rectfill(-115,13,-15,87,15)
+ rectfill(-115,13,-15,87,13)
  rectfill(-114,14,-16,86,1)
 
  line(-113,59,-17,59,3)
@@ -1524,36 +1532,36 @@ end
 -- _init=initpaper
 
 __gfx__
-eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0edeeeeeee0e4eeeeeee0e4eeeeeee0eeeeeeeeee0eeeeeeeee0dddddddeede
-eedddddeee0eed0dddeee0eeeeeeeeee0eeeeeeeeee0eddddeeeee0ed444eeeee0eddeeeeee0e44eeeeee0e44eeeeee0ee777777ee0ee777777e0ddddddddede
-eedddddeee0eedd0d0eee0edeeeeeeee0edeeeeeeee0eddddeeeee0edd44eeeee0ed6deeeee0e444eeeee0e444eeeee0ee799997ee0ee799997e0d66d66dedee
-eedddddeee0eedd000eee0eddeeeeeee0eddeeeeeee0eddddeeeee0edd44eeeee0edddeeeee0e444eeeee0e444eeeee0ee799997ee06679999760d66d66deede
-ee22222eee0eed2222eee0eddeeeeeee0e00eeeeeee0eddd6eeeee0edd44eeeee0edddeeeee0e444eeeee0e444eeeee0667999976606677777760d66d66d77d7
-eeeeeeeeee0eeeeeeeeee0eddeeeeeee0ed0eeedeee0eddddeeeee0ed644eeeee0edddeeeee0eddddeeee0ed44eeeee0667777776606676767760d66d66d79d7
-eeeeeeeeee0eeeeeeeeee0eddeeeeeee0e00eeeeeee0eddddeeeee0edd44eeeee0eeddeeeee0eedd6deee0eed4eeeee0667676776606677676760d67d76d7997
-eeeeeeeeee0eeeeedeeee0eddeeeeeee0e0deedeede0eeeeeeeeee0eedeeeeeee0eeedeeeee0eeeddddee0eeedeeeee0667767676606677777760d66d66d7777
-eeeeeeeeee0eddeeedeee0eedeeeeeee0ee0eedeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeee0eeeeeeeee0eeeeeeeee066777777660edeeeeeed0d66d66d6666
-eeeeeeeeee0eeeedeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeee0eeeeeeeee0eeeeeeeee0deeeeeeeed0eedeeeeed044444446666
-eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0e9eeeeeee0e4eeeeeee0e4eeeeeee0deeeeeeeed0eeeeeeeee04444444ee9e
-eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0e99eeeeee0e44eeeeee0e44eeeeee0deeeeeeeed0eedddddde049949949e9e
-eeeeeeeeee0eeeeeeeeee0e9eeeeeeee0e9eeeeeeee0eeeeeeeeee0eeeeeeeeee0e9d9eeeee0e444eeeee0e444eeeee0eeeeeeeeee0eed4444de04994994e9ee
-ee99999eee0ee90999eee0e99eeeeeee0e99eeeeeee0e9999eeeee0e9444eeeee0e999eeeee0e444eeeee0e444eeeee0eeddddddee099d4444d904994994ee9e
-ee99999eee0ee99090eee0e99eeeeeee0e44eeeeeee0e9999eeeee0e9944eeeee0e999eeeee0e444eeeee0e444eeeee0eed4444dee099dddddd904994994dd9d
-ee99999eee0ee99000eee0e99eeeeeee0e94eee9eee0e9999eeeee0e9944eeeee0e999eeeee0e9999eeee0e944eeeee0eed4444dee099d9d9dd9049d4d94d49d
-ee44444eee0ee94444eee0e99eeeeeee0e44eeeeeee0e999deeeee0e9944eeeee0ee99eeeee0ee99d9eee0ee94eeeee099d4444d99099dd9d9d904994994d44d
-eeeeeeeeee0eeeeeeeeee0e99eeeeeee0e49ee9ee9e0e9999eeeee0e9d44eeeee0eee9eeeee0eee9999ee0eee9eeeee099dddddd99099dddddd904994994dddd
-eeeeeeeeee0eeeeeeeeee0ee9eeeeeee0ee4ee9eeee0e9999eeeee0e9944eeeee0eeeeeeeee0eeeeeeee90eeeeeeee9099d9d9dd990edeeeeeed000000009999
-eeeeeeeeee0eeeee9eeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0ee9eeeeeee0eeeeeeeee0eeeeeee990eeeeeee99099dd9d9d990eedeeeeed000000009999
-eeeeeeeeee0e99eee9eee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0e9eeeeeee0edeeee9990edeeee999099dddddd99000000000000000000eede
-eeeeeeeeee0eeee9eeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0e99eeeeee0eddee99990eddee99990deeeeeeeed000000000000000000dede
-eeeeeeeeee0eeeeeeeeee0e9eeeeeeee0e9eeeeeeee0eeeeeeeeee0eeeeeeeeee0e9d9eeeee0eddd999990eddd999990deeeeeeeed000000000000000000edee
-eeeeeeeeee0eeeeeeeeee0e99eeeeeee0e99eeeeeee0eeeeeeeeee0eeeeeeeeee0e999eeeee0eddd999990eddd999990deeeeeeeed000000000000000000eede
-eeeeeeeeee0eeeeeeeeee0e99eeeeeee0e44eeeeeee0eeeeeeeeee0eeeeeeeeee0e999eeeee0eddd999990eddd999990000000000000000000000000000077d7
-ee99999eee0ee90999eee0e99eeeeeee0e94eee9eee0e9999eeeee0e9dddeeeee0e999eeeee0e444499990e9dd999990000000000000000000000000000079d7
-ee99999eee0ee99090eee0e99eeeeeee0e44eeeeeee0e9999eeeee0e99ddeeeee0ee99eeeee0ee44949990ee9d99999000000000000000000000000000007777
-ee99999eee0ee99000eee0e99eeeeeee0e49ee9ee9e0e9999eeeee0e99ddeeeee0eee9eeeee0eee4444990eee9eeeee000000000000000000000000000006666
-ee44444eee0ee94444eee0ee9eeeeeee0ee4ee9eeee0e999deeeee0e99ddeeeee000000000000000000000000000000000000000000000000000000000006666
-eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0e9999eeeee0e9dddeeeee00000000000000000000000000000000000000000000000000000000000ee9e
+eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeee0eeeeeeeee0eeeeeeeee0eeeeeeeeee0eeeeeeeee0dddddddeede
+eedddddeee0eed0dddeee0eeeeeeeeee0eeeeeeeeee0eddddeeeee0ed444eeeee0eeeeeeeee0eeeeeeeee0eeeeeeeee0ee777777ee0ee777777e0ddddddddede
+eedddddeee0eedd0d0eee0edeeeeeeee0edeeeeeeee0eddddeeeee0edd44eeeee0edeeeeeee0e4eeeeeee0e4eeeeeee0ee799997ee0ee799997e0d66d66dedee
+eedddddeee0eedd000eee0eddeeeeeee0eddeeeeeee0eddddeeeee0edd44eeeee0eddeeeeee0e44eeeeee0e44eeeeee0ee799997ee06679999760d66d66deede
+ee22222eee0eed2222eee0eddeeeeeee0e00eeeeeee0eddd6eeeee0edd44eeeee0ed6deeeee0e444eeeee0e444eeeee0667999976606677777760d66d66d77d7
+eeeeeeeeee0eeeeeeeeee0eddeeeeeee0ed0eeedeee0eddddeeeee0ed644eeeee0edddeeeee0e444eeeee0e444eeeee0667777776606676767760d66d66d79d7
+eeeeeeeeee0eeeeeeeeee0eddeeeeeee0e00eeeeeee0eddddeeeee0edd44eeeee0edddeeeee0e444eeeee0e444eeeee0667676776606677676760d67d76d7997
+eeeeeeeeee0eeeeedeeee0eddeeeeeee0e0deedeede0eeeeeeeeee0eedeeeeeee0edddeeeee0eddddeeee0ed44eeeee0667767676606677777760d66d66d7777
+eeeeeeeeee0eddeeedeee0eedeeeeeee0ee0eedeeee0eeeeeeeeee0eeeeeeeeee0eeddeeeee0eedd6deee0eed4eeeee066777777660edeeeeeed0d66d66d6666
+eeeeeeeeee0eeeedeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeedeeeee0eeeddddee0eeedeeeee0deeeeeeeed0eedeeeeed044444446666
+eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeee0eeeeeeeee0eeeeeeeee0deeeeeeeed0eeeeeeeee04444444ee9e
+eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeee0eeeeeeeee0eeeeeeeee0deeeeeeeed0eedddddde049949949e9e
+eeeeeeeeee0eeeeeeeeee0e9eeeeeeee0e9eeeeeeee0eeeeeeeeee0eeeeeeeeee0e9eeeeeee0e4eeeeeee0e4eeeeeee0eeeeeeeeee0eed4444de04994994e9ee
+ee99999eee0ee90999eee0e99eeeeeee0e99eeeeeee0e9999eeeee0e9444eeeee0e99eeeeee0e44eeeeee0e44eeeeee0eeddddddee099d4444d904994994ee9e
+ee99999eee0ee99090eee0e99eeeeeee0e44eeeeeee0e9999eeeee0e9944eeeee0e9d9eeeee0e444eeeee0e444eeeee0eed4444dee099dddddd904994994dd9d
+ee99999eee0ee99000eee0e99eeeeeee0e94eee9eee0e9999eeeee0e9944eeeee0e999eeeee0e444eeeee0e444eeeee0eed4444dee099d9d9dd9049d4d94d49d
+ee44444eee0ee94444eee0e99eeeeeee0e44eeeeeee0e999deeeee0e9944eeeee0e999eeeee0e444eeeee0e444eeeee099d4444d99099dd9d9d904994994d44d
+eeeeeeeeee0eeeeeeeeee0e99eeeeeee0e49ee9ee9e0e9999eeeee0e9d44eeeee0e999eeeee0e9999eeee0e944eeeee099dddddd99099dddddd904994994dddd
+eeeeeeeeee0eeeeeeeeee0ee9eeeeeee0ee4ee9eeee0e9999eeeee0e9944eeeee0ee99eeeee0ee99d9eee0ee94eeeee099d9d9dd990edeeeeeed000000009999
+eeeeeeeeee0eeeee9eeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0ee9eeeeeee0eee9eeeee0eee9999ee0eee9eeeee099dd9d9d990eedeeeeed000000009999
+eeeeeeeeee0e99eee9eee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeee0eeeeeeee90eeeeeeee9099dddddd99000000000000000000eede
+eeeeeeeeee0eeee9eeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeee0eeeeeee990eeeeeee990deeeeeeeed000000000000000000dede
+eeeeeeeeee0eeeeeeeeee0e9eeeeeeee0e9eeeeeeee0eeeeeeeeee0eeeeeeeeee0e9eeeeeee0edeeee9990edeeee9990deeeeeeeed000000000000000000edee
+eeeeeeeeee0eeeeeeeeee0e99eeeeeee0e99eeeeeee0eeeeeeeeee0eeeeeeeeee0e99eeeeee0eddee99990eddee99990deeeeeeeed000000000000000000eede
+eeeeeeeeee0eeeeeeeeee0e99eeeeeee0e44eeeeeee0eeeeeeeeee0eeeeeeeeee0e9d9eeeee0eddd999990eddd999990000000000000000000000000000077d7
+ee99999eee0ee90999eee0e99eeeeeee0e94eee9eee0e9999eeeee0e9dddeeeee0e999eeeee0eddd999990eddd999990000000000000000000000000000079d7
+ee99999eee0ee99090eee0e99eeeeeee0e44eeeeeee0e9999eeeee0e99ddeeeee0e999eeeee0eddd999990eddd99999000000000000000000000000000007777
+ee99999eee0ee99000eee0e99eeeeeee0e49ee9ee9e0e9999eeeee0e99ddeeeee0e999eeeee0e444499990e9dd99999000000000000000000000000000006666
+ee44444eee0ee94444eee0ee9eeeeeee0ee4ee9eeee0e999deeeee0e99ddeeeee0ee99eeeee0ee44949990ee9d99999000000000000000000000000000006666
+eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0eeeeeeeeee0e9999eeeee0e9dddeeeee0eee9eeeee0eee4444990eee9eeeee00000000000000000000000000000ee9e
 eeeeeeeeee0eeeeeeeeee00000000000000000000000e9999eeeee0e99ddeeeee000000000000000000000000000000000000000000000000000000000009e9e
 eeeeeeeeee0eeeee9eeee00000000000000000000000eeeeeeeeee0ee9999eeee00000000000000000000000000000000000000000000000000000000000e9ee
 eeeeeeeeee0e99eee9eee00000000000000000000000eeeeeeeeee0eee9999eee00000000000000000000000000000000000000000000000000000000000ee9e
