@@ -18,13 +18,14 @@ function _init()
  score=0
 
  grid={}
- for _y=0,3 do
+
+ for _y=1,4 do
   grid[_y]={}
-  for _x=0,3 do
-   grid[_y][_x]=0
+  for _x=1,4 do
+   grid[_y][_x]={v=0}
   end
  end
-
+ 
  -- grid[flrrnd(3)][flrrnd(3)]=2
  -- local _hastwo=nil
  -- while not _hastwo do
@@ -35,80 +36,118 @@ function _init()
  --   grid[_y][_x]=2
  --  end
  -- end
-
- grid[0][0]=2
- grid[0][1]=2
- grid[0][2]=2
- grid[0][3]=2
- grid[1][3]=2
+ 
+ grid[1][1].v=2
+ grid[3][2].v=2
+ grid[2][4].v=2
+ grid[2][1].v=2
+ grid[3][1].v=2
 
 end
 
-function rungrid(_dx,_dy)
+function reverserow(_row)
+ _row[1],_row[2],_row[3],_row[4]=_row[4],_row[3],_row[2],_row[1]
+ return _row
+end
 
- if _dx == -1 then
-  for _y=0,3,1 do
-   for _x=0,2,1 do
-    for _x2=_x+1,3,1 do
-     if grid[_y][_x] == 0 then
-      grid[_y][_x]=grid[_y][_x2]
-      grid[_y][_x2]=0
-     elseif grid[_y][_x] == grid[_y][_x2] then
-      grid[_y][_x]*=2
-      grid[_y][_x2]=0
-     end
-    end
-   end
+function collapse(_row)
+ local _newrow={}
+ for _i=1,#_row,1 do
+  if _row[_i].v > 0 then
+   add(_newrow,_row[_i])
   end
+ end
+ return _newrow
+end
 
- elseif _dx == 1 then
-  for _y=0,3,1 do
-   for _x=3,1,-1 do
-    for _x2=_x-1,0,-1 do
-     if grid[_y][_x] == 0 then
-      grid[_y][_x]=grid[_y][_x2]
-      grid[_y][_x2]=0
-      elseif grid[_y][_x] == grid[_y][_x2] then
-      grid[_y][_x]*=2
-      grid[_y][_x2]=0
-     end
-    end
-   end
-  end
-
- elseif _dy == -1 then
-  for _y=0,2,1 do
-   for _x=0,3,1 do
-    for _y2=_y+1,3,1 do
-     if grid[_y][_x] == 0 then
-      grid[_y][_x]=grid[_y2][_x]
-      grid[_y2][_x]=0
-     elseif grid[_y][_x] == grid[_y2][_x] then
-      grid[_y][_x]*=2
-      grid[_y2][_x]=0
-     end
-    end
-   end
-  end
-
- elseif _dy == 1 then
-  for _y=3,1,-1 do
-   for _x=0,3,1 do
-    for _y2=_y-1,0,-1 do
-     if grid[_y][_x] == 0 then
-      grid[_y][_x]=grid[_y2][_x]
-      grid[_y2][_x]=0
-      elseif grid[_y][_x] == grid[_y2][_x] then
-      grid[_y][_x]*=2
-      grid[_y2][_x]=0
-     end
-    end
-   end
+function mergeneighbors(_row)
+ for _i=1,#_row-1,1 do
+  if _row[_i].v == _row[_i+1].v then
+   _row[_i].v+=_row[_i+1].v
+   _row[_i+1].v=0
   end
  end
 end
 
+function extendwith0(_row)
+ while #_row <= 4 do
+  add(_row,{v=0})
+ end
+ return _row
+end
+
+function dorow(_row)
+ local _newrow=collapse(_row)
+ mergeneighbors(_newrow)
+ _newrow=collapse(_newrow)
+ _row=extendwith0(_newrow)
+ return _newrow
+end
+
+local ts=0
+
+function rungrid(_dx,_dy)
+ ts=t()
+
+ if _dx == -1 then
+  for _y=1,4 do
+   grid[_y]=dorow(grid[_y])
+  end
+
+ elseif _dx == 1 then
+  for _y=1,4 do
+   local _row=reverserow(grid[_y])
+   grid[_y]=reverserow(dorow(_row))
+  end
+
+ elseif _dy == -1 then
+  for _y=1,4 do
+   local _row={}
+   for _x=1,4 do
+    _row[_x]=grid[_x][_y]
+   end
+   _row=dorow(_row)
+   for _x=1,4 do
+    grid[_x][_y]=_row[_x]
+   end
+  end
+
+ elseif _dy == 1 then
+  for _y=1,4 do
+   local _row={}
+   for _x=1,4 do
+    _row[_x]=grid[_x][_y]
+   end
+   _row=reverserow(dorow(reverserow(_row)))
+   for _x=1,4 do
+    grid[_x][_y]=_row[_x]
+   end
+  end
+ end
+
+ 
+
+ -- add new
+ 
+
+end
+
 function _update()
+ tiles={}
+
+ for _y=1,4 do
+  for _x=1,4 do
+   local _id=_y*10+_x
+   grid[_y][_x].id=_id
+   add(tiles,{
+    x=_x,
+    y=_y,
+    id=_id,
+    v=grid[_y][_x].v,
+   })
+  end
+ end
+
  if btnp(0) then
   rungrid(-1,0)
  elseif btnp(1) then
@@ -131,22 +170,26 @@ function _draw()
  cls(0)
 
  local _offx,_offy=9,14
- for _y=0,3 do
-  for _x=0,3 do
-   local _v=grid[_y][_x]
-   local _f=rect
-   if _v != 0 then
-    _f=rectfill
-   end
+ local _dt=min(t()-ts,2)
 
-   _f(
-    _offx+_x*8,
-    _offy+_y*8,
-    _offx+_x*8+7,
-    _offy+_y*8+7,
-    colors[_v])
-  end 
- end 
+ for _tile in all(tiles) do
+  local _v=_tile.v
+  local _x=_tile.x
+  local _y=_tile.y
+
+  local _f=rect
+  if _v != 0 then
+   _f=rectfill
+  end
+
+  _f(
+   _offx+_x*8,
+   _offy+_y*8,
+   _offx+_x*8+7,
+   _offy+_y*8+7,
+   colors[_v])
+ 
+ end
 
  print(score,5,1,7)
 
