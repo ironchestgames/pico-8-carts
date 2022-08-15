@@ -16,32 +16,44 @@ function dist(x1,y1,x2,y2)
  return sqrt(dx*dx+dy*dy)*10
 end
 
-function sortony(_t)
+function sorton(_t,_key)
  for _i=1,#_t do
   local _j = _i
-  while _j > 1 and _t[_j-1].y > _t[_j].y do
+  while _j > 1 and _t[_j-1][_key] > _t[_j][_key] do
    _t[_j],_t[_j-1]=_t[_j-1],_t[_j]
    _j=_j-1
   end
  end
 end
 
-local players={
- {},
- {},
- -- {ai=true},
-}
+function reverse(_t)
+ for _i=1,flr(#_t/2) do
+  local _i2=#_t-(_i-1)
+  _t[_i],_t[_i2]=_t[_i2],_t[_i]
+ end
+end
 
-function mybtn(_i,_p)
- if players[_p+1].ai then
-  return nil -- todo: ai here
- else
-  return btn(_i,_p)
+function getteamballowner(_team)
+ for _guy in all(_team) do
+  if _guy.hasball then
+   return _guy
+  end
+ end
+end
+
+function getballowner()
+ for _team in all(teams) do
+  for _guy in all(_teams) do
+   if _guy.hasball then
+    return _guy
+   end
+  end
  end
 end
 
 function drawteam1(_guy)
  circfill(_guy.x,_guy.y,2,8)
+ circ(_guy.x,_guy.y,5,7)
 end
 
 function drawteam2(_guy)
@@ -63,7 +75,7 @@ courtbottom=courttop+courth
 local teams={
  {
   a=.5,
-  targetx=16,
+  targetx=courtleft,
   {x=0,y=0,a=.5,draw=drawteam1},
   {x=56,y=0,a=.5,draw=drawteam1},
   {x=56,y=56,a=.5,draw=drawteam1},
@@ -71,7 +83,7 @@ local teams={
  },
  {
   a=.5,
-  targetx=16+courtw,
+  targetx=courtright,
   {x=0,y=0,a=.5,draw=drawteam2},
   {x=56,y=0,a=.5,draw=drawteam2},
   {x=56,y=56,a=.5,draw=drawteam2},
@@ -82,13 +94,13 @@ local teams={
 targety=65
 
 for _guy in all(teams[1]) do
- _guy.x+=110
- _guy.y+=38
+ _guy.x+=120
+ _guy.y+=55
 end
 
 for _guy in all(teams[2]) do
- _guy.x+=48
- _guy.y+=38
+ _guy.x+=18
+ _guy.y+=28
 end
 
 defaultspd=1.2
@@ -101,12 +113,79 @@ ball={
  draw=drawball,
 }
 
+local players={
+ {},
+ {
+  ai=function(_player,_btn,_teamid)
+   local _team=teams[_teamid]
+   local _ballowner=getteamballowner(_team)
+   local _ballownerdisttogoal=999
+   local _ballchaser=nil
+
+   if _ballowner then
+    _ballownerdisttogoal=dist(_ballowner.x,_ballowner.y,_team.targetx,targety)
+
+   else
+    _ballchaser=nil
+    local _nearestlen=999
+    for _guy in all(_team) do
+     local _dist=dist(ball.x,ball.y,_guy.x,_guy.y)
+     if _dist < _nearestlen then
+      _nearestlen=_dist
+      _ballchaser=_guy
+     end
+    end
+   end
+
+   if _btn == 4 and _ballowner and _ballownerdisttogoal < 42 then
+    if not _team.chargingshot then
+     return true
+    else
+     return nil
+    end
+   end
+
+   if _btn == 1 and _ballowner and _ballownerdisttogoal > 16 then
+    return true
+   end
+
+   if _ballchaser then
+    if _btn == 0 and _ballchaser.x > ball.x then
+     return true
+    end
+
+    if _btn == 1 and _ballchaser.x < ball.x then
+     return true
+    end
+
+    if _btn == 2 and _ballchaser.y > ball.y then
+     return true
+    end
+
+    if _btn == 3 and _ballchaser.y < ball.y then
+     return true
+    end
+   end
+
+  end,
+ },
+}
+
+function mybtn(_i,_p)
+ local _player=players[_p]
+ if _player.ai then
+  return _player.ai(_player,_i,_p)
+ else
+  return btn(_i,_p-1)
+ end
+end
+
 
 function _update60()
 
  -- input
- for _player=0,1 do
-  local _team=teams[_player+1]
+ for _player=1,2 do
+  local _team=teams[_player]
   local _teamdx,_teamdy=0,0
   local _lastskating=_team.skating
   _team.skating=nil
@@ -139,73 +218,89 @@ function _update60()
 
   -- pass
   local _passbtndown=mybtn(5,_player)
-  if _passbtndown and not _team.ballsprinting then
-   for _guy in all(_team) do
-    if _guy.hasball then
-     _team.ballsprinting=true
+  local _ballowner=getteamballowner(_team)
+  if _ballowner then
+   if _passbtndown and not _team.ballsprinting then
+    _team.ballsprinting=true
+   elseif _team.ballsprinting and not _passbtndown then
+    _team.ballsprinting=nil
+
+    ball.spd=6
+    ball.x=_ballowner.x+cos(_team.a)*8
+    ball.y=_ballowner.y+sin(_team.a)*8
+    
+    local _px=cos(_team.a)*52
+    local _py=sin(_team.a)*52
+    local _nearestlen=999
+    local _nearestguy=nil
+    for _other in all(_team) do
+     local _dist=dist(_ballowner.x+_px,_ballowner.y+_py,_other.x,_other.y)
+     if _other != _ballowner and _dist < _nearestlen then
+      _nearestlen=_dist
+      _nearestguy=_other
+     end
     end
+    _team.passpoint={x=_px,y=_py}
+    ball.a=atan2(_nearestguy.x-ball.x,_nearestguy.y-ball.y)
+    _ballowner.hasball=nil
    end
-  elseif _team.ballsprinting and not _passbtndown then
-   _team.ballsprinting=nil
-   for _guy in all(_team) do
-    if _guy.hasball then
-     ball.spd=6
-     ball.x=_guy.x+cos(_team.a)*8
-     ball.y=_guy.y+sin(_team.a)*8
-     
-     local _px=cos(_team.a)*52
-     local _py=sin(_team.a)*52
-     local _nearestlen=999
-     local _nearestguy=nil
-     for _other in all(_team) do
-      local _dist=dist(_guy.x+_px,_guy.y+_py,_other.x,_other.y)
-      if _other != _guy and _dist < _nearestlen then
-       _nearestlen=_dist
-       _nearestguy=_other
+
+  else
+   _team.spreadsprinting=_passbtndown
+  end
+
+  -- shoot/steal
+  local _shootbtndown=mybtn(4,_player)
+  local _ballowner=getteamballowner(_team)
+  if _ballowner then
+   if _shootbtndown and not _team.chargingshot then
+    _team.chargingshot=true
+
+   elseif _team.chargingshot and not _shootbtndown then
+    _team.chargingshot=nil
+    local _ballowner=getteamballowner(_team)
+    if _ballowner then
+     ball.a=atan2(_team.targetx-ball.x,targety-ball.y)
+     ball.spd=5
+     ball.x=_ballowner.x+cos(ball.a)*8
+     ball.y=_ballowner.y+sin(ball.a)*8
+     _ballowner.hasball=nil
+    end
+   else
+
+    if _shootbtndown then
+     local _opponentballowner=getballowner()
+     if _opponentballowner then
+      _team.steal=true
+      for _guy in all(_team) do
+       if dist(_guy.x,_guy.y,_opponentballowner.x,_opponentballowner.y) < 5 then
+        _guy.hasball=true
+        _opponentballowner.hasball=nil
+       end
       end
      end
-     _team.passpoint={x=_px,y=_py}
-     ball.a=atan2(_nearestguy.x-ball.x,_nearestguy.y-ball.y)
-     _guy.hasball=nil
+
+    else
+     _team.steal=nil
     end
+
    end
   end
-
-  -- shoot/tackle
-  local _shootbtndown=mybtn(4,_player)
-  if _shootbtndown and not _team.chargingshot then
-   for _guy in all(_team) do
-    if _guy.hasball then
-     _team.chargingshot=true
-     break
-    end
-   end
-   if not _team.chargingshot then
-    for _guy in all(_team) do
-     -- todo: tackle
-    end
-   end
-  elseif _team.chargingshot and not _shootbtndown then
-   _team.chargingshot=nil
-   for _guy in all(_team) do
-    if _guy.hasball then
-     ball.a=atan2(_team.targetx-ball.x,targety-ball.y)
-     ball.spd=8
-     ball.x=_guy.x+cos(ball.a)*8
-     ball.y=_guy.y+sin(ball.a)*8
-     _guy.hasball=nil
-     break
-    end
-   end
-  end
-
  end
 
  -- move teams
  for _player=1,2 do
   local _team=teams[_player]
-  for _guy in all(_team) do
+  if _team.spreadsprinting then
+   sorton(_team,'x')
 
+   if _team.targetx > ball.x then
+    reverse(_team)
+   end
+  end
+
+  for _i=1,#_team do
+   local _guy=_team[_i]
    local _spd
 
    if _guy.hasball then
@@ -225,6 +320,10 @@ function _update60()
     else
      _spd=0.25
     end
+   end
+
+   if _team.spreadsprinting then
+    _spd=_spd*(_i/10+1)
    end
 
    local _nextx=_guy.x+cos(_team.a)*_spd
@@ -247,13 +346,11 @@ function _update60()
  -- update ball
  local _ballowner=nil
  for _player=1,2 do
-  local _team=teams[_player]
-  for _guy in all(_team) do
-   if _guy.hasball then
-    ball.x=_guy.x
-    ball.y=_guy.y
-    _ballowner=_guy
-   end
+  _ballowner=getteamballowner(teams[_player])
+  if _ballowner then
+   ball.x=_ballowner.x
+   ball.y=_ballowner.y
+   break
   end
  end
 
@@ -275,7 +372,7 @@ function _update60()
   for _player=1,2 do
    local _team=teams[_player]
    for _guy in all(_team) do
-    if dist(_guy.x,_guy.y,ball.x,ball.y) < 3 then
+    if dist(_guy.x,_guy.y,ball.x,ball.y) < 5 then
      _guy.hasball=true
      break
     end
@@ -317,7 +414,7 @@ function _draw()
  end
 
  add(_drawables,ball)
- sortony(_drawables)
+ sorton(_drawables,'y')
 
  for _drawable in all(_drawables) do
   _drawable.draw(_drawable)
