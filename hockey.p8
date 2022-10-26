@@ -342,6 +342,15 @@ goal2=newphysobj(
   goal2x2-goal2x1,
   goal2y2-goal2y1)
 
+-- note; for aiming
+goal1x=goal1x2
+goal1upperpost=goal1y1
+goal1lowerpost=goal1y2
+
+goal2x=goal2x1
+goal2upperpost=goal2y1
+goal2lowerpost=goal2y2
+
 puckstatics={
  newphysobj(
    rinkx1-8,
@@ -539,31 +548,31 @@ function _update60()
  end
 
  -- friendly ai
- -- for player in all(players) do
- --  if player != p1player and
- --     player.team==p1player.team then
+ for player in all(players) do
+  if player != p1player and
+     player.team==p1player.team then
 
- --   if puck.player==p1player then
- --    player.ai.targetposx=200
- --    player.ai.targetposy=64
- --   elseif puck.player==nil then
- --    player.ai.targetposx=puck.x
- --    player.ai.targetposy=puck.y
- --   end
+   if puck.player==p1player then
+    player.ai.targetposx=200
+    player.ai.targetposy=64
+   elseif puck.player==nil then
+    player.ai.targetposx=puck.x
+    player.ai.targetposy=puck.y
+   end
 
- --   local a=atan2(
- --     player.ai.targetposx-player.x,
- --     player.ai.targetposy-player.y)
- --   player.a=a
- --   player.spd=1
- --   if distance(player.ai.targetposx,
- --      player.ai.targetposy,
- --      player.x,
- --      player.y) < 5 then
- --    player.spd=0
- --   end
- --  end
- -- end
+   local a=atan2(
+     player.ai.targetposx-player.x,
+     player.ai.targetposy-player.y)
+   player.a=a
+   player.spd=1
+   if distance(player.ai.targetposx,
+      player.ai.targetposy,
+      player.x,
+      player.y) < 5 then
+    player.spd=0
+   end
+  end
+ end
 
  -- move players
  for player in all(players) do
@@ -655,9 +664,15 @@ function _update60()
    else
     puck.spd=puck.player.shootingspd
    end
-   puck.a=puck.player.a
    puck.player.isshooting=false
    puck.player.shootingspd=0
+
+   if puck.player.team == 1 and
+      (puck.player.a < 0.25 or puck.player.a > 0.75) then
+    puck.a=atan2(
+      goal2x-puck.x,
+      (goal2upperpost+4)-puck.y)
+   end
 
    puck.player.state=state_idle
    puck.player=nil
@@ -665,7 +680,28 @@ function _update60()
   -- pass
   elseif puck.player.state==state_do_pass then
    puck.spd=4.5
-   puck.a=puck.player.a
+
+   local _dist=256
+   local _closestp=nil
+   for _p in all(players) do
+    local _d=distanceobjs(_p,puck.player)
+    if _p != puck.player and
+       _p.team == puck.player.team and
+       _d < _dist then
+     _dist=_d
+     _closestp=_p
+    end
+   end
+
+   local newa=atan2(_closestp.x-puck.player.x,
+     _closestp.y-puck.player.y)
+
+   debug(abs(newa-puck.player.a))
+   if abs(newa-puck.player.a) < .25 then
+    puck.a=newa
+   else
+    puck.a=puck.player.a
+   end
 
    puck.player.state=state_idle
    puck.player=nil

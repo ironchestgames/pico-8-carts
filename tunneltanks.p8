@@ -239,6 +239,7 @@ keyups={
 tick=0
 
 function _init()
+ poke(0x5f5c,5)
  
  -- reset timers
  tick=0

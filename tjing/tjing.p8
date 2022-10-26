@@ -2,6 +2,8 @@ pico-8 cartridge // http://www.pico-8.com
 version 36
 __lua__
 
+-- public domain, cc0
+
 poke(0x5f5c, 6, 6) -- note: set auto-repeat delay for btnp
 
 function clone(table)

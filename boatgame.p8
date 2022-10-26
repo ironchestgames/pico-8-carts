@@ -15,6 +15,13 @@ function clone(_t)
  return t
 end
 
+function shuffle(_t)
+ for _i=#_t,2,-1 do
+  local _j=flr(rnd(_i))+1
+  _t[_i],_t[_j]=_t[_j],_t[_i]
+ end
+end
+
 function sortonx(_t)
  for _i=1,#_t do
   local _j = _i
@@ -25,13 +32,54 @@ function sortonx(_t)
  end
 end
 
+function countby(_t,_f,_param)
+ local _result=0
+ for _v in all(_t) do
+  if _f(_v,_param) then
+   _result+=1
+  end
+ end
+ return _result
+end
+
+function findrandomby(_t,_f,_param)
+ local _cloned=clone(_t)
+ shuffle(_cloned)
+ for _v in all(_cloned) do
+  if _f(_v,_param) then
+   return _v
+  end
+ end
+end
+
 function dist(x1,y1,x2,y2)
  local dx=(x2-x1)*0.1
  local dy=(y2-y1)*0.1
  return sqrt(dx*dx+dy*dy)*10
 end
 
-intmask=0b1111111111111111.0000000000000000
+function hasin(_t,_listname,_str)
+ for _v in all(_t[_listname]) do
+  if _v == _str then
+   return true
+  end
+ end
+end
+
+function hasmood(_member,_mood)
+ return hasin(_member,'moods',_mood)
+end
+
+function hasnotmood(_member,_mood)
+ return not hasmood(_member,_mood)
+end
+
+function makesomeone(_mood)
+ local _member=findrandomby(crew,hasnotmood,_mood)
+ if _member then
+  _member.moods[rnd({1,2})]=_mood
+ end
+end
 
 wmap={}
 mapw,maph=116,74
@@ -39,20 +87,319 @@ halfmapw,halfmaph=mapw/2,maph/2
 ports={}
 offers={}
 contracts={}
-days={}
+
+-- moods: angry, happy, hungry, grumpy, stressed, dubious, drunk, keen
+
+crew={
+ {
+  name='abdou',
+  moods={'angry','hungry'},
+ },
+ {
+  name='baba',
+  moods={'dubious','happy'},
+ },
+ {
+  name='bastian',
+  moods={'happy','hungry'},
+ },
+ {
+  name='bill',
+  moods={'angry','happy'},
+ },
+ {
+  name='caspian',
+  moods={'grumpy','stressed'},
+ },
+}
+
+names={
+ -- w ref
+ 'baldric',
+ 'bob',
+ 'bonnie',
+ 'davey',
+ 'dimebag',
+ 'donald',
+ 'edd',
+ 'fabbe',
+ 'fred',
+ 'gru',
+ 'hal',
+ 'jack',
+ 'jafar',
+ 'james',
+ 'janson',
+ 'jeb',
+ 'jungman',
+ 'kirk',
+ 'lars',
+ 'link',
+ 'luigi',
+ 'mofasa',
+ 'moon',
+ 'phil',
+ 'pip pip',
+ 'rex',
+ 'roger',
+ 'snorre',
+ 'swann',
+ 'trent',
+ 'trulls',
+ 'vinnie',
+ 'weebl',
+ 'zep',
+
+ -- something extra
+ 'cortez',
+ 'jeeves',
+ 'ramses',
+ 'sion',
+
+ -- good
+ 'abdou',
+ 'ahmed',
+ 'baba',
+ 'bastian',
+ 'bill',
+ 'bluelip',
+ 'burt',
+ 'caspar',
+ 'casper',
+ 'caspian',
+ 'cedric',
+ 'cindy',
+ 'cliff',
+ 'colin',
+ 'danny',
+ 'dieter',
+ 'don',
+ 'emile',
+ 'eric',
+ 'finn',
+ 'frank',
+ 'frej',
+ 'friman',
+ 'galen',
+ 'grunt',
+ 'gudrun',
+ 'hebert',
+ 'hubert',
+ 'hucky',
+ 'igor',
+ 'ilmar',
+ 'ishtar',
+ 'ivan',
+ 'jaleh',
+ 'jason',
+ 'joe',
+ 'john',
+ 'jonas',
+ 'joshua',
+ 'jugglo',
+ 'junior',
+ 'karl',
+ 'kazi',
+ 'kloffe',
+ 'lars',
+ 'leif',
+ 'liam',
+ 'lil joe',
+ 'loffe',
+ 'lou',
+ 'lyr',
+ 'mads',
+ 'mary',
+ 'mathew',
+ 'matias',
+ 'mindy',
+ 'moe',
+ 'monty',
+ 'muggy',
+ 'nellie',
+ 'niko',
+ 'olof',
+ 'pete',
+ 'pink',
+ 'pinklip',
+ 'poe',
+ 'polter',
+ 'poppy',
+ 'quail',
+ 'red',
+ 'redlips',
+ 'remi',
+ 'rudolph',
+ 'salah',
+ 'sally',
+ 'sam',
+ 'seb',
+ 'sergey',
+ 'sneebs',
+ 'stagger',
+ 'sten',
+ 'stork',
+ 'sven',
+ 'taffy',
+ 'thor',
+ 'thresh',
+ 'thumby',
+ 'timmy',
+ 'tommy',
+ 'troy',
+ 'twotoes',
+ 'ulf',
+ 'vlad',
+ 'wayne',
+ 'welsh',
+ 'wetty',
+ 'xiang',
+ 'ymer',
+}
+
+s_shootoneofthecrew='shoot one\nof the crew'
+s_shootthecrewmember='shoot the\ncrew member'
+s_makecrewmemberapologize='make crew\nmember\napologize'
+s_bribecrewwithmoredubloons='bribe crew\nwith more\ndubloons'
+s_spend1daytofixship='spend a day\nto fix the\nship'
+s_sailfasterwewillmakeit='sail faster,\nwe will make\nit!'
+s_cutthecrewsomeslack='cut the crew\nsome slack'
+
+daydata=nil
 
 dayfuncs={
- ['shoot one\nof the crew']=function()
-  debug('shoot one of the crew')
+ [s_shootoneofthecrew]=function()
+  local _someonegrumpy=findrandomby(crew,hasmood,'grumpy')
+  local _someonehungry=findrandomby(crew,hasmood,'hungry')
+  del(crew,_someonegrumpy or _someonehungry)
  end,
- ['bribe crew\nwith more\ndubloons']=function()
-  debug('bribe crew with more dubloons')
+ [s_shootthecrewmember]=function()
+  del(crew,daydata.member)
+ end,
+ [s_makecrewmemberapologize]=function()
+  makesomeone('grumpy')
+ end,
+ [s_bribecrewwithmoredubloons]=function()
+  makesomeone('happy')
+  makesomeone('dubious')
+ end,
+ [s_spend1daytofixship]=function()
+  journeydays+=1
+ end,
+ [s_sailfasterwewillmakeit]=function()
+  makesomeone('stressed')
+  journeydays-=1
+ end,
+ [s_cutthecrewsomeslack]=function()
+  makesomeone(rnd({'happy', 'happy', 'dubious'}))
  end,
 }
 
+days={
+ sinking={
+  title='sinking',
+  text='there are holes in the\nhull, water leaking in.',
+  left=s_spend1daytofixship,
+  right=s_sailfasterwewillmakeit,
+ },
+ mutiny={
+  title='mutiny!',
+  text='the crew are hungry from\nyour weak leadership.',
+  left=s_shootoneofthecrew,
+  right=s_bribecrewwithmoredubloons,
+ },
+ theft={
+  title='theft',
+  text=' stole\nfrom the cargo.',
+  left=s_shootthecrewmember,
+  right=s_makecrewmemberapologize,
+ },
+ fight={
+  title='fight',
+  text=' got a black eye\nbut no one wants to rat.',
+  left=s_shootthecrewmember,
+  right=s_makecrewmemberapologize,
+ },
+}
+
+function createday()
+ local hungrycount=countby(crew,hasmood,'hungry')
+ local grumpycount=countby(crew,hasmood,'grumpy')
+ local happycount=countby(crew,hasmood,'happy')
+ local angrycount=countby(crew,hasmood,'angry')
+
+ local someonedubious=findrandomby(crew,hasmood,'dubious')
+ local someonestressed=findrandomby(crew,hasmood,'stressed')
+
+ local _possibledays={}
+
+ if hungrycount == #crew then
+  local _day=clone(days.mutiny)
+  _day.text='the crew are hungry from\nyour bad leadership.'
+  add(_possibledays,_day)
+ end
+
+ if grumpycount == #crew then
+  local _day=clone(days.mutiny)
+  _day.text='the crew are tired of\nyour weak leadership.'
+  add(_possibledays,_day)
+ end
+
+ if angrycount >= 2 and #crew / angrycount < rnd() then
+  local _someoneangry=findrandomby(crew,hasmood,'angry')
+  local _day=clone(days.fight)
+  _day.text=_someoneangry.name.._day.text
+  _day.member=_someoneangry
+  add(_possibledays,_day)
+ end
+
+ if someonedubious then
+  local _r=rnd({0,0,0,1,1,2})
+  if _r == 1 then
+   local _day=clone(days.theft)
+   _day.text=someonedubious.name.._day.text
+   _day.member=someonedubious
+   add(_possibledays,_day)
+
+  elseif _r == 2 then
+   add(_possibledays,clone(days.sinking))
+  end
+ end
+
+ if someonestressed then
+  local _r=rnd({0,0,0,1})
+  if _r == 1 then
+   local _day={
+    title='klutz!',
+    text=someonestressed.name..' messed up and now\nwe\'re taking in water.',
+    right=s_spend1daytofixship,
+    left=s_shootthecrewmember,
+    member=someonestressed,
+   }
+
+   add(_possibledays,_day)
+  end
+ end
+
+ if #_possibledays == 0 then
+  local _day={
+    title='sailing',
+    text='uneventful day, let\'s\nhope the same for tomorrow',
+    left=s_cutthecrewsomeslack,
+    right=s_sailfasterwewillmakeit,
+   }
+
+   add(_possibledays,_day)
+ end
+
+ debug(#crew)
+ debug(someonestressed)
+ daydata=rnd(_possibledays)
+end
+
 cameray=0
 menusel=1
-menupos={0,123,200}
+menupos={0,128,256}
 menubtnps={
  function()
   if btnp(0) then
@@ -212,8 +559,10 @@ function createoffers()
  for _p in all(_ports) do
   local _dest=rnd(_ports)
   local _reward=flr(rnd(200))
+  local _cargo=flr(rnd(300))..' sheep'
   add(offers,{
-   text='take me and my '..flr(rnd(300))..' sheep\nto '.._dest.name..'.\ni offer '.._reward..' dubloons.',
+   text='take me and my '.._cargo..'\nto '.._dest.name..'.\ni offer '.._reward..' dubloons.',
+   cargo=_cargo,
    dest=_dest,
    reward=_reward,
   })
@@ -239,14 +588,7 @@ function portinit()
  offersel=1
 
  day=1
- days={
-  {
-   title='\^wmutiny!',
-   text='some of the crew are\ntired of weak leadership.',
-   left='shoot one\nof the crew',
-   right='bribe crew\nwith more\ndubloons',
-  }
- }
+ journeydays=10
 end
 
 function portupdate()
@@ -322,26 +664,37 @@ function portdraw()
  rectfill(6,_offy+30,122,_offy+100,15)
  print(offers[offersel].text,12,_offy+51,4)
 
+ -- sail button
+ _offy=menupos[3]+5
+ print('\x8e sail',51,_offy+110,9)
+
 end
 
 function sailinit()
+ createday()
+
  _update=sailupdate
  _draw=saildraw
 end
 
 function sailupdate()
  if btnp(0) then
-  dayfuncs[days[day].left]()
+  dayfuncs[daydata.left]()
+  createday()
   day+=1
  end
 
  if btnp(1) then
-  dayfuncs[days[day].right]()
+  dayfuncs[daydata.right]()
+  createday()
   day+=1
  end
 
- if day > #days then
+ if day > journeydays then
   portinit()
+ end
+
+ if #crew <= 0 then
  end
 end
 
@@ -351,10 +704,10 @@ function saildraw()
 
  rectfill(6,5,121,84,15)
  print('day '..day,10,9,14)
- print(days[day].title,64-#days[day].title*3,17,5)
- print(days[day].text,12,26,5)
- print(days[day].left,12,48,4)
- print(days[day].right,70,48,4)
+ print('\^w'..daydata.title,64-#daydata.title*4,17,5)
+ print(daydata.text,12,27,5)
+ print(daydata.left,12,48,4)
+ print(daydata.right,70,48,4)
  print('\x8b',30,73,4)
  print('\x91',90,73,4)
 end

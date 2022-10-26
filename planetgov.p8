@@ -315,13 +315,13 @@ function printc(_t,_x,_y)
  end
 end
 
-function perfsel(cur,items)
+function perfsel(_cur,_items)
  local _closestd=999
  local _closest=nil
- for _i in all(items) do
-  if _i != cur then
-   local _a=atan2(_i[1]-cur[1],_i[2]-cur[2])%1
-   local _d=dist(_i[1],_i[2],cur[1],cur[2])
+ for _i in all(_items) do
+  if _i != _cur then
+   local _a=atan2(_i[1]-_cur[1],_i[2]-_cur[2])%1
+   local _d=dist(_i[1],_i[2],_cur[1],_cur[2])
    if _d < _closestd and
       ((btnp(0) and _a >= 0.375 and _a <= 0.625) or
        (btnp(1) and (_a >= 0.875 or _a <= 0.125)) or
@@ -332,7 +332,7 @@ function perfsel(cur,items)
    end
   end
  end
- return _closest or cur
+ return _closest or _cur
 end
 
 valcols={

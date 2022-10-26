@@ -205,6 +205,7 @@ function _update()
 --     return (col >= row.depth * row.start_slope
 --         and col <= row.depth * row.end_slope)
   local function issymmetric(_row,_tile)
+   debug('startslope', _row.startslope, 'endslope', _row.endslope)
    return _tile.col >= _row.depth * _row.startslope and _tile.col <= _row.depth * _row.endslope
   end
 

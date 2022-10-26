@@ -280,6 +280,8 @@ playersummoner={id=1,walkdir=1,x=1,y=5,typ=30,active=true,hp=3,sel=1,availablese
  {'archer'},
  {'knifeman'},
  {'knifeman'},
+ -- {'knifeman'},
+ -- {'knifeman'},
  {'spearman'},
  {'spearman'},
 }}
@@ -288,7 +290,11 @@ enemysummoner={id=2,walkdir=-1,x=14,y=5,typ=46,active=false,hp=3,sel=6,creatures
  {'panther'},
  {'bat'},
  {'bat'},
- {'bat'},
+ -- {'bat'},
+ -- {'bat'},
+ -- {'bat'},
+ -- {'bat'},
+ -- {'bat'},
  {'hawk'},
  {'spider'},
  }}
