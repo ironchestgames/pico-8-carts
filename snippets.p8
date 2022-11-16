@@ -7,6 +7,38 @@ function debug(s)
  printh(tostr(s),'debug',false)
 end
 
+function trimsplit(_str)
+ local _result=''
+ for _i=1,#_str do
+  local _chr=_str[_i]
+  if _chr != ' ' and _chr != '\n' then
+   _result..=_chr
+  end
+ end
+ return split(_result)
+end
+
+function mapi(_t,_f)
+ local _result={}
+ foreach(_t,function(_item)
+  add(_result,_f(_item))
+ end)
+ return _result
+end
+
+function alltonum(_t)
+ local _result={}
+ foreach(_t,function(_item)
+  add(_result,tonum(_item))
+ end)
+ return _result
+end
+
+function isinsiderange(_n,_min,_max) 
+ return mid(_min,_n,_max) == _n
+end
+
+
 -- function stunningeffect(_a)
 --  if _a.effect.c == nil or
 --     _a.effect.c <= 0 then
@@ -36,11 +68,11 @@ poke(0x5604,0)    -- draw y offset
 
 -- note: set pico8_gpio[0]=1
 
-poke(0x8e*8+0x5600,62)
-poke(0x8e*8+0x5601,99)
+-- poke(0x8e*8+0x5600,62)
+-- poke(0x8e*8+0x5601,99)
 poke(0x8e*8+0x5602,peek(0x5f80) == 0 and 107 or 123)
-poke(0x8e*8+0x5603,99)
-poke(0x8e*8+0x5604,62)
+-- poke(0x8e*8+0x5603,99)
+-- poke(0x8e*8+0x5604,62)
 
 function _draw()
  cls()
