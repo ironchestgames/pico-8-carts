@@ -72,41 +72,47 @@ palt(0,false)
 -- -- debug(s2t'{ $12=1,$b=2}')
 -- debug(s2t'{ 14,3,43,22 }')
 
+function trimsplit(_str)
+ local _newstr,_result='',{}
+ for _i=1,#_str do
+  local _chr=_str[_i]
+  if _chr != ' ' and _chr != '\n' then
+   _newstr..=_chr
+  end
+ end
+ return split(_newstr)
+end
+
 function clone(_t)
- local t={}
- for k,v in pairs(_t) do
-  t[k]=v
+ local _result={}
+ for _k,_v in pairs(_t) do
+  _result[_k]=_v
  end
- return t
+ return _result
 end
 
-function isinsiderange(_n,_min,_max)
- return mid(_min,_n,_max) == _n
+function dist(_x1,_y1,_x2,_y2)
+ local _dx,_dy=(_x2-_x1)*.1,(_y2-_y1)*.1
+ return sqrt(_dx*_dx+_dy*_dy)*10
 end
 
-function dist(x1,y1,x2,y2)
- local dx=(x2-x1)*.1
- local dy=(y2-y1)*.1
- return sqrt(dx*dx+dy*dy)*10
-end
-
-function sortbyy(a)
- for i=1,#a do
-  local j=i
-  local y1=a[j].y
-  if a[j].ground then
-   y1=-1
+function sortbyy(_t)
+ for _i=1,#_t do
+  local _j=_i
+  local _y1=_t[_j].y
+  if _t[_j].ground then
+   _y1=-1
   end
-  while j > 1 and a[j-1].y > y1 do
-   a[j],a[j-1]=a[j-1],a[j]
-   j=j-1
+  while _j > 1 and _t[_j-1].y > _y1 do
+   _t[_j],_t[_j-1]=_t[_j-1],_t[_j]
+   _j=_j-1
   end
  end
- return a
+ return _t
 end
 
 function wrap(_min,_n,_max)
-  return (((_n-_min)%(_max-_min))+(_max-_min))%(_max-_min)+_min
+ return (((_n-_min)%(_max-_min))+(_max-_min))%(_max-_min)+_min
 end
 
 function drawmessages()
@@ -185,7 +191,6 @@ function resetgame()
  travelc=60
 
 
-
  factions={
   droid={
    alertc=nil,
@@ -214,6 +219,7 @@ function resetgame()
     huntingspd=2,
     c=0,
     alientype='droid',
+    bloodtype='droidblood',
     behaviour=droidtalking,
    },
   },
@@ -418,6 +424,7 @@ animaltypes={
   spd=0.75,
   huntingspd=1.25,
   c=0,
+  bloodtype='fireblood',
  },
  slime={
   sx=0,
@@ -439,6 +446,7 @@ animaltypes={
   spd=0,
   huntingspd=2,
   c=0,
+  bloodtype='droidblood',
  }
 }
 
@@ -708,6 +716,24 @@ objtypes={
   solid=true,
   ground=true,
  },
+ fireblood={
+  sx=61,
+  sy=21,
+  sw=10,
+  sh=7,
+  ground=true,
+  samplecolor=10,
+  action=takesampleaction,
+ },
+ droidblood={
+  sx=61,
+  sy=28,
+  sw=10,
+  sh=7,
+  ground=true,
+  samplecolor=7,
+  action=takesampleaction,
+ },
  deadmartian={
   sx=45,
   sy=41,
@@ -750,7 +776,7 @@ objtypes={
   sy=48,
   sw=14,
   sh=8,
-  linked={'deadmartian','deadmartianblood','martianwreck_ground','martianwreck_collision'},
+  linked=trimsplit'deadmartian,deadmartianblood,martianwreck_ground,martianwreck_collision',
  },
  taurienwreck_wing={
   sx=43,
@@ -793,7 +819,7 @@ objtypes={
   sy=78,
   sw=10,
   sh=9,
-  linked={'taurienwreck_wing','taurienwreck_ground','deadtaurien','deadtaurien_blood'},
+  linked=trimsplit'taurienwreck_wing,taurienwreck_ground,deadtaurien,deadtaurien_blood',
  },
  droidpillar1={
   sx=68,
@@ -843,375 +869,388 @@ planettypes={
  { -- light forest
   wpal={3,141,0,135,139},
   surfacecolor=3,
-  objtypes={
-   'berrybush',
-   'flowers',
-   'mushroom_red',
-   'mosstone_small',
-   'mosstone_big',
-   'marsh_watercolor',
-   'grass1',
-   'grass2',
-   'lake_watercolor',
-   'pine_small',
-   'pine_small',
-   'pine_big',
-   'pine_big',
-   'pine_big',
-  },
-  animaltypes={'bear','bat'},
-  objdist=20,
+  objtypes=trimsplit[[
+   berrybush,
+   flowers,
+   mushroom_red,
+   mosstone_small,
+   mosstone_big,
+   marsh_watercolor,
+   grass1,
+   grass2,
+   lake_watercolor,
+   pine_small,
+   pine_small,
+   pine_big,
+   pine_big,
+   pine_big
+  ]],
+  animaltypes=trimsplit'bear,bat',
+  objdist=16,
  },
  { -- dark forest
-  wpal={131,141,134,135,3},
+  wpal=trimsplit'131,141,134,135,3',
   surfacecolor=3,
-  objtypes={
-   'pine_big',
-   'pine_big',
-   'pine_big',
-   'pine_big',
-   'pine_small',
-   'pine_small',
-   'grass1',
-   'grass2',
-   'marsh_watercolor',
-   'marsh_watercolor',
-   'marsh_watercolor',
-   'mosstone_small',
-   'mosstone_small',
-   'mosstone_big',
-   'mosstone_big',
-   'lake_watercolor',
-   'twigs',
-   'twigs',
-   'mushroom_red',
-   'flowers',
-  },
-  animaltypes={'bear','bat','bat'},
+  objtypes=trimsplit[[
+   pine_big,
+   pine_big,
+   pine_big,
+   pine_big,
+   pine_small,
+   pine_small,
+   grass1,
+   grass2,
+   marsh_watercolor,
+   marsh_watercolor,
+   marsh_watercolor,
+   mosstone_small,
+   mosstone_small,
+   mosstone_big,
+   mosstone_big,
+   lake_watercolor,
+   twigs,
+   twigs,
+   mushroom_red,
+   flowers
+  ]],
+  animaltypes=trimsplit'bear,bat,bat',
   objdist=24,
  },
  { -- marsh
-  wpal={133,130,134,141,131},
+  wpal=trimsplit'133,130,134,141,131',
   surfacecolor=4,
-  objtypes={
-   'grass1',
-   'grass1',
-   'grass1',
-   'grass1',
-   'grass2',
-   'grass2',
-   'grass2',
-   'grass2',
-   'deadtree1',
-   'deadtree2',
-   'lake',
-   'berrybush',
-   'mushroom',
-   'marsh_darkgrey',
-   'marsh_darkgrey',
-   'marsh_darkgrey',
-   'marsh_darkgrey',
-   'marsh_darkgrey',
-   'marsh_darkgrey',
-  },
-  animaltypes={'spider','spider','spider','bat'},
+  objtypes=trimsplit[[
+   grass1,
+   grass1,
+   grass1,
+   grass1,
+   grass2,
+   grass2,
+   grass2,
+   grass2,
+   deadtree1,
+   deadtree2,
+   lake,
+   berrybush,
+   mushroom,
+   marsh_darkgrey,
+   marsh_darkgrey,
+   marsh_darkgrey,
+   marsh_darkgrey,
+   marsh_darkgrey,
+   marsh_darkgrey
+  ]],
+  animaltypes=trimsplit'spider,spider,spider,bat',
   objdist=26,
  },
  { -- ice
-  wpal={7,6,6,7,7},
+  wpal=trimsplit'7,6,6,7,7',
   surfacecolor=7,
-  objtypes={
-   'deadtree1',
-   'deadtree2',
-   'lake',
-   'marsh',
-   'marsh',
-   'marsh',
-   'rock_small',
-   'rock_small',
-   'rock_big',
-   'rock_big',
-  },
-  animaltypes={'gnawer','gnawer'},
-  objdist=28,
+  objtypes=trimsplit[[
+   deadtree1,
+   deadtree2,
+   lake,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   rock_small,
+   rock_small,
+   rock_small,
+   rock_small,
+   rock_small,
+   rock_small,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big
+  ]],
+  animaltypes=trimsplit'gnawer,gnawer',
+  objdist=18,
  },
  { -- wasteland 1
-  wpal={4,132,141,9,15},
+  wpal=trimsplit'4,132,141,9,15',
   surfacecolor=9,
-  objtypes={
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'cactus1',
-   'cactus2',
-   'skull',
-   'ribs',
-   'canyon_big',
-   'canyon_big',
-   'canyon_medium',
-   'canyon_medium',
-   'canyon_small',
-   'canyon_small',
-  },
-  animaltypes={'bull','bull'},
+  objtypes=trimsplit[[
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   cactus1,
+   cactus2,
+   skull,
+   ribs,
+   canyon_big,
+   canyon_big,
+   canyon_medium,
+   canyon_medium,
+   canyon_small,
+   canyon_small
+  ]],
+  animaltypes=trimsplit'bull,bull',
   objdist=30,
  },
  { -- wasteland 2
-  wpal={134,141,141,15,6},
+  wpal=trimsplit'134,141,141,15,6',
   surfacecolor=6,
-  objtypes={
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'skull',
-   'ribs',
-   'canyon_big',
-   'canyon_big',
-   'canyon_medium',
-   'canyon_medium',
-   'canyon_small',
-   'canyon_small',
-   'canyon_small',
-   'canyon_small',
-  },
-  animaltypes={'gnawer','gnawer'},
+  objtypes=trimsplit[[
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   skull,
+   ribs,
+   canyon_big,
+   canyon_big,
+   canyon_medium,
+   canyon_medium,
+   canyon_small,
+   canyon_small,
+   canyon_small,
+   canyon_small
+  ]],
+  animaltypes=trimsplit'gnawer,gnawer',
   objdist=30,
  },
  { -- desert
-  wpal={15,143,3,8,3},
+  wpal=trimsplit'15,143,3,8,3',
   surfacecolor=9,
-  objtypes={
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'flowers',
-   'cactus1',
-   'cactus2',
-  },
-  animaltypes={'spider','spider'},
+  objtypes=trimsplit[[
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   flowers,
+   cactus1,
+   cactus2
+  ]],
+  animaltypes=trimsplit'spider,spider',
   objdist=30,
  },
  { -- blue lava world
-  wpal={1,133,12,137,131},
+  wpal=trimsplit'1,133,12,137,131',
   surfacecolor=1,
-  objtypes={
-   'flowers2',
-   'rock_big',
-   'rock_big',
-   'rock_big',
-   'rock_big',
-   'rock_medium',
-   'rock_medium',
-   'rock_medium',
-   'rock_medium',
-   'rock_medium',
-   'rock_medium',
-   'rock_medium',
-   'rock_medium2',
-   'rock_medium2',
-   'rock_medium2',
-   'rock_medium2',
-   'rock_medium2',
-   'rock_medium2',
-   'rock_medium2',
-   'rock_small',
-   'rock_small',
-   'rock_small',
-   'crack_big',
-   'crack_big',
-   'crack_big',
-   'crack_big',
-   'crack_big',
-   'crack_big',
-   'crack_small',
-   'crack_small',
-   'crack_small',
-   'crack_small',
-   'lavapool_big',
-   'lavapool_small',
-   'lavapool_small',
-  },
-  animaltypes={'slime','slime','slime'},
+  objtypes=trimsplit[[
+   flowers2,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_medium,
+   rock_medium,
+   rock_medium,
+   rock_medium,
+   rock_medium,
+   rock_medium,
+   rock_medium,
+   rock_medium2,
+   rock_medium2,
+   rock_medium2,
+   rock_medium2,
+   rock_medium2,
+   rock_medium2,
+   rock_medium2,
+   rock_small,
+   rock_small,
+   rock_small,
+   crack_big,
+   crack_big,
+   crack_big,
+   crack_big,
+   crack_big,
+   crack_big,
+   crack_small,
+   crack_small,
+   crack_small,
+   crack_small,
+   lavapool_big,
+   lavapool_small,
+   lavapool_small
+  ]],
+  animaltypes=trimsplit'slime,slime,slime',
   objdist=24,
  },
  { -- dark lava world
-  wpal={130,2,10,136,134},
+  wpal=trimsplit'130,2,10,136,134',
   surfacecolor=2,
-  objtypes={
-   'flowers2',
-   'rock_big',
-   'rock_big',
-   'rock_big',
-   'rock_big',
-   'rock_big',
-   'rock_big',
-   'rock_big',
-   'rock_big',
-   'rock_big',
-   'rock_big',
-   'rock_big',
-   'rock_big',
-   'rock_big',
-   'rock_medium',
-   'rock_medium',
-   'rock_medium',
-   'rock_medium',
-   'rock_small',
-   'rock_small',
-   'rock_small',
-   'crack_big',
-   'crack_big',
-   'crack_big',
-   'crack_big',
-   'crack_small',
-   'crack_small',
-   'crack_small',
-   'crack_small',
-   'crack_small',
-   'lavapool_big',
-   'lavapool_big',
-   'lavapool_big',
-   'lavapool_small',
-   'lavapool_small',
-   'lavapool_small',
-   'lavapool_small',
-   'lavapool_small',
-  },
-  animaltypes={'firegnawer','firegnawer'},
+  objtypes=trimsplit[[
+   flowers2,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_big,
+   rock_medium,
+   rock_medium,
+   rock_medium,
+   rock_medium,
+   rock_small,
+   rock_small,
+   rock_small,
+   crack_big,
+   crack_big,
+   crack_big,
+   crack_big,
+   crack_small,
+   crack_small,
+   crack_small,
+   crack_small,
+   crack_small,
+   lavapool_big,
+   lavapool_big,
+   lavapool_big,
+   lavapool_small,
+   lavapool_small,
+   lavapool_small,
+   lavapool_small,
+   lavapool_small
+  ]],
+  animaltypes=trimsplit'firegnawer,firegnawer',
   objdist=18,
  },
  { -- red lava world
-  wpal=split'2,130,142,136,143',
+  wpal=trimsplit'2,130,142,136,143',
   surfacecolor=2,
-  objtypes={
-   'cactus1',
-   'cactus1',
-   'cactus2',
-   'cactus2',
-   'lavapool_big',
-   'lavapool_small',
-   'lavapool_small',
-   'skull',
-   'ribs',
-   'canyon_small',
-   'canyon_small',
-   'canyon_medium',
-   'canyon_medium',
-   'canyon_medium',
-   'canyon_medium',
-   'canyon_big',
-   'canyon_big',
-   'canyon_big',
-   'canyon_big',
-   'marsh_flipped',
-   'marsh_flipped',
-  },
-  animaltypes=split[[bull,bull,bull,bull]],
+  objtypes=trimsplit[[
+   cactus1,
+   cactus1,
+   cactus2,
+   cactus2,
+   lavapool_big,
+   lavapool_small,
+   lavapool_small,
+   skull,
+   ribs,
+   canyon_small,
+   canyon_small,
+   canyon_medium,
+   canyon_medium,
+   canyon_medium,
+   canyon_medium,
+   canyon_big,
+   canyon_big,
+   canyon_big,
+   canyon_big,
+   marsh_flipped,
+   marsh_flipped
+  ]],
+  animaltypes=trimsplit'bull,bull,bull,bull',
   objdist=20,
  },
  { -- blue marsh world
-  wpal={140,12,15,3,139},
+  wpal=trimsplit'140,12,15,3,139',
   surfacecolor=1,
-  objtypes={
-   'marsh_flipped',
-   'marsh_flipped',
-   'marsh_flipped',
-   'marsh_flipped',
-   'marsh_flipped',
-   'marsh_flipped',
-   'mushroom',
-   'flowers2',
-   'berrybush',
-   'grass1',
-   'grass1',
-   'grass2',
-   'grass2',
-   'lake',
-  },
-  animaltypes={'gnawer','gnawer','slime','slime','slime','slime'},
-  objdist=25,
+  objtypes=trimsplit[[
+   marsh_flipped,
+   marsh_flipped,
+   marsh_flipped,
+   marsh_flipped,
+   marsh_flipped,
+   marsh_flipped,
+   mushroom,
+   flowers2,
+   berrybush,
+   grass1,
+   grass1,
+   grass2,
+   grass2,
+   lake
+  ]],
+  animaltypes=trimsplit'gnawer,gnawer,slime,slime,slime,slime',
+  objdist=24,
  },
  { -- brown wasteland
-  wpal={132,130,139,4,143},
+  wpal=trimsplit'132,130,139,4,143',
   surfacecolor=4,
-  objtypes={
-   'marsh',
-   'marsh',
-   'marsh',
-   'marsh',
-   'mushroom_red',
-   'flowers2',
-   'flowers2',
-   'cactus1',
-   'cactus1',
-   'cactus2',
-   'cactus2',
-   'canyon_big',
-   'canyon_big',
-   'canyon_big',
-   'canyon_big',
-   'canyon_medium',
-   'canyon_medium',
-   'canyon_medium',
-   'canyon_medium',
-   'canyon_medium',
-   'canyon_small',
-   'canyon_small',
-   'canyon_small',
-   'skull',
-   'ribs',
-  },
-  animaltypes={'bull','bull','bull','bull','bull','bull'},
+  objtypes=trimsplit[[
+   marsh,
+   marsh,
+   marsh,
+   marsh,
+   mushroom_red,
+   flowers2,
+   flowers2,
+   cactus1,
+   cactus1,
+   cactus2,
+   cactus2,
+   canyon_big,
+   canyon_big,
+   canyon_big,
+   canyon_big,
+   canyon_medium,
+   canyon_medium,
+   canyon_medium,
+   canyon_medium,
+   canyon_medium,
+   canyon_small,
+   canyon_small,
+   canyon_small,
+   skull,
+   ribs
+  ]],
+  animaltypes=trimsplit'bull,bull,bull,bull,bull,bull',
   objdist=26,
  },
  { -- droid world
-  wpal={133,130,1,1,1},
+  wpal=trimsplit'133,130,1,1,1',
   surfacecolor=13,
-  objtypes={
-   'marsh',
-   'droidpillar1',
-   'droidpillar2',
-   'droidpillar3',
-   'droidpillar4',
-   'droidpillar5',
-   'droidpillar6',
-  },
+  objtypes=trimsplit[[
+   marsh,
+   droidpillar1,
+   droidpillar2,
+   droidpillar3,
+   droidpillar4,
+   droidpillar5,
+   droidpillar6
+  ]],
   -- animaltypes={'bull'},
-  animaltypes={'droid','droid','droid','droid','droid','droid','droid','droid','droid','droid'},
-  objdist=22,
+  animaltypes=trimsplit'droid,droid,droid,droid,droid,droid,droid,droid,droid,droid',
+  objdist=18,
+  droidworld=true,
  },
 }
 
@@ -1220,6 +1259,7 @@ mapsize=255
 
 function createplanet(_planettype)
  -- _planettype=planettypes[13] -- debug
+ _planettype=planettypes[5] -- debug
  local _rndseed=rnd()
  srand(_rndseed)
 
@@ -1261,7 +1301,7 @@ function createplanet(_planettype)
 
  local _tooclosedist=_planettype.objdist
 
- for _i=1,50 do
+ for _i=1,70 do
   local _x,_y,_tooclose
   local _tries=0
   repeat
@@ -1278,18 +1318,24 @@ function createplanet(_planettype)
 
    _tries+=1
 
-   if _tries > 20 then
+   if _tries > 10 then
     break
    end
 
   until _tooclose == nil
 
-  local _obj=clone(objtypes[rnd(_planettype.objtypes)])
-  _obj.x=_x
-  _obj.y=_y
+  -- debug(#_planettype.objtypes)
+  -- debug(rnd(_planettype.objtypes))
+  if _tries <= 10 then
+   local _obj=clone(objtypes[rnd(_planettype.objtypes)])
+   _obj.x=_x
+   _obj.y=_y
 
-  add(_mapobjs,_obj)
+   add(_mapobjs,_obj)
+  end
  end
+
+ debug(#_mapobjs)
 
  local _animals={}
  local _loops=min(5+flr(score/100),50)
@@ -1316,7 +1362,9 @@ function createplanet(_planettype)
   local _x=rnd(mapsize-_tooclosedist)
   local _y=rnd(mapsize-_tooclosedist)
 
-  local _wreck=clone(objtypes[rnd{'martianwreck','taurienwreck'}])
+  local _wrecktype=rnd{'martianwreck','taurienwreck'}
+
+  local _wreck=clone(objtypes[_wrecktype])
   _wreck.x=_x
   _wreck.y=_y
   add(_mapobjs,_wreck)
@@ -1328,14 +1376,16 @@ function createplanet(_planettype)
    add(_mapobjs,_linkedobj)
   end
 
+  if _wrecktype == 'taurienwreck' and rnd() > 0.75 then
+   local _trap=clone(animaltypes.trap)
+   _trap.x=_x-32
+   _trap.y=_y
+   closetrap(_trap)
+   add(_mapobjs,_trap)
+  end
+
   _haswreck=true
  end
-
- local _trap=clone(animaltypes.trap)
- _trap.x=0
- _trap.y=0
- closetrap(_trap)
- add(_mapobjs,_trap)
 
  return {
   rndseed=_rndseed,
@@ -1344,13 +1394,19 @@ function createplanet(_planettype)
   surfacecolor=_planettype.surfacecolor,
   animals=_animals,
   haswreck=_haswreck,
+  droidworld=_planettype.droidworld,
  }
 end
 
 function nextsector()
  sfx(-1,2)
 
- local _planetcount=rnd{1,2,2,2,3,3}
+ for _,_faction in pairs(factions) do
+  _faction.alertc=nil
+  _faction.firingc=nil
+ end
+
+ local _planetcount=rnd(trimsplit'1,2,2,2,3,3')
 
  sector={
   planets={}
@@ -1360,10 +1416,6 @@ function nextsector()
   add(sector.planets,createplanet(rnd(planettypes)))
  end
 
- for _,_faction in pairs(factions) do
-  _faction.alertc=nil
-  _faction.firingc=nil
- end
 end
 
 -- planet scene
@@ -1386,21 +1438,20 @@ function planetinit(_planetid)
  factions.droid.landingc=180
  factions.droid.talkingc=140
 
- guy={
-  x=mapsize/2,
-  y=mapsize/2,
-  sx=0,
-  sy=85,
-  sw=6,
-  sh=6,
+ guy.x=mapsize/2
+ guy.y=mapsize/2
 
-  spd=1,
-  talkingc=0,
-  walkingc=0,
-  runningc=0,
-  walksfx=6,
-  samplingc=0,
- }
+ guy.sx=0
+ guy.sy=85
+ guy.sw=6
+ guy.sh=6
+
+ guy.spd=1
+ guy.talkingc=0
+ guy.walkingc=0
+ guy.runningc=0
+ guy.walksfx=6
+ guy.samplingc=0
 
  pal(sector.planets[1].wpal,1)
 
@@ -1457,13 +1508,13 @@ function planetupdate()
   if btn(5) then
    guy.runningc+=1
   else
-   guy.runningc=max(0,guy.runningc-2)
+   guy.runningc=0
   end
 
   lookinginsamplecase=nil
 
   if guy.runningc > 30 and not guy.panting then
-   messages[1]=rnd{'*pant pant','*huff puff','*wheeeeze'}
+   messages[1]=rnd(trimsplit'*pant pant,*huff puff,*wheeeeze')
    guy.panting=true
   end
 
@@ -1474,7 +1525,7 @@ function planetupdate()
      _movey*=-3
      guy.panting=true
      guy.runningc=24
-     messages[1]=rnd{'ouch','ouf','argh','ow','owie'}
+     messages[1]=rnd(trimsplit'ouch,ouf,argh,ow,owie')
      sfx(rnd{16,17})
     end
    end
@@ -1544,6 +1595,7 @@ function planetupdate()
    _trap.targetx=guy.x
    _trap.targety=guy.y
    add(sector.planets[1].animals,_trap)
+   sfx(34)
   else
    guy.talkingc=8
    sfx(rnd{0,1,2})
@@ -1763,18 +1815,16 @@ end
 
 function storagedraw(_obj)
  if _obj.inrange then
-
+  local _index=_obj.index
+  
   actiontitle='sample storage'
-
+  
   if _obj.broken then
    showbrokentitle=true
-   if storages[_index] then
-    storages[_index]=nil
-   end
+   storages[_index]=nil
    return
   end
 
-  local _index=_obj.index
   local _showsamplecasearrow=nil
 
   local _x=_obj[1]-4
@@ -1805,6 +1855,7 @@ samplecolorvalues={
  [10]=2, -- bloody orange / taurien blood
  [8]=10, -- taurien blood
  [11]=12, -- mars blood
+ [7]=10, -- droid blood
 }
 
 function getseedquality()
@@ -1995,12 +2046,12 @@ function resetshipobjs()
       local _sample=samples[samplesel]
       if fuel == 5 then
        add(messages,'tank is full')
-      elseif _sample == nil and fuel == 0 then
-       add(messages,'tank is empty')
       elseif _sample == 13 then
        fuel+=1
        deli(samples,samplesel)
        sfx(14)
+      elseif fuel == 0 then
+       add(messages,'tank is empty')
       else
        add(messages,'only water for fuel')
        sfx(31)
@@ -2035,7 +2086,7 @@ function resetshipobjs()
 
       drawsamplecase(39,98,true)
 
-      if #samples > 0 then
+      if fuel < 5 and #samples > 0 then
        actiontitle='\014\x8e\015 refuel with water'
       end
      end
@@ -2195,44 +2246,59 @@ function resetshipobjs()
       end
      end
 
-     -- todo: better check for hostile
-     if fuel == 0 or factions.droid.alertc == 0 or _obj.rebootingc then
-      pset(103,76,8)
-     end
-     if _obj.inrange and not traveling then
-      rectfill(17,10,109,51,3)
+     local _blink=(t()*6)%2 > 1
 
-      if _obj.rebootingc then
-       print('rebooting...',21,14,11)
-       rectfill(21,23,81-_obj.rebootingc,26,11)
-       return
+     if not traveling then
+      -- todo: better check for hostile
+      if not _obj.broken then
+       if _blink then
+        if factions.droid.alertc == 0 or _obj.rebootingc then
+         pset(103,76,8)
+        elseif sector.planets[1].haswreck then
+         pset(103,76,11)
+        end
+       end
+
+       if fuel == 0 then
+        pset(104,76,8)
+       elseif #sector.planets == 1 then
+        pset(104,76,11)
+       end
       end
 
-      if fuel == 0 then
-       _obj.c-=1
-       if _obj.c <= 0 then
-        _obj.c=16
+      if _obj.inrange then
+       line(98,74,100,74,11)
+       line(98,76,99,76,11)
+ 
+       rectfill(17,10,109,51,3)
+ 
+       if _obj.rebootingc then
+        print('rebooting...',21,14,11)
+        rectfill(21,23,81-_obj.rebootingc,26,11)
+        return
        end
-       if _obj.c % 16 > 8 then 
+ 
+       if fuel == 0 then
         print('no fuel',78,14,8)
        end
-      end
-
-      print(_obj.broken and rnd() > 0.5 and 'navcdm' or 'navcom',21,14,11)
-      print('orbiting planet',21,23,11)
-
-      if factions.droid.alertc == 0 then
-       print('hostile ship near',21,32,8)
-      elseif _obj.broken then
-       print('system unstable',21,32,8)
-      elseif sector.planets[1].haswreck and (t()*6)%2 > 1 then
-       print('distress signal',21,32,11)
-      end
-
-      if #sector.planets > 1 then
-       print('> orbit next planet',21,41,11)
-      else
-       print('> warp to next sector',21,41,11)
+       print(_obj.broken and rnd() > 0.5 and 'navcdm' or 'navcom',21,14,11)
+       print('orbiting planet',21,23,11)
+  
+       if _obj.broken then
+        print('system unstable',21,32,8)
+       elseif _blink then
+        if factions.droid.alertc == 0 then
+         print('hostile ship near',21,32,8)
+        elseif sector.planets[1].haswreck then
+         print('distress signal',21,32,11)
+        end
+       end
+  
+       if #sector.planets > 1 then
+        print('> orbit next planet',21,41,11)
+       else
+        print('> warp to next sector',21,41,11)
+       end
       end
      end
     end,
@@ -2290,7 +2356,7 @@ end
 
 function shipinit()
  lookinginsamplecase=true
- pal({1,130,3,133,5,6,7,8,9,137,11,12,13,14,15},1)
+ pal(trimsplit'1,130,3,133,5,6,7,8,9,137,11,12,13,14,15',1)
 
  stars={}
 
@@ -2347,7 +2413,7 @@ function shipupdate()
    local _floorobjs=shipobjs[_i]
    for _obj in all(_floorobjs) do
     _obj.firstframe=nil
-    if _i == guy.floor and isinsiderange(guy.x,_obj[1],_obj[2]) then
+    if _i == guy.floor and mid(_obj[1],guy.x,_obj[2]) == guy.x then
      if not _obj.inrange then
       _obj.firstframe=true
      end
@@ -2367,7 +2433,7 @@ function shipupdate()
 
   if factions.droid.alertc == 0 then
    if not factions.droid.firingc then
-    factions.droid.firingc=120+flr(rnd(60))
+    factions.droid.firingc=90+flr(rnd(60))
    end
 
    factions.droid.firingc-=1
@@ -2415,6 +2481,12 @@ function shipupdate()
 
    if traveling == 'orbiting' then
     fuel=max(0,fuel-_fuelconsumption)
+   end
+
+   if traveling == 'warping' or traveling == 'orbiting' then
+    if sector.planets[1].droidworld then
+     factions.droid.alertc = 10
+    end
    end
 
    if traveling == 'down' then
@@ -2491,7 +2563,7 @@ function shipdraw()
  end
 
  -- draw planet
- if sector.planets[1] and traveling != 'warping' then
+ if traveling != 'warping' then
   local _x=64
   if traveling == 'orbiting' then
    _x+=travelc*2.5
@@ -2569,6 +2641,13 @@ function shipdraw()
  -- draw message
  drawmessages()
 
+ -- rectfill(5,5,15,14,5)
+ -- -- circfill(10,10,4,5)
+ -- local _r=-t()/20
+ -- local _x=cos(_r)*4
+ -- local _y=sin(_r)*4
+ -- line(10,10,10+_x,10+_y,7)
+
 end
 
 
@@ -2584,7 +2663,7 @@ function deadinit(_drawies)
 
  ts=t()
 
- pal({1,136,3,4,5,6,7,136,9,137,138,8,13,14,15},1)
+ pal(trimsplit'1,136,3,4,5,6,7,136,9,137,138,8,13,14,15',1)
  
  _update=deadupdate
  _draw=deaddraw
@@ -2661,16 +2740,16 @@ e0556560e0556560eeeee000eee04222222240eeeeee00022000eeeeee0eeeee0eeee000000eeeee
 e0ddd0eee0d0eeeeececeeeeeeeeeeeee44eeeee020eeeeee040ee02112100212110eeeeeeeeeee11111111111111111111111111111111111111111111eeeee
 ee0d0eee0ddd0eeeececeee555eeeeeeeee44eee040eeeeee040eeee0eeeeeeeeeeeeeeeeeeeeee1111111111111111111111111111111111111111111111eee
 eee0eeee0d0d0eeeeeeeeeeeeee44eeeeeeee4e04220eeee04220ee020eeeeeeeeeeeeeeeeeeeee111111111111111111111111111111111111111111111111e
-eeeeeeee00e00eeeeeeeeeeeeeeeeeee0000eeeee0000eee000eee0210eeeeeeeeeeeeeeeeeeeee1111111111111111111111111111111111111111111111111
-eeeeeeeeeeeeeeee000eeeeeeeeeeee044440eee0c0c00e04120e02110eeeeeeeeeeeeeeeeeeeee1111111111111111111111111111111111111111111111111
+eeeeeeee00e00eeeeeeeeeeeeeeeeeee0000eeeee0000eee000eee0210eeeeeeeeeaaaaeeeeeeee1111111111111111111111111111111111111111111111111
+eeeeeeeeeeeeeeee000eeeeeeeeeeee044440eee0c0c00e04120e02110eeeaaeeeeeeeeeeeeeeee1111111111111111111111111111111111111111111111111
 eeee000eeeeeeee05550eeee444eee04999940e0c0c0500412220021210eeeeeeeeeeeeeeeeeeeee11111111111111111111111111111111111111111111111e
-e0e05550eeeeeee05055000eeeeeee099999900c0c050ee0000eeeeee0eeeeeeeeeeeeeeeeeeeeeeeeee11111111111111111111111111eeeeeeeeeeeeeeeeee
+e0e05550eeeeeee05055000eeeeeee099999900c0c050ee0000eeeeee0eeeeeeeeaaaeeeeeeeeeeeeeee11111111111111111111111111eeeeeeeeeeeeeeeeee
 0e0050500eeeeee050500ee0eeeeeee099990e0c0c050e0cccc0eeee0300eeeeeeeeeeeeeeeeeeeeeeeee11111111111111111111eeeeeeeeeeeeeeeeeeeeeee
 0ee0000dd0eeeee0000dd0eeeeeeeeee0000ee0c0c02220c5c5c0eee03030eeeeeeeeeeeeeeeeeee1eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeee0e09d90eeee0e009d90eeeeee0000000eeeee000ee0cccccc0e003330eeeeeeeeeeeeeeeeeee11eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeee0ee0000eeee0eee000eeeeee044444440eee04410eeee000ee030300eeeeeeeeeeeeeeeeeee1111eeeeeeeeeeeee1eeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+eeee0e09d90eeee0e009d90eeeeee0000000eeeee000ee0cccccc0e003330eeeeee7777eeeeeeeee11eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+eeee0ee0000eeee0eee000eeeeee044444440eee04410eeee000ee030300e77eeeeeeeeeeeeeeee1111eeeeeeeeeeeee1eeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eee0ee0eeee0ee0eeeeeeeeeeee04999999940ee04120eee0440ee03330eeeeeeeeeeeeeeeeeeeee1111eeeeeeee1eee11eeeeeee1eeeee1eeeeeeeeeeeeeeee
-eee0000eeee0000eeeeeeeeeeee09999999990e04120eeee04120ee0030eeeeeeeeeeeeeeeeeeee111111eeeeee1eeee111eeeeee1eeee1eee1eeeeeeeeeeeee
+eee0000eeee0000eeeeeeeeeeee09999999990e04120eeee04120ee0030eeeeeee777eeeeeeeeee111111eeeeee1eeee111eeeeee1eeee1eee1eeeeeeeeeeeee
 0e08aaa0ee08aaa0eeeeeeeeeeee0999999990ee02220ee041120eee030eeeeeeeeeeeeeeeeeeeee111111eee1111eee1111eee1e1ee1111ee11eeeeeeeeeeee
 e0889a9000889a90eeeeeeeeeeeee00999990eee04120ee04120eeee030eeeeeeeeeeeeeeeeeeeeee111111111111111111111111111111111111eeeeeeee1ee
 e088aaa0e088aaa0eeeeeeeeeeeeeee00000eee041220ee041120eeee00eeeeeeeeeeeeeeeeeeeeee1111111111111111111111111111111111111eeeeee1eee
@@ -2748,10 +2827,10 @@ eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee5422011111111111022200000000000002220111
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee54420111111111111104011111111111110401111d1111040110011118111040ee00000eeeee0000000eeeeee
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee4542011100001110110401111110000111040110000011040109901000001040e0545350eeee033330e0eeeee
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee55420110dddd0105010401111105555011040110555011040109901055501040e0555550eeee033330000eeee
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee44420110cccc0105010401111105555011040110555011040111111055501040e05d5350eeee033335b500eee
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee44420110cccc0105010401111105555011040110555011040111111055501040e05d5350eeee0333353300eee
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee55420110dddd0105010401551105555011040110555011040106601055501040e0555550ee00033335550e0ee
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee45420110cccc0105010401551105555011040110555011040106601055501040e05d5350ee05555555550222e
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee54422010dddd0105010401111110440111040110555011040111111055501040e0555550ee055555522222222
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee54422010dddd0105010401111110440111040110555011040111111055501040e0555550ee044444422222222
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee5442222222222222222222222222222222222222222222222222222222222222222222222222222244444442
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee44222444444444444444444222222224444444444444444444444444444444444444444444444444444422
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee4442222222222222222224220000002242222222222242222222222222222222224222222222444444422e
@@ -2791,8 +2870,8 @@ __sfx__
 001000100605006040005500054005050050300175001740060500604000550005400505005030027500274000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000800001e6200f550226200f550226200f550226200f550246200f550246200f550256200f550276200f550296200f5502a6200f5502b6200f5502e6200f5502e6200f5502d6200f550296403b650146500c650
 000700000362003620036200462005620076200b6200f62013620176201b6201e6202062021620226202362023620236202362021620206201d6201a6201762014620116200d6200b62009620056200362000620
-0003000016330123300f3100b3101261012610126101161011610106100f6100d6100c6100a610086100761005610046100161000610066000560004600036000260002600006000060000600006000060000600
-0003000003620046200662006620096200a6200d6200e62011620166201b6201d620256202e6203f620266002e6003c6003f60000000000000000000000000000000000000000000000000000000000000000000
+000600002243022430164300d4301261012610126101161011610106100f6100d6100c6100a610086100761005610046100161000610066000560004600036000260002600006000060000600006000060000600
+000600000b420174202242022420096100a6100d6100e61011610166101b6101d610256102e6103f610266002e6003c6003f60000000000000000000000000000000000000000000000000000000000000000000
 001000000211002110001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
 00040000286201f6201a620166201262011620106200f6200f6200f6200f6200e6200e6200d6200d6200d6200d6200c6200b6200a620096200962008620076200662005620046200462003620026200062000620
 0005000000610006100061000610006100061000610006100061000610006100061000610006100061001610026100361005610056100661007610086100b6100b6100f6101161014620176201b6302264026650
@@ -2800,4 +2879,5 @@ __sfx__
 000a00002c5502d5502c5502b550275501d55017550125500e5500955006550035500255001550005500055000550005500055000550005500055000540005000050000500047500475004700047000450008700
 000900001a05014050080501500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000b00001f050150500a0500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000600003645036450295502655038650376501b550185501855000000124500f4500d55000000000000150000500005000050000000000000000000000000000000000000000000000000000000000000000000
+000500003b6503a650295502655032450324501b550185501855000000154500f4500d55005450024500150000500005000050000000000000000000000000000000000000000000000000000000000000000000
+000600001514016150211500010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
