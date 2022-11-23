@@ -4,7 +4,7 @@ __lua__
 -- the panspermia guy 1.0
 -- by ironchest games
 
-cartdata'ironchestgames_thepanspermiaguy_v1-dev8'
+cartdata'ironchestgames_thepanspermiaguy_v1-dev10'
 
 --[[ cartdata layout
 
@@ -14,6 +14,8 @@ cartdata'ironchestgames_thepanspermiaguy_v1-dev8'
 
 11 - 25 = broken ship objects floor 1
 26 - 40 = broken ship objects floor 2
+
+41,42,43,44 = seed cannon samples
 
 59 = is game saved
 60 = last seed score
@@ -32,64 +34,23 @@ end
 poke(0x5f5c,-1) -- disable auto-repeat for btnp
 
 -- note: set special char o-button to look like c-button if gpio 1 is set, pico8_gpio[0]=1 in js
+poke(0x5600, 5)    -- char width
+poke(0x5601, 7)    -- char width for high cars
+poke(0x5602, 5)    -- char height
+poke(0x5603, 0)    -- draw x offset
+poke(0x5604, 0)    -- draw y offset
+
+poke(0x8e*8+0x5600,0b0111110)
+poke(0x8e*8+0x5601,0b1100011)
 poke(0x8e*8+0x5602,peek(0x5f80) == 0 and 107 or 123)
--- poke(0x8e*8+0x5602,123)
+poke(0x8e*8+0x5603,0b1100011)
+poke(0x8e*8+0x5604,0b0111110)
 
 -- pink as transparent
 palt(14,true)
 palt(0,false)
 
--- function s2t(_s)
---  local _t={}
---  local _key=''
---  local _value=''
---  local _i=1
---  local _mode='search'
-
---  repeat
---   local _c=_s[_i]
-
---   if _c == '{' then
---    -- todo
---   elseif _c == '$' then
---    _mode='key'
---    _key=''
---   elseif _c == '=' then
---    _mode='value'
---    _value=''
---   elseif _c == ',' or _c == '}' then
---    _mode='kvpairend'
---   end
-
---   debug('char "'.._c..'"  mode: '.._mode..' key: '.._key..' value: '.._value)
-  
---   if _mode == 'search' then
---   elseif _mode == 'kvpairend' then
---    _value=tonum(_value) or _value
---    _t[_key]=_value
---    _mode='search'
---   elseif _mode == 'key' and _c != '$' then
---    _key=_key.._c
---   elseif _mode == 'value' and _c != '=' then
---    _value=_value.._c
---   end
-
---   _i+=1
-
---   debug('char "'.._c..'"  mode: '.._mode..' key: '.._key..' value: '.._value)
---   debug('---')
---  until _i == #_s+1
-
---  debug(_t['12'])
---  debug(_t.b)
-
---  return _t
--- end
-
--- -- debug(s2t'{ $a=1,$b=2}')
--- -- debug(s2t'{ $12=1,$b=2}')
--- debug(s2t'{ 14,3,43,22 }')
-
+-- utils
 function contains(_t,_value)
  for _v in all(_t) do
   if _v == _value then
@@ -141,6 +102,27 @@ function wrap(_min,_n,_max)
  return (((_n-_min)%(_max-_min))+(_max-_min))%(_max-_min)+_min
 end
 
+-- 78 token s2t (depends on trimsplit)
+function s2t(_t)
+ local _result={}
+ local _kvstrings=trimsplit(_t)
+ for _kvstring in all(_kvstrings) do
+  local _kvpair=split(_kvstring,'=')
+  local _value=_kvpair[2]
+  for _i,_v in ipairs(split'true,false,nil') do
+   if _value == _v then
+    _value=({true,false})[_i]
+   end
+  end
+  if type(_value) == 'string' then
+   _value=sub(_value,2,#_value-1)
+  end
+  _result[_kvpair[1]]=_value
+ end
+ return _result
+end
+
+-- helpers
 function drawmessages()
  if #messages > 0 then
   local _strlen=#messages[1]*4
@@ -174,6 +156,19 @@ function removefromsamplecase(_index)
   dset(_i,samples[_i])
  end
  return _result
+end
+
+function addsampletoseed(_sample)
+ add(seed,_sample)
+ dset(40+#seed,_sample)
+end
+
+function clearseedcannon()
+ dset(41,0)
+ dset(42,0)
+ dset(43,0)
+ dset(44,0)
+ seed={}
 end
 
 floordatapos={10,25}
@@ -247,7 +242,7 @@ function resetgame()
   dset(8,0)
 
  else
-  -- load saved samples
+  -- load saved sample case
   for _i=1,5 do
    local _savedvalue=dget(_i)
    if _savedvalue == 0 then
@@ -256,6 +251,17 @@ function resetgame()
     samples[_i]=_savedvalue
    end
   end
+
+  -- load seed cannon samples
+  for _i=1,4 do
+   local _savedvalue=dget(40+_i)
+   if _savedvalue == 0 then
+    seed[_i]=nil
+   else
+    seed[_i]=_savedvalue
+   end
+  end
+
 
   -- load saved broken ship objects
   for _floorindex,_floorobjs in ipairs(shipobjs) do
@@ -891,49 +897,6 @@ animaltypes={
 --   sh=9,
 --   linked=trimsplit'taurienwreck_wing,taurienwreck_ground,deadtaurien,deadtaurien_blood',
 --  },
---  droidpillar1={
---   sx=68,
---   sy=0,
---   sw=9,
---   sh=7,
---   solid=true,
---  },
---  droidpillar2={
---   sx=77,
---   sy=0,
---   sw=6,
---   sh=5,
---   solid=true,
---  },
---  droidpillar3={
---   sx=68,
---   sy=7,
---   sw=9,
---   sh=6,
---   solid=true,
---  },
---  droidpillar4={
---   sx=68,
---   sy=13,
---   sw=9,
---   sh=7,
---   solid=true,
---  },
---  droidpillar5={
---   sx=83,
---   sy=0,
---   sw=9,
---   sh=13,
---   solid=true,
---  },
---  droidpillar6={
---   sx=77,
---   sy=5,
---   sw=6,
---   sh=4,
---   solid=true,
---  },
--- }
 
 
 -- sx,sy,sw,sh,samplecolor,ground,solid,dangerous,sunken,walksfx,action
@@ -1088,30 +1051,67 @@ objtypes={
  },
 }
 
-plantsamplechances={
- [15]=1,
- [9]=1,
- [10]=0.675,
- [6]=0.5,
- [8]=0.05,
- [11]=0.025,
- [7]=0.01,
-}
+plantsamplechances=s2t[[
+ 15=1,
+ 9=1,
+ 10=0.675,
+ 6=0.5,
+ 8=0.05,
+ 11=0.025,
+ 7=0.01
+ ]]
+ 
 
 planettypes={
  droidworld={
-  wpal=trimsplit'133,130,1,1,1',
+  wpal=split'133,130,1,1,1',
+  groundcolor=133,
   surfacecolor=13,
-  objtypes=trimsplit[[
-   marsh,
-   droidpillar1,
-   droidpillar2,
-   droidpillar3,
-   droidpillar4,
-   droidpillar5,
-   droidpillar6
-  ]],
-  animaltypes=trimsplit'droid,droid,droid,droid,droid,droid,droid,droid,droid,droid',
+  objtypes={
+   { -- droidpillar1
+    sx='68',
+    sy='0',
+    sw='9',
+    sh='7',
+    solid='1',
+   },
+   { -- droidpillar2
+    sx='77',
+    sy='0',
+    sw='6',
+    sh='5',
+    solid='1',
+   },
+   { -- droidpillar3
+    sx='68',
+    sy='7',
+    sw='9',
+    sh='6',
+    solid='1',
+   },
+   { -- droidpillar4
+    sx='68',
+    sy='13',
+    sw='9',
+    sh='7',
+    solid='1',
+   },
+   { -- droidpillar5
+    sx='83',
+    sy='0',
+    sw='9',
+    sh='13',
+    solid='1',
+   },
+   { -- droidpillar6
+    sx='77',
+    sy='5',
+    sw='6',
+    sh='4',
+    solid='1',
+   }
+  },
+  animaltypes=split'droid,droid,droid,droid,droid,droid,droid',
   objdist=18,
   droidworld=true,
  },
@@ -1193,9 +1193,7 @@ function fixpal(_pal)
  return _pal
 end
 
-function getplanettypes()
- local _planettypes={}
-
+function createplanettype()
  -- palette
  local _wpal,_groundcolor,_surfacecolor
  
@@ -1259,23 +1257,14 @@ function getplanettypes()
   add(_animaltypes,rnd(_allanimaltypes))
  end
 
- -- debug('_animaltypes')
- -- foreach(_animaltypes,debug)
-
- add(_planettypes,{
+ return {
   wpal=fixpal(_wpal),
   groundcolor=_groundcolor,
   surfacecolor=_surfacecolor,
   objtypes=_objtypes,
   animaltypes=_animaltypes,
   objdist=36-flr(rnd(6))-flr((dget(62)/scorethreshold)*20),
- })
-
- -- add(_planettypes,planettypes.droidworld)
- -- add(_planettypes,planettypes.martianworld)
- -- add(_planettypes,planettypes.taurienworld)
-
- return _planettypes
+ }
 end
 
 
@@ -1446,7 +1435,7 @@ function nextsector()
   _faction.firingc=nil
  end
 
- -- local _planetcount=rnd(trimsplit'1,2,2,2,3,3')
+ -- local _planetcount=rnd(trimsplit'1,1,2,2,2,2,3,3')
  local _planetcount=1
 
  sector={
@@ -1454,8 +1443,11 @@ function nextsector()
  }
 
  for _i=1,_planetcount do
-  local _planettypes=getplanettypes()
-  add(sector.planets,createplanet(rnd(_planettypes)))
+  if rnd() < (dget(62)/scorethreshold)*0.25  then
+   add(sector.planets,createplanet(planettypes.droidworld))
+  else
+   add(sector.planets,createplanet(createplanettype()))
+  end
  end
 
 end
@@ -1809,10 +1801,10 @@ function drawelevator(_obj)
  end
 end
 
-function drawseed(_x,_y,_spin)
+function drawseed(_spin)
  for _i=1,#seed do
   local _ii=_i-1
-  pset(_x+_ii%2,_y+flr(_ii/2),seed[_i])
+  pset(49+_ii%2,76+flr(_ii/2),seed[_i])
  end
  if _spin then
   add(seed,deli(seed,1))
@@ -1948,14 +1940,14 @@ function resetshipobjs()
     29,43,
     cantbreak=true,
     inputhandler=function(_obj)
-     if btnp(4) and not seed.score then
+     if btnp(4) and not travelblocked then
       traveling='down'
       travelc=30
       sfx(27)
      end
     end,
     draw=function(_obj)
-     if _obj.inrange and not seed.score then
+     if _obj.inrange and not travelblocked then
       sspr(92,87,7,4,31,84)
       actiontitle='\014\x8e\015 go to surface'
      end
@@ -2136,16 +2128,15 @@ function resetshipobjs()
      44,49,
      c=0,
      inputhandler=function(_obj)
-      if not seed.score then
+      if _obj.c == 0 then
        sampleselectinputhandler(_obj)
 
        if _obj.inputlastframe == true and not btn(4) then
         _obj.inputlastframe=nil
         if #samples > 0 and #seed < 4 then
-         add(seed,removefromsamplecase(samplesel))
+         addsampletoseed(removefromsamplecase(samplesel))
          sfx(14)
         elseif #seed == 4 then
-         seed.score=getseedquality()
          _obj.c=90
          sfx(12)
         end
@@ -2159,6 +2150,7 @@ function resetshipobjs()
       end
 
       if _obj.c > 0 then
+       travelblocked=true
        actiontitle=''
        _obj.c-=1
        if _obj.c % 30 < 15 then
@@ -2167,10 +2159,12 @@ function resetshipobjs()
 
        if _obj.c == 0 then
         if not (_obj.broken and rnd() > 0.675) then
-         dset(60,seed.score)
+         local _seedscore=getseedquality()
+         dset(60,_seedscore)
          dset(61,dget(61)+1)
-         dset(62,dget(62)+seed.score)
-         seed.y=60
+         dset(62,dget(62)+_seedscore)
+         _obj.seedy=60
+         clearseedcannon()
          
          if not factions.droid.alertc then
           factions.droid.alertc=300+flr(rnd(300))
@@ -2180,29 +2174,33 @@ function resetshipobjs()
 
          sfx(13)
         else
-         seed.score=nil
          sfx(31)
         end
        end
 
        pset(43,75,11)
 
-      elseif _obj.inrange and #seed == 4 and not seed.y then
+      elseif _obj.inrange and #seed == 4 then
        actiontitle='\014\x8e\015 shoot seed'
        pset(43,75,11)
       elseif _obj.inrange and #samples > 0 then
        actiontitle='\014\x8e\015 add sample'
       end
 
-      if seed.y then
-       if seed.y > 30 then
+      if _obj.seedy then
+       if _obj.seedy > 30 then
         sspr(104,85,6,6,47,57)
        end
-       seed.y-=8
+       _obj.seedy-=8
        pset(43,75,11)
+       rectfill(49,_obj.seedy,50,_obj.seedy+1,7)
+       if _obj.seedy < 0 then
+        _obj.seedy=nil
+       end
+      else
+       drawseed(#seed == 4)
       end
 
-      drawseed(49,seed.y or 76,#seed == 4)
      end,
    },
    { -- elevator
@@ -2448,6 +2446,7 @@ function shipupdate()
 
   actiontitle=''
   showbrokentitle=nil
+  travelblocked=nil
 
   for _i=1,2 do
    local _floorobjs=shipobjs[_i]
@@ -2482,14 +2481,6 @@ function shipupdate()
     breakrandomshipobj()
     factions.droid.firingc=nil
     sfx(rnd{19,20})
-   end
-  end
-
-  -- update seed
-  if seed.y then
-   seed.y-=6
-   if seed.y < 0 then
-    seed={}
    end
   end
 
