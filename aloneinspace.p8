@@ -4,7 +4,25 @@ __lua__
 -- the panspermia guy 1.0
 -- by ironchest games
 
-cartdata'ironchestgames_thepanspermiaguy_v1-dev1'
+cartdata'ironchestgames_thepanspermiaguy_v1-dev8'
+
+--[[ cartdata layout
+
+1,2,3,4,5 = sample case
+6,7,8 = sample storages
+9 = fuel
+
+11 - 25 = broken ship objects floor 1
+26 - 40 = broken ship objects floor 2
+
+59 = is game saved
+60 = last seed score
+61 = current nr of seeds
+62 = current score
+63 = highscore
+
+--]]
+
 
 printh('debug started','debug',true)
 function debug(s)
@@ -81,7 +99,7 @@ function contains(_t,_value)
 end
 
 function trimsplit(_str)
- local _newstr,_result='',{}
+ local _newstr=''
  for _i=1,#_str do
   local _chr=_str[_i]
   if _chr != ' ' and _chr != '\n' then
@@ -145,6 +163,27 @@ function updatemessages()
  end
 end
 
+function addtosamplecase(_sample)
+ add(samples,_sample)
+ dset(#samples,_sample)
+end
+
+function removefromsamplecase(_index)
+ local _result=deli(samples,_index)
+ for _i=1,5 do
+  dset(_i,samples[_i])
+ end
+ return _result
+end
+
+floordatapos={10,25}
+function breakrandomshipobj()
+ local _floorindex=rnd{1,2}
+ local _objindex=flr(1+rnd(#shipobjs[_floorindex]))
+ dset(floordatapos[_floorindex]+_objindex,1)
+ shipobjs[_floorindex][_objindex].broken=true
+end
+
 function drawsamplecase(_x,_y,_showarrow)
  sspr(103,0,25,13,_x,_y)
 
@@ -189,15 +228,48 @@ function resetgame()
  lookinginsamplecase=nil
  samples={}
  samplesel=1
- storages={}
  seed={}
- fuel=5
- score=0
- seedsshot=0
- lastseed=0
+
+ resetshipobjs()
+
+ if dget(59) == 0 then -- no ongoing game
+  dset(59,1) -- set ongoing game
+  
+  dset(60,0) -- last seed
+  dset(61,0) -- seeds shot
+  dset(62,0) -- score
+
+  dset(9,5) -- fuel
+
+  dset(6,0) -- storages
+  dset(7,0)
+  dset(8,0)
+
+ else
+  for _i=1,5 do
+   local _savedvalue=dget(_i)
+   if _savedvalue == 0 then
+    samples[_i]=nil
+   else
+    samples[_i]=_savedvalue
+   end
+  end
+
+  for _floorindex,_floorobjs in ipairs(shipobjs) do
+   for _objindex,_obj in ipairs(_floorobjs) do
+    if dget(floordatapos[_floorindex]+_objindex) == 1 then
+     debug('broken')
+     debug(_floorindex)
+     debug(_objindex)
+     debug(floordatapos[_floorindex]+_objindex)
+     _obj.broken=true
+    end
+   end
+  end
+ end
+
  traveling='warping'
  travelc=60
-
 
  factions={
   droid={
@@ -236,8 +308,6 @@ function resetgame()
  deaddrawies={}
 
  particles={}
-
- resetshipobjs()
 end
 
 -- global constants
@@ -258,7 +328,7 @@ takesampleaction={
    add(messages,'sample case is full')
   else
    _target.action=nil
-   add(samples,_target.samplecolor)
+   addtosamplecase(_target.samplecolor)
    guy.samplingc=20
    sector.planets[1].haswreck=nil
    sfx(8)
@@ -875,7 +945,7 @@ objtypes={
   sy='22,29',
   sw='11,8',
   sh='7,6',
-  solid='1,1',
+  lava=true,
   ground=true,
  },
  { -- lavacracks
@@ -1118,9 +1188,6 @@ function fixcolor(_color)
 end
 
 function fixpal(_pal)
- debug('fixpal')
- foreach(_pal,function (c) debug(c) end)
- debug('-- end fixpal')
  for _i=1,#_pal do
   _pal[_i]=fixcolor(_pal[_i])
  end
@@ -1153,14 +1220,14 @@ function getplanettypes()
    _stonehighlight=rnd(stonehighlights[_stonecolor])
   end
 
-  if _leafcolor and _stonehighlight then
-   debug('break!')
-   debug('_leafcolor')
-   debug(_leafcolor)
-   debug('_leafshadow')
-   debug(_leafshadow)
-   debug('_stonehighlight')
-   debug(_stonehighlight)
+  if _leafcolor != 0 and _stonehighlight != 0 then
+   -- debug('break!')
+   -- debug('_leafcolor')
+   -- debug(_leafcolor)
+   -- debug('_leafshadow')
+   -- debug(_leafshadow)
+   -- debug('_stonehighlight')
+   -- debug(_stonehighlight)
    _wpal={
     _shadowcolor,
     _stonecolor,
@@ -1204,10 +1271,10 @@ function getplanettypes()
   -- debug(_result)
   -- local _index=mid(1,flr(_result*#objtypes),18)
   -- debug(flr(_result*#objtypes))
-   local _a=flr((rnd(2)-1+score/scorethreshold)*#objtypes)
+  local _a=flr((rnd(2)-1+dget(62)/scorethreshold)*#objtypes)
   local _index=mid(1,_a,#objtypes)
-  debug('_------a')
-  debug(_a)
+  -- debug('_------a')
+  -- debug(_a)
   local _objtype=objtypes[_index]
   
   -- local _objtypecount=rnd(split'1,1,1,2,2,4') -- todo: good?
@@ -1226,8 +1293,8 @@ function getplanettypes()
   add(_animaltypes,rnd(_allanimaltypes))
  end
 
- debug('_animaltypes')
- foreach(_animaltypes,debug)
+ -- debug('_animaltypes')
+ -- foreach(_animaltypes,debug)
 
  add(_planettypes,{
   wpal=fixpal(_wpal),
@@ -1235,7 +1302,7 @@ function getplanettypes()
   surfacecolor=_surfacecolor,
   objtypes=_objtypes,
   animaltypes=_animaltypes,
-  objdist=36-flr(rnd(6))-flr((score/scorethreshold)*20),
+  objdist=36-flr(rnd(6))-flr((dget(62)/scorethreshold)*20),
  })
 
  -- add(_planettypes,planettypes.droidworld)
@@ -1344,7 +1411,7 @@ function createplanet(_planettype)
  -- debug(#_mapobjs)
 
  local _animals={}
- local _loops=min(5+flr(score/100),50)
+ local _loops=min(1+flr(dget(62)/100),50)
  for _i=1,_loops do
   if rnd() < 1 - 1 / #_planettype.animaltypes then
    local _typ=rnd(_planettype.animaltypes)
@@ -1527,16 +1594,15 @@ function planetupdate()
    guy.panting=true
   end
 
-  if guy.runningc > 0 then
-   for _obj in all(sector.planets[1].mapobjs) do
-    if _obj.solid and dist(guy.x-_movex,guy.y-_movey,_obj.x,_obj.y) < _obj.sw * 0.5 then
-     _movex*=-3
-     _movey*=-3
-     guy.panting=true
-     guy.runningc=24
-     messages[1]=rnd(trimsplit'ouch,ouf,argh,ow,owie')
-     sfx(rnd{16,17})
-    end
+
+  for _obj in all(sector.planets[1].mapobjs) do
+   if dist(guy.x-_movex,guy.y-_movey,_obj.x,_obj.y) < _obj.sw * 0.5 and (guy.runningc > 0 and _obj.solid or _obj.lava) then
+    _movex*=-3
+    _movey*=-3
+    guy.panting=true
+    guy.runningc=24
+    messages[1]=rnd(trimsplit'ouch,ouf,argh,ow,owie')
+    sfx(rnd{16,17})
    end
   end
 
@@ -1811,12 +1877,12 @@ function storageinputhandler(_obj)
    return
   end
   local _index=_obj.index
-  if storages[_index] != nil and #samples < 5 then
-   add(samples,storages[_index])
-   storages[_index]=nil
+  if dget(_index) != 0 and #samples < 5 then
+   addtosamplecase(dget(_index))
+   dset(_index,nil)
    sfx(14)
-  elseif storages[_index] == nil and #samples > 0 then
-   storages[_index]=deli(samples,samplesel)
+  elseif dget(_index) == 0 and #samples > 0 then
+   dset(_index,removefromsamplecase(samplesel))
    sfx(14)
   end
  end
@@ -1830,7 +1896,7 @@ function storagedraw(_obj)
   
   if _obj.broken then
    showbrokentitle=true
-   storages[_index]=nil
+   dset(_index,0)
    return
   end
 
@@ -1839,19 +1905,19 @@ function storagedraw(_obj)
   local _x=_obj[1]-4
   sspr(92,0,11,13,_x,98)
 
-  if storages[_index] != nil and #samples < 5 then
+  if dget(_index) != 0 and #samples < 5 then
    actiontitle='\014\x8e\015 take sample'
    sspr(99,85,5,6,_x+3,113)
-  elseif storages[_index] == nil and #samples > 0 then
+  elseif dget(_index) == 0 and #samples > 0 then
    actiontitle='\014\x8e\015 store sample'
    _showsamplecasearrow=true
   end
 
   drawsamplecase(42,98,_showsamplecasearrow)
 
-  if storages[_obj.index] then
+  if dget(_obj.index) != 0 then
    local _lx=_x+5
-   line(_lx,105,_lx,107,storages[_obj.index])
+   line(_lx,105,_lx,107,dget(_obj.index))
   end
  end
 end
@@ -1961,19 +2027,19 @@ function resetshipobjs()
    },
    { -- storage 1
     71,76,
-    index=1,
+    index=6,
     inputhandler=storageinputhandler,
     draw=storagedraw,
    },
    { -- storage 2
     77,82,
-    index=2,
+    index=7,
     inputhandler=storageinputhandler,
     draw=storagedraw,
    },
    { -- storage 3
     83,88,
-    index=3,
+    index=8,
     inputhandler=storageinputhandler,
     draw=storagedraw,
    },
@@ -1989,8 +2055,8 @@ function resetshipobjs()
        -- todo: add n/a sfx
        return
       end
-      deli(samples,samplesel)
-      add(samples,13)
+      removefromsamplecase(samplesel)
+      addtosamplecase(13)
       sfx(15)
      end
     end,
@@ -2052,14 +2118,13 @@ function resetshipobjs()
      if _obj.inputlastframe == true and not btn(4) then
       _obj.inputlastframe=nil
 
-      local _sample=samples[samplesel]
-      if fuel == 5 then
+      if dget(9) == 5 then
        add(messages,'tank is full')
-      elseif _sample == 13 then
-       fuel+=1
-       deli(samples,samplesel)
+      elseif samples[samplesel] == 13 then
+       dset(9,dget(9)+1)
+       removefromsamplecase(samplesel)
        sfx(14)
-      elseif fuel == 0 then
+      elseif dget(9) == 0 then
        add(messages,'tank is empty')
       else
        add(messages,'only water for fuel')
@@ -2068,8 +2133,8 @@ function resetshipobjs()
      end
     end,
     draw=function(_obj)
-     if fuel > 0 then
-      line(36,79,36,75+(5-fuel),12)
+     if dget(9) > 0 then
+      line(36,79,36,75+(5-dget(9)),12)
 
       rectfill(19,73,20,79,12)
 
@@ -2077,7 +2142,7 @@ function resetshipobjs()
       sspr(106,79,11-_offx,5,10+_offx,74)
      end
 
-     if fuel <= 1 then
+     if dget(9) <= 1 then
       pset(34,73,8)
      end
 
@@ -2086,7 +2151,7 @@ function resetshipobjs()
       _obj.c=6
      end
 
-     if fuel > 0 and _obj.c % 6 > 3 then
+     if dget(9) > 0 and _obj.c % 6 > 3 then
       sspr(102,80,4,5,29,75)
      end
 
@@ -2095,7 +2160,7 @@ function resetshipobjs()
 
       drawsamplecase(39,98,true)
 
-      if fuel < 5 and #samples > 0 then
+      if dget(9) < 5 and #samples > 0 then
        actiontitle='\014\x8e\015 refuel with water'
       end
      end
@@ -2111,7 +2176,7 @@ function resetshipobjs()
        if _obj.inputlastframe == true and not btn(4) then
         _obj.inputlastframe=nil
         if #samples > 0 and #seed < 4 then
-         add(seed,deli(samples,samplesel))
+         add(seed,removefromsamplecase(samplesel))
          sfx(14)
         elseif #seed == 4 then
          seed.score=getseedquality()
@@ -2136,9 +2201,9 @@ function resetshipobjs()
 
        if _obj.c == 0 then
         if not (_obj.broken and rnd() > 0.675) then
-         lastseed=seed.score
-         seedsshot+=1
-         score+=seed.score
+         dset(60,seed.score)
+         dset(61,dget(61)+1)
+         dset(62,dget(62)+seed.score)
          seed.y=60
          
          if not factions.droid.alertc then
@@ -2199,14 +2264,14 @@ function resetshipobjs()
       rectfill(19,11,109,50,5)
       print('highscore: '..tostr(dget(63)),23,14,9)
       line(19,22,109,22,0)
-      print('total score: '..tostr(score),23,26,12)
-      print('seeds: '..tostr(seedsshot),23,34,11)
+      print('total score: '..tostr(dget(62)),23,26,12)
+      print('seeds: '..tostr(dget(61)),23,34,11)
 
       if _obj.broken then
        print((_obj.broken and rnd() > 0.5 and 'la5t sfed: ' or 'last seed: ')..tostr(flr(rnd(9999))),23,42,6)
       else
-       local _quality=flr((lastseed/38)*100)
-       print('last seed: '..tostr(lastseed)..' ('..tostr(_quality)..'%)',23,42,6)
+       local _quality=flr((dget(60)/38)*100)
+       print('last seed: '..tostr(dget(60))..' ('..tostr(_quality)..'%)',23,42,6)
       end
      end
 
@@ -2234,7 +2299,7 @@ function resetshipobjs()
        end
       end
 
-      if fuel > 0 then
+      if dget(9) > 0 then
        if #sector.planets == 1 then
         traveling='warping'
        else
@@ -2268,7 +2333,7 @@ function resetshipobjs()
         end
        end
 
-       if fuel == 0 then
+       if dget(9) == 0 then
         pset(104,76,8)
        elseif #sector.planets == 1 then
         pset(104,76,11)
@@ -2287,7 +2352,7 @@ function resetshipobjs()
         return
        end
  
-       if fuel == 0 then
+       if dget(9) == 0 then
         print('no fuel',78,14,8)
        end
        print(_obj.broken and rnd() > 0.5 and 'navcdm' or 'navcom',21,14,11)
@@ -2448,8 +2513,7 @@ function shipupdate()
    factions.droid.firingc-=1
 
    if factions.droid.firingc == 0 then
-    local _shipobj=rnd(shipobjs[rnd{1,2}])
-    _shipobj.broken=true
+    breakrandomshipobj()
     factions.droid.firingc=nil
     sfx(rnd{19,20})
    end
@@ -2484,12 +2548,13 @@ function shipupdate()
    end
 
    if traveling == 'warping' then
-    fuel=max(0,fuel-_fuelconsumption)
+    dset(9,max(0,dget(9)-_fuelconsumption))
+    debug(dget(9))
     nextsector()
    end
 
    if traveling == 'orbiting' then
-    fuel=max(0,fuel-_fuelconsumption)
+    dset(9,max(0,dget(9)-_fuelconsumption))
    end
 
    if traveling == 'warping' or traveling == 'orbiting' then
@@ -2535,7 +2600,7 @@ function shipupdate()
 
  -- update stars
  for _s in all(stars) do
-  local _spd=fuel == 0 and 0.25 or 1
+  local _spd=dget(9) == 0 and 0.25 or 1
   if traveling == 'warping' or traveling == 'orbiting' then
    _spd=4
   end
@@ -2665,10 +2730,11 @@ function deadinit(_drawies)
  sfx(30)
  deaddrawies=_drawies
 
- local _curhiscore=dget(63)
- if score > _curhiscore then
-  dset(63,score)
+ if dget(62) > dget(63) then -- score > highscore
+  dset(63,dget(62)) -- set new highscore
  end
+
+ dset(59,0) -- reset save
 
  ts=t()
 
@@ -2713,7 +2779,7 @@ function deaddraw()
  print('deceased',48,32,12)
  local _highscorestr='highscore: '..tostr(dget(63))
  print(_highscorestr,126-#_highscorestr*4,2,10)
- print('score: '..tostr(score),2,2,10)
+ print('score: '..tostr(dget(62)),2,2,10)
  if t()-ts > 2 then
   print('\014\x8e\015 wake up new clone',24,118,9)
  end
