@@ -233,6 +233,7 @@ function resetgame()
  resetshipobjs()
 
  if dget(59) == 0 then -- no ongoing game
+  -- reset
   dset(59,1) -- set ongoing game
   
   dset(60,0) -- last seed
@@ -246,6 +247,7 @@ function resetgame()
   dset(8,0)
 
  else
+  -- load saved samples
   for _i=1,5 do
    local _savedvalue=dget(_i)
    if _savedvalue == 0 then
@@ -255,13 +257,10 @@ function resetgame()
    end
   end
 
+  -- load saved broken ship objects
   for _floorindex,_floorobjs in ipairs(shipobjs) do
    for _objindex,_obj in ipairs(_floorobjs) do
     if dget(floordatapos[_floorindex]+_objindex) == 1 then
-     debug('broken')
-     debug(_floorindex)
-     debug(_objindex)
-     debug(floordatapos[_floorindex]+_objindex)
      _obj.broken=true
     end
    end
@@ -1128,56 +1127,56 @@ surfacecolors=split'1,4,3,4,5,6,7,na,9,na,na,na,13,13,9,na,na,2,3,2,4,5,3,na,na,
 
 leafshadows=split'1,2,3,4,5,6,8,13,14,15,18,19,20,21,22,23,24,25,26,27,28,29,30,31'
 leafcolors={
- [1]={19,28},
- [2]={4,24},
- [3]={27},
- [4]={25,30},
- [5]={3,22},
- [6]={7},
- [8]={14},
- [13]={6,14,22},
- [14]={15},
- [15]={7},
- [18]={20,21},
- [19]={3,28},
- [20]={4},
- [21]={5,29},
- [22]={15},
- [23]={7},
- [24]={8},
- [25]={9},
- [26]={10,23},
- [27]={11,26},
- [28]={11,13},
- [29]={13},
- [30]={14,31},
- [31]={15},
+ [1]=split'19,28',
+ [2]=split'4,24',
+ [3]=split'27',
+ [4]=split'25,30',
+ [5]=split'3,22',
+ [6]=split'7',
+ [8]=split'14',
+ [13]=split'6,14,22',
+ [14]=split'15',
+ [15]=split'7',
+ [18]=split'20,21',
+ [19]=split'3,28',
+ [20]=split'4',
+ [21]=split'5,29',
+ [22]=split'15',
+ [23]=split'7',
+ [24]=split'8',
+ [25]=split'9',
+ [26]=split'10,23',
+ [27]=split'11,26',
+ [28]=split'11,13',
+ [29]=split'13',
+ [30]=split'14,31',
+ [31]=split'15',
 }
 
 stonecolors=split'1,2,3,4,5,6,7,8,9,12,13,14,18,19,20,21,22,23,27,28,29,30'
 stonehighlights={
- [1]={2,3,5,13,19,20,24,28,29},
- [2]={3,4,5,13,14,22,24,25,29,30},
- [3]={6,11,12,26,27},
- [4]={9,14,25,30,31},
- [5]={3,6,8,13,14,15,22,24,25,30,31},
- [6]={3,7,27},
- [7]={6},
- [8]={9,14,30,31},
- [9]={10,15},
- [12]={6,7,15,23,26,31},
- [13]={6,12,14,15,23,31},
- [14]={15,31},
- [18]={2,5,21,29},
- [19]={3,13,22,27,28},
- [20]={4,13,22,24,30},
- [21]={2,4,5,13,28,29},
- [22]={6,9,15,31},
- [23]={7},
- [27]={11,23,26},
- [28]={6,12,22,27,31},
- [29]={3,4,13,22,24,25},
- [30]={9,31},
+ [1]=split'2,3,5,13,19,20,24,28,29',
+ [2]=split'3,4,5,13,14,22,24,25,29,30',
+ [3]=split'6,11,12,26,27',
+ [4]=split'9,14,25,30,31',
+ [5]=split'3,6,8,13,14,15,22,24,25,30,31',
+ [6]=split'3,7,27',
+ [7]=split'6',
+ [8]=split'9,14,30,31',
+ [9]=split'10,15',
+ [12]=split'6,7,15,23,26,31',
+ [13]=split'6,12,14,15,23,31',
+ [14]=split'15,31',
+ [18]=split'2,5,21,29',
+ [19]=split'3,13,22,27,28',
+ [20]=split'4,13,22,24,30',
+ [21]=split'2,4,5,13,28,29',
+ [22]=split'6,9,15,31',
+ [23]=split'7',
+ [27]=split'11,23,26',
+ [28]=split'6,12,22,27,31',
+ [29]=split'3,4,13,22,24,25',
+ [30]=split'9,31',
 }
 
 function fixcolor(_color)
@@ -1243,44 +1242,11 @@ function getplanettypes()
  local _objtypes={}
  local _objtypeslen=rnd(split'4,4,4,5,5,5,6,7,8,9') -- todo: good?
 
- -- while #_objtypes == 0 do
  while #_objtypes < _objtypeslen do
-
-  -- local _debugscore=1
-  -- local _maxscore=1900
-  -- local _l=_debugscore/_maxscore
-  -- local _c=flr(_l*#objtypes)
-  -- local _result=rnd()
-  -- debug('sssssssssss')
-
-  -- debug(_l)
-  -- debug(_c)
-  -- debug(_result)
-  -- debug('---')
-
-  -- for _i=1,_c do
-  --  local x=rnd(_l*_i)
-  --  debug(x)
-  --  _result+=x
-  -- end
-  -- debug('---')
-  -- debug(_result)
-  -- debug(_c)
-  -- _result=_result/_c
-  
-  -- debug(_result)
-  -- local _index=mid(1,flr(_result*#objtypes),18)
-  -- debug(flr(_result*#objtypes))
   local _a=flr((rnd(2)-1+dget(62)/scorethreshold)*#objtypes)
   local _index=mid(1,_a,#objtypes)
-  -- debug('_------a')
-  -- debug(_a)
   local _objtype=objtypes[_index]
-  
-  -- local _objtypecount=rnd(split'1,1,1,2,2,4') -- todo: good?
-  -- for _i=1,_objtypecount do
-   add(_objtypes,_objtype)
-  -- end
+  add(_objtypes,_objtype)
  end
 
  -- fauna
