@@ -4,7 +4,7 @@ __lua__
 -- the panspermia guy 1.0
 -- by ironchest games
 
-cartdata'ironchestgames_thepanspermiaguy_v1-dev10'
+cartdata'ironchestgames_thepanspermiaguy_v1-dev11'
 
 --[[ cartdata layout
 
@@ -109,6 +109,14 @@ end
 function wrap(_min,_n,_max)
  return (((_n-_min)%(_max-_min))+(_max-_min))%(_max-_min)+_min
 end
+
+function mergeright(_t1,_t2)
+ for _k,_v in pairs(_t2) do
+  _t1[_k]=_v
+ end
+ return _t1
+end
+
 
 -- 78 token s2t (depends on trimsplit)
 function s2t(_t)
@@ -269,8 +277,15 @@ function resetgame()
   dset(61,0) -- seeds shot
   dset(62,0) -- score
 
-  -- reset sample case + storages + seed samples + ship objects broken status
-  for _i=1,44 do
+  --[[
+   sample case
+   storages
+   seed samples
+   ship objects broken status
+   carried tool
+   tool storages
+  --]]
+  for _i=1,47 do
    dset(_i,0)
   end
 
@@ -406,16 +421,18 @@ function closetrap(_trap)
 end
 
 function getnewtrap(_x,_y)
- return closetrap({
-  x=_x,
-  y=_y,
+ return closetrap(mergeright(s2t[[
   sx=28,
-  -- sy=41, -- note: set by closetrap
-  -- sw=4,
-  -- sh=4,
-  behaviour=laidtrapbehaviour,
-  toolnr=1,
- })
+  toolnr=1
+  ]],
+  {
+   x=_x,
+   y=_y,
+   -- sy=41, -- note: set by closetrap
+   -- sw=4,
+   -- sh=4,
+   behaviour=laidtrapbehaviour,
+ }))
 end
 
 function getnewsparepart(_x,_y)
@@ -797,7 +814,7 @@ planettypes={
   surfacecolor=13,
   objtypes={
    { -- droidpillar1
-    sx='68',
+    sx='68', -- todo: token hunt, use s2t
     sy='0',
     sw='9',
     sh='7',
@@ -953,13 +970,6 @@ function createplanettype()
   end
 
   if _leafcolor != 0 and _stonehighlight != 0 then
-   -- debug('break!')
-   -- debug('_leafcolor')
-   -- debug(_leafcolor)
-   -- debug('_leafshadow')
-   -- debug(_leafshadow)
-   -- debug('_stonehighlight')
-   -- debug(_stonehighlight)
    _wpal={
     _shadowcolor,
     _stonecolor,
@@ -1054,76 +1064,90 @@ function createplanet(_planettype)
   local _y=flrrnd(mapsize-_tooclosedist)
 
   if _wrecktype == 'martianwreck' then
-   add(_mapobjs,{ -- ship wreck
-    x=_x,
-    y=_y,
+   -- ship wreck
+   add(_mapobjs,mergeright(s2t[[
     sx=58,
     sy=48,
     sw=14,
     sh=8,
-    solid=true,
-   })
+    solid=true
+    ]],{
+    x=_x,
+    y=_y,
+   }))
 
-   add(_mapobjs,{ -- debris
-    x=_x+1,
-    y=_y-2,
+   -- debris
+   add(_mapobjs,mergeright(s2t[[
     sx=56,
     sy=50,
     sw=21,
     sh=9,
-    ground=true,
-   })
+    ground=true
+    ]],{
+    x=_x+1,
+    y=_y-2,
+   }))
 
-   add(_mapobjs,{ -- corpse
-    x=_x-14,
-    y=_y+2,
+   -- corpse
+   add(_mapobjs,mergeright(s2t[[
     sx=48,
     sy=54,
     sw=8,
-    sh=4,
-   })
+    sh=4
+    ]],{
+    y=_y+2,
+    x=_x-14,
+   }))
 
    add(_mapobjs,getbloodobj(_x-23,_y+3,'martian'))
 
   else -- taurienwreck
-   add(_mapobjs,{ -- ship wreck
-    x=_x,
-    y=_y,
+   -- ship wreck
+   add(_mapobjs,mergeright(s2t[[
     sx=49,
     sy=78,
     sw=10,
     sh=9,
-    solid=true,
-   })
+    solid=true
+    ]],{
+    x=_x,
+    y=_y,
+   }))
 
-   add(_mapobjs,{ -- small wing
-    x=_x-8,
-    y=_y-5,
+   -- small wing
+   add(_mapobjs,mergeright(s2t[[
     sx=44,
     sy=78,
     sw=5,
     sh=4,
-    solid=true,
-   })
-
-   add(_mapobjs,{ -- debris
+    solid=true
+    ]],{
     x=_x-8,
-    y=_y-1,
+    y=_y-5,
+   }))
+
+   -- debris
+   add(_mapobjs,mergeright(s2t[[
     sx=42,
     sy=83,
     sw=9,
     sh=6,
-    ground=true,
-   })
+    ground=true
+    ]],{
+    x=_x-8,
+    y=_y-1,
+   }))
 
-   add(_mapobjs,{ -- corpse
-    x=_x-17,
-    y=_y,
+   -- corpse
+   add(_mapobjs,mergeright(s2t[[
     sx=33,
     sy=85,
     sw=9,
-    sh=3,
-   })
+    sh=3
+    ]],{
+    x=_x-17,
+    y=_y,
+   }))
 
    add(_mapobjs,getbloodobj(_x-26,_y+1,'taurien'))
 
@@ -1143,15 +1167,16 @@ function createplanet(_planettype)
   local _ruincount=flrrnd(7)+4
   local _sy=rnd(split'104,112,120')
   for _i=0,_ruincount-1 do
-   add(_mapobjs,{
+   add(_mapobjs,mergeright(s2t[[
+    sw=8,
+    sh=8,
+    solid=true
+    ]],{
     x=_x+cos(_i/_ruincount)*_ruincount*5,
     y=_y+sin(_i/_ruincount)*_ruincount*5,
     sx=rnd(split'15,23,31'),
     sy=_sy,
-    sw=8,
-    sh=8,
-    solid=true,
-   })
+   }))
   end
  end
 
@@ -1209,9 +1234,8 @@ function createplanet(_planettype)
 
  -- add fauna
  local _animals={}
- local _loops=min(1+flr(dget(62)/100),50)
+ local _loops=mid(0,flrrnd(getscorepercentage()*50),50)
  for _i=1,_loops do
-  if rnd() < 1 - 1 / #_planettype.animaltypes then
    local _typ=rnd(_planettype.animaltypes)
    local _animal=clone(animaltypes[_typ])
    _animal.x=flrrnd(mapsize)
@@ -1223,7 +1247,6 @@ function createplanet(_planettype)
     _animal.bloodtype=_animal.bloodtype or 'taurien'
     _animal.behaviour=sighthunting
     add(_animals,_animal)
-   end
   end
  end
 
@@ -1283,20 +1306,23 @@ function planetinit()
  factions.droid.landingc=180
  factions.droid.talkingc=140
 
- guy.x=mapsize/2
- guy.y=mapsize/2
-
- guy.sx=0
- guy.sy=83
- guy.sw=6
- guy.sh=6
-
- guy.spd=1
- guy.talkingc=0
- guy.walkingc=0
- guy.runningc=0
- guy.walksfx=6
- guy.samplingc=0
+ --7877
+ guy=mergeright(guy,{
+  x=mapsize/2,
+  y=mapsize/2,
+ 
+  sx=0,
+  sy=83,
+  sw=6,
+  sh=6,
+ 
+  spd=1,
+  talkingc=0,
+  walkingc=0,
+  runningc=0,
+  walksfx=6,
+  samplingc=0,
+ })
 
  pal(sector.planets[1].wpal,1)
 
