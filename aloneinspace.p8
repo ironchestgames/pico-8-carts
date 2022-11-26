@@ -17,6 +17,11 @@ cartdata'ironchestgames_thepanspermiaguy_v1-dev10'
 
 41,42,43,44 = seed cannon samples
 
+tools are: 1 = trap, 2 = deterrer, 3 = drill, 4 = spare part)
+45 = tool carrying
+46 = tool storage 1
+47 = tool storage 2
+
 59 = is game saved
 60 = last seed score
 61 = current nr of seeds
@@ -24,7 +29,6 @@ cartdata'ironchestgames_thepanspermiaguy_v1-dev10'
 63 = highscore
 
 --]]
-
 
 printh('debug started','debug',true)
 function debug(s)
@@ -34,23 +38,27 @@ end
 poke(0x5f5c,-1) -- disable auto-repeat for btnp
 
 -- note: set special char o-button to look like c-button if gpio 1 is set, pico8_gpio[0]=1 in js
-poke(0x5600, 5)    -- char width
-poke(0x5601, 7)    -- char width for high cars
-poke(0x5602, 5)    -- char height
-poke(0x5603, 0)    -- draw x offset
-poke(0x5604, 0)    -- draw y offset
+poke(0x5600,5)    -- char width
+poke(0x5601,7)    -- char width for high cars
+poke(0x5602,5)    -- char height
+poke(0x5603,0)    -- draw x offset
+poke(0x5604,0)    -- draw y offset
 
-poke(0x8e*8+0x5600,0b0111110)
-poke(0x8e*8+0x5601,0b1100011)
-poke(0x8e*8+0x5602,peek(0x5f80) == 0 and 107 or 123)
-poke(0x8e*8+0x5603,0b1100011)
-poke(0x8e*8+0x5604,0b0111110)
+poke(23152,0b0111110) -- 0x8e*8+0x5600
+poke(23153,0b1100011) -- 0x8e*8+0x5601
+poke(23154,peek(0x5f80) == 0 and 107 or 123)  -- 0x8e*8+0x5602
+poke(23155,0b1100011) -- 0x8e*8+0x5603
+poke(23156,0b0111110) -- 0x8e*8+0x5604
 
 -- pink as transparent
 palt(14,true)
 palt(0,false)
 
 -- utils
+function flrrnd(_n)
+ return flr(rnd(_n))
+end
+
 function contains(_t,_value)
  for _v in all(_t) do
   if _v == _value then
@@ -123,6 +131,32 @@ function s2t(_t)
 end
 
 -- helpers
+local bloodtypes={
+ fire=split'20,10',
+ droid=split'24,7',
+ martian=split'28,11',
+ taurien=split'32,8',
+}
+
+function getbloodobj(_x,_y,_bloodtype)
+ local _type=bloodtypes[_bloodtype]
+ return {
+  sx=69,
+  sy=_type[1],
+  sw=10,
+  sh=4,
+  samplecolor=_type[2],
+  action=takesampleaction,
+  x=_x,
+  y=_y,
+  ground=true,
+ }
+end
+
+function getscorepercentage()
+ return dget(62)/1000 -- 1000 is top threshold
+end
+
 function drawmessages()
  if #messages > 0 then
   local _strlen=#messages[1]*4
@@ -228,18 +262,19 @@ function resetgame()
  resetshipobjs()
 
  if dget(59) == 0 then -- no ongoing game
-  -- reset
+
   dset(59,1) -- set ongoing game
   
   dset(60,0) -- last seed
   dset(61,0) -- seeds shot
   dset(62,0) -- score
 
-  dset(9,5) -- fuel
+  -- reset sample case + storages + seed samples + ship objects broken status
+  for _i=1,44 do
+   dset(_i,0)
+  end
 
-  dset(6,0) -- storages
-  dset(7,0)
-  dset(8,0)
+  dset(9,5) -- fuel
 
  else
   -- load saved sample case
@@ -261,7 +296,6 @@ function resetgame()
     seed[_i]=_savedvalue
    end
   end
-
 
   -- load saved broken ship objects
   for _floorindex,_floorobjs in ipairs(shipobjs) do
@@ -296,7 +330,7 @@ function resetgame()
    talksfx=29,
    alien={
     sx=16,
-    sy=53,
+    sy=52,
     sw=8,
     sh=8,
     sightradius=128,
@@ -304,7 +338,7 @@ function resetgame()
     huntingspd=2,
     c=0,
     alientype='droid',
-    bloodtype='droidblood',
+    bloodtype='droid',
     behaviour=droidtalking,
    },
   },
@@ -316,14 +350,83 @@ function resetgame()
 end
 
 -- global constants
-scorethreshold=1000
 floorys={91,80}
 
+toolnames=split'trap,deterrer,drill,spare part'
+
+tools={
+ s2t[[
+  sx=28,
+  sy=41,
+  sw=4,
+  sh=4,
+  toolnr=1
+ ]],
+ s2t[[
+  sx=19,
+  sy=38,
+  sw=3,
+  sh=4,
+  toolnr=2
+ ]],
+ s2t[[
+  sx=24,
+  sy=43,
+  sw=4,
+  sh=5,
+  toolnr=3
+ ]],
+ s2t[[
+  sx=28,
+  sy=45,
+  sw=4,
+  sh=5,
+  toolnr=4
+ ]],
+}
+
+pickupactionfunc=function (_obj)
+ if dget(45) != 0 then
+  add(messages,'carrying another tool')
+ else
+  del(sector.planets[1].mapobjs,_obj)
+  dset(45,_obj.toolnr)
+ end
+end
+
 function closetrap(_trap)
- _trap.action=pickuptrapaction
- _trap.sy=49
+ _trap.action={
+  title='pick up trap',
+  func=pickupactionfunc,
+ }
+ _trap.sy=41
  _trap.sw=4
  _trap.sh=4
+ return _trap
+end
+
+function getnewtrap(_x,_y)
+ return closetrap({
+  x=_x,
+  y=_y,
+  sx=28,
+  -- sy=41, -- note: set by closetrap
+  -- sw=4,
+  -- sh=4,
+  behaviour=laidtrapbehaviour,
+  toolnr=1,
+ })
+end
+
+function getnewsparepart(_x,_y)
+ local _tool=clone(tools[4])
+ _tool.action={
+  title='pick up spare part',
+  func=pickupactionfunc,
+ }
+ _tool.x=_x
+ _tool.y=_y
+ return _tool
 end
 
 takesampleaction={
@@ -341,22 +444,12 @@ takesampleaction={
  end,
 }
 
-pickuptrapaction={
- title='pick up trap',
- func=function (_obj)
-  del(sector.planets[1].mapobjs,_obj)
-  _obj.sy=46
-  _obj.sw=7
-  _obj.sh=3
-  guy.trap=_obj
- end,
-}
-
-function trapbehaviour(_behaviouree)
+function laidtrapbehaviour(_behaviouree)
  local _disttoguy=dist(_behaviouree.x,_behaviouree.y,guy.x,guy.y)
  if guy.runningc > 0 and _disttoguy < 2 then
   local _disttoguy=dist(_behaviouree.x,_behaviouree.y,guy.x,guy.y)
   local _drawies={guy,_behaviouree}
+  closetrap(_behaviouree)
   resetplanetcamera(_drawies)
   deadinit(_drawies)
   return true
@@ -366,10 +459,7 @@ function trapbehaviour(_behaviouree)
   if _other != _behaviouree and dist(_behaviouree.x,_behaviouree.y,_other.x,_other.y) < 4 then
    -- kill animal
    del(sector.planets[1].animals,_other)
-   local _blood=clone(objtypes[_other.bloodtype])
-   _blood.x=_other.x
-   _blood.y=_other.y
-   add(sector.planets[1].mapobjs,_blood)
+   add(sector.planets[1].mapobjs,getbloodobj(_other.x,_other.y,_other.bloodtype))
    sfx(33)
 
    -- close trap
@@ -411,14 +501,13 @@ function sighthunting(_behaviouree)
   _behaviouree.targetx=guy.x
   _behaviouree.targety=guy.y
   if _behaviouree.alientype == 'droid' and not _prevhunting then
-   add(messages,rnd{'yikes','eek','uh-oh'})
+   add(messages,rnd(split'yikes,eek,uh-oh'))
   end
   _behaviouree.hunting=true
 
  elseif _disttotarget < _behaviouree.spd + 0.5 then
   _behaviouree.targetx=_behaviouree.x+rnd(_behaviouree.sightradius)-_behaviouree.sightradius/2
   _behaviouree.targety=_behaviouree.y+rnd(_behaviouree.sightradius)-_behaviouree.sightradius/2
-
  end
  
  local _spd=_behaviouree.hunting and _behaviouree.huntingspd or _behaviouree.spd
@@ -442,461 +531,100 @@ function sighthunting(_behaviouree)
 end
 
 animaltypes={
- trap={
-  sx=26,
-  sy=49,
-  sw=4,
-  sh=4,
-  behaviour=trapbehaviour,
- },
- bear={
+ bear=s2t[[
   sx=0,
-  sy=10,
+  sy=8,
   sw=8,
   sh=8,
   sightradius=36,
   spd=0.75,
   huntingspd=1,
-  c=0,
- },
- bat={
+  c=0
+ ]],
+ bat=s2t[[
   sx=0,
-  sy=18,
+  sy=16,
   sw=7,
   sh=6,
   sightradius=32,
   spd=0.75,
   huntingspd=0.75,
-  c=0,
- },
- spider={
+  c=0
+ ]],
+ spider=s2t[[
   sx=0,
-  sy=24,
+  sy=75,
   sw=12,
   sh=7,
   sightradius=38,
   spd=0.25,
   huntingspd=1.25,
-  c=0,
- },
- bull={
+  c=0
+ ]],
+ bull=s2t[[
   sx=0,
-  sy=31,
+  sy=38,
   sw=8,
   sh=8,
   sightradius=28,
   spd=0.125,
   huntingspd=1,
-  c=0,
- },
- gnawer={
+  c=0
+ ]],
+ snake=s2t[[
   sx=0,
-  sy=39,
+  sy=0,
+  sw=8,
+  sh=8,
+  sightradius=36,
+  spd=0.25,
+  huntingspd=0.875,
+  c=0
+ ]],
+ gnawer=s2t[[
+  sx=0,
+  sy=22,
+  sw=8,
+  sh=8,
+  sightradius=48,
+  spd=0.75,
+  huntingspd=1.25,
+  c=0
+ ]],
+ firegnawer=s2t[[
+  sx=0,
+  sy=30,
   sw=8,
   sh=8,
   sightradius=48,
   spd=0.75,
   huntingspd=1.25,
   c=0,
- },
- firegnawer={
+  bloodtype='fire'
+ ]],
+ slime=s2t[[
   sx=0,
-  sy=76,
-  sw=8,
-  sh=8,
-  sightradius=48,
-  spd=0.75,
-  huntingspd=1.25,
-  c=0,
-  bloodtype='fireblood',
- },
- slime={
-  sx=0,
-  sy=47,
+  sy=46,
   sw=9,
   sh=6,
   sightradius=72,
   spd=0.25,
   huntingspd=0.5,
   c=0,
-  bloodtype='deadmartianblood',
- },
- droid={
+  bloodtype='martian'
+ ]],
+ droid=s2t[[
   sx=16,
-  sy=53,
+  sy=52,
   sw=8,
   sh=8,
   sightradius=128,
   spd=0,
   huntingspd=2,
   c=0,
-  bloodtype='droidblood',
- },
+  bloodtype='droid'
+ ]],
 }
-
--- objtypes={
---  twigs={
---   sx=20,
---   sy=4,
---   sw=6,
---   sh=4,
---   ground=true,
---  },
---  flowers={
---   sx=31,
---   sy=0,
---   sw=5,
---   sh=4,
---   samplecolor=9,
---   action=takesampleaction,
---  },
---  flowers2={
---   sx=16,
---   sy=18,
---   sw=5,
---   sh=4,
---   samplecolor=9,
---   action=takesampleaction,
---  },
---  mushroom_red={
---   sx=20,
---   sy=8,
---   sw=7,
---   sh=5,
---   samplecolor=15,
---   action=takesampleaction,
---  },
---  mosstone_small={
---   sx=15,
---   sy=0,
---   sw=6,
---   sh=4,
---  },
---  mosstone_big={
---   sx=52,
---   sy=6,
---   sw=8,
---   sh=7,
---   solid=true,
---  },
---  grass1={
---   sx=21,
---   sy=0,
---   sw=5,
---   sh=4,
---  },
---  grass2={
---   sx=15,
---   sy=4,
---   sw=5,
---   sh=5,
---  },
---  lake_watercolor={
---   sx=26,
---   sy=4,
---   sw=11,
---   sh=7,
---   ground=true,
---   samplecolor=13,
---   action=takesampleaction,
---   walksfx=7,
---   sunken=true,
---  },
---  pine_small={
---   sx=37,
---   sy=0,
---   sw=7,
---   sh=9,
---   solid=true,
---   samplecolor=6,
---   action=takesampleaction,
---  },
---  pine_big={
---   sx=44,
---   sy=0,
---   sw=8,
---   sh=15,
---   solid=true,
---   samplecolor=6,
---   action=takesampleaction,
---  },
---  mushroom={
---   sx=20,
---   sy=13,
---   sw=7,
---   sh=5,
---   samplecolor=15,
---   action=takesampleaction,
---  },
---  deadtree1={
---   sx=38,
---   sy=15,
---   sw=8,
---   sh=8,
---   solid=true,
---  },
---  deadtree2={
---   sx=46,
---   sy=15,
---   sw=8,
---   sh=8,
---   solid=true,
---  },
---  lake={
---   sx=27,
---   sy=11,
---   sw=11,
---   sh=7,
---   ground=true,
---   samplecolor=13,
---   action=takesampleaction,
---   walksfx=7,
---   sunken=true,
---  },
---  marsh={
---   sx=38,
---   sy=9,
---   sw=5,
---   sh=4,
---   ground=true,
---  },
---  marsh_flipped={
---   sx=24,
---   sy=22,
---   sw=5,
---   sh=4,
---   ground=true,
---  },
---  marsh_watercolor={
---   sx=26,
---   sy=0,
---   sw=5,
---   sh=4,
---   ground=true,
---  },
---  marsh_darkgrey={
---   sx=21,
---   sy=18,
---   sw=5,
---   sh=4,
---   ground=true,
---  },
---  rock_big={
---   sx=54,
---   sy=13,
---   sw=7,
---   sh=8,
---   solid=true,
---  },
---  rock_medium={
---   sx=61,
---   sy=13,
---   sw=7,
---   sh=8,
---   solid=true,
---  },
---  rock_medium2={
---   sx=60,
---   sy=6,
---   sw=8,
---   sh=7,
---   solid=true,
---  },
---  rock_small={
---   sx=53,
---   sy=21,
---   sw=6,
---   sh=5,
---  },
---  canyon_big={
---   sx=38,
---   sy=29,
---   sw=8,
---   sh=8,
---   solid=true,
---  },
---  canyon_medium={
---   sx=46,
---   sy=30,
---   sw=8,
---   sh=7,
---   solid=true,
---  },
---  canyon_small={
---   sx=46,
---   sy=23,
---   sw=7,
---   sh=3,
---  },
---  cactus1={
---   sx=54,
---   sy=26,
---   sw=7,
---   sh=9,
---   solid=true,
---   samplecolor=13,
---   action=takesampleaction,
---  },
---  cactus2={
---   sx=54,
---   sy=35,
---   sw=7,
---   sh=8,
---   solid=true,
---   samplecolor=13,
---   action=takesampleaction,
---  },
---  skull={
---   sx=46,
---   sy=26,
---   sw=8,
---   sh=4,
---   samplecolor=6,
---   action=takesampleaction,
---  },
---  ribs={
---   sx=38,
---   sy=23,
---   sw=8,
---   sh=6,
---   samplecolor=6,
---   action=takesampleaction,
---  },
---  crack_big={
---   sx=30,
---   sy=18,
---   sw=8,
---   sh=5,
---   ground=true,
---  },
---  crack_small={
---   sx=30,
---   sy=36,
---   sw=8,
---   sh=4,
---   ground=true,
---  },
---  lavapool_big={
---   sx=27,
---   sy=29,
---   sw=11,
---   sh=7,
---   solid=true,
---   ground=true,
---  },
---  lavapool_small={
---   sx=30,
---   sy=23,
---   sw=8,
---   sh=6,
---   solid=true,
---   ground=true,
---  },
---  fireblood={
---   sx=61,
---   sy=21,
---   sw=10,
---   sh=7,
---   ground=true,
---   samplecolor=10,
---   action=takesampleaction,
---  },
---  droidblood={
---   sx=61,
---   sy=28,
---   sw=10,
---   sh=7,
---   ground=true,
---   samplecolor=7,
---   action=takesampleaction,
---  },
---  deadmartian={
---   sx=45,
---   sy=41,
---   sw=8,
---   sh=4,
---   offx=-17,
---   offy=2,
---  },
---  deadmartianblood={
---   sx=35,
---   sy=41,
---   sw=10,
---   sh=7,
---   offx=-26,
---   offy=1,
---   ground=true,
---   samplecolor=11,
---   action=takesampleaction,
---  },
---  martianwreck_ground={
---   sx=42,
---   sy=50,
---   sw=21,
---   sh=9,
---   offx=2,
---   offy=-2,
---   ground=true,
---  },
---  martianwreck_collision={
---   sx=44,
---   sy=50,
---   sw=5,
---   sh=4,
---   offx=-1,
---   offy=0,
---   solid=true,
---  },
---  martianwreck={
---   sx=63,
---   sy=48,
---   sw=14,
---   sh=8,
---   linked=trimsplit'deadmartian,deadmartianblood,martianwreck_ground,martianwreck_collision',
---  },
---  taurienwreck_wing={
---   sx=43,
---   sy=78,
---   sw=5,
---   sh=4,
---   offx=-9,
---   offy=-6,
---  },
---  taurienwreck_ground={
---   sx=42,
---   sy=82,
---   sw=9,
---   sh=7,
---   offx=-8,
---   offy=-2,
---   ground=true,
---  },
---  deadtaurien={
---   sx=26,
---   sy=41,
---   sw=9,
---   sh=3,
---   offx=-18,
---   offy=2,
---  },
---  deadtaurien_blood={
---   sx=16,
---   sy=43,
---   sw=10,
---   sh=4,
---   offx=-27,
---   offy=3,
---   ground=true,
---   samplecolor=8,
---   action=takesampleaction,
---  },
---  taurienwreck={
---   sx=49,
---   sy=78,
---   sw=10,
---   sh=9,
---   linked=trimsplit'taurienwreck_wing,taurienwreck_ground,deadtaurien,deadtaurien_blood',
---  },
 
 
 -- sx,sy,sw,sh,samplecolor,ground,solid,dangerous,sunken,walksfx,action
@@ -1010,7 +738,7 @@ objtypes={
   ground=true,
  },
  { -- grass
-  sx='16,21,26',
+  sx='17,22,27',
   sy='31,31,31',
   sw='5,5,5',
   sh='4,4,4',
@@ -1120,63 +848,69 @@ planettypes={
 
 mapsize=255
 
-groundcolors=split'1,2,3,4,5,6,7,9,13,14,15,18,19,20,21,22,23,27,28,29,31'
-shadowcolors=split'17,18,19,20,21,22,6,na,4,na,na,na,29,8,31,na,na,16,1,18,18,5,26,na,na,na,3,1,21,na,22'
+groundcolors=split'1,2,3,4,5,6,7,9,13,14,15,18,19,20,21,22,23,27,28,29'
+shadowcolors=split'17,18,19,20,21,22,6,na,4,na,na,na,29,8,31,na,na,16,1,18,18,5,26,na,na,na,3,1,21'
 
-surfacecolors=split'1,4,3,4,5,6,7,na,9,na,na,na,13,13,9,na,na,2,3,2,4,5,3,na,na,na,3,1,13,na,9'
+surfacecolors=split'1,4,3,4,5,6,7,na,9,na,na,na,13,13,9,na,na,2,3,2,4,5,3,na,na,na,3,1,13'
 
 leafshadows=split'1,2,3,4,5,6,8,13,14,15,18,19,20,21,22,23,24,25,26,27,28,29,30,31'
 leafcolors={
- [1]=split'19,28',
- [2]=split'4,24',
- [3]=split'27',
- [4]=split'25,30',
- [5]=split'3,22',
- [6]=split'7',
- [8]=split'14',
- [13]=split'6,14,22',
- [14]=split'15',
- [15]=split'7',
- [18]=split'20,21',
- [19]=split'3,28',
- [20]=split'4',
- [21]=split'5,29',
- [22]=split'15',
- [23]=split'7',
- [24]=split'8',
- [25]=split'9',
- [26]=split'10,23',
- [27]=split'11,26',
- [28]=split'11,13',
- [29]=split'13',
- [30]=split'14,31',
- [31]=split'15',
+ split'19,28', -- 1
+ split'4,24', -- 2
+ split'27', -- 3
+ split'25,30', -- 4
+ split'3,22', -- 5
+ split'7', -- 6
+ nil,
+ split'14', -- 8
+ nil,nil,nil,nil,
+ split'6,14,22', -- 13
+ split'15', -- 14
+ split'7', -- 15
+ nil,nil,
+ split'20,21', -- 18
+ split'3,28', -- 19
+ split'4', -- 20
+ split'5,29', -- 21
+ split'15', -- 22
+ split'7', -- 23
+ split'8', -- 24
+ split'9', -- 25
+ split'10,23', -- 26
+ split'11,26', -- 27
+ split'11,13', -- 28
+ split'13', -- 29
+ split'14,31', -- 30
+ split'15', -- 31
 }
 
 stonecolors=split'1,2,3,4,5,6,7,8,9,12,13,14,18,19,20,21,22,23,27,28,29,30'
 stonehighlights={
- [1]=split'2,3,5,13,19,20,24,28,29',
- [2]=split'3,4,5,13,14,22,24,25,29,30',
- [3]=split'6,11,12,26,27',
- [4]=split'9,14,25,30,31',
- [5]=split'3,6,8,13,14,15,22,24,25,30,31',
- [6]=split'3,7,27',
- [7]=split'6',
- [8]=split'9,14,30,31',
- [9]=split'10,15',
- [12]=split'6,7,15,23,26,31',
- [13]=split'6,12,14,15,23,31',
- [14]=split'15,31',
- [18]=split'2,5,21,29',
- [19]=split'3,13,22,27,28',
- [20]=split'4,13,22,24,30',
- [21]=split'2,4,5,13,28,29',
- [22]=split'6,9,15,31',
- [23]=split'7',
- [27]=split'11,23,26',
- [28]=split'6,12,22,27,31',
- [29]=split'3,4,13,22,24,25',
- [30]=split'9,31',
+ split'2,3,5,13,19,20,24,28,29', -- 1
+ split'3,4,5,13,14,22,24,25,29,30', -- 2
+ split'6,11,12,26,27', -- 3
+ split'9,14,25,30,31', -- 4
+ split'3,6,8,13,14,15,22,24,25,30,31', -- 5
+ split'3,7,27', -- 6
+ split'6', -- 7
+ split'9,14,30,31', -- 8
+ split'10,15', -- 9
+ nil,nil,
+ split'6,7,15,23,26,31', -- 12
+ split'6,12,14,15,23,31', -- 13
+ split'15,31', -- 14
+ nil,nil,nil,nil,
+ split'2,5,21,29', -- 18
+ split'3,13,22,27,28', -- 19
+ split'4,13,22,24,30', -- 20
+ split'2,4,5,13,28,29', -- 21
+ split'6,9,15,31', -- 22
+ split'7', -- 23
+ nil,nil,nil,
+ split'11,23,26', -- 27
+ split'6,12,22,27,31', -- 28
+ split'3,4,13,22,24,25', -- 29
+ split'9,31', -- 30
 }
 
 function fixcolor(_color)
@@ -1194,6 +928,7 @@ function fixpal(_pal)
 end
 
 function createplanettype()
+
  -- palette
  local _wpal,_groundcolor,_surfacecolor
  
@@ -1236,19 +971,19 @@ function createplanettype()
   end
  end
 
- -- flora
+ -- flora types
  local _objtypes={}
  local _objtypeslen=rnd(split'4,4,4,5,5,5,6,7,8,9') -- todo: good?
 
  while #_objtypes < _objtypeslen do
-  local _a=flr((rnd(2)-1+dget(62)/scorethreshold)*#objtypes)
+  local _a=flr((rnd(2)-1+getscorepercentage())*#objtypes)
   local _index=mid(1,_a,#objtypes)
   local _objtype=objtypes[_index]
   add(_objtypes,_objtype)
  end
 
- -- fauna
- local _allanimaltypes=split'bear,bat,spider,bull,gnawer,firegnawer,slime'
+ -- fauna types
+ local _allanimaltypes=split'bear,bat,spider,bull,snake,gnawer,firegnawer,slime'
 
  local _animaltypes={}
 
@@ -1263,16 +998,16 @@ function createplanettype()
   surfacecolor=_surfacecolor,
   objtypes=_objtypes,
   animaltypes=_animaltypes,
-  objdist=36-flr(rnd(6))-flr((dget(62)/scorethreshold)*20),
+  objdist=36-flrrnd(6)-flr((getscorepercentage())*20),
  }
 end
 
 
 function createplanet(_planettype)
- -- _planettype=planettypes[13] -- debug
- -- _planettype=planettypes[1] -- debug
- local _rndseed=rnd()
+ local _rndseed=rnd() -- todo: needed?
  srand(_rndseed)
+
+ local _tooclosedist=_planettype.objdist
 
  local _wpal={
   _planettype.wpal[1],
@@ -1288,7 +1023,7 @@ function createplanet(_planettype)
    x=mapsize/2,
    y=mapsize/2-10,
    sx=63,
-   sy=33,
+   sy=36,
    sw=15,
    sh=7,
    action={
@@ -1309,14 +1044,125 @@ function createplanet(_planettype)
   },
  }
 
- local _tooclosedist=_planettype.objdist
+ -- add wreck
+ local _haswreck=nil
+ if rnd() > 0.95 then
+  _haswreck=true
 
+  local _wrecktype=rnd{'martianwreck','taurienwreck'}
+  local _x=flrrnd(mapsize-_tooclosedist)
+  local _y=flrrnd(mapsize-_tooclosedist)
+
+  if _wrecktype == 'martianwreck' then
+   add(_mapobjs,{ -- ship wreck
+    x=_x,
+    y=_y,
+    sx=58,
+    sy=48,
+    sw=14,
+    sh=8,
+    solid=true,
+   })
+
+   add(_mapobjs,{ -- debris
+    x=_x+1,
+    y=_y-2,
+    sx=56,
+    sy=50,
+    sw=21,
+    sh=9,
+    ground=true,
+   })
+
+   add(_mapobjs,{ -- corpse
+    x=_x-14,
+    y=_y+2,
+    sx=48,
+    sy=54,
+    sw=8,
+    sh=4,
+   })
+
+   add(_mapobjs,getbloodobj(_x-23,_y+3,'martian'))
+
+  else -- taurienwreck
+   add(_mapobjs,{ -- ship wreck
+    x=_x,
+    y=_y,
+    sx=49,
+    sy=78,
+    sw=10,
+    sh=9,
+    solid=true,
+   })
+
+   add(_mapobjs,{ -- small wing
+    x=_x-8,
+    y=_y-5,
+    sx=44,
+    sy=78,
+    sw=5,
+    sh=4,
+    solid=true,
+   })
+
+   add(_mapobjs,{ -- debris
+    x=_x-8,
+    y=_y-1,
+    sx=42,
+    sy=83,
+    sw=9,
+    sh=6,
+    ground=true,
+   })
+
+   add(_mapobjs,{ -- corpse
+    x=_x-17,
+    y=_y,
+    sx=33,
+    sy=85,
+    sw=9,
+    sh=3,
+   })
+
+   add(_mapobjs,getbloodobj(_x-26,_y+1,'taurien'))
+
+   if rnd() > 0.75 then
+    add(_mapobjs,getnewtrap(_x-32,_y-2))
+   end
+  end
+ end
+
+ -- add artifact
+ if rnd() > 0.95 and not _haswreck then
+  _x=flrrnd(mapsize-32)
+  _y=flrrnd(mapsize-32)
+
+  add(_mapobjs,rnd({getnewtrap,getnewsparepart})(_x,_y))
+
+  local _ruincount=flrrnd(7)+4
+  local _sy=rnd(split'104,112,120')
+  for _i=0,_ruincount-1 do
+   add(_mapobjs,{
+    x=_x+cos(_i/_ruincount)*_ruincount*5,
+    y=_y+sin(_i/_ruincount)*_ruincount*5,
+    sx=rnd(split'15,23,31'),
+    sy=_sy,
+    sw=8,
+    sh=8,
+    solid=true,
+   })
+  end
+ end
+
+
+ -- add flora
  for _i=1,70 do
   local _x,_y,_tooclose
   local _tries=0
   repeat
-   _x=rnd(mapsize-_tooclosedist)
-   _y=rnd(mapsize-_tooclosedist)
+   _x=flrrnd(mapsize-_tooclosedist)
+   _y=flrrnd(mapsize-_tooclosedist)
    _tooclose=nil
 
    for _other in all(_mapobjs) do
@@ -1334,21 +1180,19 @@ function createplanet(_planettype)
 
   until _tooclose == nil
 
-  -- debug(#_planettype.objtypes)
-  -- debug(rnd(_planettype.objtypes))
   local _obj=clone(rnd(_planettype.objtypes))
   local _sxs=split(_obj.sx)
-  local _idx=flr(rnd(#_sxs))+1
+  local _idx=flrrnd(#_sxs)+1
   local _samplecolorindex0=0
   if type(_obj.samplecolor) == 'string' then
    local _samplecolors=split(_obj.samplecolor)
-   _samplecolorindex0=flr(rnd(#_samplecolors))
+   _samplecolorindex0=flrrnd(#_samplecolors)
    _obj.samplecolor=_samplecolors[_samplecolorindex0+1]
    if rnd() > plantsamplechances[_obj.samplecolor] then
     _tries=100
    end
   end
-
+  
   if _tries <= 10 and not contains(_planettype.wpal,_obj.samplecolor) then
    _obj.sx=split(_obj.sx)[_idx]
    _obj.sw=split(_obj.sw)[_idx]
@@ -1363,57 +1207,25 @@ function createplanet(_planettype)
   end
  end
 
- -- debug(#_mapobjs)
-
+ -- add fauna
  local _animals={}
  local _loops=min(1+flr(dget(62)/100),50)
  for _i=1,_loops do
   if rnd() < 1 - 1 / #_planettype.animaltypes then
    local _typ=rnd(_planettype.animaltypes)
    local _animal=clone(animaltypes[_typ])
-   _animal.x=flr(rnd(mapsize))
-   _animal.y=flr(rnd(mapsize))
+   _animal.x=flrrnd(mapsize)
+   _animal.y=flrrnd(mapsize)
    if dist(mapsize/2,mapsize/2,_animal.x,_animal.y) > 60 then
     _animal.targetx=_animal.x
     _animal.targety=_animal.y
     _animal.typ=_typ
-    _animal.bloodtype=_animal.bloodtype or 'deadtaurien_blood'
+    _animal.bloodtype=_animal.bloodtype or 'taurien'
     _animal.behaviour=sighthunting
     add(_animals,_animal)
    end
   end
  end
-
- -- add wreck
- -- local _haswreck=nil
- -- if rnd() > 0.85 then
- --  local _x=rnd(mapsize-_tooclosedist)
- --  local _y=rnd(mapsize-_tooclosedist)
-
- --  local _wrecktype=rnd{'martianwreck','taurienwreck'}
-
- --  local _wreck=clone(objtypes[_wrecktype])
- --  _wreck.x=_x
- --  _wreck.y=_y
- --  add(_mapobjs,_wreck)
-
- --  for _name in all(_wreck.linked) do
- --   local _linkedobj=clone(objtypes[_name])
- --   _linkedobj.x=_x+_linkedobj.offx
- --   _linkedobj.y=_y+_linkedobj.offy
- --   add(_mapobjs,_linkedobj)
- --  end
-
- --  if _wrecktype == 'taurienwreck' and rnd() > 0.75 then
- --   local _trap=clone(animaltypes.trap)
- --   _trap.x=_x-32
- --   _trap.y=_y
- --   closetrap(_trap)
- --   add(_mapobjs,_trap)
- --  end
-
- --  _haswreck=true
- -- end
 
  return {
   rndseed=_rndseed,
@@ -1422,7 +1234,7 @@ function createplanet(_planettype)
   groundcolor=_planettype.groundcolor,
   surfacecolor=_planettype.surfacecolor,
   animals=_animals,
-  haswreck=nil,--_haswreck,
+  haswreck=_haswreck,
   droidworld=_planettype.droidworld,
  }
 end
@@ -1435,15 +1247,14 @@ function nextsector()
   _faction.firingc=nil
  end
 
- -- local _planetcount=rnd(trimsplit'1,1,2,2,2,2,3,3')
- local _planetcount=1
+ local _planetcount=rnd(split'1,1,2,2,2,2,3,3')
 
  sector={
   planets={}
  }
 
  for _i=1,_planetcount do
-  if rnd() < (dget(62)/scorethreshold)*0.25  then
+  if rnd() < (getscorepercentage())*0.25  then
    add(sector.planets,createplanet(planettypes.droidworld))
   else
    add(sector.planets,createplanet(createplanettype()))
@@ -1460,13 +1271,13 @@ function resetplanetcamera(_drawies)
  local _diffx=_drawies[2].x-guy.x
  local _diffy=_drawies[2].y-guy.y
  _drawies[2].x-=_diffx+62
- _drawies[2].y-=_diffy+62
+ _drawies[2].y-=_diffy+63
 
  guy.x=62
  guy.y=65
 end
 
-function planetinit(_planetid)
+function planetinit()
  lookinginsamplecase=nil
 
  factions.droid.landingc=180
@@ -1476,7 +1287,7 @@ function planetinit(_planetid)
  guy.y=mapsize/2
 
  guy.sx=0
- guy.sy=85
+ guy.sy=83
  guy.sw=6
  guy.sh=6
 
@@ -1522,10 +1333,8 @@ function planetupdate()
 
   if btn(2) then
    _movey+=_spd
-   guy.sx=6
   elseif btn(3) then
    _movey-=_spd
-   guy.sx=0
   end
  end
 
@@ -1548,7 +1357,7 @@ function planetupdate()
   lookinginsamplecase=nil
 
   if guy.runningc > 30 and not guy.panting then
-   messages[1]=rnd(trimsplit'*pant pant,*huff puff,*wheeeeze')
+   messages[1]=rnd(split'*pant pant,*huff puff,*wheeeeze')
    guy.panting=true
   end
 
@@ -1559,7 +1368,7 @@ function planetupdate()
     _movey*=-3
     guy.panting=true
     guy.runningc=24
-    messages[1]=rnd(trimsplit'ouch,ouf,argh,ow,owie')
+    messages[1]=rnd(split'ouch,ouf,argh,ow,owie')
     sfx(rnd{16,17})
    end
   end
@@ -1620,15 +1429,23 @@ function planetupdate()
    if guy.action.func(guy.action.target) then
     return
    end
-  elseif guy.trap then
-   local _trap=guy.trap
-   guy.trap=nil
-   _trap.x=guy.x
-   _trap.y=guy.y
-   _trap.targetx=guy.x
-   _trap.targety=guy.y
-   add(sector.planets[1].animals,_trap)
-   sfx(34)
+  elseif dget(45) != 0 then
+   if dget(45) == 1 then
+    add(sector.planets[1].animals,{
+     x=guy.x,
+     y=guy.y,
+     targetx=guy.x,
+     targety=guy.y,
+     sx=28,
+     sy=38,
+     sw=7,
+     sh=3,
+     toolnr=1,
+     behaviour=laidtrapbehaviour,
+    })
+    dset(45,0)
+    sfx(34)
+   end
   else
    guy.talkingc=8
    sfx(rnd{0,1,2})
@@ -1639,13 +1456,19 @@ function planetupdate()
  guy.samplingc-=1
 
  if guy.talkingc > 0 then
-  guy.sx=12
+  guy.sx=18
  end
 
+ guy.sy=83
+ if dget(45) != 0 then -- carrying tool
+  guy.sy=90
+ end
  if guy.sunken then
-  guy.sy=84
- else
-  guy.sy=85
+  guy.sy-=1
+ end
+
+ if (_movex != 0 or _movey != 0) then
+  guy.sx=guy.walkingc > 3 and 12 or 6
  end
 
  -- update factions
@@ -1877,6 +1700,33 @@ function storagedraw(_obj)
    local _lx=_x+5
    line(_lx,105,_lx,107,dget(_obj.index))
   end
+ end
+end
+
+function toolstorageinputhandler(_obj)
+ if _obj.inrange and btnp(4) then
+  local _carriedtool=dget(45)
+  dset(45,dget(45+_obj.index))
+  dset(45+_obj.index,_carriedtool)
+  sfx(35)
+ end
+end
+
+function toolstoragedraw(_obj)
+ local _storedtool=dget(45+_obj.index)
+ if _obj.inrange then
+  if _storedtool != 0 then
+   actiontitle='\014\x8e\015 pick up '..toolnames[_storedtool]
+  elseif dget(45) != 0 then
+   actiontitle='\014\x8e\015 store '..toolnames[dget(45)]
+  else
+   actiontitle='tool storage'
+  end
+ end
+
+ if _storedtool != 0 then
+  local _tool=tools[_storedtool]
+  sspr(_tool.sx,_tool.sy,_tool.sw,_tool.sh,_obj[1]-1,75)
  end
 end
 
@@ -2167,7 +2017,7 @@ function resetshipobjs()
          clearseedcannon()
          
          if not factions.droid.alertc then
-          factions.droid.alertc=300+flr(rnd(300))
+          factions.droid.alertc=300+flrrnd(300)
          else
           factions.droid.alertc=max(1,factions.droid.alertc-90)
          end
@@ -2220,6 +2070,20 @@ function resetshipobjs()
     end,
     draw=drawelevator,
    },
+   { -- tool storage 1
+    72,76,
+    index=1,
+    cantbreak=true, -- todo: blow off the tool
+    inputhandler=toolstorageinputhandler,
+    draw=toolstoragedraw,
+   },
+   { -- tool storage 1
+    78,82,
+    index=2,
+    cantbreak=true, -- todo: blow off the tool
+    inputhandler=toolstorageinputhandler,
+    draw=toolstoragedraw,
+   },
    { -- score tracker
     87,92,
     c=0,
@@ -2232,7 +2096,7 @@ function resetshipobjs()
       print('seeds: '..tostr(dget(61)),23,34,11)
 
       if _obj.broken then
-       print((_obj.broken and rnd() > 0.5 and 'la5t sfed: ' or 'last seed: ')..tostr(flr(rnd(9999))),23,42,6)
+       print((_obj.broken and rnd() > 0.5 and 'la5t sfed: ' or 'last seed: ')..tostr(flrrnd(9999)),23,42,6)
       else
        local _quality=flr((dget(60)/38)*100)
        print('last seed: '..tostr(dget(60))..' ('..tostr(_quality)..'%)',23,42,6)
@@ -2394,14 +2258,14 @@ end
 
 function shipinit()
  lookinginsamplecase=true
- pal(trimsplit'1,130,3,133,5,6,7,8,9,137,11,12,13,14,15',1)
+ pal(split'1,130,3,133,5,6,7,8,9,137,11,12,13,14,15',1)
 
  stars={}
 
  for i=1,30 do
   add(stars,{
-   x=flr(rnd()*128),
-   y=flr(rnd()*128),
+   x=flrrnd(128),
+   y=flrrnd(128),
    spd=mid(0.125,rnd()+0.5,1),
    col=rnd{1,13}
   })
@@ -2445,6 +2309,7 @@ function shipupdate()
   end
 
   actiontitle=''
+  showrepairtitle=nil
   showbrokentitle=nil
   travelblocked=nil
 
@@ -2457,7 +2322,16 @@ function shipupdate()
       _obj.firstframe=true
      end
      _obj.inrange=true
-     if _obj.inputhandler then
+     debug('dget(45)')
+     debug(dget(45))
+     if dget(45) == 4 and _obj.broken and not _obj.cantbreak then -- carrying spare part
+      showrepairtitle=true
+      if btnp(4) then
+       dset(45,0)
+       -- sfx() -- todo
+       _obj.broken=nil
+      end
+     elseif _obj.inputhandler then
       actiontitle=_obj.actiontitle or ''
       _obj.inputhandler(_obj)
      end
@@ -2472,7 +2346,7 @@ function shipupdate()
 
   if factions.droid.alertc == 0 then
    if not factions.droid.firingc then
-    factions.droid.firingc=90+flr(rnd(60))
+    factions.droid.firingc=90+flrrnd(60)
    end
 
    factions.droid.firingc-=1
@@ -2506,7 +2380,6 @@ function shipupdate()
 
    if traveling == 'warping' then
     dset(9,max(0,dget(9)-_fuelconsumption))
-    debug(dget(9))
     nextsector()
    end
 
@@ -2564,7 +2437,7 @@ function shipupdate()
   _s.x-=_s.spd*_spd
   if _s.x < 0 then
    _s.x=140
-   _s.y=flr(rnd()*128)
+   _s.y=flrrnd(128)
   end
  end
 
@@ -2639,10 +2512,8 @@ function shipdraw()
  end
 
  -- draw guy
- if guy.floor > 0 and not guy.incryo then
-  sspr(16,36,4,5,guy.x-2,guy.y-5)
- elseif guy.floor == 0 then
-  sspr(24,36,4,5,guy.x-2,guy.y-5)
+ if not guy.incryo then
+  sspr(32,dget(45) == 0 and 41 or 46,5,5,guy.x-2,guy.y-5)
  end
 
  -- draw small ship
@@ -2661,8 +2532,10 @@ function shipdraw()
   pset(_p.x,_p.y,_p.col)
  end
 
- -- draw actiontitle and brokentitle
- if showbrokentitle then
+ -- draw actiontitle, repairtitle, and brokentitle
+ if showrepairtitle then
+  print('\014\x8e\015 repair',48,32,9)
+ elseif showbrokentitle then
   print('broken',52,32,8)
  else
   local _strlen=#actiontitle*4
@@ -2695,7 +2568,7 @@ function deadinit(_drawies)
 
  ts=t()
 
- pal(trimsplit'1,136,3,4,5,6,7,136,9,137,138,8,13,14,15',1)
+ pal(split'1,136,3,4,5,6,7,136,9,137,138,8,13,14,15',1)
  
  _update=deadupdate
  _draw=deaddraw
@@ -2757,126 +2630,126 @@ e0e0990ee0099900eee111ececeecece0fccc30e068880e0f4440e00c3c00c3c0c0ee0552550e052
 0b9999b00b9999b0eeeeee9eeceecee9e0c330ee000eeee000eee0c3c0eeee0c00ee05752550ee0000ee025220ee0ddddddddd00550505050505050505050550
 e0bbbb0ee0bbbb0eeeeeeeececeececeee000ee08880ee04440eee00c0eeee0c0eee02222550105250ee025250ee055505055500550505050505050505050550
 ee0000eeee0000eeeeedddececeececee0ccc0ee0f000ee09000eee0c0eeee0c0eeee000000ee02550ee025250ee055505055500550505050505050505050550
-eeeeeeeeeeeeeeeee33eeeeeeeaaeeee0cc9cc0e0f8880e094440ee0c0eeee0c0eee05757550e022201e055250ee055505055500550505050505050505050550
-eeeeeeeeeeeeeeeeeeeeeeaeeceeceea09ccc30e0f0f0ee09090eee0000eeeee000e05755550eeeeeee05752550e055505055500555055505550555055505550
-ee00ee00ee00ee00eeeeeeececeecece0ccca30e000eeee000eeee011110eeee060e05552220eeeeeee05552250e055550555500555555555555555555555550
-ee010010ee010010eee333ececeececee0c330e08880ee04440ee01dddd10eee000e02252550eeeeeee05252250e055555555500ddddddddddddddddddddddd0
-ee011110ee011110eeeeeeeeee88eeeeee000eee09000ee0a000e0dddddd0eee050e022222201eeeeee02222220100000000000e00000000000000000000000e
-e0116160e0116160eeeeee8eeceecee8e0ccc0ee098880e0a4440e0dddd0eeee050ee000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000e
+ee00ee00ee00ee00e33eeeeeeeaaeeee0cc9cc0e0f8880e094440ee0c0eeee0c0eee05757550e022201e055250ee055505055500550505050505050505050550
+ee010010ee010010eeeeeeaeeceeceea09ccc30e0f0f0ee09090eee0000eeeee000e05755550eeeeeee05752550e055505055500555055505550555055505550
+ee011110ee011110eeeeeeececeecece0ccca30e000eeee000eeee011110eeee060e05552220eeeeeee05552250e055550555500555555555555555555555550
+e0117170e0117170eee333ececeececee0c330e08880ee04440ee01dddd10eee000e02252550eeeeeee05252250e055555555500ddddddddddddddddddddddd0
+0111111001111110eeeeeeeeee88eeeeee000eee09000ee0a000e0dddddd0eee050e022222201eeeeee02222220100000000000e00000000000000000000000e
+0111111001111110eeeeee8eeceecee8e0ccc0ee098880e0a4440e0dddd0eeee050ee000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000e
 0111111001111110eeeeeeececeecece0ccacc0e09090ee0a0a0eee0000eeeee050e05752550eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee066666660
-0111111001111110eeeeeeececeecece0accc30e000eeee000eeeee0000000eee0ee05555520eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee060000060
-0111111001111110eeeeeeeeeebbeeee0ccc83008880ee04440eee011111110eeeee05722520eeeeee1111111111111111111111111111111eeeeeeeeeeeeeee
-01010010e010110eeeeeeebeeceeceebe0c330ee0a000ee08000e01ddddddd10eeee05552520eeee1111111111111111111111111111111111111eeeeeeeeeee
-000e000eeeeeeeeeeeeeeeececeececeee000eee0a8880e0844400ddddddddd0eeee05752520eee1111111111111111111111111111111111111111eeeeeeeee
-0440440eee0eeeeeeeeeeeececeececee0ccc0ee0a0a0ee08080ee0dddddddd0eeee022222201ee111111111111111111111111111111111111111111eeeeeee
-e04440eee040eeeeeeeeeeeeee77eeee0cc8cc0e000eeee000eeeee00ddddd0eeeeeeeeeeeeeeee11111111111111111111111111111111111111111111eeeee
-ee040eee04440eeeeeeeee7eeceecee708ccc3008880ee04440eeeeee00000eeeeeeeeeeeeeeeee1111111111111111111111111111111111111111111111eee
-eee0eeee04040eeeeeeeeeececeecece0ccc830e0b000ee0b000eee0000000eeeeeeeeeeeeeaaaa111111111111111111111111111111111111111111111111e
-eeeeeeee00e00eeeeeeeeeececeececee0c330ee0b8880e0b4440e0aaaaaaa0eeeeeeaaeeeeeeee1111111111111111111111111111111111111111111111111
-eeeeeeeeeeeeeeee000eeeeeeeeeeeeeee000eee0b0b0ee0b0b0e0a9999999a0eeeeeeeeeeeeeee1111111111111111111111111111111111111111111111111
-eeee000eeeeeeee05550eeeeeeeeeeeee0ccc0ee000eeee000eee09999999990eeeeeeeeeeaaaeee11111111111111111111111111111111111111111111111e
-e0e05550eeeeeee05055000eeeeeeeee0ccbcc008880ee04440eee0999999990eeeeeeeeeeeeeeeeeeee11111111111111111111111111eeeeeeeeeeeeeeeeee
-0e0050500eeeeee050500ee0eeeeeeee0bccc30e07000ee07000eee00999990eeeeeeeeeeeeeeeeeeeeee11111111111111111111eeeeeeeeeeeeeeeeeeeeeee
-0ee0000dd0eeeee0000dd0eeeeeeeeee0cccb30e078880e074440eeee00000eeeeeeeeeeeee7777e1eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeee0e09d90eeee0e009d90eeeeeeeeee0c330ee07070ee07070eeeee0000eeeeeeee77eeeeeeeee11eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeee0ee0000eeee0eee000eeeeeeeeeeee000eeeeeeee00e0eeee0ee0aaaa0eeeeeeeeeeeeeeeee1111eeeeeeeeeeeee1eeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eee0ee0eeee0ee0eceeeeeeeecceeecee0ccc0ee0eee040040ee0400a9999a0eeeeeeeeeee777eee1111eeeeeeee1eee11eeeeeee1eeeee1eeeeeeeeeeeeeeee
-eee0000eeee0000eeceecceeceececee0cc7cc0040e040ee040e01009999990eeeeeeeeeeeeeeee111111eeeeee1eeee111eeeeee1eeee1eee1eeeeeeeeeeeee
-0e08aaa0ee08aaa0ececeececeececee07ccc30e040010ee010040ee099990ee00eee0000eeeeeee111111eee1111eee1111eee1e1ee1111ee11eeeeeeeeeeee
-e0889a9000889a90ececeececeececee0ccc630e01040eeee0410eeee0000eee0d0e0aa990eeeeeee111111111111111111111111111111111111eeeeeeee1ee
-e088aaa0e088aaa0eeeeeeeeeeeeeeeee0c330eee010eeeeee040eeeeeeeeaee0dd0aaaaa900eeeee1111111111111111111111111111111111111eeeeee1eee
-e0888880e0888880e00ee00ee11eeeeeeeeeeeeee040eeeeee040eeeeeeeaee05666666666660eeee11111111111111111111111111111111111111eee1111ee
-e000000ee000000e0ff00f901f91eeeeeeeeeeee04110eeee04110eeeaaaeaa05dddddddddd660e1111111111111111111111111111111111111111111111111
-e0ee0e0eee00e0ee0ff009901991eeeeeeeeeeeeeeeeeeeeeeeeeeeaaeeeeeee00000000000000e1111111111111111111111111111111111111111111111111
-eee0000eeeeeeeee0aa006601661eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaee111111111111ee1111111111111111111111111111111111111111111111111
-ee077770eee0000e0aa006601661eeeeeeeeeeeeeeeeeeeeeeeeeeeaaaeeaeeeeeeeeeeeeeeeeeeeeeee1111111111111111111111111111111111111111111e
-ee078780ee077770eeeeeeeeeeee00eeeeeeeeeeeeeeeeee0eeeeeeeeeaaeeeeeeeeeeeeeeeeeeee11111111111111111111111111111111111111111111111e
-e0777770ee078780eeeeeeeeeee00a0000eeeeeeeeeeee6e60eeeeeeeeeeaaeeeeeeeeeeeeeeeeee1111111111111111111111111111111111111111111111ee
-07778880e0777770eeeeee8888080885850eeeeeeeeee06bb000eeeeeeeeeeaeeeeeeeeeeeeeeeee111111111111111111111111111111111111111111111eee
-077788800777888088eeeeeeeeeeeeeeeeeeeeeeebbbb06bbddd0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111111111111111111111111111111111111eeee
-0777777007777770eeeeeeeeeeeeeeeeeeebbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111e11111111eeeeeeeeeee1111111eeeeeeee
-07070070e070770eeeeee888ee00e0e00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eeeeeeeeeeeeeeeeeeeeeee11111111111111eeeeeeeeee
-eee0000eeeeeeeeeeeeeeeeeee0606060eeeeeeebbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0c0eeeee0eeeeeeeeeeee1111111111111111111111eeeeee
-ee0bbbb0eee00000eeeeeeeeee055d550eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000eeeeeee0cc0eee0c0eeeeeeee1111111111111111111111111111eee
-e0bb7b7b0e0bbbbb0eeeeeeeee0000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0ddddd00eeee0cc30eee0cc0eeeeee111111111111111111111111111111ee
-e0bbbbbb00bbb7b7b0eeeeeeee0560eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedee0d66666dd0eee0cc30ee0cc30eeeee11111111111111111111111111111111e
-e0bbbbbb00bbbbbbb0eeeeeeee0650eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0d6d000d6dd0ee0cc330e0cc330eee1111111111111111111111111111111111
-ee000000ee0000000eeeeeeeee0560eeeeeeee00eeeeeeeeeeeeeeeeeeeeeee0d6d07bb0d6dd00cc3330e0cc330eee1111111111111111111111111111111111
-ee0000eeee0000eeee0000eeee0000eeeeeee0dd0eeeeeeeeeeeeeeeeeeeeee0dd07bbbb0d6d0e0c330e0cc3330eeee11111111111111111111111111111111e
-e0dddd0ee0dddd0ee0dddd0ee0dddd0eeeee0dd50eeeeeeeeeeeeeeeeeeeeeeeed0bbbbb0d6d0ee010eee00100eeeeeeeeee1111111111111111111111eeeeee
-e0d7d70ee0d7d70ee0d7d70ee0d7d70eeee0dddd0eddeeeeeeeeeeeeeeeddeeeeeeeebb0dddd0ee010eeee010eeeeeeeeeeeeeee11111111111111eeeeeeeeee
-e00ddd0eee0ddd0eee0ddd0eee0ddd0eee0dd7d50eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111111111eeeeeeeeeee
-0d0000d0e000000ee000000ee000000eee0dd7dd0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1111111111eeeeeeeeeeee
-050d00500d0d00d00d0d00d00d0d00d0e0ddd7d50eeeeeeeeeeeeeeddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111eeeeeeeeeeeeee
-05050050050500500505005005050050e0d7d7dd0eeeeeeee00000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eeeeeeeeeeee
-ee0500ee050ee0500505005005050050e0d7d7dd50eeeeee0bbb770eeeeeeeeeee0000eeeee0000eeeeeeeeeeeeeeeeeeeeeeeeeee1eeeeeee0c0eeeeee0eeee
-eeeeeeeeeeeeeeeeee000000eeeeeeee0dddd7ddd0eee000bbbbbb7000eeeee0e060600eee060600eeeeeeeeeeee00ee00eeeeeee1eeeeeeee0c0eeeee0c0eee
-0000000000000000000a88a0eeeeeeee07d5d7dd50e00d60bbbbbbb06d00ee060606050ee0606050eee0000eeeee060060eeee111e11eeeee0cc0eeeee0c0eee
-0a88a00a88a00a88a0e0dd0eeeeeeeee0dd5d7ddd00d6dd600000006dd6d0060606050ee0606050eee066660eeee006660ee11eeeeeeeeeeee0cc0eeee0cc0ee
-e0880ee0880ee0880ee0880eeeeeeeee07ddd7dd500dd6dd6666666dd6dd0060606050ee0606050eee0656560eee0656560eeeeeee11eeeeee0c30eee0ccc0ee
-005580085500005500005500eeeeeeee0dd7d7ddd0e00d66ddddddd66d00e0606060111e06060111ee06666660ee06666660111ee1eeeeeeee0cc30eee0cc30e
-08dd0ee0dd8008dd8008dd80eeeeeeee05d7dddd50eee0000000000000eeeeeeee0000eeeee0000eeee0000eeeee00ee00eeeee11eeeeeeee0cc300eee0c300e
-e050eeee050ee0550ee0550eeeeeeeee05d7d7ddd0eeee11111111111eeeeee0e0f0f00eee0f0f00ee0ffff0eeee0f00f0eeeeeee11eeeeee0cc330ee0cc330e
-eee0eeeee0eeeee0eeeee0eeeeeeeeee05d7d7d550eeeeeeeeeeeeee0000ee0f0f0f050ee0f0f050ee0f5f5f0eee00fff0eeeeeeeee1eeee0ccc3330e0ccc330
-e0000ee0000ee0000ee0000eeeeeeeee0dddddddd0eeeeeeeeeeeee08880e0f0f0f050ee0f0f050eee0ffffff0ee0f5f5f0eeeeeeeeeeeee00ccc3300ccc3300
-07666007666007666007bb60eeeeeeee05d5d5d550eeeee0000000085550e0f0f0f050ee0f0f050eeeeeeeeeeeee0ffffff0eeeeeeeeeeeee0c3330ee0c3330e
-06bb6006bb6006bb6006bb60eeeeeeee0dd555dd0eeeee066d0555588880e0f0f0f0111e0f0f0111eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0cc333300cc33330
-06bb6006bb6006bb60065560eeeeeeee055555550eeee06ddd0588588880eeee000eeeeeeeeeeeeeee0eeeeeeeeeeeeeeeeeeee0eeeeeeee0001100000011000
+01010010e010110eeeeeeeececeecece0accc30e000eeee000eeeee0000000eee0ee05555520eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee060000060
+000e000eeeeeeeeeeeeeeeeeeebbeeee0ccc83008880ee04440eee011111110eeeee05722520eeeeee1111111111111111111111111111111eeeeeeeeeeeeeee
+0cc0cc0eee0eeeeeeeeeeebeeceeceebe0c330ee0a000ee08000e01ddddddd10eeee05552520eeee1111111111111111111111111111111111111eeeeeeeeeee
+e0ccc0eee0c0eeeeeeeeeeececeececeee000eee0a8880e0844400ddddddddd0eeee05752520eee1111111111111111111111111111111111111111eeeeeeeee
+ee0c0eee0ccc0eeeeeeeeeececeececee0ccc0ee0a0a0ee08080ee0dddddddd0eeee022222201ee111111111111111111111111111111111111111111eeeeeee
+eee0eeee0c0c0eeeeeeeeeeeee77eeee0cc8cc0e000eeee000eeeee00ddddd0eeeeeeeeeeeeaaaa11111111111111111111111111111111111111111111eeeee
+eeeeeeee00e00eeeeeeeee7eeceecee708ccc3008880ee04440eeeeee00000eeeeeeeaaeeeeeeee1111111111111111111111111111111111111111111111eee
+eee0000eeeeeeeeeeeeeeeececeecece0ccc830e0b000ee0b000eee0000000eeeeeeeeeeeeeeeee111111111111111111111111111111111111111111111111e
+ee077770eee0000eeeeeeeececeececee0c330ee0b8880e0b4440e0aaaaaaa0eeeeeeeeeeeaaaee1111111111111111111111111111111111111111111111111
+ee078780ee077770eeeeeeeeeeeeeeeeee000eee0b0b0ee0b0b0e0a9999999a0eeeeeeeeeee77771111111111111111111111111111111111111111111111111
+e0777770ee078780eeeeeeeeeeeeeeeee0ccc0ee000eeee000eee09999999990eeeee77eeeeeeeee11111111111111111111111111111111111111111111111e
+07778880e0777770eeeeeeeeeeeeeeee0ccbcc008880ee04440eee0999999990eeeeeeeeeeeeeeeeeeee11111111111111111111111111eeeeeeeeeeeeeeeeee
+0777888007778880eeeeeeeeeeeeeeee0bccc30e07000ee07000eee00999990eeeeeeeeeee777eeeeeeee11111111111111111111eeeeeeeeeeeeeeeeeeeeeee
+0777777007777770eeeeeeeeeeeeeeee0cccb30e078880e074440eeee00000eeeeeeeeeeeeebbbbe1eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+07070070e070770eeeeeeeeeeeeeeeeee0c330ee07070ee07070eeeee0000eeeeeeeebbeeeeeeeee11eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+eee0000eeeeeeeeeeeeeeeeeeeeeeeeeee000eeeeeeee00e0eeee0ee0aaaa0eeeeeeeeeeeeeeeeee111eeeeeeeeeeeee1eeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+ee088880eee0000eeceeeeeeeecceeece0ccc0ee0eee040040ee0400a9999a0eeeeeeeeeeebbbeee1111eeeeeeee1eee11eeeeeee1eeeee1eeeeeeeeeeeeeeee
+ee089890ee088880eeceecceeceecece0cc7cc0040e040ee040e01009999990eeeeeeeeeeee8888e11111eeeeee1eeee111eeeeee1eeee1eee1eeeeeeeeeeeee
+e0888880ee089890eececeececeecece07ccc30e040010ee010040ee099990eeeeeee88eeeeeeeee111111eee1111eee1111eee1e1ee1111ee11eeeeeeeeeeee
+0888aaa0e0888880eececeececeecece0ccc630e01040eeee0410eeee0000eeeeeeeeeeeeeeeeeeee111111111111111111111111111111111111eeeeeeee1ee
+0888aaa00888aaa0eeeeeeeeeeeeeeeee0c330eee010eeeeee040eeeeeeeeaeeeeeeeeeeee888eeee1111111111111111111111111111111111111eeeeee1eee
+0888888008888880eeeeeeeeeeeeeeeeeeeeeeeee040eeeeee040eeeeeeeaeee00eee0000eeeeeeee11111111111111111111111111111111111111eee1111ee
+08080080e080880eeeeeeeeeeeeeeeeeeeeeeeee04110eeee04110eeeaaaeaae0d0e0aa990eeeee1111111111111111111111111111111111111111111111111
+eee0ee0eeee0ee0eeeee0ee0ee0e00e0e00eeeeeeeeeeeeeeeeeeeeaaeeeeeee0dd0aaaaa900eee1111111111111111111111111111111111111111111111111
+eee0000eeee0000eeee0a00900700606060eeeeeeeeeeeeeeeeeeeeeeeeeeaa05666666666660ee1111111111111111111111111111111111111111111111111
+0e044440ee044440eee060060060055d550eeeeeeeeeeeeeeeeeeeeaaaeeaee05dddddddddd660eeeeee1111111111111111111111111111111111111111111e
+e044707000447070eee0600600600000e00eee00eee00eeeeeeeeeeeeeaaeeee00000000000000ee11111111111111111111111111111111111111111111111e
+e0444040e0444040eee06006006005600ff0e0ff0e0ff0eeeeeeeeeeeeeeaaeee111111111111eee1111111111111111111111111111111111111111111111ee
+e0444440e0444440eeeeeeee000006500ff0e0ff0e0ff0eeeeeeeeeeeeeeeeaeeeeeeeeeeeeeeeee111111111111111111111111111111111111111111111eee
+e000000ee000000eeeeeeeee066005600aa0e0aa0e0aa0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111111111111111111111111111111111111eeee
+e0ee0e0eee00e0eeeeeeeeee0dd0000e0aa0e0a00e00a0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111e11111111eeeeeeeeeee1111111eeeeeeee
+eee0000eeeeeeeeeeeeeeeeee06009b0e00eee00eee00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eeeeeeeeeeeeeeeeeeeeeee11111111111111eeeeeeeeee
+ee0bbbb0eee00000eeeeeeeeee0e09900ff0e0ff0e0ff0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0c0eeeee0eeeeeeeeeeee1111111111111111111111eeeeee
+e0bb7b7b0e0bbbbb0eeeeeeeeeee0bb00ff0e0ff0e0ff0eeeeeeeeeeeeeeee00000eeeeeeeeeeee0cc0eee0c0eeeeeeee1111111111111111111111111111eee
+e0bbbbbb00bbb7b7b0eeeeeeeeee00000aa600aa600aa60eeeeeeeeeeeeee0ddddd00eeeeeeeee0cc30eee0cc0eeeeee111111111111111111111111111111ee
+e0bbbbbb00bbbbbbb0eeeeeeeeeeeeee0aa0e0a00e00a0eeeeeeeeeeeeee0d66666dd0eeeeedde0cc30ee0cc30eeeee11111111111111111111111111111111e
+ee000000ee0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0d6d000d6dd0eeeeeee0cc330e0cc330eee1111111111111111111111111111111111
+ee0000eeee0000eeee0000eeee0000eeeeeeee00eeeeeeeeeeeeeeeeee0d6d07bb0d6dd0eeeee0cc3330e0cc330eee1111111111111111111111111111111111
+e0dddd0ee0dddd0ee0dddd0ee0dddd0eeeeee0dd0eeeeeeeeeeeeeeeee0dd07bbbb0d6d0eeeeee0c330e0cc3330eeee11111111111111111111111111111111e
+e0d7d70ee0d7d70ee0d7d70ee0d7d70eeeee0dd50eeeeeeeeee0eeeeeeeed0bbbbb0d6d0eeeeeee010eee00100eeeeeeeeee1111111111111111111111eeeeee
+e00ddd0eee0ddd0eee0ddd0eee0ddd0eeee0dddd0eeeeeeee6e60eeeddeeeeeebb0dddd0eddeeee010eeee010eeeeeeeeeeeeeee11111111111111eeeeeeeeee
+0d0000d0e000000ee000000ee000000eee0dd7d50eeeeeee06bb000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111111111eeeeeeeeeee
+050d00500d0d00d00d0d00d00d0d00d0ee0dd7dd0eeeeeee06bbddd0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1111111111eeeeeeeeeeee
+05050050050500500505005005050050e0ddd7d50eeeeeeeeeeeeeeeeeeeeeeeeeeeedddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111eeeeeeeeeeeeee
+ee0500ee050ee0500505005005050050e0d7d7dd0eeeeeeee00000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eeeeeeeeeeee
+eeeeeeeeeeeeeeeeee000000eeeeeeeee0d7d7dd50eeeeee0bbb770eeeeeeeeeee0000eeeee0000eeeeeeeeeeeeeeeeeeeeeeeeeee1eeeeeee0c0eeeeee0eeee
+0000000000000000000a88a0eeeeeeee0dddd7ddd0eee000bbbbbb7000eeeee0e060600eee060600eeeeeeeeeeee00ee00eeeeeee1eeeeeeee0c0eeeee0c0eee
+0a88a00a88a00a88a0e0dd0eeeeeeeee07d5d7dd50e00d60bbbbbbb06d00ee060606050ee0606050eee0000eeeee060060eeee111e11eeeee0cc0eeeee0c0eee
+e0880ee0880ee0880ee0880eeeeeeeee0dd5d7ddd00d6dd600000006dd6d0060606050ee0606050eee066660eeee006660ee11eeeeeeeeeeee0cc0eeee0cc0ee
+005580085500005500005500eeeeeeee07ddd7dd500dd6dd6666666dd6dd0060606050ee0606050eee0656560eee0656560eeeeeee11eeeeee0c30eee0ccc0ee
+08dd0ee0dd8008dd8008dd80eeeeeeee0dd7d7ddd0e00d66ddddddd66d00e0606060111e06060111ee06666660ee06666660111ee1eeeeeeee0cc30eee0cc30e
+e050eeee050ee0550ee0550eeeeeeeee05d7dddd50eee0000000000000eeeeeeee0000eeeee0000eeee0000eeeee00ee00eeeee11eeeeeeee0cc300eee0c300e
+eee0eeeee0eeeee0eeeee0eeeeeeeeee05d7d7ddd0eeee11111111111eeeeee0e0f0f00eee0f0f00ee0ffff0eeee0f00f0eeeeeee11eeeeee0cc330ee0cc330e
+e0000ee0000ee0000ee0000eeeeeeeee05d7d7d550eeeeeeeeeeeeee0000ee0f0f0f050ee0f0f050ee0f5f5f0eee00fff0eeeeeeeee1eeee0ccc3330e0ccc330
+07666007666007666007bb60eeeeeeee0dddddddd0eeeeeeeeeeeee08880e0f0f0f050ee0f0f050eee0ffffff0ee0f5f5f0eeeeeeeeeeeee00ccc3300ccc3300
+06bb6006bb6006bb6006bb60eeeeeeee05d5d5d550eeeee0000000085550e0f0f0f050ee0f0f050eeeeeeeeeeeee0ffffff0eeeeeeeeeeeee0c3330ee0c3330e
+06bb6006bb6006bb60065560eeeeeeee0dd555dd0eeeee066d0555588880e0f0f0f0111e0f0f0111eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0cc333300cc33330
+e0dd0ee0dd0ee0dd0ee0dd0eeeeeeeee055555550eeee06ddd0588588880eeee000eeeeeeeeeeeeeee0eeeeeeeeeeeeeeeeeeee0eeeeeeee0001100000011000
 e0dd0ee0dd0ee0dd0ee0dd0eeeeeeeee055555550eee06dddd05555888850ee04420eeee00eeeeeee040eeeeeeeeeee00eeeee040eeeeeeeee0110eeee0110ee
 e0dd0ee0dd0ee0dd0ee0dd0eeeeeeeee055050550ee000000055000000850ee04220eee0440eeeee0420eee000eeee0440eee0420eeeeeeeeeeeeeeeeeeeeeee
-e0dd0ee0dd0ee0dd0ee0dd0eeeeeeeeee0000000ee0885555550888850850e04220eeee04220eee04220ee04420eee04220e04220eeeeeeeeeeeeeeeeeeeeeee
-eee0000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000000000000000eee02220ee042220eee0422200422220e042220e042420eeeeeeeeeeeeeeeeeeeeee
-ee088880eee0000eeeeeeeeeeeeeeeeee1111111eee11111111111111111eee04220ee0422240ee042220eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeefeeeee
-ee089890ee088880eeeeeeeeeeeeeeeeeeeeeeeeeeeeee00eeeee0eeeeeeee042240e04224420e0422240eeee8888888888888eeeeeeeeeeeeeeeeefeecefeee
-e0888880ee089890eeeeeeeeeeeeeeeeeeeeeeeeeeeee050eeee080eeeeee0422422004222220e0422420eeee888888eeee888eeeeeeeeecccccceeecceeceef
-0888aaa0e0888880eeeeeeeeeeeeeeeeeeeeeeeeeeee0850eee08880eeeeeeeeeeeeeeeeeeeeeeeee0eeeeeee88888eeeeee88cccceeccccccc66eeeecefecce
-0888aaa00888aaa0eeeeeeeeeeeeeeeeeeeeeeeeeee08850ee0558880eeeeeee00eeeeeeeeeeeeee040eeeeee88888eeeeee88ddddccc6c66c666eefeccefcee
-0888888008888880eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee05555800eeeeee0440eeeee000eeeee040eeeeee88888eeeeee88cccceeccccccc66eeecceeeece
-08080080e080880eeeeeeeeeeeeeeeeeeeeeeeeeeeddee00055585050eeeeee04220eee04440eee04220eeeee88888eeeeee88ddddeeeeecccccceeeeceeeece
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeddd558508850eeee042220ee042220eee04220eeeee888888eeee888cccceeeee0000eeeeeee9eeeee
-eeeeeeeeeeeeee00eee00eeeeeeeeeeeeeeeeeeeeeeeeeeedd550888850eee04220eee042220eee042240eeee101eeeeeeeee9eeee6eee06ddd0eee9eece9eee
-ee00eee00eeee0ff0e0ff0eeeeeeeeeeeeeeeeeeeeeeedeeeee5500000eeee042220e04224420e0422420eeee101eeeeeeee999eee6e6e06ddd0eeeecceecee9
-e0ff0e0ff0eee0ff0e0ff0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0422222004242220e0422420eeee101110001199999ee6eee0dddd0eeeeece9ecce
-e0ff0e0ff0eee0880e0880eeeeeeeeeeeeeeeeeeeeeeeeee555eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1011099901e999ee66e6e05dd50eee9ecce9cee
-0daa0e0add0e0daa0e0add0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1011109990e999ee6666e055550eeeecceeeece
-0daa0e0add0e0daa0e0add0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1010000990eaaae455555055550eeeeeceeeece
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee42444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee424424444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee42444244444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee424442444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+eeeeeeeeeeeeeeee000eeeeeeeeeeeeee0000000ee0885555550888850850e04220eeee04220eee04220ee04420eee04220e04220eeeeeeeeeeeeeeeeeeeeeee
+eeee000eeeeeeee05550eeeeeeeeeeeeeeeeeeeeee000000000000000000eee02220ee042220eee0422200422220e042220e042420eeeeeeeeeeeeeeeeeeeeee
+e0e05550eeeeeee05055000eeeeeeeeee1111111eee11111111111111111eee04220ee0422240ee042220eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeefeeeee
+0e0050500eeeeee050500ee0eeeeeeeeeeeeeeeeeeeeee00eeeee0eeeeeeee042240e04224420e0422240eeee8888888888888eeeeeeeeeeeeeeeeefeecefeee
+0ee0000dd0eeeee0000dd0eeeeeeeeeeeeeeeeeeeeeee050eeee080eeeeee0422422004222220e0422420eeee888888eeee888eeeeeeeeecccccceeecceeceef
+eeee0e09d90eeee0e009d90eeeeeeeeeeeeeeeeeeeee0850eee08880eeeeeeeeeeeeeeeeeeeeeeeee0eeeeeee88888eeeeee88cccceeccccccc66eeeecefecce
+eeee0ee0000eeee0eee000eeeeeeeeeeeeeeeeeeeee08850ee0558880eeeeeee00eeeeeeeeeeeeee040eeeeee88888eeeeee88ddddccc6c66c666eefeccefcee
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee05555800eeeeee0440eeeee000eeeee040eeeeee88888eeeeee88cccceeccccccc66eeecceeeece
+eeeeeeeeeeeeeeeeeeee00eeeeeeeeeeeeeeeeeeeeddee00055585050eeeeee04220eee04440eee04220eeeee88888eeeeee88ddddeeeeecccccceeeeceeeece
+ee00eeee00eeee00eee0ff0eeeeeeeeeeeeeeeeeeeeeeeddd558508850eeee042220ee042220eee04220eeeee888888eeee888cccceeeee0000eeeeeee9eeeee
+e0ff0ee0ff0ee0ff0ee0ff0eeeeeeeeeeee00eeeeeeeeeeedd550888850eee04220eee042220eee042240eeee101eeeeeeeee9eeee6eee06ddd0eee9eece9eee
+e0ff0ee0ff0ee0ff0ee0880eeeeeeeeeee00a0000eeeedeeeee5500000eeee042220e04224420e0422420eeee101eeeeeeee999eee6e6e06ddd0eeeecceecee9
+0daa0e0daa0e0daa0e0daa0eeeeeeeeee080885850eeeeeeeeeeeeeeeeeee0422222004242220e0422420eeee101110001199999ee6eee0dddd0eeeeece9ecce
+0daa0e0da0ee0d0a0e0daa0eeeeeeeeeeeeeeeeeeeeeeeeedddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1011099901e999ee66e6e05dd50eee9ecce9cee
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1011109990e999ee6666e055550eeeecceeeece
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1010000990eaaae455555055550eeeeeceeeece
+ee00eeee00eeee00eeeeeeeeeeeeeeeeeeeeeee444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+e0ff0ee0ff0ee0ff0eeeeeeeeeeeeeeeeeeeeee42444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+e0ff0ee0ff0ee0ff0eeeeeeeeeeeeeeeeeeeeeee424424444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+0daa600daa600daa60eeeeeeeeeeeeeeeeeeeeee42444244444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+0daa0e0da00e0d0a0eeeeeeeeeeeeeeeeeeeeeeee424442444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eeeeeeeeeeeeeeeeeeeeeeee00eeeeeeeeee00eee42444424444444eeeeeeeeee244444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeeeeeeeeeeeeeeee00000e070eeeeeeee0f0eeee424444244444444eeeeeeeee2222eeeeeeee4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeeeeeeeeeeeeeee0777f0e07f00eeeeee0f0eeee42444442444444444eeeeeee2444eeeeeeee4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeeeeeeeeeeeeeee0777f0e07f7f0eee007f0eeeee424444424444444444eeeee2444eeeeeeee4e4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeeeeeeeeeeeeee077f7f0e07f7f0ee07f7f0eeeee42444444222222222222ee222222eeeeeee4e4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeeeeeeeeeeeee0777f7f0e07f7f0ee07f7f0eeeee44244422444444444444444444444444444444444444444444444444444eeeeeeeeeeeeeeeeeeeeeeeeee
-eeeeeeeeeeeeeee077f77f0e07f7f0ee07f7f0eeeee4424224442222222222222222222222222222222222222222222444444444444444444eeeeeeeeeeeeeee
-eeeeeeeeeeeeeee0ffffff00777fff00777fff0eeee4444444224444444444444444444444444444444444444444444222444444222222222444eeeeeeeeeeee
+eeeeeeeeeeeeeeeeee00000e040eeeeeeee020eeee424444244444444eeeeeeeee2222eeeeeeee4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+eeeeeeeeeeeeeeeee044420e04200eeeeee020eeee42444442444444444eeeeeee2444eeeeeeee4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+eeeeeeeeeeeeeeeee044420e042420eee00420eeeee424444424444444444eeeee2444eeeeeeee4e4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+eeeeeeeeeeeeeeee0442420e042420ee042420eeeee42444444222222222222ee222222eeeeeee4e4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+eeeeeeeeeeeeeee04442420e042420ee042420eeeee44244422444444444444444444444444444444444444444444444444444eeeeeeeeeeeeeeeeeeeeeeeeee
+eeeeeeeeeeeeeee04424420e042420ee042420eeeee4424224442222222222222222222222222222222222222222222444444444444444444eeeeeeeeeeeeeee
+eeeeeeeeeeeeeee022222200444222004442220eeee4444444224444444444444444444444444444444444444444444222444444222222222444eeeeeeeeeeee
 eeeeeeeeeeeeeeeeeeeeeeee00eeeeeeeeee00eeee44222222222222244444444444444444442222222224442222222222224442200000000000444eeeeeeeee
-eeeeeeeeeeeeeeeeee00000e070eeeeeeee060eee4422000000000002242222222222222224220000000224220000000000224220eeeeeeeeeee0000eeeeeeee
-eeeeeeeeeeeeeeeee077760e07600eeeeee060ee5422011111111111022200000000000002220111111102220111111111102220eeeeeeeeeeeeeeee0eeeeeee
-eeeeeeeeeeeeeeeee077760e076760eee00760e54420111111111111104011111111111110401111d1111040110011118111040ee00000eeeee0000000eeeeee
-eeeeeeeeeeeeeeee0776760e076760ee076760e4542011100001110110401111110000111040110000011040109901000001040e0545350eeee033330e0eeeee
-eeeeeeeeeeeeeee07776760e076760ee076760e55420110dddd0105010401111105555011040110555011040109901055501040e0555550eeee033330000eeee
-eeeeeeeeeeeeeee07767760e076760ee076760e44420110cccc0105010401111105555011040110555011040111111055501040e05d5350eeee0333353300eee
-eeeeeeeeeeeeeee06666660077766600777666055420110dddd0105010401551105555011040110555011040106601055501040e0555550ee00033335550e0ee
-eeeeeeeeeeeeeeeeeeeeeeee00eeeeeeeeee00e45420110cccc0105010401551105555011040110555011040106601055501040e05d5350ee05555555550222e
-eeeeeeeeeeeeeeeeee00000e060eeeeeeee0d0e54422010dddd0105010401111110440111040110555011040111111055501040e0555550ee044444422222222
-eeeeeeeeeeeeeeeee0666d0e06d00eeeeee0d0ee5442222222222222222222222222222222222222222222222222222222222222222222222222222244444442
-eeeeeeeeeeeeeeeee0666d0e06d6d0eee006d0eeee44222444444444444444444222222224444444444444444444444444444444444444444444444444444422
-eeeeeeeeeeeeeeee066d6d0e06d6d0ee06d6d0eeee4442222222222222222224220000002242222222222242222222222222222222224222222222444444422e
-eeeeeeeeeeeeeee0666d6d0e06d6d0ee06d6d0eeee0000000000000000000022201111110222000000000222000000000000000000022200000002222222422e
-eeeeeeeeeeeeeee066d66d0e06d6d0ee06d6d0eeee50111111111111111110040110000110401111d111104011111111111111111110401151511024444422ee
-eeeeeeeeeeeeeee0dddddd00666ddd00666ddd0eee5011111100001110011104010d6dd0104011000001104011111111111111111110401151511022224222ee
+eeeeeeeeeeeeeeeeee00000e070eeeeeeee0f0eee4422000000000002242222222222222224220000000224220000000000224220eeeeeeeeeee0000eeeeeeee
+eeeeeeeeeeeeeeeee0777f0e07f00eeeeee0f0ee54220111111111110222000000000000022201111111022201dd1111dd102220eeeeeeeeeeeeeeee0eeeeeee
+eeeeeeeeeeeeeeeee0777f0e07f7f0eee007f0e54420111111111111104011111111111110401111d1111040111111111111040ee00000eeeee0000000eeeeee
+eeeeeeeeeeeeeeee077f7f0e07f7f0ee07f7f0e4542011100001110110401111110000111040110000011040111111111111040e0545350eeee033330e0eeeee
+eeeeeeeeeeeeeee0777f7f0e07f7f0ee07f7f0e55420110dddd0105010401111105555011040110555011040111111111111040e0555550eeee033330000eeee
+eeeeeeeeeeeeeee077f77f0e07f7f0ee07f7f0e44420110cccc0105010401111105555011040110555011040111111111111040e05d5350eeee0333353300eee
+eeeeeeeeeeeeeee0ffffff00777fff00777fff055420110dddd0105010401551105555011040110555011040111111111111040e0555550ee00033335550e0ee
+eeeeeeeeeeeeeeeeeeeeeeee00eeeeeeeeee00e45420110cccc0105010401551105555011040110555011040111111111111040e05d5350ee05555555550222e
+eeeeeeeeeeeeeeeeee00000e070eeeeeeee060e54422010dddd0105010401111110440111040110555011040111111111111040e0555550ee044444422222222
+eeeeeeeeeeeeeeeee077760e07600eeeeee060ee5442222222222222222222222222222222222222222222222222222222222222222222222222222244444442
+eeeeeeeeeeeeeeeee077760e076760eee00760eeee44222444444444444444444222222224444444444444444444444444444444444444444444444444444422
+eeeeeeeeeeeeeeee0776760e076760ee076760eeee4442222222222222222224220000002242222222222242222222222222222222224222222222444444422e
+eeeeeeeeeeeeeee07776760e076760ee076760eeee0000000000000000000022201111110222000000000222000000000000000000022200000002222222422e
+eeeeeeeeeeeeeee07767760e076760ee076760eeee50111111111111111110040110000110401111d111104011111111111111111110401151511024444422ee
+eeeeeeeeeeeeeee066666600777666007776660eee5011111100001110011104010d6dd0104011000001104011111111111111111110401151511022224222ee
 eeeeeeeeeeeeeeeeeeeeeeee00eeeeeeeeee00eeee501111109999010d0111040100dd0010401105550110401111111111111111111040115151102444222eee
-eeeeeeeeeeeeeeeeee00000e0d0eeeeeeee050eeee50111009999990dd011104010400401040110555011040100000100000100000104010000010244222eeee
-eeeeeeeeeeeeeeeee0ddd50e0d500eeeeee050eeee501106666666666650110401044440104011055501104010ddd01055d01055d010401055501024222eeeee
-eeeeeeeeeeeeeeeee0ddd50e0d5d50eee00d50eeee501066dddddddddd501104010444401040110555011040105550105d50105d501040105550102222eeeeee
-eeeeeeeeeeeeeeee0dd5d50e0d5d50ee0d5d50eeee501000000000000001110401004400104011055501104010555010d55010d550104010555022222eeeeeee
-eeeeeeeeeeeeeee0ddd5d50e0d5d50ee0d5d50eeee22222222222222222222222222222222222222222222222222222222222222222222222222222eeeeeeeee
-eeeeeeeeeeeeeee0dd5dd50e0d5d50ee0d5d50eeeee2222222222222222222222222222222222222222222222222222222222222222222222222eeeeeeeeeeee
-eeeeeeeeeeeeeee055555500ddd55500ddd5550eeeeeeeeee22222222eee22222222eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee22222222eeeeeeeeeeeeeeeeeeee
+eeeeeeeeeeeeeeeeee00000e060eeeeeeee0d0eeee50111009999990dd011104010400401040110555011040100000100000100000104010000010244222eeee
+eeeeeeeeeeeeeeeee0666d0e06d00eeeeee0d0eeee501106666666666650110401044440104011055501104010ddd01055d01055d010401055501024222eeeee
+eeeeeeeeeeeeeeeee0666d0e06d6d0eee006d0eeee501066dddddddddd501104010444401040110555011040105550105d50105d501040105550102222eeeeee
+eeeeeeeeeeeeeeee066d6d0e06d6d0ee06d6d0eeee501000000000000001110401004400104011055501104010555010d55010d550104010555022222eeeeeee
+eeeeeeeeeeeeeee0666d6d0e06d6d0ee06d6d0eeee22222222222222222222222222222222222222222222222222222222222222222222222222222eeeeeeeee
+eeeeeeeeeeeeeee066d66d0e06d6d0ee06d6d0eeeee2222222222222222222222222222222222222222222222222222222222222222222222222eeeeeeeeeeee
+eeeeeeeeeeeeeee0dddddd00666ddd00666ddd0eeeeeeeeee22222222eee22222222eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee22222222eeeeeeeeeeeeeeeeeeee
 __sfx__
 000200001e5501f550205501f5501f5501f5502355000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
 000200001f550165502155023550245501c5502155024550000002155000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -2913,3 +2786,4 @@ __sfx__
 000b00001f050150500a0500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000500003b6503a650295502655032450324501b550185501855000000154500f4500d55005450024500150000500005000050000000000000000000000000000000000000000000000000000000000000000000
 000600001514016150211500010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
+00030000214201c4401c4402144021440114200340000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
