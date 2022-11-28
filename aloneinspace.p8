@@ -4,7 +4,7 @@ __lua__
 -- the panspermia guy 1.0
 -- by ironchest games
 
-cartdata'ironchestgames_thepanspermiaguy_v1-dev11'
+cartdata'ironchestgames_thepanspermiaguy_v1-dev14'
 
 --[[ cartdata layout
 
@@ -110,13 +110,6 @@ function wrap(_min,_n,_max)
  return (((_n-_min)%(_max-_min))+(_max-_min))%(_max-_min)+_min
 end
 
-function mergeright(_t1,_t2)
- for _k,_v in pairs(_t2) do
-  _t1[_k]=_v
- end
- return _t1
-end
-
 
 -- 78 token s2t (depends on trimsplit)
 function s2t(_t)
@@ -138,6 +131,17 @@ function s2t(_t)
  return _result
 end
 
+function mergeright(_t1,_t2)
+ for _k,_v in pairs(_t2) do
+  _t1[_k]=_v
+ end
+ return _t1
+end
+
+function mergerightands2t(_t1,_t2)
+ return mergeright(s2t(_t1),_t2)
+end
+
 -- helpers
 local bloodtypes={
  fire=split'20,10',
@@ -148,43 +152,60 @@ local bloodtypes={
 
 function getbloodobj(_x,_y,_bloodtype)
  local _type=bloodtypes[_bloodtype]
- return {
+ return mergerightands2t([[
   sx=69,
-  sy=_type[1],
   sw=10,
   sh=4,
+  ground=true
+  ]],{
+  sy=_type[1],
   samplecolor=_type[2],
   action=takesampleaction,
   x=_x,
   y=_y,
-  ground=true,
- }
+ })
 end
 
 function getscorepercentage()
  return dget(62)/1000 -- 1000 is top threshold
 end
 
-function drawmessages()
- if #messages > 0 then
-  local _strlen=#messages[1]*4
-  local _y=guy.y-36
-  local _x=mid(0,guy.x-_strlen/2,128-_strlen/2)
-  local _x2=_x+_strlen+2
-  rectfill(_x,_y,_x2,_y+8,7)
-  line(guy.x,_y,guy.x,guy.y-7,7)
-  print(messages[1],_x+2,_y+2,0)
+talks={}
+function drawtalks()
+ for _talk in all(talks) do
+  local _strwidth=#_talk.str*4
+  local _y=_talk.y-33
+  local _x1=_talk.x-_strwidth/2
+  if _talk.followcam then
+   _x1=mid(0,_x1,128-_strwidth/2)
+  end
+  local _x2=_x1+_strwidth+2
+  rectfill(_x1,_y,_x2,_y+8,_talk.bgcolor)
+  line(_talk.x,_y,_talk.x,_y+30,_talk.bgcolor)
+  print(_talk.str,_x1+2,_y+2,_talk.strcolor)
  end
+ talks={}
 end
 
-function updatemessages()
- if #messages > 0 then
-  messages.c-=1
-  if messages.c <= 0 then
-   del(messages,messages[1])
-   messages.c=30
-  end
- end
+function addguytalk()
+ add(talks,{
+  strcolor=0,
+  bgcolor=7,
+  followcam=true,
+  x=guy.x,
+  y=guy.y-5,
+  str=guytalkstr,
+ })
+end
+
+function adddroidtalk(_behaviouree,_str)
+ add(talks,{
+  strcolor=7,
+  bgcolor=13,
+  x=_behaviouree.x,
+  y=_behaviouree.y-6,
+  str=_str,
+ })
 end
 
 function addtosamplecase(_sample)
@@ -218,7 +239,12 @@ function breakrandomshipobj()
  local _floorindex=rnd{1,2}
  local _objindex=flr(1+rnd(#shipobjs[_floorindex]))
  dset(floordatapos[_floorindex]+_objindex,1)
- shipobjs[_floorindex][_objindex].broken=true
+ local _obj=shipobjs[_floorindex][_objindex]
+ _obj.broken=true
+ _obj.brokenthisframe=true
+ if _obj.datapos then
+  dset(_obj.datapos,0)
+ end
 end
 
 function drawsamplecase(_x,_y,_showarrow)
@@ -339,23 +365,7 @@ function resetgame()
    landingc=nil,
    talkingc=nil,
    firingc=nil,
-   talkcol=7,
-   talkbgcol=13,
-   talkstr='stop spreading life',
-   talksfx=29,
-   alien={
-    sx=16,
-    sy=52,
-    sw=8,
-    sh=8,
-    sightradius=128,
-    spd=0,
-    huntingspd=2,
-    c=0,
-    alientype='droid',
-    bloodtype='droid',
-    behaviour=droidtalking,
-   },
+   alientype='droid',
   },
  }
 
@@ -402,9 +412,10 @@ tools={
 
 pickupactionfunc=function (_obj)
  if dget(45) != 0 then
-  add(messages,'carrying another tool')
+  guy.talkingc=30
+  guytalkstr='carrying another tool'
  else
-  del(sector.planets[1].mapobjs,_obj)
+  del(sector[1].mapobjs,_obj)
   dset(45,_obj.toolnr)
  end
 end
@@ -421,7 +432,7 @@ function closetrap(_trap)
 end
 
 function getnewtrap(_x,_y)
- return closetrap(mergeright(s2t[[
+ return closetrap(mergerightands2t([[
   sx=28,
   toolnr=1
   ]],
@@ -450,12 +461,14 @@ takesampleaction={
  title='take sample',
  func=function (_target)
   if #samples == 5 then
-   add(messages,'sample case is full')
+   guy.talkingc=30
+   guytalkstr='sample case is full'
+   sfx(0)
   else
    _target.action=nil
    addtosamplecase(_target.samplecolor)
    guy.samplingc=20
-   sector.planets[1].haswreck=nil
+   sector[1].haswreck=nil
    sfx(8)
   end
  end,
@@ -472,33 +485,32 @@ function laidtrapbehaviour(_behaviouree)
   return true
  end
 
- for _other in all(sector.planets[1].animals) do
+ for _other in all(sector[1].animals) do
   if _other != _behaviouree and dist(_behaviouree.x,_behaviouree.y,_other.x,_other.y) < 4 then
    -- kill animal
-   del(sector.planets[1].animals,_other)
-   add(sector.planets[1].mapobjs,getbloodobj(_other.x,_other.y,_other.bloodtype))
+   del(sector[1].animals,_other)
+   add(sector[1].mapobjs,getbloodobj(_other.x,_other.y,_other.bloodtype))
    sfx(33)
 
    -- close trap
    closetrap(_behaviouree)
-   del(sector.planets[1].animals,_behaviouree)
-   add(sector.planets[1].mapobjs,_behaviouree)
+   del(sector[1].animals,_behaviouree)
+   add(sector[1].mapobjs,_behaviouree)
    break
   end
  end
 end
 
-function martiantalking(_behaviouree)
- local _disttoguy=dist(_behaviouree.x,_behaviouree.y,guy.x,guy.y)
- 
- if _disttoguy < 32 then
-
+function droidbehaviour(_behaviouree)
+ if not _behaviouree.talkingc then
+  sfx(29)
+  _behaviouree.talkingc=140
  end
-end
-
-function droidtalking(_behaviouree)
- if factions.droid.talkingc <= 0 then
-  _behaviouree.behaviour=sighthunting
+ if _behaviouree.talkingc > 0 then
+  adddroidtalk(_behaviouree,'stop spreading life')
+  _behaviouree.talkingc-=1
+ elseif _behaviouree.talkingc <= 0 then
+  sighthunting(_behaviouree)
  end
 end
 
@@ -517,8 +529,10 @@ function sighthunting(_behaviouree)
  elseif _disttoguy < _behaviouree.sightradius then
   _behaviouree.targetx=guy.x
   _behaviouree.targety=guy.y
-  if _behaviouree.alientype == 'droid' and not _prevhunting then
-   add(messages,rnd(split'yikes,eek,uh-oh'))
+  if _behaviouree.isscary and guy.scared == nil and not _prevhunting then
+   guytalkstr=rnd(split'yikes,eek,uh-oh')
+   guy.scared=true
+   guy.talkingc=10
   end
   _behaviouree.hunting=true
 
@@ -639,7 +653,8 @@ animaltypes={
   spd=0,
   huntingspd=2,
   c=0,
-  bloodtype='droid'
+  bloodtype='droid',
+  isscary=true
  ]],
 }
 
@@ -812,6 +827,7 @@ planettypes={
   wpal=split'133,130,1,1,1',
   groundcolor=133,
   surfacecolor=13,
+  animalcount=16,
   objtypes={
    { -- droidpillar1
     sx='68', -- todo: token hunt, use s2t
@@ -916,7 +932,7 @@ stonehighlights={
  split'6,7,15,23,26,31', -- 12
  split'6,12,14,15,23,31', -- 13
  split'15,31', -- 14
- nil,nil,nil,nil,
+ nil,nil,nil,
  split'2,5,21,29', -- 18
  split'3,13,22,27,28', -- 19
  split'4,13,22,24,30', -- 20
@@ -1014,9 +1030,6 @@ end
 
 
 function createplanet(_planettype)
- local _rndseed=rnd() -- todo: needed?
- srand(_rndseed)
-
  local _tooclosedist=_planettype.objdist
 
  local _wpal={
@@ -1042,9 +1055,9 @@ function createplanet(_planettype)
      traveling='up'
      travelc=30
      sfx(27)
-     for _a in all(sector.planets[1].animals) do
+     for _a in all(sector[1].animals) do
       if _a.alientype == 'droid' then
-       del(sector.planets[1].animals,_a)
+       del(sector[1].animals,_a)
       end
      end
      shipinit()
@@ -1065,7 +1078,7 @@ function createplanet(_planettype)
 
   if _wrecktype == 'martianwreck' then
    -- ship wreck
-   add(_mapobjs,mergeright(s2t[[
+   add(_mapobjs,mergerightands2t([[
     sx=58,
     sy=48,
     sw=14,
@@ -1077,7 +1090,7 @@ function createplanet(_planettype)
    }))
 
    -- debris
-   add(_mapobjs,mergeright(s2t[[
+   add(_mapobjs,mergerightands2t([[
     sx=56,
     sy=50,
     sw=21,
@@ -1089,7 +1102,7 @@ function createplanet(_planettype)
    }))
 
    -- corpse
-   add(_mapobjs,mergeright(s2t[[
+   add(_mapobjs,mergerightands2t([[
     sx=48,
     sy=54,
     sw=8,
@@ -1103,7 +1116,7 @@ function createplanet(_planettype)
 
   else -- taurienwreck
    -- ship wreck
-   add(_mapobjs,mergeright(s2t[[
+   add(_mapobjs,mergerightands2t([[
     sx=49,
     sy=78,
     sw=10,
@@ -1115,7 +1128,7 @@ function createplanet(_planettype)
    }))
 
    -- small wing
-   add(_mapobjs,mergeright(s2t[[
+   add(_mapobjs,mergerightands2t([[
     sx=44,
     sy=78,
     sw=5,
@@ -1127,7 +1140,7 @@ function createplanet(_planettype)
    }))
 
    -- debris
-   add(_mapobjs,mergeright(s2t[[
+   add(_mapobjs,mergerightands2t([[
     sx=42,
     sy=83,
     sw=9,
@@ -1139,7 +1152,7 @@ function createplanet(_planettype)
    }))
 
    -- corpse
-   add(_mapobjs,mergeright(s2t[[
+   add(_mapobjs,mergerightands2t([[
     sx=33,
     sy=85,
     sw=9,
@@ -1165,15 +1178,16 @@ function createplanet(_planettype)
   add(_mapobjs,rnd({getnewtrap,getnewsparepart})(_x,_y))
 
   local _ruincount=flrrnd(7)+4
-  local _sy=rnd(split'104,112,120')
+  local _sy=rnd(split'96,104,112,120')
   for _i=0,_ruincount-1 do
-   add(_mapobjs,mergeright(s2t[[
+   local _a=_i/_ruincount+0.05
+   add(_mapobjs,mergerightands2t([[
     sw=8,
     sh=8,
     solid=true
     ]],{
-    x=_x+cos(_i/_ruincount)*_ruincount*5,
-    y=_y+sin(_i/_ruincount)*_ruincount*5,
+    x=_x+cos(_a)*_ruincount*5,
+    y=_y+sin(_a)*_ruincount*5,
     sx=rnd(split'15,23,31'),
     sy=_sy,
    }))
@@ -1234,7 +1248,7 @@ function createplanet(_planettype)
 
  -- add fauna
  local _animals={}
- local _loops=mid(0,flrrnd(getscorepercentage()*50),50)
+ local _loops=_planettype.animalcount or mid(0,flrrnd(getscorepercentage()*20),50)
  for _i=1,_loops do
    local _typ=rnd(_planettype.animaltypes)
    local _animal=clone(animaltypes[_typ])
@@ -1251,7 +1265,6 @@ function createplanet(_planettype)
  end
 
  return {
-  rndseed=_rndseed,
   mapobjs=_mapobjs,
   wpal=_wpal,
   groundcolor=_planettype.groundcolor,
@@ -1270,17 +1283,13 @@ function nextsector()
   _faction.firingc=nil
  end
 
- local _planetcount=rnd(split'1,1,2,2,2,2,3,3')
+ sector={}
 
- sector={
-  planets={}
- }
-
- for _i=1,_planetcount do
+ for _i=1,rnd(split'1,1,2,2,2,2,3,3') do
   if rnd() < (getscorepercentage())*0.25  then
-   add(sector.planets,createplanet(planettypes.droidworld))
+   add(sector,createplanet(planettypes.droidworld))
   else
-   add(sector.planets,createplanet(createplanettype()))
+   add(sector,createplanet(createplanettype()))
   end
  end
 
@@ -1304,31 +1313,25 @@ function planetinit()
  lookinginsamplecase=nil
 
  factions.droid.landingc=180
- factions.droid.talkingc=140
 
- --7877
- guy=mergeright(guy,{
-  x=mapsize/2,
-  y=mapsize/2,
- 
+ guy=mergeright(guy,mergerightands2t([[
   sx=0,
   sy=83,
   sw=6,
   sh=6,
- 
-  spd=1,
   talkingc=0,
+  voicec=0,
   walkingc=0,
   runningc=0,
   walksfx=6,
-  samplingc=0,
- })
+  samplingc=0
+  ]],{
+  x=mapsize/2,
+  y=mapsize/2,
+  scared=nil,
+ }))
 
- pal(sector.planets[1].wpal,1)
-
- messages={
-  c=30,
- }
+ pal(sector[1].wpal,1)
 
  camera(guy.x/2,guy.y/2)
 
@@ -1340,14 +1343,14 @@ function planetupdate()
  local _movex=0
  local _movey=0
 
- local _spd=guy.spd
+ local _spd=1
 
  guy.sx=0
 
  if guy.panting then
   _spd=0
  elseif guy.runningc > 0 then
-  _spd*=2
+  _spd=2
  end
 
  if guy.talkingc <= 0 and guy.samplingc <= 0 then
@@ -1383,25 +1386,27 @@ function planetupdate()
   lookinginsamplecase=nil
 
   if guy.runningc > 30 and not guy.panting then
-   messages[1]=rnd(split'*pant pant,*huff puff,*wheeeeze')
+   guytalkstr=rnd(split'*pant pant,*huff puff,*wheeeeze')
+   guy.talkingc=30
    guy.panting=true
+   sfx(2)
   end
 
 
-  for _obj in all(sector.planets[1].mapobjs) do
+  for _obj in all(sector[1].mapobjs) do
    if dist(guy.x-_movex,guy.y-_movey,_obj.x,_obj.y) < _obj.sw * 0.5 and (guy.runningc > 0 and _obj.solid or _obj.lava) then
     _movex*=-3
     _movey*=-3
     guy.panting=true
     guy.runningc=24
-    messages[1]=rnd(split'ouch,ouf,argh,ow,owie')
+    guytalkstr=rnd(split'ouch,ouf,argh,ow,owie')
+    guy.talkingc=30
     sfx(rnd{16,17})
    end
   end
 
  else
   guy.walkingc=0
-
   guy.runningc=max(0,guy.runningc-2)
 
   if guy.runningc == 0 then
@@ -1416,14 +1421,14 @@ function planetupdate()
  guy.action=nil
  guy.sunken=nil
 
- local _mapobjs=sector.planets[1].mapobjs
+ local _mapobjs=sector[1].mapobjs
 
  for _,_faction in pairs(factions) do
   _faction.landingx=wrap(0,_faction.landingx+_movex,mapsize)
   _faction.landingy=wrap(0,_faction.landingy+_movey,mapsize)
  end
 
- for _animal in all(sector.planets[1].animals) do
+ for _animal in all(sector[1].animals) do
   _animal.x=wrap(0,_animal.x+_movex,mapsize)
   _animal.y=wrap(0,_animal.y+_movey,mapsize)
   _animal.targetx=wrap(0,_animal.targetx+_movex,mapsize)
@@ -1457,31 +1462,36 @@ function planetupdate()
    end
   elseif dget(45) != 0 then
    if dget(45) == 1 then
-    add(sector.planets[1].animals,{
-     x=guy.x,
-     y=guy.y,
-     targetx=guy.x,
-     targety=guy.y,
+    add(sector[1].animals,mergerightands2t([[
      sx=28,
      sy=38,
      sw=7,
      sh=3,
-     toolnr=1,
+     toolnr=1
+     ]],{
+     x=guy.x,
+     y=guy.y,
+     targetx=guy.x,
+     targety=guy.y,
      behaviour=laidtrapbehaviour,
-    })
+    }))
     dset(45,0)
     sfx(34)
    end
   else
-   guy.talkingc=8
+   guy.voicec=8
+   guy.talkingc=0
    sfx(rnd{0,1,2})
   end
  end
 
- guy.talkingc-=1
+ guy.voicec-=1
  guy.samplingc-=1
-
  if guy.talkingc > 0 then
+  guy.talkingc-=1
+ end
+
+ if (guy.talkingc > 15 and guy.talkingc % 6 > 3) or guy.voicec > 0 then
   guy.sx=18
  end
 
@@ -1506,40 +1516,35 @@ function planetupdate()
     _faction.landingc-=1
 
     if _faction.landingc == 0 then
-     local _alien=clone(_faction.alien)
-     _alien.x=_faction.landingx+16
-     _alien.y=_faction.landingy+16
-     _alien.targetx=_faction.landingx+16
-     _alien.targety=_faction.landingy+16
-     add(sector.planets[1].animals,_alien)
-     sfx(_faction.talksfx)
+     add(sector[1].animals,mergeright(clone(animaltypes[_faction.alientype]),{
+      x=_faction.landingx+16,
+      y=_faction.landingy+16,
+      targetx=_faction.landingx+16,
+      targety=_faction.landingy+16,
+      behaviour=droidbehaviour, -- todo: less droid specific
+     }))
     end
-
-   elseif _faction.talkingc > 0 then
-    _faction.talkingc-=1
    end
   end
  end
 
  -- update animals
- for _animal in all(sector.planets[1].animals) do
+ for _animal in all(sector[1].animals) do
   if _animal.behaviour(_animal) then
    return
   end
  end
 
- -- update messages
- updatemessages()
 end
 
 function planetdraw()
- cls(sector.planets[1].groundcolor)
+ cls(sector[1].groundcolor)
 
- local _mapobjs=sector.planets[1].mapobjs
+ local _mapobjs=sector[1].mapobjs
  local _drawies=clone(_mapobjs)
  add(_drawies,guy)
 
- for _animal in all(sector.planets[1].animals) do
+ for _animal in all(sector[1].animals) do
   add(_drawies,_animal)
  end
 
@@ -1562,7 +1567,7 @@ function planetdraw()
    _obj.flipx)
  end
 
- -- draw faction ship
+ -- draw faction ship -- todo: less droid specific
  for _factionname,_faction in pairs(factions) do
   if _faction.alertc == 0 then
    local _y=_faction.landingy-_faction.landingc
@@ -1571,22 +1576,6 @@ function planetdraw()
     _sh=26
    end
    sspr(32,52,10,_sh,_faction.landingx,_y)
-  end
-
-  -- draw alien talk
-  if _faction.landingc == 0 and _faction.talkingc > 20 and _faction.talkingc < 140 then
-   local _alien
-   for _a in all(sector.planets[1].animals) do
-    if _a.alientype == _factionname then
-     _alien=_a
-     break
-    end
-   end
-   local _strlen=#_faction.talkstr*4
-   local _y=_alien.y-36
-   rectfill(_alien.x-_strlen/2,_y,_alien.x+_strlen/2+2,_y+8,_faction.talkbgcol)
-   line(_alien.x,_y,_alien.x,_alien.y-12,_faction.talkbgcol)
-   print(_faction.talkstr,_alien.x+2-_strlen/2,_y+2,_faction.talkcol)
   end
  end
 
@@ -1608,8 +1597,11 @@ function planetdraw()
   drawsamplecase(_x,_y)
  end
 
- -- draw message
- drawmessages()
+ -- draw talks
+ if guy.talkingc > 0 then
+  addguytalk()
+ end
+ drawtalks()
 end
 
 
@@ -1680,51 +1672,52 @@ function storageinputhandler(_obj)
   _obj.inputlastframe=nil
 
   if _obj.broken then
-   -- todo: add sfx
    return
   end
-  local _index=_obj.index
-  if dget(_index) != 0 and #samples < 5 then
-   addtosamplecase(dget(_index))
-   dset(_index,nil)
+  local _datapos=_obj.datapos
+  if dget(_datapos) != 0 and #samples < 5 then
+   addtosamplecase(dget(_datapos))
+   dset(_datapos,nil)
    sfx(14)
-  elseif dget(_index) == 0 and #samples > 0 then
-   dset(_index,removefromsamplecase(samplesel))
+  elseif dget(_datapos) == 0 and #samples > 0 then
+   dset(_datapos,removefromsamplecase(samplesel))
    sfx(14)
+  else
+   sfx(31)
   end
  end
 end
 
 function storagedraw(_obj)
  if _obj.inrange then
-  local _index=_obj.index
+  local _datapos=_obj.datapos
   
   actiontitle='sample storage'
   
   if _obj.broken then
    showbrokentitle=true
-   dset(_index,0)
+   dset(_datapos,0)
    return
   end
 
   local _showsamplecasearrow=nil
 
-  local _x=_obj[1]-4
+  local _x=_obj.x1-4
   sspr(92,0,11,13,_x,98)
 
-  if dget(_index) != 0 and #samples < 5 then
+  if dget(_datapos) != 0 and #samples < 5 then
    actiontitle='\014\x8e\015 take sample'
    sspr(99,85,5,6,_x+3,113)
-  elseif dget(_index) == 0 and #samples > 0 then
+  elseif dget(_datapos) == 0 and #samples > 0 then
    actiontitle='\014\x8e\015 store sample'
    _showsamplecasearrow=true
   end
 
   drawsamplecase(42,98,_showsamplecasearrow)
 
-  if dget(_obj.index) != 0 then
+  if dget(_obj.datapos) != 0 then
    local _lx=_x+5
-   line(_lx,105,_lx,107,dget(_obj.index))
+   line(_lx,105,_lx,107,dget(_obj.datapos))
   end
  end
 end
@@ -1732,14 +1725,18 @@ end
 function toolstorageinputhandler(_obj)
  if _obj.inrange and btnp(4) then
   local _carriedtool=dget(45)
-  dset(45,dget(45+_obj.index))
-  dset(45+_obj.index,_carriedtool)
-  sfx(35)
+  dset(45,dget(_obj.datapos))
+  dset(_obj.datapos,_carriedtool)
+  if dget(45) != 0 or dget(_obj.datapos) != 0 then
+   sfx(35)
+  else
+   sfx(31)
+  end
  end
 end
 
 function toolstoragedraw(_obj)
- local _storedtool=dget(45+_obj.index)
+ local _storedtool=dget(_obj.datapos)
  if _obj.inrange then
   if _storedtool != 0 then
    actiontitle='\014\x8e\015 pick up '..toolnames[_storedtool]
@@ -1752,7 +1749,7 @@ function toolstoragedraw(_obj)
 
  if _storedtool != 0 then
   local _tool=tools[_storedtool]
-  sspr(_tool.sx,_tool.sy,_tool.sw,_tool.sh,_obj[1]-1,75)
+  sspr(_tool.sx,_tool.sy,_tool.sw,_tool.sh,_obj.x1-1,75)
  end
 end
 
@@ -1795,10 +1792,13 @@ end
 function resetshipobjs()
  shipobjs={
   { -- floor 1
-   { -- elevator
-    60,65,
+   -- elevator
+   mergerightands2t([[
+    x1=60,
+    x2=65,
     c=0,
-    y=86,
+    y=86
+    ]],{
     inputhandler=function(_obj)
      if btnp(2) then
       if not (_obj.broken and rnd() < 0.5) then
@@ -1811,10 +1811,13 @@ function resetshipobjs()
      end
     end,
     draw=drawelevator,
-   },
-   { -- small ship
-    29,43,
-    cantbreak=true,
+   }),
+   -- small ship
+   mergerightands2t([[
+    x1=29,
+    x2=43,
+    cantbreak=true
+    ]],{
     inputhandler=function(_obj)
      if btnp(4) and not travelblocked then
       traveling='down'
@@ -1828,10 +1831,13 @@ function resetshipobjs()
       actiontitle='\014\x8e\015 go to surface'
      end
     end,
-   },
-   { -- cryo
-    50,53,
-    cantbreak=true,
+   }),
+   -- cryo
+   mergerightands2t([[
+    x1=50,
+    x2=53,
+    cantbreak=true
+    ]],{
     inputhandler=function(_obj)
      if guy.incryo then
       if btnp(4) then
@@ -1858,27 +1864,39 @@ function resetshipobjs()
       end
      end
     end,
-   },
-   { -- storage 1
-    71,76,
-    index=6,
+   }),
+   -- storage 1
+   mergerightands2t([[
+    x1=71,
+    x2=76,
+    datapos=6
+    ]],{
     inputhandler=storageinputhandler,
     draw=storagedraw,
-   },
-   { -- storage 2
-    77,82,
-    index=7,
+   }),
+   -- storage 2
+   mergerightands2t([[
+    x1=77,
+    x2=82,
+    datapos=7
+    ]],{
     inputhandler=storageinputhandler,
     draw=storagedraw,
-   },
-   { -- storage 3
-    83,88,
-    index=8,
+   }),
+   -- storage 3
+   mergerightands2t([[
+    x1=83,
+    x2=88,
+    datapos=8
+    ]],{
     inputhandler=storageinputhandler,
     draw=storagedraw,
-   },
-   { -- water converter
-    94,99,
+   }),
+   -- water converter
+   mergerightands2t([[
+    x1=94,
+    x2=99
+    ]],{
     inputhandler=function(_obj)
      sampleselectinputhandler(_obj)
 
@@ -1886,7 +1904,7 @@ function resetshipobjs()
       _obj.inputlastframe=nil
 
       if _obj.broken or #samples == 0 then
-       -- todo: add n/a sfx
+       sfx(31)
        return
       end
       removefromsamplecase(samplesel)
@@ -1907,62 +1925,79 @@ function resetshipobjs()
       end
      end
     end,
-   },
-   { -- door
-    43,49,
+   }),
+   -- door
+   mergerightands2t([[
+    x1=43,
+    x2=49,
     x=44,
     y=85,
     c=0,
-    cantbreak=true,
+    cantbreak=true
+    ]],{
     draw=drawdoor,
-   },
-   { -- door
-    54,60,
+   }),
+   -- door
+   mergerightands2t([[
+    x1=54,
+    x2=60,
     x=55,
     y=85,
     c=0,
-    cantbreak=true,
+    cantbreak=true
+    ]],{
     draw=drawdoor,
-   },
-   { -- door
-    66,72,
+   }),
+   -- door
+   mergerightands2t([[
+    x1=66,
+    x2=72,
     x=67,
     y=85,
     c=0,
-    cantbreak=true,
+    cantbreak=true
+    ]],{
     draw=drawdoor,
-   },
-   { -- door
-    88,94,
+   }),
+   -- door
+   mergerightands2t([[
+    x1=88,
+    x2=94,
     x=89,
     y=85,
     c=0,
-    cantbreak=true,
+    cantbreak=true
+    ]],{
     draw=drawdoor,
-   },
+   }),
   },
 
-  { -- floor 2
-   { -- engine
-    28,37,
-    c=0,
+  -- floor 2
+  {
+   -- engine
+   mergerightands2t([[
+    x1=28,
+    x2=37,
+    c=0
+    ]],{
     inputhandler=function(_obj)
      sampleselectinputhandler(_obj)
 
      if _obj.inputlastframe == true and not btn(4) then
       _obj.inputlastframe=nil
 
-      if dget(9) == 5 then
-       add(messages,'tank is full')
-      elseif samples[samplesel] == 13 then
+      if samples[samplesel] != 13 then
+       guytalkstr='only water for fuel'
+       guy.talkingc=30
+       sfx(31)
+      elseif dget(9) == 5 then
+       guytalkstr='tank is full'
+       guy.talkingc=30
+       sfx(31)
+      else
        dset(9,dget(9)+1)
        removefromsamplecase(samplesel)
        sfx(14)
-      elseif dget(9) == 0 then
-       add(messages,'tank is empty')
-      else
-       add(messages,'only water for fuel')
-       sfx(31)
       end
      end
     end,
@@ -1999,10 +2034,13 @@ function resetshipobjs()
       end
      end
     end,
-   },
-   { -- seed cannon
-     44,49,
-     c=0,
+   }),
+   -- seed cannon
+   mergerightands2t([[
+     x1=44,
+     x2=49,
+     c=0
+     ]],{
      inputhandler=function(_obj)
       if _obj.c == 0 then
        sampleselectinputhandler(_obj)
@@ -2015,6 +2053,8 @@ function resetshipobjs()
         elseif #seed == 4 then
          _obj.c=90
          sfx(12)
+        else
+         sfx(31)
         end
        end
       end
@@ -2078,11 +2118,14 @@ function resetshipobjs()
       end
 
      end,
-   },
-   { -- elevator
-    60,65,
+   }),
+   -- elevator
+   mergerightands2t([[
+    x1=60,
+    x2=65,
     c=0,
-    y=75,
+    y=75
+    ]],{
     inputhandler=function(_obj)
      if btnp(3) then
       if not (_obj.broken and rnd() < 0.5) then
@@ -2095,24 +2138,33 @@ function resetshipobjs()
      end
     end,
     draw=drawelevator,
-   },
-   { -- tool storage 1
-    72,76,
-    index=1,
-    cantbreak=true, -- todo: blow off the tool
+   }),
+   -- tool storage 1
+   mergerightands2t([[
+    x1=72,
+    x2=76,
+    datapos=46,
+    cantbreak=true
+    ]],{ -- todo: blow off the tool
     inputhandler=toolstorageinputhandler,
     draw=toolstoragedraw,
-   },
-   { -- tool storage 1
-    78,82,
-    index=2,
-    cantbreak=true, -- todo: blow off the tool
+   }),
+   -- tool storage 1
+   mergerightands2t([[
+    x1=78,
+    x2=82,
+    datapos=47,
+    cantbreak=true
+    ]],{ -- todo: blow off the tool
     inputhandler=toolstorageinputhandler,
     draw=toolstoragedraw,
-   },
-   { -- score tracker
-    87,92,
-    c=0,
+   }),
+   -- score tracker
+   mergerightands2t([[
+    x1=87,
+    x2=92,
+    c=0
+    ]],{
     draw=function(_obj)
      if _obj.inrange then
       rectfill(19,11,109,50,5)
@@ -2137,10 +2189,13 @@ function resetshipobjs()
 
      pset(unpack(_obj.blink))
     end,
-   },
-   { -- navcom
-    96,97,
+   }),
+   -- navcom
+   mergerightands2t([[
+    x1=96,
+    x2=97,
     c=0,
+    ]],{
     inputhandler=function(_obj)
      if btnp(4) then
       if _obj.broken then
@@ -2153,16 +2208,16 @@ function resetshipobjs()
        end
       end
 
-      if dget(9) > 0 then
-       if #sector.planets == 1 then
+      if dget(9) > 0 and not travelblocked then
+       if #sector == 1 then
         traveling='warping'
        else
         traveling='orbiting'
-        deli(sector.planets, 1)
+        deli(sector, 1)
        end
        travelc=60
       else
-       -- sfx() -- todo: error sound
+       sfx(31)
       end
      end
     end,
@@ -2182,14 +2237,14 @@ function resetshipobjs()
        if _blink then
         if factions.droid.alertc == 0 or _obj.rebootingc then
          pset(103,76,8)
-        elseif sector.planets[1].haswreck then
+        elseif sector[1].haswreck then
          pset(103,76,11)
         end
        end
 
        if dget(9) == 0 then
         pset(104,76,8)
-       elseif #sector.planets == 1 then
+       elseif #sector == 1 then
         pset(104,76,11)
        end
       end
@@ -2217,12 +2272,14 @@ function resetshipobjs()
        elseif _blink then
         if factions.droid.alertc == 0 then
          print('hostile ship near',21,32,8)
-        elseif sector.planets[1].haswreck then
+        elseif sector[1].haswreck then
          print('distress signal',21,32,11)
         end
        end
   
-       if #sector.planets > 1 then
+       if travelblocked then
+        print('wait for seed cannon',21,41,11)
+       elseif #sector > 1 then
         print('> orbit next planet',21,41,11)
        else
         print('> warp to next sector',21,41,11)
@@ -2230,39 +2287,51 @@ function resetshipobjs()
       end
      end
     end,
-   },
-   { -- door
-    38,43,
+   }),
+   -- door
+   mergerightands2t([[
+    x1=38,
+    x2=43,
     x=39,
     y=74,
     c=0,
-    cantbreak=true,
+    cantbreak=true
+    ]],{
     draw=drawdoor,
-   },
-   { -- door
-    54,60,
+   }),
+   -- door
+   mergerightands2t([[
+    x1=54,
+    x2=60,
     x=55,
     y=74,
     c=0,
-    cantbreak=true,
+    cantbreak=true
+    ]],{
     draw=drawdoor,
-   },
-   { -- door
-    66,72,
+   }),
+   -- door
+   mergerightands2t([[
+    x1=66,
+    x2=72,
     x=67,
     y=74,
     c=0,
-    cantbreak=true,
-    draw=drawdoor,
-   },
-   { -- door
-    81,87,
+    cantbreak=true
+    ]],{
+    draw=drawdoor
+   }),
+   -- door
+   mergerightands2t([[
+    x1=81,
+    x2=87,
     x=82,
     y=74,
     c=0,
-    cantbreak=true,
+    cantbreak=true
+    ]],{
     draw=drawdoor,
-   },
+   }),
   },
  }
 end
@@ -2301,15 +2370,12 @@ function shipinit()
 
  guy.x=guy.incryo and 52 or 37
  guy.y=91
+ guy.talkingc=0
 
  guy.floor=1 -- 0 space, 1 below, 2 deck
 
  actiontitle=''
  showbrokentitle=nil
-
- messages={
-  c=30,
- }
 
  camera()
 
@@ -2339,23 +2405,28 @@ function shipupdate()
   showbrokentitle=nil
   travelblocked=nil
 
+  if guy.talkingc > 0 then
+   guy.talkingc-=1
+  end
+
   for _i=1,2 do
    local _floorobjs=shipobjs[_i]
-   for _obj in all(_floorobjs) do
+   for _j,_obj in ipairs(_floorobjs) do
     _obj.firstframe=nil
-    if _i == guy.floor and mid(_obj[1],guy.x,_obj[2]) == guy.x then
+    _obj.floor=_i
+    _obj.index=_j
+    if _i == guy.floor and mid(_obj.x1,guy.x,_obj.x2) == guy.x then
      if not _obj.inrange then
       _obj.firstframe=true
      end
      _obj.inrange=true
-     debug('dget(45)')
-     debug(dget(45))
      if dget(45) == 4 and _obj.broken and not _obj.cantbreak then -- carrying spare part
       showrepairtitle=true
       if btnp(4) then
-       dset(45,0)
-       -- sfx() -- todo
        _obj.broken=nil
+       dset(45,0)
+       dset(floordatapos[_obj.floor]+_obj.index,0)
+       sfx(36)
       end
      elseif _obj.inputhandler then
       actiontitle=_obj.actiontitle or ''
@@ -2384,9 +2455,6 @@ function shipupdate()
    end
   end
 
-  -- update messages
-  updatemessages()
-
  else -- traveling
   if travelc == 60 then
    if traveling == 'warping' then
@@ -2414,7 +2482,7 @@ function shipupdate()
    end
 
    if traveling == 'warping' or traveling == 'orbiting' then
-    if sector.planets[1].droidworld then
+    if sector[1].droidworld then
      factions.droid.alertc = 10
     end
    end
@@ -2436,7 +2504,7 @@ function shipupdate()
   local _floorobjs=shipobjs[_i]
   for _obj in all(_floorobjs) do
    if _obj.broken and not _obj.cantbreak then
-    addbrokenparticle(_obj[2]-3,floorys[_i])
+    addbrokenparticle(_obj.x2-3,floorys[_i])
    end
   end
  end
@@ -2498,7 +2566,7 @@ function shipdraw()
   if traveling == 'orbiting' then
    _x+=travelc*2.5
   end
-  circfill(_x,318,200,sector.planets[1].surfacecolor)
+  circfill(_x,318,200,sector[1].surfacecolor)
  end
 
  -- draw factions ships
@@ -2531,9 +2599,13 @@ function shipdraw()
  sspr(39,91,89,37,21,57)
 
  -- draw shipobjs
- for _floorobjs in all(shipobjs) do
+ for _floori,_floorobjs in ipairs(shipobjs) do
   for _obj in all(_floorobjs) do
    _obj.draw(_obj)
+   if _obj.brokenthisframe then
+    circfill(_obj.x1+(_obj.x2-_obj.x1),floorys[_floori],9,7)
+    _obj.brokenthisframe=nil
+   end
   end
  end
 
@@ -2568,16 +2640,11 @@ function shipdraw()
   print(actiontitle,64-_strlen/2,32,9)
  end
 
- -- draw message
- drawmessages()
-
- -- rectfill(5,5,15,14,5)
- -- -- circfill(10,10,4,5)
- -- local _r=-t()/20
- -- local _x=cos(_r)*4
- -- local _y=sin(_r)*4
- -- line(10,10,10+_x,10+_y,7)
-
+ -- draw talks
+ if guy.talkingc > 0 then
+  addguytalk()
+ end
+ drawtalks()
 end
 
 
@@ -2738,12 +2805,12 @@ e0ff0ee0ff0ee0ff0ee0880eeeeeeeeeee00a0000eeeedeeeee5500000eeee042220e04224420e04
 0daa0e0daa0e0daa0e0daa0eeeeeeeeee080885850eeeeeeeeeeeeeeeeeee0422222004242220e0422420eeee101110001199999ee6eee0dddd0eeeeece9ecce
 0daa0e0da0ee0d0a0e0daa0eeeeeeeeeeeeeeeeeeeeeeeeedddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1011099901e999ee66e6e05dd50eee9ecce9cee
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1011109990e999ee6666e055550eeeecceeeece
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1010000990eaaae455555055550eeeeeceeeece
-ee00eeee00eeee00eeeeeeeeeeeeeeeeeeeeeee444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-e0ff0ee0ff0ee0ff0eeeeeeeeeeeeeeeeeeeeee42444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-e0ff0ee0ff0ee0ff0eeeeeeeeeeeeeeeeeeeeeee424424444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-0daa600daa600daa60eeeeeeeeeeeeeeeeeeeeee42444244444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-0daa0e0da00e0d0a0eeeeeeeeeeeeeeeeeeeeeeee424442444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+eeeeeeeeeeeeeeeeeeee00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1010000990eaaae455555055550eeeeeceeeece
+ee00eeee00eeee00eee0ff0eeeeeeeeeeeeeeee444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+e0ff0ee0ff0ee0ff0ee0ff0eeeeeeeeeeeeeeee42444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+e0ff0ee0ff0ee0ff0ee0880eeeeeeeeeeeeeeeee424424444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+0daa600daa600daa600daa60eeeeeeeeeeeeeeee42444244444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+0daa0e0da00e0d0a0e0daa0eeeeeeeeeeeeeeeeee424442444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eeeeeeeeeeeeeeeeeeeeeeee00eeeeeeeeee00eee42444424444444eeeeeeeeee244444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eeeeeeeeeeeeeeeeee00000e040eeeeeeee020eeee424444244444444eeeeeeeee2222eeeeeeee4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eeeeeeeeeeeeeeeee044420e04200eeeeee020eeee42444442444444444eeeeeee2444eeeeeeee4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
@@ -2813,3 +2880,4 @@ __sfx__
 000500003b6503a650295502655032450324501b550185501855000000154500f4500d55005450024500150000500005000050000000000000000000000000000000000000000000000000000000000000000000
 000600001514016150211500010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
 00030000214201c4401c4402144021440114200340000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00040000180501b050240502405030050300503705037050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
