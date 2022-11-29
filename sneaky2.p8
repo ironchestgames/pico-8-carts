@@ -13,7 +13,123 @@ pal(2,141,1) -- dark red -> mauve
 -- set auto-repeat delay for btnp
 poke(0x5f5c, 5)
 
+function getdirtransform(_dir,_tile,_origin)
+ -- todo: change to pico dirs
+ local _c,_r=_tile.col,_tile.row
+ if _dir == 0 then
+  return _origin.x+_c,_origin.y-_r
+ elseif _dir == 1 then
+  return _origin.x+_r,_origin.y+_c
+ elseif _dir == 2 then
+  return _origin.x+_c,_origin.y+_r
+ elseif _dir == 3 then
+  return _origin.x-_r,_origin.y+_c
+ end
+end
+
+function roundtiesup(_n)
+ return flr(_n+0.5)
+end
+
+function roundtiesdown(_n)
+ return -flr(-(_n-0.5))
+end
+
+function gettiles(_row)
+ local _mincol=roundtiesup(_row.depth*_row.startslope)
+ local _maxcol=roundtiesdown(_row.depth*_row.endslope)
+ local _tiles={}
+ for _col=_mincol,_maxcol do
+  add(_tiles,{row=_row.depth,col=_col})
+ end
+ return _tiles
+end
+
+function nextrow(_row)
+ return {
+  depth=_row.depth+1,
+  startslope=_row.startslope,
+  endslope=_row.endslope,
+ }
+end
+
+function isnotoffpremises(_x,_y)
+ return _x < 16 and _x >= 0 and _y < 16 and _x >= 0
+end
+
+function reveal(_tile,_dir,_origin)
+ local _x,_y=getdirtransform(_dir,_tile,_origin)
+ if isnotoffpremises(_x,_y) then
+  fog[_y*16+_x]=0
+  unlit[_y*16+_x]=0
+ end
+end
+
+function iswall(_tile,_dir,_origin)
+ if _tile then
+  local _x,_y=getdirtransform(_dir,_tile,_origin)
+  return floor[_y*16+_x] == 2
+ end
+end
+
+function isfloor(_tile,_dir,_origin)
+ if _tile then
+  local _x,_y=getdirtransform(_dir,_tile,_origin)
+  local _f=floor[_y*16+_x]
+  return _f == 0 or _f == 1
+ end
+end
+
+function slope(_tile)
+ return (2*_tile.col-1)/(2*_tile.row)
+end
+
+function issymmetric(_row,_tile)
+ return _tile.col >= _row.depth * _row.startslope and _tile.col <= _row.depth * _row.endslope
+end
+
+function scan(_row1,_dir,_origin)
+ local _rows={_row1}
+ while #_rows > 0 do
+  local _row=deli(_rows,#_rows)
+  local _prevtile=nil
+  local _tiles=gettiles(_row)
+  for _tile in all(_tiles) do
+   if iswall(_tile,_dir,_origin) or issymmetric(_row,_tile) then
+    reveal(_tile,_dir,_origin)
+   end
+   if iswall(_prevtile,_dir,_origin) and isfloor(_tile,_dir,_origin) then
+    _row.startslope=slope(_tile)
+   end
+   if isfloor(_prevtile,_dir,_origin) and iswall(_tile,_dir,_origin) then
+    local _nextrow=nextrow(_row)
+    _nextrow.endslope=slope(_tile)
+    add(_rows,_nextrow)
+   end
+   _prevtile=_tile
+  end
+  if isfloor(_prevtile,_dir,_origin) then
+   local _nextrow=nextrow(_row)
+   add(_rows,_nextrow)
+  end
+ end
+end
+
+function symshadows(_origin)
+ for _dir=0,3 do
+  local _firstrow={
+   depth=1,
+   startslope=-1,
+   endslope=1,
+  }
+  scan(_firstrow,_dir,_origin)
+ end
+end
+
 _p={x=8,y=8}
+
+sneakp=nil
+headp=nil
 
 floor={}
 fog={}
@@ -64,7 +180,7 @@ function _update()
 
  local _nextx,_nexty=_p.x,_p.y
 
- local _sneakp=nil
+ sneakp=nil
  if btn(4) then
   if btn(0) then
    _nextx-=1
@@ -79,7 +195,7 @@ function _update()
    _nexty+=1
   end
 
-  _sneakp={
+  sneakp={
    x=_nextx,
    y=_nexty,
   }
@@ -105,126 +221,21 @@ function _update()
   _p.x,_p.y=_nextx,_nexty
  end
 
- local _headpx=_p.x
- local _headpy=_p.y
+ headp={
+  x=_p.x,
+  y=_p.y,
+ }
 
- if _sneakp then
-  _headpx=_sneakp.x
-  _headpy=_sneakp.y
- end
+ fog[headp.y*16+headp.x]=0
+ unlit[headp.y*16+headp.x]=0
 
- local function getdirtransform(_dir,_tile)
-  -- todo: change to pico dirs
-  local _c,_r=_tile.col,_tile.row
-  if _dir == 0 then
-   return _headpx+_c,_headpy-_r
-  elseif _dir == 1 then
-   return _headpx+_r,_headpy+_c
-  elseif _dir == 2 then
-   return _headpx+_c,_headpy+_r
-  elseif _dir == 3 then
-   return _headpx-_r,_headpy+_c
+ symshadows(headp)
+ if sneakp then
+  if floor[sneakp.y*16+sneakp.x] == 2 then
+   sneakp=nil
+  else
+   symshadows(sneakp)
   end
- end
-
- local function roundtiesup(_n)
-  return flr(_n+0.5)
- end
-
- local function roundtiesdown(_n)
-  return -flr(-(_n-0.5))
- end
-
- local function newrow(_depth,_startslope,_endslope)
-  return {
-   depth=_depth,
-   startslope=_startslope,
-   endslope=_endslope,
-  }
- end
-
- local function gettiles(_row)
-  local _mincol=roundtiesup(_row.depth*_row.startslope)
-  local _maxcol=roundtiesdown(_row.depth*_row.endslope)
-  local _tiles={}
-  for _col=_mincol,_maxcol do
-   add(_tiles,{row=_row.depth,col=_col})
-  end
-  return _tiles
- end
-
- local function nextrow(_row)
-  return newrow(_row.depth+1,_row.startslope,_row.endslope)
- end
-
- local function isnotoffpremises(_x,_y)
-  return _x < 16 and _x >= 0 and _y < 16 and _x >= 0
- end
-
- fog[_headpy*16+_headpx]=0
- unlit[_headpy*16+_headpx]=0
-
- local function reveal(_tile,_dir)
-  local _x,_y=getdirtransform(_dir,_tile)
-  if isnotoffpremises(_x,_y) then
-   fog[_y*16+_x]=0
-   unlit[_y*16+_x]=0
-  end
- end
-
- local function iswall(_tile,_dir)
-  if _tile then
-   local _x,_y=getdirtransform(_dir,_tile)
-   return floor[_y*16+_x] == 2
-  end
- end
-
- local function isfloor(_tile,_dir)
-  if _tile then
-   local _x,_y=getdirtransform(_dir,_tile)
-   local _f=floor[_y*16+_x]
-   return _f == 0 or _f == 1
-  end
- end
-
- local function slope(_tile)
-  return (2*_tile.col-1)/(2*_tile.row)
- end
-
- local function issymmetric(_row,_tile)
-  return _tile.col >= _row.depth * _row.startslope and _tile.col <= _row.depth * _row.endslope
- end
-
- local function scan(_row1,_dir)
-  local _rows={_row1}
-  while #_rows > 0 do
-   local _row=deli(_rows,#_rows)
-   local _prevtile
-   local _tiles=gettiles(_row)
-   for _tile in all(_tiles) do
-    if iswall(_tile,_dir) or issymmetric(_row,_tile) then
-     reveal(_tile,_dir)
-    end
-    if iswall(_prevtile,_dir) and isfloor(_tile,_dir) then
-     _row.startslope=slope(_tile)
-    end
-    if isfloor(_prevtile,_dir) and iswall(_tile,_dir) then
-     local _nextrow=nextrow(_row)
-     _nextrow.endslope=slope(_tile)
-     add(_rows,_nextrow)
-    end
-    _prevtile=_tile
-   end
-   if isfloor(_prevtile,_dir) then
-    local _nextrow=nextrow(_row)
-    add(_rows,_nextrow)
-   end
-  end
- end
-
- for _dir=0,3 do
-  local _firstrow=newrow(1,-1,1)
-  scan(_firstrow,_dir)
  end
 end
 
