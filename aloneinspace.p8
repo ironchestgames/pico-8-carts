@@ -4,7 +4,7 @@ __lua__
 -- the panspermia guy 1.0
 -- by ironchest games
 
-cartdata'ironchestgames_thepanspermiaguy_v1-dev14'
+cartdata'ironchestgames_thepanspermiaguy_v1-dev15'
 
 --[[ cartdata layout
 
@@ -22,6 +22,7 @@ tools are: 1 = trap, 2 = deterrer, 3 = drill, 4 = spare part)
 46 = tool storage 1
 47 = tool storage 2
 
+58 = tool carrying talk
 59 = is game saved
 60 = last seed score
 61 = current nr of seeds
@@ -143,6 +144,10 @@ function mergerightands2t(_t1,_t2)
 end
 
 -- helpers
+function mapwrap(_n)
+ return wrap(0,_n,mapsize)
+end
+
 local bloodtypes={
  fire=split'20,10',
  droid=split'24,7',
@@ -298,11 +303,13 @@ function resetgame()
  if dget(59) == 0 then -- no ongoing game
 
   dset(59,1) -- set ongoing game
+
   
   dset(60,0) -- last seed
   dset(61,0) -- seeds shot
   dset(62,0) -- score
 
+  dset(58,0) -- tool carrying talk
   --[[
    sample case
    storages
@@ -388,24 +395,25 @@ tools={
   toolnr=1
  ]],
  s2t[[
-  sx=19,
+  sx=16,
   sy=38,
   sw=3,
   sh=4,
   toolnr=2
  ]],
  s2t[[
-  sx=24,
+  sx=20,
   sy=43,
   sw=4,
   sh=5,
+  drillc=150,
   toolnr=3
  ]],
  s2t[[
   sx=28,
   sy=45,
   sw=4,
-  sh=5,
+  sh=4,
   toolnr=4
  ]],
 }
@@ -431,6 +439,17 @@ function closetrap(_trap)
  return _trap
 end
 
+function getnewtool(_x,_y,_toolindex)
+ return mergeright(clone(tools[_toolindex]),{
+  x=_x,
+  y=_y,
+  action={
+   title='pick up '..toolnames[_toolindex],
+   func=pickupactionfunc,
+  },
+ })
+end
+
 function getnewtrap(_x,_y)
  return closetrap(mergerightands2t([[
   sx=28,
@@ -446,15 +465,16 @@ function getnewtrap(_x,_y)
  }))
 end
 
+function getnewdeterrer(_x,_y)
+ return getnewtool(_x,_y,2)
+end
+
+function getnewdrill(_x,_y)
+ return getnewtool(_x,_y,3)
+end
+
 function getnewsparepart(_x,_y)
- local _tool=clone(tools[4])
- _tool.action={
-  title='pick up spare part',
-  func=pickupactionfunc,
- }
- _tool.x=_x
- _tool.y=_y
- return _tool
+ return getnewtool(_x,_y,4)
 end
 
 takesampleaction={
@@ -501,6 +521,77 @@ function laidtrapbehaviour(_behaviouree)
  end
 end
 
+function scaredbehaviour(_behaviouree)
+ _behaviouree.scaredc-=1
+ if _behaviouree.scaredc <= 0 then
+  _behaviouree.behaviour=_behaviouree.oldbehaviour
+ else
+  local _a=atan2(_behaviouree.scaredx-_behaviouree.x,_behaviouree.scaredy-_behaviouree.y)+0.5
+  _behaviouree.x+=cos(_a)*_behaviouree.spd
+  _behaviouree.y+=sin(_a)*_behaviouree.spd
+
+  _behaviouree.flipx=_behaviouree.x < _behaviouree.scaredx
+
+  _behaviouree.c-=1
+  if _behaviouree.c <= 0 then
+   _behaviouree.c=16
+  end
+  _behaviouree.sx=0
+  if _behaviouree.c > 8 then
+   _behaviouree.sx=_behaviouree.sw
+  end
+ end
+end
+
+function laiddeterrerbehaviour(_behaviouree)
+ if _behaviouree.c > 0 then
+  _behaviouree.c-=1
+  _behaviouree.sx=16+(_behaviouree.c % 4)*3
+  for _other in all(sector[1].animals) do
+   if _other != _behaviouree and _other.spd and _other.behaviour != scaredbehaviour and dist(_behaviouree.x,_behaviouree.y,_other.x,_other.y) < 48 then
+    -- scare animal
+    _other.oldbehaviour=_other.behaviour
+    _other.behaviour=scaredbehaviour
+    _other.scaredc=120
+    _other.scaredx=_behaviouree.x
+    _other.scaredy=_behaviouree.y
+   break
+   end
+  end
+ else
+  del(sector[1].animals,_behaviouree)
+  add(sector[1].mapobjs,getnewdeterrer(_behaviouree.x,_behaviouree.y))
+ end
+end
+
+function laiddrillbehaviour(_behaviouree)
+ _behaviouree.drillc-=1
+ if _behaviouree.drillc <= 0 then
+  del(sector[1].animals,_behaviouree)
+  add(sector[1].mapobjs,getnewdrill(_behaviouree.x,_behaviouree.y))
+  add(sector[1].mapobjs,mergerightands2t([[
+   sx=53,
+   sy=9,
+   sw=8,
+   sh=6,
+   ground=true,
+   samplecolor=13,
+   sunken=true,
+   walksfx=7
+   ]],{
+    x=_behaviouree.x,
+    y=_behaviouree.y,
+    action=takesampleaction,
+  }))
+ else
+
+  if _behaviouree.drillc % 40 == 29 then
+   _behaviouree.sh-=1
+  end
+  _behaviouree.sx=20+(_behaviouree.drillc % 2)*4
+ end
+end
+
 function droidbehaviour(_behaviouree)
  if not _behaviouree.talkingc then
   sfx(29)
@@ -531,8 +622,8 @@ function sighthunting(_behaviouree)
   _behaviouree.targety=guy.y
   if _behaviouree.isscary and guy.scared == nil and not _prevhunting then
    guytalkstr=rnd(split'yikes,eek,uh-oh')
-   guy.scared=true
    guy.talkingc=10
+   guy.scared=true
   end
   _behaviouree.hunting=true
 
@@ -1076,97 +1167,84 @@ function createplanet(_planettype)
   local _x=flrrnd(mapsize-_tooclosedist)
   local _y=flrrnd(mapsize-_tooclosedist)
 
+  -- add tool
+  if rnd() > 0.65 then
+   add(_mapobjs,getnewsparepart(_x-34,_y-2))
+  end
+
+  local function addwreckobj(_x,_y,_strobj)
+   add(_mapobjs,mergerightands2t(_strobj,{
+    x=_x,
+    y=_y,
+   }))
+  end
+
   if _wrecktype == 'martianwreck' then
    -- ship wreck
-   add(_mapobjs,mergerightands2t([[
+   addwreckobj(_x,_y,[[
     sx=58,
     sy=48,
     sw=14,
     sh=8,
     solid=true
-    ]],{
-    x=_x,
-    y=_y,
-   }))
+    ]])
 
    -- debris
-   add(_mapobjs,mergerightands2t([[
+   addwreckobj(_x+1,_y-2,[[
     sx=56,
     sy=50,
     sw=21,
     sh=9,
     ground=true
-    ]],{
-    x=_x+1,
-    y=_y-2,
-   }))
+    ]])
 
    -- corpse
-   add(_mapobjs,mergerightands2t([[
+   addwreckobj(_x+2,_y-14,[[
     sx=48,
     sy=54,
     sw=8,
     sh=4
-    ]],{
-    y=_y+2,
-    x=_x-14,
-   }))
+    ]])
 
    add(_mapobjs,getbloodobj(_x-23,_y+3,'martian'))
 
   else -- taurienwreck
    -- ship wreck
-   add(_mapobjs,mergerightands2t([[
+   addwreckobj(_x,_y,[[
     sx=49,
     sy=78,
     sw=10,
     sh=9,
     solid=true
-    ]],{
-    x=_x,
-    y=_y,
-   }))
+    ]])
 
    -- small wing
-   add(_mapobjs,mergerightands2t([[
+   addwreckobj(_x-8,_y-5,[[
     sx=44,
     sy=78,
     sw=5,
     sh=4,
     solid=true
-    ]],{
-    x=_x-8,
-    y=_y-5,
-   }))
+    ]])
 
    -- debris
-   add(_mapobjs,mergerightands2t([[
+   addwreckobj(_x-8,_y-1,[[
     sx=42,
     sy=83,
     sw=9,
     sh=6,
     ground=true
-    ]],{
-    x=_x-8,
-    y=_y-1,
-   }))
+    ]])
 
    -- corpse
-   add(_mapobjs,mergerightands2t([[
+   addwreckobj(_x-17,_y,[[
     sx=33,
     sy=85,
     sw=9,
     sh=3
-    ]],{
-    x=_x-17,
-    y=_y,
-   }))
+    ]])
 
    add(_mapobjs,getbloodobj(_x-26,_y+1,'taurien'))
-
-   if rnd() > 0.75 then
-    add(_mapobjs,getnewtrap(_x-32,_y-2))
-   end
   end
  end
 
@@ -1175,7 +1253,7 @@ function createplanet(_planettype)
   _x=flrrnd(mapsize-32)
   _y=flrrnd(mapsize-32)
 
-  add(_mapobjs,rnd({getnewtrap,getnewsparepart})(_x,_y))
+  add(_mapobjs,rnd({getnewtrap,getnewdeterrer,getnewdrill,getnewsparepart})(_x,_y))
 
   local _ruincount=flrrnd(7)+4
   local _sy=rnd(split'96,104,112,120')
@@ -1197,8 +1275,7 @@ function createplanet(_planettype)
 
  -- add flora
  for _i=1,70 do
-  local _x,_y,_tooclose
-  local _tries=0
+  local _tries,_x,_y,_tooclose=0
   repeat
    _x=flrrnd(mapsize-_tooclosedist)
    _y=flrrnd(mapsize-_tooclosedist)
@@ -1223,6 +1300,7 @@ function createplanet(_planettype)
   local _sxs=split(_obj.sx)
   local _idx=flrrnd(#_sxs)+1
   local _samplecolorindex0=0
+
   if type(_obj.samplecolor) == 'string' then
    local _samplecolors=split(_obj.samplecolor)
    _samplecolorindex0=flrrnd(#_samplecolors)
@@ -1367,7 +1445,61 @@ function planetupdate()
   end
  end
 
- if _movex != 0 or _movey != 0 then
+ if _movex == 0 and _movey == 0 then
+  guy.walkingc=0
+  guy.runningc=max(0,guy.runningc-2)
+
+  if guy.runningc == 0 then
+   guy.panting=nil
+  end
+
+  lookinginsamplecase=(not guy.panting) and btn(4)
+
+  if dget(45) != 0 and btnp(5) then
+
+   if dget(45) == 1 then -- trap
+    add(sector[1].animals,mergerightands2t([[
+     sx=28,
+     sy=38,
+     sw=7,
+     sh=3,
+     toolnr=1
+     ]],{
+     x=guy.x,
+     y=guy.y,
+     targetx=guy.x,
+     targety=guy.y,
+     behaviour=laidtrapbehaviour,
+    }))
+    sfx(34)
+
+   elseif dget(45) == 2 then -- deterrer
+    add(sector[1].animals,mergeright(clone(tools[2]),{
+     x=guy.x,
+     y=guy.y,
+     targetx=guy.x,
+     targety=guy.y,
+     c=360,
+     behaviour=laiddeterrerbehaviour,
+    }))
+    sfx(34)
+
+   elseif dget(45) == 3 then -- drill
+    add(sector[1].animals,mergeright(clone(tools[3]),{
+     x=guy.x,
+     y=guy.y,
+     targetx=guy.x,
+     targety=guy.y,
+     behaviour=laiddrillbehaviour,
+    }))
+
+   elseif dget(45) == 4 then -- spare part
+    add(sector[1].mapobjs,getnewsparepart(guy.x,guy.y))
+   end
+   dset(45,0)
+  end
+
+ else
   guy.walkingc-=1
   if guy.runningc > 0 then
    guy.walkingc-=1
@@ -1378,7 +1510,15 @@ function planetupdate()
   end
 
   if btn(5) then
-   guy.runningc+=1
+   if dget(45) == 0 then
+    guy.runningc+=1
+   else
+    if dget(58) == 0 then
+     dset(58,1)
+     guy.talkingc=30
+     guytalkstr='can\'t run while carrying tool'
+    end
+   end
   else
    guy.runningc=0
   end
@@ -1392,28 +1532,17 @@ function planetupdate()
    sfx(2)
   end
 
-
   for _obj in all(sector[1].mapobjs) do
    if dist(guy.x-_movex,guy.y-_movey,_obj.x,_obj.y) < _obj.sw * 0.5 and (guy.runningc > 0 and _obj.solid or _obj.lava) then
     _movex*=-3
     _movey*=-3
     guy.panting=true
     guy.runningc=24
-    guytalkstr=rnd(split'ouch,ouf,argh,ow,owie')
+    guytalkstr=rnd(split'ouch,oof,argh,ow,owie,oww')
     guy.talkingc=30
     sfx(rnd{16,17})
    end
   end
-
- else
-  guy.walkingc=0
-  guy.runningc=max(0,guy.runningc-2)
-
-  if guy.runningc == 0 then
-   guy.panting=nil
-  end
-
-  lookinginsamplecase=(not guy.panting) and btn(5)
 
  end
 
@@ -1424,20 +1553,20 @@ function planetupdate()
  local _mapobjs=sector[1].mapobjs
 
  for _,_faction in pairs(factions) do
-  _faction.landingx=wrap(0,_faction.landingx+_movex,mapsize)
-  _faction.landingy=wrap(0,_faction.landingy+_movey,mapsize)
+  _faction.landingx=mapwrap(_faction.landingx+_movex)
+  _faction.landingy=mapwrap(_faction.landingy+_movey)
  end
 
  for _animal in all(sector[1].animals) do
-  _animal.x=wrap(0,_animal.x+_movex,mapsize)
-  _animal.y=wrap(0,_animal.y+_movey,mapsize)
-  _animal.targetx=wrap(0,_animal.targetx+_movex,mapsize)
-  _animal.targety=wrap(0,_animal.targety+_movey,mapsize)
+  _animal.x=mapwrap(_animal.x+_movex)
+  _animal.y=mapwrap(_animal.y+_movey)
+  _animal.targetx=mapwrap(_animal.targetx+_movex)
+  _animal.targety=mapwrap(_animal.targety+_movey)
  end
 
  for _obj in all(_mapobjs) do
-  _obj.x=wrap(0,_obj.x+_movex,mapsize)
-  _obj.y=wrap(0,_obj.y+_movey,mapsize)
+  _obj.x=mapwrap(_obj.x+_movex)
+  _obj.y=mapwrap(_obj.y+_movey)
 
   if (_obj.action or _obj.walksfx or _obj.sunken) and dist(guy.x,guy.y,_obj.x,_obj.y) < 5 then
    if _obj.walksfx then
@@ -1455,34 +1584,8 @@ function planetupdate()
   end
  end
 
- if btnp(4) then
-  if guy.action then
-   if guy.action.func(guy.action.target) then
-    return
-   end
-  elseif dget(45) != 0 then
-   if dget(45) == 1 then
-    add(sector[1].animals,mergerightands2t([[
-     sx=28,
-     sy=38,
-     sw=7,
-     sh=3,
-     toolnr=1
-     ]],{
-     x=guy.x,
-     y=guy.y,
-     targetx=guy.x,
-     targety=guy.y,
-     behaviour=laidtrapbehaviour,
-    }))
-    dset(45,0)
-    sfx(34)
-   end
-  else
-   guy.voicec=8
-   guy.talkingc=0
-   sfx(rnd{0,1,2})
-  end
+ if btnp(4) and guy.action and guy.action.func(guy.action.target) then
+  return
  end
 
  guy.voicec-=1
@@ -2632,6 +2735,7 @@ function shipdraw()
 
  -- draw actiontitle, repairtitle, and brokentitle
  if showrepairtitle then
+  rectfill(46,30,83,38,0)
   print('\014\x8e\015 repair',48,32,9)
  elseif showbrokentitle then
   print('broken',52,32,8)
@@ -2753,16 +2857,16 @@ e0888880ee089890eececeececeecece07ccc30e040010ee010040ee099990eeeeeee88eeeeeeeee
 0888aaa00888aaa0eeeeeeeeeeeeeeeee0c330eee010eeeeee040eeeeeeeeaeeeeeeeeeeee888eeee1111111111111111111111111111111111111eeeeee1eee
 0888888008888880eeeeeeeeeeeeeeeeeeeeeeeee040eeeeee040eeeeeeeaeee00eee0000eeeeeeee11111111111111111111111111111111111111eee1111ee
 08080080e080880eeeeeeeeeeeeeeeeeeeeeeeee04110eeee04110eeeaaaeaae0d0e0aa990eeeee1111111111111111111111111111111111111111111111111
-eee0ee0eeee0ee0eeeee0ee0ee0e00e0e00eeeeeeeeeeeeeeeeeeeeaaeeeeeee0dd0aaaaa900eee1111111111111111111111111111111111111111111111111
-eee0000eeee0000eeee0a00900700606060eeeeeeeeeeeeeeeeeeeeeeeeeeaa05666666666660ee1111111111111111111111111111111111111111111111111
-0e044440ee044440eee060060060055d550eeeeeeeeeeeeeeeeeeeeaaaeeaee05dddddddddd660eeeeee1111111111111111111111111111111111111111111e
-e044707000447070eee0600600600000e00eee00eee00eeeeeeeeeeeeeaaeeee00000000000000ee11111111111111111111111111111111111111111111111e
-e0444040e0444040eee06006006005600ff0e0ff0e0ff0eeeeeeeeeeeeeeaaeee111111111111eee1111111111111111111111111111111111111111111111ee
-e0444440e0444440eeeeeeee000006500ff0e0ff0e0ff0eeeeeeeeeeeeeeeeaeeeeeeeeeeeeeeeee111111111111111111111111111111111111111111111eee
-e000000ee000000eeeeeeeee066005600aa0e0aa0e0aa0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111111111111111111111111111111111111eeee
-e0ee0e0eee00e0eeeeeeeeee0dd0000e0aa0e0a00e00a0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111e11111111eeeeeeeeeee1111111eeeeeeee
-eee0000eeeeeeeeeeeeeeeeee06009b0e00eee00eee00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eeeeeeeeeeeeeeeeeeeeeee11111111111111eeeeeeeeee
-ee0bbbb0eee00000eeeeeeeeee0e09900ff0e0ff0e0ff0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0c0eeeee0eeeeeeeeeeee1111111111111111111111eeeeee
+eee0ee0eeee0ee0ee0ee0ee0ee0e00e0e00eeeeeeeeeeeeeeeeeeeeaaeeeeeee0dd0aaaaa900eee1111111111111111111111111111111111111111111111111
+eee0000eeee0000e0800a00700900606060eeeeeeeeeeeeeeeeeeeeeeeeeeaa05666666666660ee1111111111111111111111111111111111111111111111111
+0e044440ee044440060060060060055d550eeeeeeeeeeeeeeeeeeeeaaaeeaee05dddddddddd660eeeeee1111111111111111111111111111111111111111111e
+e0447070004470700600600600600000e00eee00eee00eeeeeeeeeeeeeaaeeee00000000000000ee11111111111111111111111111111111111111111111111e
+e0444040e044404006006006006005600ff0e0ff0e0ff0eeeeeeeeeeeeeeaaeee111111111111eee1111111111111111111111111111111111111111111111ee
+e0444440e0444440eeee0000000006500ff0e0ff0e0ff0eeeeeeeeeeeeeeeeaeeeeeeeeeeeeeeeee111111111111111111111111111111111111111111111eee
+e000000ee000000eeeee06600dd005600aa0e0aa0e0aa0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111111111111111111111111111111111111eeee
+e0ee0e0eee00e0eeeeee0dd00660000e0aa0e0a00e00a0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111e11111111eeeeeeeeeee1111111eeeeeeee
+eee0000eeeeeeeeeeeeee060e0d009b0e00eee00eee00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eeeeeeeeeeeeeeeeeeeeeee11111111111111eeeeeeeeee
+ee0bbbb0eee00000eeeeee0eee0e09900ff0e0ff0e0ff0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0c0eeeee0eeeeeeeeeeee1111111111111111111111eeeeee
 e0bb7b7b0e0bbbbb0eeeeeeeeeee0bb00ff0e0ff0e0ff0eeeeeeeeeeeeeeee00000eeeeeeeeeeee0cc0eee0c0eeeeeeee1111111111111111111111111111eee
 e0bbbbbb00bbb7b7b0eeeeeeeeee00000aa600aa600aa60eeeeeeeeeeeeee0ddddd00eeeeeeeee0cc30eee0cc0eeeeee111111111111111111111111111111ee
 e0bbbbbb00bbbbbbb0eeeeeeeeeeeeee0aa0e0a00e00a0eeeeeeeeeeeeee0d66666dd0eeeeedde0cc30ee0cc30eeeee11111111111111111111111111111111e
@@ -2803,7 +2907,7 @@ ee00eeee00eeee00eee0ff0eeeeeeeeeeeeeeeeeeeeeeeddd558508850eeee042220ee042220eee0
 e0ff0ee0ff0ee0ff0ee0ff0eeeeeeeeeeee00eeeeeeeeeeedd550888850eee04220eee042220eee042240eeee101eeeeeeeee9eeee6eee06ddd0eee9eece9eee
 e0ff0ee0ff0ee0ff0ee0880eeeeeeeeeee00a0000eeeedeeeee5500000eeee042220e04224420e0422420eeee101eeeeeeee999eee6e6e06ddd0eeeecceecee9
 0daa0e0daa0e0daa0e0daa0eeeeeeeeee080885850eeeeeeeeeeeeeeeeeee0422222004242220e0422420eeee101110001199999ee6eee0dddd0eeeeece9ecce
-0daa0e0da0ee0d0a0e0daa0eeeeeeeeeeeeeeeeeeeeeeeeedddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1011099901e999ee66e6e05dd50eee9ecce9cee
+0daa0e0da00e0d0a0e0daa0eeeeeeeeeeeeeeeeeeeeeeeeedddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1011099901e999ee66e6e05dd50eee9ecce9cee
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1011109990e999ee6666e055550eeeecceeeece
 eeeeeeeeeeeeeeeeeeee00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1010000990eaaae455555055550eeeeeceeeece
 ee00eeee00eeee00eee0ff0eeeeeeeeeeeeeeee444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
