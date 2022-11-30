@@ -193,24 +193,26 @@ function drawtalks()
 end
 
 function addguytalk()
- add(talks,{
+ add(talks,mergerightands2t([[
   strcolor=0,
   bgcolor=7,
-  followcam=true,
+  followcam=true
+  ]],{
   x=guy.x,
   y=guy.y-5,
   str=guytalkstr,
- })
+ }))
 end
 
 function adddroidtalk(_behaviouree,_str)
- add(talks,{
+ add(talks,mergerightands2t([[
   strcolor=7,
-  bgcolor=13,
+  bgcolor=13
+  ]],{
   x=_behaviouree.x,
   y=_behaviouree.y-6,
   str=_str,
- })
+ }))
 end
 
 function addtosamplecase(_sample)
@@ -302,27 +304,13 @@ function resetgame()
 
  if dget(59) == 0 then -- no ongoing game
 
-  dset(59,1) -- set ongoing game
-
-  
-  dset(60,0) -- last seed
-  dset(61,0) -- seeds shot
-  dset(62,0) -- score
-
-  dset(58,0) -- tool carrying talk
-  --[[
-   sample case
-   storages
-   seed samples
-   ship objects broken status
-   carried tool
-   tool storages
-  --]]
-  for _i=1,47 do
+  for _i=1,58 do
    dset(_i,0)
   end
 
-  dset(9,5) -- fuel
+  dset(9,5) -- starting fuel
+
+  dset(59,1) -- set ongoing game
 
  else
   -- load saved sample case
@@ -359,8 +347,7 @@ function resetgame()
  travelc=60
 
  factions={
-  droid={
-   alertc=nil,
+  droid=s2t[[
    shipsx=79,
    shipsy=16,
    shipsw=49,
@@ -369,11 +356,12 @@ function resetgame()
    shipy=15,
    landingx=128,
    landingy=128,
-   landingc=nil,
-   talkingc=nil,
-   firingc=nil,
-   alientype='droid',
-  },
+   alientype='droid'
+   ]],
+   -- alertc=nil,
+   -- landingc=nil,
+   -- talkingc=nil,
+   -- firingc=nil,
  }
 
  deaddrawies={}
@@ -382,7 +370,7 @@ function resetgame()
 end
 
 -- global constants
-floorys={91,80}
+floorys=split'91,80'
 
 toolnames=split'trap,deterrer,drill,spare part'
 
@@ -429,6 +417,7 @@ pickupactionfunc=function (_obj)
 end
 
 function closetrap(_trap)
+ -- token hunt: use mergeright
  _trap.action={
   title='pick up trap',
   func=pickupactionfunc,
