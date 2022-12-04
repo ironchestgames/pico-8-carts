@@ -39,17 +39,19 @@ end
 poke(0x5f5c,-1) -- disable auto-repeat for btnp
 
 -- note: set special char o-button to look like c-button if gpio 1 is set, pico8_gpio[0]=1 in js
-poke(0x5600,5)    -- char width
-poke(0x5601,7)    -- char width for high cars
-poke(0x5602,5)    -- char height
-poke(0x5603,0)    -- draw x offset
-poke(0x5604,0)    -- draw y offset
+-- poke(0x5600,5)    -- char width
+-- poke(0x5601,7)    -- char width for high cars
+-- poke(0x5602,5)    -- char height
+-- poke(0x5603,0)    -- draw x offset
+-- poke(0x5604,0)    -- draw y offset
+poke(0x5600,unpack(split'5,7,5,0,0'))
 
-poke(23152,0b0111110) -- 0x8e*8+0x5600
-poke(23153,0b1100011) -- 0x8e*8+0x5601
-poke(23154,peek(0x5f80) == 0 and 107 or 123)  -- 0x8e*8+0x5602
-poke(23155,0b1100011) -- 0x8e*8+0x5603
-poke(23156,0b0111110) -- 0x8e*8+0x5604
+-- poke(23152,0b0111110) -- 0x8e*8+0x5600
+-- poke(23153,0b1100011) -- 0x8e*8+0x5601
+-- poke(23154,peek(0x5f80) == 0 and 107 or 123)  -- 0x8e*8+0x5602
+-- poke(23155,0b1100011) -- 0x8e*8+0x5603
+-- poke(23156,0b0111110) -- 0x8e*8+0x5604
+poke(0x5a70,unpack(split('62,99,'..(peek(0x5f80) == 0 and 107 or 123)..',99,62')))
 
 -- pink as transparent
 palt(14,true)
@@ -229,8 +231,6 @@ function removefromsamplecase(_index)
 end
 
 function addsampletoseed(_sample)
- add(seed,_sample)
- dset(40+#seed,_sample)
 end
 
 function clearseedcannon()
@@ -272,18 +272,11 @@ function drawsamplecase(_x,_y,_showarrow)
  end
 end
 
-function updatefactionalerts()
- for _,_faction in pairs(factions) do
-  if _faction.alertc and _faction.alertc > 0 then
-   local _prevalertc=_faction.alertc
-
-   _faction.alertc-=1
-
-   if _faction.alertc == 0 then
-    if _faction == factions.droid and _prevalertc != 0 then
-     sfx(21,2)
-    end
-   end
+function updatedroidalert()
+ if droidalertc and droidalertc > 0 then
+  droidalertc-=1
+  if droidalertc == 1 then
+   sfx(21,2)
   end
  end
 end
@@ -295,21 +288,17 @@ function resetgame()
  }
  guy={incryo=true}
 
- lookinginsamplecase=nil
- samples={}
- samplesel=1
- seed={}
+ samples,seed,samplesel,lookinginsamplecase={},{},1
 
  resetshipobjs()
 
  if dget(59) == 0 then -- no ongoing game
 
-  for _i=1,58 do
+  for _i=1,63 do
    dset(_i,0)
   end
 
   dset(9,5) -- starting fuel
-
   dset(59,1) -- set ongoing game
 
  else
@@ -343,30 +332,11 @@ function resetgame()
   end
  end
 
- traveling='warping'
- travelc=60
+ traveling,travelc='warping',60
 
- factions={
-  droid=s2t[[
-   shipsx=79,
-   shipsy=16,
-   shipsw=49,
-   shipsh=12,
-   shipx=73,
-   shipy=15,
-   landingx=128,
-   landingy=128,
-   alientype='droid'
-   ]],
-   -- alertc=nil,
-   -- landingc=nil,
-   -- talkingc=nil,
-   -- firingc=nil,
- }
+ droidalertc,droidlandingc,droidfiringc,droidlandingx,droidlandingy=nil
 
- deaddrawies={}
-
- particles={}
+ deaddrawies,particles={},{}
 end
 
 -- global constants
@@ -499,6 +469,9 @@ function laidtrapbehaviour(_behaviouree)
    -- kill animal
    del(sector[1].animals,_other)
    add(sector[1].mapobjs,getbloodobj(_other.x,_other.y,_other.bloodtype))
+   if _other.bloodtype == 'droid' then
+    breakrandomshipobj()
+   end
    sfx(33)
 
    -- close trap
@@ -889,6 +862,14 @@ objtypes={
   samplecolor='15,9,10,8,11,7',
   action=takesampleaction,
  },
+ { -- berrybush
+  sx='32',
+  sy='0',
+  sw='7',
+  sh='6',
+  samplecolor='15,9,10,8,11,7',
+  action=takesampleaction,
+ },
 }
 
 plantsamplechances=s2t[[
@@ -1079,11 +1060,11 @@ function createplanettype()
 
  -- flora types
  local _objtypes={}
- local _objtypeslen=rnd(split'4,4,4,5,5,5,6,7,8,9') -- todo: good?
+ local _objtypeslen=rnd(split'3,4,4,5,5,5,6,7,8,9') -- todo: good?
 
  while #_objtypes < _objtypeslen do
   local _a=flr((rnd(2)-1+getscorepercentage())*#objtypes)
-  local _index=mid(1,_a,#objtypes)
+  local _index=mid(_wpal[2] == 7 and 3 or 1,_a,#objtypes) -- if white/snow then never show lava
   local _objtype=objtypes[_index]
   add(_objtypes,_objtype)
  end
@@ -1122,7 +1103,7 @@ function createplanet(_planettype)
   13,14,15}
 
  local _mapobjs={
-  { -- player ship
+  { -- shuttle
    x=mapsize/2,
    y=mapsize/2-10,
    sx=63,
@@ -1149,7 +1130,7 @@ function createplanet(_planettype)
 
  -- add wreck
  local _haswreck=nil
- if rnd() > 0.95 then
+ if rnd() < 0.05 then
   _haswreck=true
 
   local _wrecktype=rnd{'martianwreck','taurienwreck'}
@@ -1157,7 +1138,7 @@ function createplanet(_planettype)
   local _y=flrrnd(mapsize-_tooclosedist)
 
   -- add tool
-  if rnd() > 0.65 then
+  if rnd() < 0.35 then
    add(_mapobjs,getnewsparepart(_x-34,_y-2))
   end
 
@@ -1188,7 +1169,7 @@ function createplanet(_planettype)
     ]])
 
    -- corpse
-   addwreckobj(_x+2,_y-14,[[
+   addwreckobj(_x-14,_y+2,[[
     sx=48,
     sy=54,
     sw=8,
@@ -1238,7 +1219,7 @@ function createplanet(_planettype)
  end
 
  -- add artifact
- if rnd() > 0.95 and not _haswreck then
+ if rnd() < 0.05 then
   _x=flrrnd(mapsize-32)
   _y=flrrnd(mapsize-32)
 
@@ -1345,10 +1326,7 @@ end
 function nextsector()
  sfx(-1,2)
 
- for _,_faction in pairs(factions) do
-  _faction.alertc=nil
-  _faction.firingc=nil
- end
+ droidalertc,droidfiringc=nil
 
  sector={}
 
@@ -1379,7 +1357,7 @@ end
 function planetinit()
  lookinginsamplecase=nil
 
- factions.droid.landingc=180
+ droidlandingc=nil
 
  guy=mergeright(guy,mergerightands2t([[
   sx=0,
@@ -1541,9 +1519,9 @@ function planetupdate()
 
  local _mapobjs=sector[1].mapobjs
 
- for _,_faction in pairs(factions) do
-  _faction.landingx=mapwrap(_faction.landingx+_movex)
-  _faction.landingy=mapwrap(_faction.landingy+_movey)
+ if droidlandingx then
+  droidlandingx=mapwrap(droidlandingx+_movex)
+  droidlandingy=mapwrap(droidlandingy+_movey)
  end
 
  for _animal in all(sector[1].animals) do
@@ -1599,23 +1577,26 @@ function planetupdate()
   guy.sx=guy.walkingc > 3 and 12 or 6
  end
 
- -- update factions
- updatefactionalerts()
+ -- update droid faction
+ updatedroidalert()
 
- for _,_faction in pairs(factions) do
-  if _faction.alertc == 0 then
-   if _faction.landingc > 0 then
-    _faction.landingc-=1
+ if droidalertc == 0 then
+  if not droidlandingc then
+   droidlandingc=180
+   droidlandingx=guy.x
+   droidlandingy=guy.y
+  end
+  if droidlandingc > 0 then
+   droidlandingc-=1
 
-    if _faction.landingc == 0 then
-     add(sector[1].animals,mergeright(clone(animaltypes[_faction.alientype]),{
-      x=_faction.landingx+16,
-      y=_faction.landingy+16,
-      targetx=_faction.landingx+16,
-      targety=_faction.landingy+16,
-      behaviour=droidbehaviour, -- todo: less droid specific
-     }))
-    end
+   if droidlandingc == 0 then
+    add(sector[1].animals,mergeright(clone(animaltypes.droid),{
+     x=droidlandingx+16,
+     y=droidlandingy+16,
+     targetx=droidlandingx+16,
+     targety=droidlandingy+16,
+     behaviour=droidbehaviour,
+    }))
    end
   end
  end
@@ -1659,16 +1640,14 @@ function planetdraw()
    _obj.flipx)
  end
 
- -- draw faction ship -- todo: less droid specific
- for _factionname,_faction in pairs(factions) do
-  if _faction.alertc == 0 then
-   local _y=_faction.landingy-_faction.landingc
-   local _sh=24
-   if _faction.landingc == 0 then
-    _sh=26
-   end
-   sspr(32,52,10,_sh,_faction.landingx,_y)
+ -- draw droid ship
+ if droidlandingy then
+  local _y=droidlandingy-droidlandingc
+  local _sh=24
+  if droidlandingc == 0 then
+   _sh=26
   end
+  sspr(32,52,10,_sh,droidlandingx,_y)
  end
 
  -- draw guy action
@@ -2140,7 +2119,9 @@ function resetshipobjs()
        if _obj.inputlastframe == true and not btn(4) then
         _obj.inputlastframe=nil
         if #samples > 0 and #seed < 4 then
-         addsampletoseed(removefromsamplecase(samplesel))
+         local _sample=removefromsamplecase(samplesel)
+         add(seed,_sample)
+         dset(40+#seed,_sample)
          sfx(14)
         elseif #seed == 4 then
          _obj.c=90
@@ -2174,10 +2155,10 @@ function resetshipobjs()
          _obj.seedy=60
          clearseedcannon()
          
-         if not factions.droid.alertc then
-          factions.droid.alertc=300+flrrnd(300)
+         if not droidalertc then
+          droidalertc=300+flrrnd(300)
          else
-          factions.droid.alertc=max(1,factions.droid.alertc-90)
+          droidalertc=max(1,droidalertc-90)
          end
 
          sfx(13)
@@ -2324,10 +2305,9 @@ function resetshipobjs()
      local _blink=(t()*6)%2 > 1
 
      if not traveling then
-      -- todo: better check for hostile
       if not _obj.broken then
        if _blink then
-        if factions.droid.alertc == 0 or _obj.rebootingc then
+        if droidalertc == 0 or _obj.rebootingc then
          pset(103,76,8)
         elseif sector[1].haswreck then
          pset(103,76,11)
@@ -2362,7 +2342,7 @@ function resetshipobjs()
        if _obj.broken then
         print('system unstable',21,32,8)
        elseif _blink then
-        if factions.droid.alertc == 0 then
+        if droidalertc == 0 then
          print('hostile ship near',21,32,8)
         elseif sector[1].haswreck then
          print('distress signal',21,32,11)
@@ -2530,19 +2510,19 @@ function shipupdate()
    end
   end
 
-  -- update droid co
-  updatefactionalerts()
+  -- update droid faction
+  updatedroidalert()
 
-  if factions.droid.alertc == 0 then
-   if not factions.droid.firingc then
-    factions.droid.firingc=90+flrrnd(60)
+  if droidalertc == 0 then
+   if not droidfiringc then
+    droidfiringc=90+flrrnd(60)
    end
 
-   factions.droid.firingc-=1
+   droidfiringc-=1
 
-   if factions.droid.firingc == 0 then
+   if droidfiringc == 0 then
     breakrandomshipobj()
-    factions.droid.firingc=nil
+    droidfiringc=nil
     sfx(rnd{19,20})
    end
   end
@@ -2575,7 +2555,7 @@ function shipupdate()
 
    if traveling == 'warping' or traveling == 'orbiting' then
     if sector[1].droidworld then
-     factions.droid.alertc = 10
+     droidalertc = 10
     end
    end
 
@@ -2632,7 +2612,7 @@ end
 function shipdraw()
  cls(0)
 
- if factions.droid.firingc == 1 then
+ if droidfiringc == 1 then
   cls(13)
  end
 
@@ -2661,30 +2641,16 @@ function shipdraw()
   circfill(_x,318,200,sector[1].surfacecolor)
  end
 
- -- draw factions ships
- for _,_faction in pairs(factions) do
-  local _shipx=_faction.shipx
-  local _shipy=_faction.shipy
-  local _shipsw=_faction.shipsw
-  local _shipsh=_faction.shipsh
-  local _shipcx=_shipx+_shipsw/2
-  local _shipcy=_shipy+_shipsh/2
-  if factions.droid.alertc == 0 then
-   sspr(
-    _faction.shipsx,
-    _faction.shipsy,
-    _shipsw,
-    _shipsh,
-    _shipx,
-    _shipy)
+ -- draw droid ship
+ if droidalertc == 0 then
+  sspr(79,16,49,12,74,16)
 
-  elseif factions.droid.alertc == 1 then
-   circfill(_shipcx,_shipcy,12,7) -- note: warp vfx
-  end
+ elseif droidalertc == 1 then
+  circfill(93,23,12,7) -- note: warp vfx
+ end
 
-  if factions.droid.firingc and factions.droid.firingc < 3 then
-   line(_shipcx,_shipcy,65,80,7) -- note: laser vfx
-  end
+ if droidfiringc and droidfiringc < 3 then
+  line(109,23,65,80,7) -- note: laser vfx
  end
 
  -- draw ship
@@ -2949,7 +2915,7 @@ __sfx__
 000100001e0101e0101d0101d0101c0101b0101b0101a0101a01019010180101701016010150101401013010110100f0100d0100c0100a01009010070100501004010020100a0000d00000000000000000000000
 000300000241002410024100241000410004100041000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400
 000400000241000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400
-003c00002230022330223002233022300223302230000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300
+093c00002230022330223002233022300223302230000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300
 000500003f6603565030640276401e63018620126200f6200d6200b62009620086200762007620066200662005620046200362003620036200262002620026200160000610016000061001600006100160000610
 000800001f4203a4202e40033400244002b4003c4002040037400394003c4003f40009400064000540003400004000940006400074000b4000c4000b400084000040000400004000040000400004000040000400
 000400003544027440304401f44024440164400f440134300c4300743000430004200040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400
@@ -2958,12 +2924,12 @@ __sfx__
 000300001945023450174501e450184500000011450134500d4500f45000000114500045000450000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00020000336503365033650336502f4502e4502e4502c4502b4502a45028450284502465024450226501f4501e6501a45015450104500b4500345005400004000065000640006400063000620006200061000620
 00020000336503365033650336502e4502d4502d4502c4502a650286502745026450234501e45018450134500d4500645001450004400b4000065000640006400063000620006300065000650006400062000630
-001000100605006040005500054005050050300175001740060500604000550005400505005030027500274000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000800001e6200f550226200f550226200f550226200f550246200f550246200f550256200f550276200f550296200f5502a6200f5502b6200f5502e6200f5502e6200f5502d6200f550296403b650146500c650
+001000100606006050005600055005060050400176001750060600605000560005500506005040027600275000000000000000000000000000000000000000000000000000000000000000000000000000000000
+180800001e6210f551226210f551226210f551226210f551246210f551246210f551256210f551276210f551296210f5512a6210f5512b6210f5512e6210f5512e6210f5512d6210f551296413b650146500c653
 000700000362003620036200462005620076200b6200f62013620176201b6201e6202062021620226202362023620236202362021620206201d6201a6201762014620116200d6200b62009620056200362000620
 000600002243022430164300d4301261012610126101161011610106100f6100d6100c6100a610086100761005610046100161000610066000560004600036000260002600006000060000600006000060000600
 000600000b420174202242022420096100a6100d6100e61011610166101b6101d610256102e6103f610266002e6003c6003f60000000000000000000000000000000000000000000000000000000000000000000
-001000000211002110001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
+001000000a1100a110001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
 00040000286201f6201a620166201262011620106200f6200f6200f6200f6200e6200e6200d6200d6200d6200d6200c6200b6200a620096200962008620076200662005620046200462003620026200062000620
 0005000000610006100061000610006100061000610006100061000610006100061000610006100061001610026100361005610056100661007610086100b6100b6100f6101161014620176201b6302264026650
 000200003265029250292500545028650161501515006350063501f6501f650102501025017250162500725007250236501d65019650000000a30000000000001025010250000000430000000000001125011250
@@ -2974,3 +2940,4 @@ __sfx__
 000600001514016150211500010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
 00030000214201c4401c4402144021440114200340000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00040000180501b050240502405030050300503705037050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+010800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
