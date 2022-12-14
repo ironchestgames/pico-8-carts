@@ -22,8 +22,13 @@ tools are: 1 = trap, 2 = deterrer, 3 = drill, 4 = spare part)
 46 = tool storage 1
 47 = tool storage 2
 
+50 = last seed sample 1 color
+51 = last seed sample 2 color
+52 = last seed sample 3 color
+53 = last seed sample 4 color
+
 59 = is game saved
-60 = last seed score
+
 61 = current nr of seeds
 62 = current score
 63 = highscore
@@ -151,9 +156,9 @@ end
 
 local bloodtypes={
  fire=split'20,10',
- droid=split'24,7',
- martian=split'28,11',
- taurien=split'32,8',
+ droid=split'25,7',
+ martian=split'30,11',
+ taurien=split'35,8',
 }
 
 function getbloodobj(_x,_y,_bloodtype)
@@ -161,7 +166,7 @@ function getbloodobj(_x,_y,_bloodtype)
  return mergerightands2t([[
   sx=69,
   sw=10,
-  sh=4,
+  sh=5,
   ground=true
   ]],{
   sy=_type[1],
@@ -722,7 +727,7 @@ animaltypes={
   sw=8,
   sh=8,
   sightradius=128,
-  spd=0,
+  spd=0.05,
   huntingspd=2,
   c=0,
   bloodtype='droid',
@@ -1128,7 +1133,7 @@ function createplanet(_planettype)
   -- shuttle
   mergerightands2t([[
    sx=63,
-   sy=36,
+   sy=40,
    sw=15,
    sh=7
    ]],{
@@ -1668,7 +1673,7 @@ function planetdraw()
   local _y=guy.action.target.y-22
   rectfill(_targetx-_strlen/2,_y,_targetx+_strlen/2,_y+8,0)
   line(_targetx,_y,_targetx,guy.action.target.y-guy.action.target.sh-2,0)
-  print('\014\x8e\015 '..guy.action.title,_targetx+2-_strlen/2,_y+2,9)
+  print('\f9\014\x8e\015 '..guy.action.title,_targetx+2-_strlen/2,_y+2)
  end
 
  -- draw sample case
@@ -1834,14 +1839,16 @@ end
 
 samplecolorvalues={
  [6]=1, -- stonish
- [15]=1, -- sandish
- [9]=2, -- orange
- [13]=2, -- water
- [10]=2, -- bloody orange / taurien blood
- [8]=10, -- taurien blood
+ [15]=2, -- sandish
+ [9]=3, -- orange
+ [10]=4, -- bloody orange
+ [13]=5, -- water
+ [8]=8, -- taurien blood
  [11]=12, -- mars blood
- [7]=10, -- droid blood
+ [7]=12, -- droid blood
 }
+
+colortohex=split'1,2,3,4,5,6,7,8,9,a,b,c,d,e,f'
 
 function getseedquality()
  local _result=0
@@ -1851,12 +1858,10 @@ function getseedquality()
 
  for _color=1,15 do
   local _value=samplecolorvalues[_color]
-  if _value then
-   while del(_samples,_color) do
-    _result+=_value
-    if count(_kinds,_color) == 0 then
-     add(_kinds,_color)
-    end
+  while del(_samples,_color) do
+   _result+=_value
+   if count(_kinds,_color) == 0 then
+    add(_kinds,_color)
    end
   end
  end
@@ -1865,7 +1870,7 @@ function getseedquality()
   _result+=12
  end
 
- return _result
+ return _result,#_kinds == 4 and 12 or nil
 end
 
 function resetshipobjs()
@@ -1937,7 +1942,7 @@ function resetshipobjs()
      if _obj.inrange then
       if guy.incryo and _update != deadupdate then
        actiontitle='\014\x8e\015 exit cryo'
-       print('\x97 self-destruct',38,43,9)
+       print('\f9\x97 self-destruct',38,43)
       else
        actiontitle='\014\x8e\015 enter cryo'
       end
@@ -2156,10 +2161,14 @@ function resetshipobjs()
         travelblocked=nil
 
         if not (_obj.broken and rnd() > 0.675) then
-         local _seedscore=getseedquality()
-         dset(60,_seedscore)
+         local _result,_bonus=getseedquality()
+         dset(50,seed[1])
+         dset(51,seed[2])
+         dset(52,seed[3])
+         dset(53,seed[4])
+         dset(54,_bonus)
          dset(61,dget(61)+1)
-         dset(62,dget(62)+_seedscore)
+         dset(62,dget(62)+_result)
          _obj.seedy=60
          clearseedcannon()
          
@@ -2249,16 +2258,27 @@ function resetshipobjs()
     draw=function(_obj)
      if _obj.inrange then
       rectfill(19,11,109,50,5)
-      print('highscore: '..tostr(dget(63)),23,14,9)
+      print('\f9highscore: '..tostr(dget(63)),23,14)
       line(19,22,109,22,0)
-      print('total score: '..tostr(dget(62)),23,26,12)
-      print('seeds: '..tostr(dget(61)),23,34,11)
+      print('\fctotal score: '..tostr(dget(62)),23,26)
+      print('\fbseeds: '..tostr(dget(61)),23,34)
 
       if _obj.broken then
-       print((_obj.broken and rnd() > 0.5 and 'la5t sfed: ' or 'last seed: ')..tostr(flrrnd(9999)),23,42,6)
+       print((_obj.broken and rnd() > 0.5 and '\f6la5t sfed: ' or '\f6last seed: ')..tostr(flrrnd(9999)),23,42)
       else
-       local _quality=flr((dget(60)/38)*100)
-       print('last seed: '..tostr(dget(60))..' ('..tostr(_quality)..'%)',23,42,6)
+       local _str='\f6last: '
+       if dget(50) != 0 then
+        for _i=50,53 do
+         local _samplevalue=dget(_i)
+         _str=_str..'\f'..tostr(colortohex[_samplevalue])..samplecolorvalues[_samplevalue]..'\f4+'
+        end
+        if dget(54) != 0 then
+         _str=_str..'(\fc12\f4)'
+        else
+         _str=_str..'(0)'
+        end
+       end
+       print(_str,23,42)
       end
      end
 
@@ -2336,7 +2356,7 @@ function resetshipobjs()
        rectfill(17,10,109,51,3)
  
        if _obj.rebootingc then
-        print('rebooting...',21,14,11)
+        print('\fbrebooting...',21,14)
         rectfill(21,23,81-_obj.rebootingc,26,11)
         return
        end
@@ -2344,27 +2364,27 @@ function resetshipobjs()
        if dget(9) == 0 then
         print('no fuel',78,14,8)
        end
-       print(_obj.broken and rnd() > 0.5 and 'n4vcdm' or 'navcom',21,14,11)
-       print('orbiting planet',21,23,11)
+       print(_obj.broken and rnd() > 0.5 and '\fbn4vcdm' or '\fbnavcom',21,14)
+       print('\fborbiting planet',21,23)
   
        if _obj.broken then
-        print('system unstable',21,32,8)
+        print('\f8system unstable',21,32)
        elseif _blink then
         if droidalertc == 0 then
-         print('hostile ship near',21,32,8)
+         print('\f8hostile ship near',21,32)
         elseif sector[1].haswreck then
-         print('distress signal',21,32,11)
+         print('\fbdistress signal',21,32)
         elseif sector[1].hasartifact then
-         print('surface anomaly',21,32,11)
+         print('\fbsurface anomaly',21,32)
         end
        end
   
        if travelblocked then
-        print('wait for seed cannon',21,41,11)
+        print('\fbwait for seed cannon',21,41)
        elseif #sector > 1 then
-        print('> orbit next planet',21,41,11)
+        print('\fb> orbit next planet',21,41)
        else
-        print('> hyper jump',21,41,11)
+        print('\fb> hyper jump',21,41)
        end
       end
      end
@@ -2695,9 +2715,9 @@ function shipdraw()
  -- draw actiontitle, repairtitle, and brokentitle
  if showrepairtitle then
   rectfill(46,30,83,38,0)
-  print('\014\x8e\015 repair',48,32,9)
+  print('\f9\014\x8e\015 repair',48,32)
  elseif showbrokentitle then
-  print('broken',52,32,8)
+  print('\f8broken',52,32)
  else
   local _strlen=#actiontitle*4
   print(actiontitle,64-_strlen/2,32,9)
@@ -2759,12 +2779,12 @@ function deaddraw()
   end
  end
 
- print('deceased',48,32,12)
- local _highscorestr='highscore: '..tostr(dget(63))
- print(_highscorestr,126-#_highscorestr*4,2,10)
- print('score: '..tostr(dget(62)),2,2,10)
+ print('\fcdeceased',48,32)
+ local _highscorestr='\fahighscore: '..tostr(dget(63))
+ print(_highscorestr,126-#_highscorestr*4,2)
+ print('\fascore: '..tostr(dget(62)),2,2)
  if t()-ts > 2 then
-  print('\014\x8e\015 wake up new clone',24,118,9)
+  print('\f9\014\x8e\015 wake up new clone',24,118)
  end
 end
 
@@ -2799,29 +2819,29 @@ eee0eeee0c0c0eeeeeeeeeeeee77eeee0cc8cc0e000eeee000eeeee00ddddd0eeeeeeeeeeeeaaaa1
 eeeeeeee00e00eeeeeeeee7eeceecee708ccc3008880ee04440eeeeee00000eeeeeeeaaeeeeeeee1111111111111111111111111111111111111111111111eee
 eee0000eeeeeeeeeeeeeeeececeecece0ccc830e0b000ee0b000eee0000000eeeeeeeeeeeeeeeee111111111111111111111111111111111111111111111111e
 ee077770eee0000eeeeeeeececeececee0c330ee0b8880e0b4440e0aaaaaaa0eeeeeeeeeeeaaaee1111111111111111111111111111111111111111111111111
-ee078780ee077770eeeeeeeeeeeeeeeeee000eee0b0b0ee0b0b0e0a9999999a0eeeeeeeeeee77771111111111111111111111111111111111111111111111111
-e0777770ee078780eeeeeeeeeeeeeeeee0ccc0ee000eeee000eee09999999990eeeee77eeeeeeeee11111111111111111111111111111111111111111111111e
-07778880e0777770eeeeeeeeeeeeeeee0ccbcc008880ee04440eee0999999990eeeeeeeeeeeeeeeeeeee11111111111111111111111111eeeeeeeeeeeeeeeeee
-0777888007778880eeeeeeeeeeeeeeee0bccc30e07000ee07000eee00999990eeeeeeeeeee777eeeeeeee11111111111111111111eeeeeeeeeeeeeeeeeeeeeee
-0777777007777770eeeeeeeeeeeeeeee0cccb30e078880e074440eeee00000eeeeeeeeeeeeebbbbe1eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-07070070e070770eeeeeeeeeeeeeeeeee0c330ee07070ee07070eeeee0000eeeeeeeebbeeeeeeeee11eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eee0000eeeeeeeeeeeeeeeeeeeeeeeeeee000eeeeeeee00e0eeee0ee0aaaa0eeeeeeeeeeeeeeeeee111eeeeeeeeeeeee1eeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-ee088880eee0000eeceeeeeeeecceeece0ccc0ee0eee040040ee0400a9999a0eeeeeeeeeeebbbeee1111eeeeeeee1eee11eeeeeee1eeeee1eeeeeeeeeeeeeeee
-ee089890ee088880eeceecceeceecece0cc7cc0040e040ee040e01009999990eeeeeeeeeeee8888e11111eeeeee1eeee111eeeeee1eeee1eee1eeeeeeeeeeeee
-e0888880ee089890eececeececeecece07ccc30e040010ee010040ee099990eeeeeee88eeeeeeeee111111eee1111eee1111eee1e1ee1111ee11eeeeeeeeeeee
+ee078780ee077770eeeeeeeeeeeeeeeeee000eee0b0b0ee0b0b0e0a9999999a0eeeeeeeeeeeeeee1111111111111111111111111111111111111111111111111
+e0777770ee078780eeeeeeeeeeeeeeeee0ccc0ee000eeee000eee09999999990eeeeeeeeeee7777e11111111111111111111111111111111111111111111111e
+07778880e0777770eeeeeeeeeeeeeeee0ccbcc008880ee04440eee0999999990eeeee77eeeeeeeeeeeee11111111111111111111111111eeeeeeeeeeeeeeeeee
+0777888007778880eeeeeeeeeeeeeeee0bccc30e07000ee07000eee00999990eeeeeeeeeeeeeeeeeeeeee11111111111111111111eeeeeeeeeeeeeeeeeeeeeee
+0777777007777770eeeeeeeeeeeeeeee0cccb30e078880e074440eeee00000eeeeeeeeeeee777eee1eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+07070070e070770eeeeeeeeeeeeeeeeee0c330ee07070ee07070eeeee0000eeeeeeeeeeeeeeeeeee11eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+eee0000eeeeeeeeeeeeeeeeeeeeeeeeeee000eeeeeeee00e0eeee0ee0aaaa0eeeeeeeeeeeeebbbbe111eeeeeeeeeeeee1eeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+ee088880eee0000eeceeeeeeeecceeece0ccc0ee0eee040040ee0400a9999a0eeeeeebbeeeeeeeee1111eeeeeeee1eee11eeeeeee1eeeee1eeeeeeeeeeeeeeee
+ee089890ee088880eeceecceeceecece0cc7cc0040e040ee040e01009999990eeeeeeeeeeeeeeeee11111eeeeee1eeee111eeeeee1eeee1eee1eeeeeeeeeeeee
+e0888880ee089890eececeececeecece07ccc30e040010ee010040ee099990eeeeeeeeeeeebbbeee111111eee1111eee1111eee1e1ee1111ee11eeeeeeeeeeee
 0888aaa0e0888880eececeececeecece0ccc630e01040eeee0410eeee0000eeeeeeeeeeeeeeeeeeee111111111111111111111111111111111111eeeeeeee1ee
-0888aaa00888aaa0eeeeeeeeeeeeeeeee0c330eee010eeeeee040eeeeeeeeaeeeeeeeeeeee888eeee1111111111111111111111111111111111111eeeeee1eee
-0888888008888880eeeeeeeeeeeeeeeeeeeeeeeee040eeeeee040eeeeeeeaeee00eee0000eeeeeeee11111111111111111111111111111111111111eee1111ee
-08080080e080880eeeeeeeeeeeeeeeeeeeeeeeee04110eeee04110eeeaaaeaae0d0e0aa990eeeee1111111111111111111111111111111111111111111111111
-eee0ee0eeee0ee0ee0ee0ee0ee0e00e0e00eeeeeeeeeeeeeeeeeeeeaaeeeeeee0dd0aaaaa900eee1111111111111111111111111111111111111111111111111
-eee0000eeee0000e0800a00700900606060eeeeeeeeeeeeeeeeeeeeeeeeeeaa05666666666660ee1111111111111111111111111111111111111111111111111
-0e044440ee044440060060060060055d550eeeeeeeeeeeeeeeeeeeeaaaeeaee05dddddddddd660eeeeee1111111111111111111111111111111111111111111e
-e0447070004470700600600600600000e00eee00eee00eeeeeeeeeeeeeaaeeee00000000000000ee11111111111111111111111111111111111111111111111e
-e0444040e044404006006006006005600ff0e0ff0e0ff0eeeeeeeeeeeeeeaaeee111111111111eee1111111111111111111111111111111111111111111111ee
-e0444440e0444440eeee0000000006500ff0e0ff0e0ff0eeeeeeeeeeeeeeeeaeeeeeeeeeeeeeeeee111111111111111111111111111111111111111111111eee
-e000000ee000000eeeee06600dd005600aa0e0aa0e0aa0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111111111111111111111111111111111111eeee
-e0ee0e0eee00e0eeeeee0dd00660000e0aa0e0a00e00a0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111e11111111eeeeeeeeeee1111111eeeeeeee
-eee0000eeeeeeeeeeeeee060e0d009b0e00eee00eee00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eeeeeeeeeeeeeeeeeeeeeee11111111111111eeeeeeeeee
+0888aaa00888aaa0eeeeeeeeeeeeeeeee0c330eee010eeeeee040eeeeeeeeaeeeeeeeeeeeee8888ee1111111111111111111111111111111111111eeeeee1eee
+0888888008888880eeeeeeeeeeeeeeeeeeeeeeeee040eeeeee040eeeeeeeaeeeeeeee88eeeeeeeeee11111111111111111111111111111111111111eee1111ee
+08080080e080880eeeeeeeeeeeeeeeeeeeeeeeee04110eeee04110eeeaaaeaaeeeeeeeeeeeeeeee1111111111111111111111111111111111111111111111111
+eee0ee0eeee0ee0ee0ee0ee0ee0e00e0e00eeeeeeeeeeeeeeeeeeeeaaeeeeeeeeeeeeeeeee888ee1111111111111111111111111111111111111111111111111
+eee0000eeee0000e0800a00700900606060eeeeeeeeeeeeeeeeeeeeeeeeeeaaeeeeeeeeeeeeeeee1111111111111111111111111111111111111111111111111
+0e044440ee044440060060060060055d550eeeeeeeeeeeeeeeeeeeeaaaeeaeee00eee0000eeeeeeeeeee1111111111111111111111111111111111111111111e
+e0447070004470700600600600600000e00eee00eee00eeeeeeeeeeeeeaaeeee0d0e0aa990eeeeee11111111111111111111111111111111111111111111111e
+e0444040e044404006006006006005600ff0e0ff0e0ff0eeeeeeeeeeeeeeaaee0dd0aaaaa900eeee1111111111111111111111111111111111111111111111ee
+e0444440e0444440eeee0000000006500ff0e0ff0e0ff0eeeeeeeeeeeeeeeea05666666666660eee111111111111111111111111111111111111111111111eee
+e000000ee000000eeeee06600dd005600aa0e0aa0e0aa0eeeeeeeeeeeeeeeee05dddddddddd660eeeeeee111111111111111111111111111111111111111eeee
+e0ee0e0eee00e0eeeeee0dd00660000e0aa0e0a00e00a0eeeeeeeeeeeeeeeeee00000000000000eeeeeeeee111111e11111111eeeeeeeeeee1111111eeeeeeee
+eee0000eeeeeeeeeeeeee060e0d009b0e00eee00eee00eeeeeeeeeeeeeeeeeeee111111111111eee0eeeeeeeeeeeeeeeeeeeeeee11111111111111eeeeeeeeee
 ee0bbbb0eee00000eeeeee0eee0e09900ff0e0ff0e0ff0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0c0eeeee0eeeeeeeeeeee1111111111111111111111eeeeee
 e0bb7b7b0e0bbbbb0eeeeeeeeeee0bb00ff0e0ff0e0ff0eeeeeeeeeeeeeeee00000eeeeeeeeeeee0cc0eee0c0eeeeeeee1111111111111111111111111111eee
 e0bbbbbb00bbb7b7b0eeeeeeeeee00000aa600aa600aa60eeeeeeeeeeeeee0ddddd00eeeeeeeee0cc30eee0cc0eeeeee111111111111111111111111111111ee
