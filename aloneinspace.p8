@@ -181,23 +181,6 @@ function getscorepercentage()
  return dget(62)/1000 -- 1000 is top threshold
 end
 
-talks={}
-function drawtalks()
- for _talk in all(talks) do
-  local _strwidth=#_talk.str*4
-  local _y=_talk.y-33
-  local _x1=_talk.x-_strwidth/2
-  if _talk.followcam then
-   _x1=mid(0,_x1,128-_strwidth/2)
-  end
-  local _x2=_x1+_strwidth+2
-  rectfill(_x1,_y,_x2,_y+8,_talk.bgcolor)
-  line(_talk.x,_y,_talk.x,_y+30,_talk.bgcolor)
-  print(_talk.str,_x1+2,_y+2,_talk.strcolor)
- end
- talks={}
-end
-
 function drawtalk()
  if talk then
   -- draw
@@ -256,14 +239,10 @@ function removefromsamplecase(_index)
  return _result
 end
 
-function addsampletoseed(_sample)
-end
-
 function clearseedcannon()
- dset(41,0)
- dset(42,0)
- dset(43,0)
- dset(44,0)
+ for _i=41,44 do
+  dset(_i,0)
+ end
  seed={}
 end
 
@@ -273,8 +252,7 @@ function breakrandomshipobj()
  local _objindex=flr(1+rnd(#shipobjs[_floorindex]))
  dset(floordatapos[_floorindex]+_objindex,1)
  local _obj=shipobjs[_floorindex][_objindex]
- _obj.broken=true
- _obj.brokenthisframe=true
+ _obj.broken,_obj.brokenthisframe=true,true
  if _obj.datapos then
   dset(_obj.datapos,0)
  end
@@ -294,6 +272,9 @@ function drawsamplecase(_x,_y,_showarrow)
 
   if _showarrow and _i == samplesel then
    sspr(99,85,5,6,_lx-2,_y+15)
+   if btn(4) then
+    print('\fa\x8b  \x91',_lx-11,_y+16)
+   end
   end
  end
 end
@@ -309,9 +290,8 @@ end
 
 function resetgame()
  -- note: global vars
- sector={
-  planets={},
- }
+ -- sector={}
+
  guy={incryo=true}
 
  samples,seed,samplesel,lookinginsamplecase={},{},1
@@ -410,15 +390,15 @@ pickupactionfunc=function (_obj)
 end
 
 function closetrap(_trap)
- -- token hunt: use mergeright
- _trap.action={
-  title='pick up trap',
-  func=pickupactionfunc,
- }
- _trap.sy=41
- _trap.sw=4
- _trap.sh=4
- return _trap
+ return mergeright(_trap,{
+  action={
+   title='pick up trap',
+   func=pickupactionfunc,
+  },
+  sy=41,
+  sw=4,
+  sh=4,
+ })
 end
 
 function getnewtool(_x,_y,_toolindex)
@@ -471,8 +451,7 @@ takesampleaction={
    _target.action,_target.solid,_target.sunken=nil
    addtosamplecase(_target.samplecolor)
    guy.samplingc=20
-   sector[1].haswreck=nil
-   sector[1].hasartifact=nil
+   sector[1].haswreck,sector[1].hasartifact=nil
    sfx(8)
   end
  end,
@@ -2258,10 +2237,10 @@ function resetshipobjs()
     draw=function(_obj)
      if _obj.inrange then
       rectfill(19,11,109,50,5)
-      print('\f9highscore: '..tostr(dget(63)),23,14)
       line(19,22,109,22,0)
+      print('\f9highscore: '..tostr(dget(63)),23,14)
       print('\fctotal score: '..tostr(dget(62)),23,26)
-      print('\fbseeds: '..tostr(dget(61)),23,34)
+      print('\fbseeds:\ndsf '..tostr(dget(61)),23,34)
 
       if _obj.broken then
        print((_obj.broken and rnd() > 0.5 and '\f6la5t sfed: ' or '\f6last seed: ')..tostr(flrrnd(9999)),23,42)
@@ -2285,7 +2264,7 @@ function resetshipobjs()
      _obj.c-=1
      if _obj.c <= 0 then
       _obj.c=20
-      _obj.blink=rnd{{88,74,9},{88,76,12},{88,78,12},{90,74,11},{90,76,11},{90,78,11}}
+      _obj.blink=rnd{split'88,74,9',split'88,76,12',split'88,78,12',split'90,74,11',split'90,76,11',split'90,78,11'}
      end
 
      pset(unpack(_obj.blink))
