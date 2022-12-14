@@ -200,9 +200,11 @@ function drawtalk()
   local _y=_talker.y-33
   local _x1=_talker.x-talk.strwidth/2
   if _talker == guy then
-   _x1=mid(0,_x1,128-talk.strwidth/2)
+   _x1=mid(1,_x1,127-talk.strwidth/2)
   end
   local _x2=_x1+talk.strwidth+2
+  rectfill(_x1-1,_y-1,_x2+1,_y+9,talk.strcolor)
+  rectfill(_talker.x-1,_y,_talker.x+1,_talker.y-8,talk.strcolor)
   rectfill(_x1,_y,_x2,_y+8,talk.bgcolor)
   line(_talker.x,_y,_talker.x,_talker.y-8,talk.bgcolor)
   print(talk.str,_x1+2,_y+2,talk.strcolor)
@@ -459,6 +461,8 @@ takesampleaction={
    guytalk('sample case is full')
    sfx(0)
   else
+   _target.sy+=_target.sh-1
+   _target.sh=1
    _target.action=nil
    addtosamplecase(_target.samplecolor)
    guy.samplingc=20
