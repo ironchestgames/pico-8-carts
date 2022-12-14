@@ -463,10 +463,11 @@ takesampleaction={
   else
    _target.sy+=_target.sh-1
    _target.sh=1
-   _target.action=nil
+   _target.action,_target.solid,_target.sunken=nil
    addtosamplecase(_target.samplecolor)
    guy.samplingc=20
    sector[1].haswreck=nil
+   sector[1].hasartifact=nil
    sfx(8)
   end
  end,
@@ -1151,7 +1152,7 @@ function createplanet(_planettype)
 
  -- add wreck
  local _haswreck=nil
- if rnd() < 0.05 then
+ if rnd() < 0.065 then
   _haswreck=true
 
   local _wrecktype=rnd{'martianwreck','taurienwreck'}
@@ -1159,7 +1160,7 @@ function createplanet(_planettype)
   local _y=flrrnd(mapsize-_tooclosedist)
 
   -- add tool
-  if rnd() < 0.35 then
+  if rnd() < 0.385 then
    add(_mapobjs,getnewsparepart(_x-34,_y-2))
   end
 
@@ -1240,7 +1241,10 @@ function createplanet(_planettype)
  end
 
  -- add artifact
- if rnd() < 0.05 then
+ local _hasartifact=nil
+ if rnd() < 0.065 then
+  _hasartifact=true
+
   _x=flrrnd(mapsize-32)
   _y=flrrnd(mapsize-32)
 
@@ -1340,6 +1344,7 @@ function createplanet(_planettype)
   surfacecolor=_planettype.surfacecolor,
   animals=_animals,
   haswreck=_haswreck,
+  hasartifact=_hasartifact,
   droidworld=_planettype.droidworld,
  }
 end
@@ -1461,11 +1466,11 @@ function planetupdate()
 
    elseif dget(45) == 2 then -- deterrer
     add(sector[1].animals,mergeright(clone(tools[2]),{
+     c=360,
      x=guy.x,
      y=guy.y,
      targetx=guy.x,
      targety=guy.y,
-     c=360,
      behaviour=laiddeterrerbehaviour,
     }))
     sfx(39)
@@ -1482,6 +1487,7 @@ function planetupdate()
    elseif dget(45) == 4 then -- spare part
     add(sector[1].mapobjs,getnewsparepart(guy.x,guy.y))
    end
+
    dset(45,0)
   end
 
@@ -1681,9 +1687,9 @@ end
 -- ship scene
 
 function drawdoor(_obj)
- if _obj.firstframe then
-  sfx(26)
- end
+ -- if _obj.firstframe then
+ --  sfx(26)
+ -- end
  if _obj.inrange then
   sspr(89,85,3,6,_obj.x,_obj.y)
   _obj.c=6
@@ -2311,7 +2317,7 @@ function resetshipobjs()
        if _blink then
         if droidalertc == 0 or _obj.rebootingc then
          pset(103,76,8)
-        elseif sector[1].haswreck then
+        elseif sector[1].haswreck or sector[1].hasartifact then
          pset(103,76,11)
         end
        end
@@ -2338,7 +2344,7 @@ function resetshipobjs()
        if dget(9) == 0 then
         print('no fuel',78,14,8)
        end
-       print(_obj.broken and rnd() > 0.5 and 'navcdm' or 'navcom',21,14,11)
+       print(_obj.broken and rnd() > 0.5 and 'n4vcdm' or 'navcom',21,14,11)
        print('orbiting planet',21,23,11)
   
        if _obj.broken then
@@ -2348,6 +2354,8 @@ function resetshipobjs()
          print('hostile ship near',21,32,8)
         elseif sector[1].haswreck then
          print('distress signal',21,32,11)
+        elseif sector[1].hasartifact then
+         print('surface anomaly',21,32,11)
         end
        end
   
@@ -2356,7 +2364,7 @@ function resetshipobjs()
        elseif #sector > 1 then
         print('> orbit next planet',21,41,11)
        else
-        print('> warp to next sector',21,41,11)
+        print('> hyper jump',21,41,11)
        end
       end
      end
