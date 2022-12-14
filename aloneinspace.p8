@@ -22,7 +22,6 @@ tools are: 1 = trap, 2 = deterrer, 3 = drill, 4 = spare part)
 46 = tool storage 1
 47 = tool storage 2
 
-58 = tool carrying talk
 59 = is game saved
 60 = last seed score
 61 = current nr of seeds
@@ -194,27 +193,47 @@ function drawtalks()
  talks={}
 end
 
-function addguytalk()
- add(talks,mergerightands2t([[
-  strcolor=0,
-  bgcolor=7,
-  followcam=true
-  ]],{
-  x=guy.x,
-  y=guy.y-5,
-  str=guytalkstr,
- }))
+function drawtalk()
+ if talk then
+  -- draw
+  local _talker=talk.talker
+  local _y=_talker.y-33
+  local _x1=_talker.x-talk.strwidth/2
+  if _talker == guy then
+   _x1=mid(0,_x1,128-talk.strwidth/2)
+  end
+  local _x2=_x1+talk.strwidth+2
+  rectfill(_x1,_y,_x2,_y+8,talk.bgcolor)
+  line(_talker.x,_y,_talker.x,_talker.y-8,talk.bgcolor)
+  print(talk.str,_x1+2,_y+2,talk.strcolor)
+
+  -- update
+  talk.c-=1
+  if talk.c == 0 then
+   talk=nil
+  end
+ end
 end
 
-function adddroidtalk(_behaviouree,_str)
- add(talks,mergerightands2t([[
-  strcolor=7,
-  bgcolor=13
-  ]],{
-  x=_behaviouree.x,
-  y=_behaviouree.y-6,
-  str=_str,
- }))
+function addtalk(_str,_talker,_bgcolor,_strcolor)
+ if talk == nil or _str != talk.str then
+  talk={
+   c=24,
+   str=_str,
+   talker=_talker,
+   bgcolor=_bgcolor,
+   strcolor=_strcolor,
+   strwidth=#_str*4,
+  }
+ end
+end
+
+function guytalk(_str)
+ addtalk(_str,guy,7,0)
+end
+
+function droidtalk(_str,_droid)
+ addtalk(_str,_droid,13,7)
 end
 
 function addtosamplecase(_sample)
@@ -376,8 +395,7 @@ tools={
 
 pickupactionfunc=function (_obj)
  if dget(45) != 0 then
-  guy.talkingc=30
-  guytalkstr='carrying another tool'
+  guytalk('carrying another tool')
  else
   del(sector[1].mapobjs,_obj)
   dset(45,_obj.toolnr)
@@ -438,8 +456,7 @@ takesampleaction={
  title='take sample',
  func=function (_target)
   if #samples == 5 then
-   guy.talkingc=30
-   guytalkstr='sample case is full'
+   guytalk('sample case is full')
    sfx(0)
   else
    _target.action=nil
@@ -558,7 +575,7 @@ function droidbehaviour(_behaviouree)
   _behaviouree.talkingc=140
  end
  if _behaviouree.talkingc > 0 then
-  adddroidtalk(_behaviouree,'stop spreading life')
+  droidtalk('stop spreading life',_behaviouree)
   _behaviouree.talkingc-=1
  elseif _behaviouree.talkingc <= 0 then
   sighthunting(_behaviouree)
@@ -581,8 +598,7 @@ function sighthunting(_behaviouree)
   _behaviouree.targetx=guy.x
   _behaviouree.targety=guy.y
   if _behaviouree.isscary and guy.scared == nil and not _prevhunting then
-   guytalkstr=rnd(split'yikes,eek,uh-oh')
-   guy.talkingc=10
+   guytalk(rnd(split'yikes,eek,uh-oh'))
    guy.scared=true
   end
   _behaviouree.hunting=true
@@ -1020,6 +1036,7 @@ function fixpal(_pal)
 end
 
 function createplanettype()
+ local _scorepercentage=getscorepercentage()
 
  -- palette
  local _wpal,_groundcolor,_surfacecolor
@@ -1061,10 +1078,12 @@ function createplanettype()
  local _objtypeslen=rnd(split'3,4,4,5,5,5,6,7,8,9') -- todo: good?
 
  while #_objtypes < _objtypeslen do
-  local _a=flr((rnd(2)-1+getscorepercentage())*#objtypes)
-  local _index=mid(_wpal[2] == 7 and 3 or 1,_a,#objtypes) -- if white/snow then never show lava
-  local _objtype=objtypes[_index]
-  add(_objtypes,_objtype)
+  local _objtypelen=#objtypes-(_scorepercentage < 0.4 and 2 or _scorepercentage < 0.6 and 1 or 0) -- never have flowers and or berrybushes if not enough points
+  local _index=mid(
+    (_wpal[2] == 7 or rnd(_scorepercentage) < 0.3) and 3 or 1, -- if white/snow then never show lava
+    flr((rnd(2)-1+_scorepercentage)*_objtypelen),
+    _objtypelen)
+  add(_objtypes,objtypes[_index])
  end
 
  -- fauna types
@@ -1083,7 +1102,7 @@ function createplanettype()
   surfacecolor=_surfacecolor,
   objtypes=_objtypes,
   animaltypes=_animaltypes,
-  objdist=36-flrrnd(6)-flr((getscorepercentage())*20),
+  objdist=mid(12,36-flrrnd(6)-flr(_scorepercentage*20),52),
  }
 end
 
@@ -1101,30 +1120,30 @@ function createplanet(_planettype)
   13,14,15}
 
  local _mapobjs={
-  { -- shuttle
-   x=mapsize/2,
-   y=mapsize/2-10,
+  -- shuttle
+  mergerightands2t([[
    sx=63,
    sy=36,
    sw=15,
-   sh=7,
+   sh=7
+   ]],{
+   x=mapsize/2,
+   y=mapsize/2-10,
    action={
     title='go back to ship',
     func=function()
      traveling='up'
      travelc=30
      sfx(27)
-     for _a in all(sector[1].animals) do
-      if _a.alientype == 'droid' then
-       del(sector[1].animals,_a)
-      end
-     end
      shipinit()
      return true
     end,
    }
-  },
+  }),
  }
+
+ -- add aliens
+ 
 
  -- add wreck
  local _haswreck=nil
@@ -1362,8 +1381,6 @@ function planetinit()
   sy=83,
   sw=6,
   sh=6,
-  talkingc=0,
-  voicec=0,
   walkingc=0,
   runningc=0,
   walksfx=6,
@@ -1396,7 +1413,7 @@ function planetupdate()
   _spd=2
  end
 
- if guy.talkingc <= 0 and guy.samplingc <= 0 then
+ if guy.samplingc <= 0 then
   if btn(0) then
    _movex+=_spd
   elseif btn(1) then
@@ -1478,11 +1495,7 @@ function planetupdate()
    if dget(45) == 0 then
     guy.runningc+=1
    else
-    if dget(58) == 0 then
-     dset(58,1)
-     guy.talkingc=30
-     guytalkstr='can\'t run while carrying tool'
-    end
+    guytalk('can\'t run while carrying tool')
    end
   else
    guy.runningc=0
@@ -1491,8 +1504,7 @@ function planetupdate()
   lookinginsamplecase=nil
 
   if guy.runningc > 30 and not guy.panting then
-   guytalkstr=rnd(split'*pant pant,*huff puff,*wheeeeze')
-   guy.talkingc=30
+   guytalk(rnd(split'*pant pant,*huff puff,*wheeeeze'))
    guy.panting=true
    sfx(2)
   end
@@ -1503,8 +1515,7 @@ function planetupdate()
     _movey*=-3
     guy.panting=true
     guy.runningc=24
-    guytalkstr=rnd(split'ouch,oof,argh,ow,owie,oww')
-    guy.talkingc=30
+    guytalk(rnd(split'ouch,oof,argh,ow,owie,oww'))
     sfx(rnd{16,17})
    end
   end
@@ -1553,15 +1564,7 @@ function planetupdate()
   return
  end
 
- guy.voicec-=1
  guy.samplingc-=1
- if guy.talkingc > 0 then
-  guy.talkingc-=1
- end
-
- if (guy.talkingc > 15 and guy.talkingc % 6 > 3) or guy.voicec > 0 then
-  guy.sx=18
- end
 
  guy.sy=83
  if dget(45) != 0 then -- carrying tool
@@ -1667,10 +1670,7 @@ function planetdraw()
  end
 
  -- draw talks
- if guy.talkingc > 0 then
-  addguytalk()
- end
- drawtalks()
+ drawtalk()
 end
 
 
@@ -1884,7 +1884,7 @@ function resetshipobjs()
    -- small ship
    mergerightands2t([[
     x1=29,
-    x2=43,
+    x2=40,
     cantbreak=true
     ]],{
     inputhandler=function(_obj)
@@ -2056,12 +2056,10 @@ function resetshipobjs()
       _obj.inputlastframe=nil
 
       if samples[samplesel] != 13 then
-       guytalkstr='only water for fuel'
-       guy.talkingc=30
+       guytalk('only water for fuel')
        sfx(31)
       elseif dget(9) == 5 then
-       guytalkstr='tank is full'
-       guy.talkingc=30
+       guytalk('tank is full')
        sfx(31)
       else
        dset(9,dget(9)+1)
@@ -2442,7 +2440,6 @@ function shipinit()
 
  guy.x=guy.incryo and 52 or 37
  guy.y=91
- guy.talkingc=0
 
  guy.floor=1 -- 0 space, 1 below, 2 deck
 
@@ -2475,10 +2472,6 @@ function shipupdate()
   actiontitle=''
   showrepairtitle=nil
   showbrokentitle=nil
-
-  if guy.talkingc > 0 then
-   guy.talkingc-=1
-  end
 
   for _i=1,2 do
    local _floorobjs=shipobjs[_i]
@@ -2699,10 +2692,7 @@ function shipdraw()
  end
 
  -- draw talks
- if guy.talkingc > 0 then
-  addguytalk()
- end
- drawtalks()
+ drawtalk()
 end
 
 
