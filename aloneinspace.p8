@@ -313,21 +313,13 @@ function resetgame()
   -- load saved sample case
   for _i=1,5 do
    local _savedvalue=dget(_i)
-   if _savedvalue == 0 then
-    samples[_i]=nil
-   else
-    samples[_i]=_savedvalue
-   end
+   samples[_i]=_savedvalue != 0 and _savedvalue or nil
   end
 
   -- load seed cannon samples
   for _i=1,4 do
    local _savedvalue=dget(40+_i)
-   if _savedvalue == 0 then
-    seed[_i]=nil
-   else
-    seed[_i]=_savedvalue
-   end
+   seed[_i]=_savedvalue != 0 and _savedvalue or nil
   end
 
   -- load saved broken ship objects
@@ -342,7 +334,7 @@ function resetgame()
 
  traveling,travelc='warping',60
 
- deaddrawies,particles={},{}
+ deaddrawies,particles,talk={},{}
 end
 
 -- global constants
@@ -1542,13 +1534,8 @@ function planetupdate()
   _obj.y=mapwrap(_obj.y+_movey)
 
   if (_obj.action or _obj.walksfx or _obj.sunken) and dist(guy.x,guy.y,_obj.x,_obj.y) < 5 then
-   if _obj.walksfx then
-    guy.walksfx=_obj.walksfx
-   end
-
-   if _obj.sunken then
-    guy.sunken=_obj.sunken
-   end
+   guy.walksfx=_obj.walksfx or guy.walksfx
+   guy.sunken=_obj.sunken
 
    if _obj.action then
     guy.action=_obj.action
@@ -1639,7 +1626,7 @@ function planetdraw()
  end
 
  -- draw droid ship
- if droidlandingy then
+ if droidlandingc then
   local _y=droidlandingy-droidlandingc
   local _sh=24
   if droidlandingc == 0 then
@@ -2427,16 +2414,17 @@ end
 
 function addbrokenparticle(_x,_y)
  if rnd() > 0.85 and #particles < 20 then
-  add(particles,{
-   x=_x,
-   y=_y,
-   vx=rnd(2)-1,
-   vy=-rnd(),
+  add(particles,mergerightands2t([[
    ax=0.9,
    ay=0.9,
    col=9,
-   life=5,
-   })
+   life=5
+   ]],{
+    x=_x,
+    y=_y,
+    vx=rnd(2)-1,
+    vy=-rnd(),
+   }))
  end
 end
 
