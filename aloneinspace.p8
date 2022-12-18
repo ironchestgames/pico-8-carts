@@ -1357,8 +1357,7 @@ function createplanet(_planettype)
  -- add fauna
  local _animals={}
  local _loops=_planettype.animalcount or mid(0,flrrnd(getscorepercentage()*20),50)
- for _i=1,10 do
- -- for _i=1,_loops do
+ for _i=1,_loops do
    local _typ=rnd(_planettype.animaltypes)
    local _animal=clone(animaltypes[_typ])
    _animal.x=flrrnd(mapsize)
@@ -1375,7 +1374,8 @@ function createplanet(_planettype)
 
  -- add aliens
  local _alientype=nil
- if rnd() < 0.065 then
+ if alienhostile == nil and #_animals > 0 and rnd() < 0.065 then
+
   _alientype=rnd{'martian','taurien'}
 
   local _x=flrrnd(mapsize-_tooclosedist)
@@ -1407,12 +1407,12 @@ function createplanet(_planettype)
    talkfunc=_alientype == 'martian' and martiantalk or taurientalk,
    talkstr=_alientype == 'martian' and 'trade us water or else' or 'help us hunt or else',
    behaviour=function (_behaviouree)
-    -- todo: set to hostile
+    alienhostile=_alientype
 
     if disttoguy(_behaviouree) < 20 and not _behaviouree.hastalked then
      _behaviouree.hastalked=true
      _behaviouree.talkfunc(_behaviouree.talkstr,_behaviouree)
-     _behaviouree.behaviour=_behaviouree.behaviour2
+     _behaviouree.behaviour=_behaviouree.behaviour2 or _behaviouree.behaviour
     end
    end,
   })
@@ -1445,7 +1445,7 @@ function createplanet(_planettype)
        martiantalk('you will regret this',_obj)
       else
        martiantalk('thanks, now go away',_obj)
-       -- todo: martians friendly
+       alienhostile=nil
       end
       del(sector[1].mapobjs,_obj)
      end,
@@ -1470,7 +1470,7 @@ function createplanet(_planettype)
 
       taurientalk('well done, for a human',_behaviouree)
 
-      -- todo: tauriens friendly
+      alienhostile=nil
 
       sfx(rnd{40,41})
       break
@@ -1501,7 +1501,7 @@ end
 function nextsector()
  sfx(-1,2)
  
- droidalertc,droidfiringc,droidlandingc,droidlandingx,droidlandingy=nil
+ droidalertc,droidfiringc,droidlandingc,droidlandingx,droidlandingy,alienhostile,alienfiringc=nil
 
  sector={}
 
@@ -2520,7 +2520,7 @@ function resetshipobjs()
        if _obj.broken then
         print('\f8\x96system unstable\x96',21,32)
        elseif _blink then
-        if droidalertc == 0 then
+        if droidalertc == 0 or alienhostile then
          print('\f8hostile ship near \x88',21,32)
         elseif sector[1].haswreck then
          print('\fbdistress signal \x96',21,32)
@@ -2685,6 +2685,21 @@ function shipupdate()
    end
   end
 
+  -- update alien faction
+  if alienhostile then
+   if not alienfiringc then
+    alienfiringc=90+flrrnd(60)
+   end
+
+   alienfiringc-=1
+
+   if alienfiringc == 0 then
+    breakrandomshipobj()
+    alienfiringc=nil
+    sfx(rnd{19,20})
+   end
+  end
+
   -- update droid faction
   updatedroidalert()
 
@@ -2787,7 +2802,7 @@ end
 function shipdraw()
  cls(0)
 
- if droidfiringc == 1 then
+ if droidfiringc == 1 or alienfiringc == 1 then
   cls(13)
  end
 
@@ -2818,7 +2833,7 @@ function shipdraw()
 
  -- draw droid ship
  if droidalertc == 0 then
-  sspr(79,13,49,12,74,16)
+  sspr(79,13,49,16,74,16)
 
  elseif droidalertc == 1 then
   circfill(93,23,12,7) -- note: warp vfx
@@ -2826,6 +2841,17 @@ function shipdraw()
 
  if droidfiringc and droidfiringc < 3 then
   line(109,23,65,80,7) -- note: laser vfx
+ end
+
+ -- alien shot
+ if alienfiringc and alienfiringc < 3 then
+  line(21,26,65,80,7) -- note: laser vfx
+ end
+
+ -- draw martian/taurien ship
+ local _alientype=alienhostile or (sector and sector[1].alientype)
+ if _alientype then
+  sspr(79,_alientype == 'martian' and 45 or 29,49,16,5,14)
  end
 
  -- draw ship
