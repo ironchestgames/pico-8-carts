@@ -1414,17 +1414,18 @@ function createplanet(_planettype)
    behaviour=function (_behaviouree)
     alienhostile=_alientype
 
-    if disttoguy(_behaviouree) < 20 and not _behaviouree.hastalked then
-     _behaviouree.hastalked=true
+    if disttoguy(_behaviouree) < 20 then
      _behaviouree.talkfunc(_behaviouree.talkstr,_behaviouree)
-     _behaviouree.behaviour=_behaviouree.behaviour2 or _behaviouree.behaviour
+     _behaviouree.behaviour=_behaviouree.behaviour2
     end
    end,
   })
 
   if _alientype == 'martian' then
 
-   -- note: no behaviour 2
+   _alien.behaviour2=function ()
+    -- pass
+   end
 
    add(_mapobjs,mergerightands2t([[
     sx=24,
