@@ -465,7 +465,7 @@ takesampleaction={
 }
 
 function laidtrapbehaviour(_behaviouree)
- if guy.runningc > 0 and disttoguy(_behaviouree) < 2 then
+ if guy.notmoving == true and disttoguy(_behaviouree) < 2 then
   local _drawies={guy,_behaviouree}
   closetrap(_behaviouree)
   resetplanetcamera(_drawies)
@@ -1122,12 +1122,11 @@ function createplanettype()
  while #_objtypes < _objtypeslen do
   local _objtypelen=#objtypes-(_scorepercentage < 0.4 and 2 or _scorepercentage < 0.6 and 1 or 0) -- never have flowers and or berrybushes if not enough points
   local _index=mid(
-    (_wpal[2] == 7 or rnd(_scorepercentage) < 0.3) and 3 or 1, -- if white/snow then never show lava
+    (_wpal[2] == 7 or rnd(_scorepercentage) > 0.25) and 3 or 1, -- if white/snow then never show lava
     flr((rnd(2)-1+_scorepercentage)*_objtypelen),
     _objtypelen)
   add(_objtypes,objtypes[_index])
  end
- -- add(_objtypes,objtypes[1])
 
  -- fauna types
  local _allanimaltypes=split'bear,bat,spider,bull,snake,gnawer,firegnawer,slime'
@@ -1585,9 +1584,11 @@ function planetupdate()
   end
  end
 
+ guy.notmoving=nil
  if _movex == 0 and _movey == 0 then
   guy.walkingc=0
   guy.runningc=max(0,guy.runningc-2)
+  guy.notmoving=true
 
   if guy.runningc == 0 then
    guy.panting=nil
@@ -2406,7 +2407,7 @@ function resetshipobjs()
       line(19,22,109,22,0)
       local _laststr
       if _obj.broken then
-       _laststr=(_obj.broken and rnd() > 0.5 and '\n\n\nla5t sfed: ' or '\n\n\nlast seed: ')..tostr(flrrnd(9999))
+       _laststr=(_obj.broken and rnd() > 0.5 and '\n\n\nla5t: ' or '\n\n\nl4st: ')..tostr(flrrnd(9999))
       else
        _laststr='\n\n\nlast: '
        if dget(50) != 0 then
