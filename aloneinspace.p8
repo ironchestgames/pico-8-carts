@@ -183,6 +183,10 @@ function getscorepercentage()
  return dget(62)/1000 -- 1000 is top threshold
 end
 
+function disttoguy(_other)
+ return dist(_other.x,_other.y,guy.x,guy.y)
+end
+
 function drawtalk()
  if talk then
   -- draw
@@ -226,6 +230,16 @@ end
 
 function droidtalk(_str,_droid)
  addtalk(_str,_droid,13,7)
+end
+
+function martiantalk(_str,_alien)
+ addtalk(_str,_alien,6,13)
+ talk.c=44
+end
+
+function taurientalk(_str,_alien)
+ addtalk(_str,_alien,5,6)
+ talk.c=44
 end
 
 function addtosamplecase(_sample)
@@ -453,9 +467,7 @@ takesampleaction={
 }
 
 function laidtrapbehaviour(_behaviouree)
- local _disttoguy=dist(_behaviouree.x,_behaviouree.y,guy.x,guy.y)
- if guy.runningc > 0 and _disttoguy < 2 then
-  local _disttoguy=dist(_behaviouree.x,_behaviouree.y,guy.x,guy.y)
+ if guy.runningc > 0 and disttoguy(_behaviouree) < 2 then
   local _drawies={guy,_behaviouree}
   closetrap(_behaviouree)
   resetplanetcamera(_drawies)
@@ -567,7 +579,7 @@ function droidbehaviour(_behaviouree)
 end
 
 function sighthunting(_behaviouree)
- local _disttoguy=dist(_behaviouree.x,_behaviouree.y,guy.x,guy.y)
+ local _disttoguy=disttoguy(_behaviouree)
  local _disttotarget=dist(_behaviouree.x,_behaviouree.y,_behaviouree.targetx,_behaviouree.targety)
  local _prevhunting=_behaviouree.hunting
  _behaviouree.hunting=nil
@@ -579,8 +591,7 @@ function sighthunting(_behaviouree)
   return true
 
  elseif _disttoguy < _behaviouree.sightradius then
-  _behaviouree.targetx=guy.x
-  _behaviouree.targety=guy.y
+  _behaviouree.targetx,_behaviouree.targety=guy.x,guy.y
   if _behaviouree.isscary and guy.scared == nil and not _prevhunting then
    guytalk(rnd(split'yikes,eek,uh-oh'))
    guy.scared=true
@@ -713,161 +724,210 @@ animaltypes={
 -- sx,sy,sw,sh,samplecolor,ground,solid,dangerous,sunken,walksfx,action
 
 objtypes={
- { -- lava
-  sx='53,55',
-  sy='22,29',
-  sw='11,8',
-  sh='7,6',
+ 
+ -- lava
+ s2t[[
+  sx='53;55',
+  sy='22;29',
+  sw='11;8',
+  sh='7;6',
   lava=true,
-  ground=true,
- },
- { -- lavacracks
-  sx='55,55',
-  sy='35,39',
-  sw='8,8',
-  sh='4,5',
-  ground=true,
- },
- { -- sharp stones
-  sx='78,78,100',
-  sy='72,80,73',
-  sw='7,7,6',
-  sh='8,8,5',
-  solid='1,1,1',
- },
- { -- cracks
-  sx='103,103',
-  sy='64,68',
-  sw='8,8',
-  sh='4,5',
-  ground=true,
- },
- { -- rounded stones
-  sx='69,69,85,93',
-  sy='73,82,75,74',
-  sw='8,8,7,6',
-  sh='7,6,3,4',
-  solid='1,1,0,0',
- },
- { -- lakes
-  sx='53,53',
-  sy='9,15',
-  sw='8,11',
-  sh='6,7',
+  ground=true
+ ]],
+ 
+ -- lavacracks
+ s2t[[
+  sx='55;55',
+  sy='35;39',
+  sw='8;8',
+  sh='4;5',
+  ground=true
+ ]],
+ 
+ -- sharp stones
+ s2t[[
+  sx='78;78;100',
+  sy='72;80;73',
+  sw='7;7;6',
+  sh='8;8;5',
+  solid='1;1;1'
+ ]],
+
+ -- cracks
+ s2t[[
+  sx='103;103',
+  sy='64;68',
+  sw='8;8',
+  sh='4;5',
+  ground=true
+ ]],
+
+ -- rounded stones
+ s2t[[
+  sx='69;69;85;93',
+  sy='73;82;75;74',
+  sw='8;8;7;6',
+  sh='7;6;3;4',
+  solid='1;1;0;0'
+ ]],
+
+ -- lakes
+ mergerightands2t([[
+  sx='53;53',
+  sy='9;15',
+  sw='8;11',
+  sh='6;7',
   ground=true,
   samplecolor=13,
   sunken=true,
-  walksfx=7,
-  action=takesampleaction,
- },
- { -- skulls and ribs
-  sx='61,72,24,16',
-  sy='60,60,0,0',
-  sw='10,8,8,8',
-  sh='6,6,4,5',
-  samplecolor='6,15',
-  solid='1,0,0,0',
-  action=takesampleaction,
- },
- { -- canyon stones
-  sx='61,61,85',
-  sy='72,81,75',
-  sw='8,8,7',
-  sh='8,7,3',
-  solid='1,1,0',
- },
- { -- flowerbush
-  sx='16,23',
-  sy='20,20',
-  sw='7,6',
-  sh='8,8',
-  samplecolor='15,9',
-  action=takesampleaction,
- },
- { -- dead trees
-  sx='39,47',
-  sy='30,30',
-  sw='8,8',
-  sh='8,8',
-  solid='1,1',
- },
- { -- red caps
+  walksfx=7
+  ]],{
+   action=takesampleaction,
+  }),
+ 
+ -- skulls and ribs
+ mergerightands2t([[
+  sx='61;72;24;16',
+  sy='60;60;0;0',
+  sw='10;8;8;8',
+  sh='6;6;4;5',
+  samplecolor='6;15',
+  solid='1;0;0;0'
+  ]],{
+   action=takesampleaction,
+  }),
+ 
+ -- canyon stones
+ s2t[[
+  sx='61;61;85',
+  sy='72;81;75',
+  sw='8;8;7',
+  sh='8;7;3',
+  solid='1;1;0'
+ ]],
+ 
+ -- flowerbush
+ mergerightands2t([[
+  sx='16;23',
+  sy='20;20',
+  sw='7;6',
+  sh='8;8',
+  samplecolor='15;9'
+  ]],{
+   action=takesampleaction,
+  }),
+
+ -- dead trees
+ s2t[[
+  sx='39;47',
+  sy='30;30',
+  sw='8;8',
+  sh='8;8',
+  solid='1;1'
+ ]],
+
+ -- red caps
+ mergerightands2t([[
   sx='39',
   sy='0',
   sw='7',
   sh='5',
-  samplecolor='6,15,9,10,11,7',
-  action=takesampleaction,
- },
- { -- shadow marsh
+  samplecolor='6;15;9;10;11;7'
+  ]],{
+   action=takesampleaction,
+  }),
+
+ -- shadow marsh
+ s2t[[
   sx='48',
   sy='38',
   sw='5',
   sh='4',
-  ground=true,
- },
- { -- water marsh
+  ground=true
+ ]],
+
+ -- water marsh
+ s2t[[
   sx='48',
   sy='42',
   sw='5',
   sh='4',
-  ground=true,
- },
- { -- leafshadow marsh
+  ground=true
+ ]],
+
+ -- leafshadow marsh
+ s2t[[
   sx='48',
   sy='46',
   sw='5',
   sh='4',
-  ground=true,
- },
- { -- grass
-  sx='80,87,94',
-  sy='67,67,67',
-  sw='7,7,7',
-  sh='5,5,5',
- },
- { -- cactuses
-  sx='53,60',
-  sy='0,0',
-  sw='7,7',
-  sh='9,9',
-  solid='1,1',
-  action=takesampleaction,
-  samplecolor=13,
- },
- { -- mushrooms
+  ground=true
+ ]],
+
+ -- grass
+ s2t[[
+  sx='80;87;94',
+  sy='67;67;67',
+  sw='7;7;7',
+  sh='5;5;5'
+ ]],
+
+ -- cactuses
+ mergerightands2t([[
+  sx='53;60',
+  sy='0;0',
+  sw='7;7',
+  sh='9;9',
+  solid='1;1',
+  samplecolor=13
+  ]],{
+   action=takesampleaction,
+  }),
+
+ -- mushrooms
+ mergerightands2t([[
   sx='46',
   sy='0',
   sw='7',
   sh='5',
-  samplecolor='15,9,10,8,11,7',
-  action=takesampleaction,
- },
- { -- trees
-  sx='16,23,112,120',
-  sy='10,11,62,63',
-  sw='7,7,8,8',
-  sh='10,9,15,14',
-  solid='1,1,1,1',
-  action=takesampleaction,
-  samplecolor=6,
- },
- { -- flowers
-  sx='0,7',
-  sy='98,98',
-  sw='7,7',
-  sh='5,5',
-  samplecolor='15,9,10,8,11,7',
-  action=takesampleaction,
- },
- { -- berrybush
+  samplecolor='15;9;10;8;11;7'
+  ]],{
+   action=takesampleaction,
+  }),
+
+ -- trees
+ mergerightands2t([[
+  sx='16;23;112;120',
+  sy='10;11;62;63',
+  sw='7;7;8;8',
+  sh='10;9;15;14',
+  solid='1;1;1;1',
+  samplecolor=6
+  ]],{
+   action=takesampleaction,
+  }),
+
+ -- flowers
+ mergerightands2t([[
+  sx='0;7',
+  sy='98;98',
+  sw='7;7',
+  sh='5;5',
+  samplecolor='15;9;10;8;11;7'
+  ]],{
+   action=takesampleaction,
+  }),
+
+  -- berrybush
+  mergerightands2t([[
   sx='32',
   sy='0',
   sw='7',
   sh='6',
-  samplecolor='15,9,10,8,11,7',
-  action=takesampleaction,
- },
+  samplecolor='15;9;10;8;11;7'
+  ]],{
+   action=takesampleaction,
+  }),
 }
 
 plantsamplechances=s2t[[
@@ -1069,6 +1129,7 @@ function createplanettype()
     _objtypelen)
   add(_objtypes,objtypes[_index])
  end
+ -- add(_objtypes,objtypes[1])
 
  -- fauna types
  local _allanimaltypes=split'bear,bat,spider,bull,snake,gnawer,firegnawer,slime'
@@ -1125,9 +1186,6 @@ function createplanet(_planettype)
    }
   }),
  }
-
- -- add aliens
- 
 
  -- add wreck
  local _haswreck=nil
@@ -1271,12 +1329,12 @@ function createplanet(_planettype)
   until _tooclose == nil
 
   local _obj=clone(rnd(_planettype.objtypes))
-  local _sxs=split(_obj.sx)
+  local _sxs=split(_obj.sx,';')
   local _idx=flrrnd(#_sxs)+1
   local _samplecolorindex0=0
 
   if type(_obj.samplecolor) == 'string' then
-   local _samplecolors=split(_obj.samplecolor)
+   local _samplecolors=split(_obj.samplecolor,';')
    _samplecolorindex0=flrrnd(#_samplecolors)
    _obj.samplecolor=_samplecolors[_samplecolorindex0+1]
    if rnd() > plantsamplechances[_obj.samplecolor] then
@@ -1285,12 +1343,12 @@ function createplanet(_planettype)
   end
   
   if _tries <= 10 and not contains(_planettype.wpal,_obj.samplecolor) then
-   _obj.sx=split(_obj.sx)[_idx]
-   _obj.sw=split(_obj.sw)[_idx]
-   _obj.sh=split(_obj.sh)[_idx]
-   _obj.sy=split(_obj.sy)[_idx]+_samplecolorindex0*_obj.sh
+   _obj.sx=split(_obj.sx,';')[_idx]
+   _obj.sw=split(_obj.sw,';')[_idx]
+   _obj.sh=split(_obj.sh,';')[_idx]
+   _obj.sy=split(_obj.sy,';')[_idx]+_samplecolorindex0*_obj.sh
 
-   _obj.solid=_obj.solid and split(_obj.solid)[_idx] == 1
+   _obj.solid=_obj.solid and split(_obj.solid,';')[_idx] == 1
    _obj.x=_x
    _obj.y=_y
 
@@ -1316,6 +1374,82 @@ function createplanet(_planettype)
   end
  end
 
+ -- add aliens
+ local _alientype=nil
+ -- if rnd() < 0.065 then
+ if true then
+  -- _alientype=rnd{'martian','taurien'}
+  _alientype='martian'
+
+  local _x=flrrnd(mapsize-_tooclosedist)
+  local _y=flrrnd(mapsize-_tooclosedist)
+  
+  add(_mapobjs,mergerightands2t([[
+   sx=42,
+   sw=19,
+   sh=10,
+   solid=true
+   ]],{
+   sy=_alientype == 'martian' and 58 or 68,
+   x=_x+15,
+   y=_y,
+  }))
+
+  if _alientype == 'martian' then
+   add(_animals,mergerightands2t([[
+    sx=24,
+    sy=60,
+    sw=8,
+    sh=8,
+   ]],{
+    x=_x,
+    y=_y,
+    targetx=_x,
+    targety=_y,
+    typ=_alientype,
+    bloodtype=_alientype,
+    behaviour=function (_behaviouree)
+     if disttoguy(_behaviouree) < 20 and not _behaviouree.hastalked then
+      _behaviouree.hastalked=true
+      martiantalk('give us water or else',_behaviouree)
+     end
+    end,
+   }))
+
+   add(_mapobjs,mergerightands2t([[
+    sx=24,
+    sy=60,
+    sw=8,
+    sh=8,
+   ]],{
+    x=_x,
+    y=_y,
+    action={
+     title='trade water',
+     func=function (_obj)
+      local _waterfound=nil
+      for _i=1,5 do
+       if samples[_i] == 13 then
+        samples[_i]=11
+        dset(_i,11)
+        _waterfound=true
+        break
+       end
+      end
+      if not _waterfound then
+       -- todo: add martians to ship scene
+       martiantalk('you will regret this',_obj)
+      else
+       martiantalk('thanks, now go away',_obj)
+      end
+      del(sector[1].mapobjs,_obj)
+     end,
+    }
+   }))
+  else -- taurien
+  end
+ end
+
  return {
   mapobjs=_mapobjs,
   wpal=_wpal,
@@ -1324,6 +1458,7 @@ function createplanet(_planettype)
   animals=_animals,
   haswreck=_haswreck,
   hasartifact=_hasartifact,
+  alientype=_alientype,
   droidworld=_planettype.droidworld,
  }
 end
@@ -1649,7 +1784,7 @@ function planetdraw()
  if lookinginsamplecase or guy.samplingc > 0 then
   local _x=guy.x-10
   local _y=guy.y+10
-  sspr(80,88,9,3,_x+8,_y-3)
+  sspr(60,88,9,3,_x+8,_y-3)
   drawsamplecase(_x,_y)
  end
 
@@ -1807,11 +1942,11 @@ function toolstoragedraw(_obj)
 end
 
 samplecolorvalues={
- [6]=1, -- stonish
+ [13]=1, -- water
+ [6]=2, -- stonish
  [15]=2, -- sandish
- [9]=3, -- orange
- [10]=4, -- bloody orange
- [13]=5, -- water
+ [9]=2, -- orange
+ [10]=2, -- bloody orange
  [8]=8, -- taurien blood
  [11]=12, -- mars blood
  [7]=12, -- droid blood
@@ -2601,7 +2736,7 @@ function shipupdate()
   end
   _s.x-=_s.spd*_spd
   if _s.x < 0 then
-   _s.x=140
+   _s.x=188
    _s.y=flrrnd(128)
   end
  end
@@ -2625,7 +2760,7 @@ function shipdraw()
  -- draw stars
  for _s in all(stars) do
   if traveling == 'warping' then
-   line(_s.x,_s.y,_s.x-10,_s.y,13)
+   line(_s.x,_s.y,_s.x+(travelc-60),_s.y,13)
   else
    pset(_s.x,_s.y,_s.col)
   end
@@ -2830,22 +2965,22 @@ e00ddd0eee0ddd0eee0ddd0eee0ddd0eeee0dddd0eeeeeeee6e60eeeddeeeeeebb0dddd0eddeeeee
 050d00500d0d00d00d0d00d00d0d00d0ee0dd7dd0eeeeeee06bbddd0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1111111111eeeeeeeeeeeeeeeeeeeeeeeeeee
 05050050050500500505005005050050e0ddd7d50eeeeeeeeeeeeeeeeeeeeeeeeeeeedddeeeeeeeeeeeeeeeeeeeee111111eeeeeeeeeeeeeeeeeeeeeeeeeeeee
 ee0500ee050ee0500505005005050050e0d7d7dd0eeeeeeee00000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeeeeeeeeeeeeeeee000000eeeeeeeee0d7d7dd50eeeeee0bbb770eeeeeeeeeee0000eeeee0000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-0000000000000000000a88a0eeeeeeee0dddd7ddd0eee000bbbbbb7000eeeee0e060600eee060600eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-0a88a00a88a00a88a0e0dd0eeeeeeeee07d5d7dd50e00d60bbbbbbb06d00ee060606050ee0606050eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eeeeeeeeeeee
-e0880ee0880ee0880ee0880eeeeeeeee0dd5d7ddd00d6dd600000006dd6d0060606050ee0606050eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0c0eeeeee0eeee
-005580085500005500005500eeeeeeee07ddd7dd500dd6dd6666666dd6dd0060606050ee0606050eeeeeeeeeeeeeeeeeeeeeeeeeeeeee1eeee0c0eeeee0c0eee
-08dd0ee0dd8008dd8008dd80eeeeeeee0dd7d7ddd0e00d66ddddddd66d00e0606060111e06060111eeeeeeeeeeeeeeeeeeeeeeeeeeee1eeee0cc0eeeee0c0eee
-e050eeee050ee0550ee0550eeeeeeeee05d7dddd50eee0000000000000eeeeeeee0000eeeee0000eeeeeeeeeeeeeeeeeeeeeeeeee111e11eee0cc0eeee0cc0ee
-eee0eeeee0eeeee0eeeee0eeeeeeeeee05d7d7ddd0eeee11111111111eeeeee0e0f0f00eee0f0f0000eeeeeeeeee0000eee00ee11eeeeeeeee0c30eee0ccc0ee
-e0000ee0000ee0000ee0000eeeeeeeee05d7d7d550eeeeeeeeeeeeee0000ee0f0f0f050ee0f0f0500c0ee0000ee0c00c0e0c0eeeeeeee11eee0cc30eee0cc30e
-07666007666007666007bb60eeeeeeee0dddddddd0eeeeeeeeeeeee08880e0f0f0f050ee0f0f050ee0c00c00c00c0ee0c0c0eee111ee1eeee0cc300eee0c300e
-06bb6006bb6006bb6006bb60eeeeeeee05d5d5d550eeeee0000000085550e0f0f0f050ee0f0f050ee0c0c0ee0c0c0ee0c0c0eeeeee11eeeee0cc330ee0cc330e
-06bb6006bb6006bb60065560eeeeeeee0dd555dd0eeeee066d0555588880e0f0f0f0111e0f0f0111e0c0c0ee0c0c0ee0c0c0eeeeeeee11ee0ccc3330e0ccc330
-e0dd0ee0dd0ee0dd0ee0dd0eeeeeeeee055555550eeee06ddd0588588880eeee000eeeeeeeeeeeeeee0eeeeeeeeeeeeeeeeeeeeeeeeeee1e00ccc3300ccc3300
-e0dd0ee0dd0ee0dd0ee0dd0eeeeeeeee055555550eee06dddd05555888850ee04420eeee00eeeeeee040eeeeeeeeeeeeeeeeeee0eeeeeeeee0c3330ee0c3330e
-e0dd0ee0dd0ee0dd0ee0dd0eeeeeeeee055050550ee000000055000000850ee04220eee0440eeeee0420eeeeeeeeeee00eeeee040eeeeeee0cc333300cc33330
-eeeeeeeeeeeeeeee000eeeeeeeeeeeeee0000000ee0885555550888850850e04220eeee04220eee04220eee000eeee0440eee0420eeeeeee0001100000011000
+eee0eeeee0eeeeeeeeeee0eeeeee0eeee0d7d7dd50eeeeee0bbb770eeeeeeeeeee0000eeeee0000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+e0000ee0000eeeeeeee0000eee0000ee0dddd7ddd0eee000bbbbbb7000eeeee0e060600eee060600eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+076660076660eeeeee07bb60e076660e07d5d7dd50e00d60bbbbbbb06d00ee060606050ee0606050eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eeeeeeeeeeee
+06bb6006bb60eeeeee06bb60e06bb60e0dd5d7ddd00d6dd600000006dd6d0060606050ee0606050eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0c0eeeeee0eeee
+06bb6006bb60eeeeee065560e06bb60e07ddd7dd500dd6dd6666666dd6dd0060606050ee0606050eeeeeeeeeeeeeeeeeeeeeeeeeeeeee1eeee0c0eeeee0c0eee
+e0dd0ee0dd0eeeeeeee0dd0eee0dd0ee0dd7d7ddd0e00d66ddddddd66d00e0606060111e06060111eeeeeeeeeeeeeeeeeeeeeeeeeeee1eeee0cc0eeeee0c0eee
+e0dd0ee0dd0eeeeeeee0dd0eee0dd0ee05d7dddd50eee0000000000000eeeeeeee0000eeeee0000eeeeeeeeeeeeeeeeeeeeeeeeee111e11eee0cc0eeee0cc0ee
+e0dd0ee0dd0eeeeeeee0dd0eee0dd0ee05d7d7ddd0eeee11111111111eeeeee0e0f0f00eee0f0f0000eeeeeeeeee0000eee00ee11eeeeeeeee0c30eee0ccc0ee
+eeeeeeeeeeeeeeeeee000000eeeeeeee05d7d7d550eeeeeeeeeeeeee0000ee0f0f0f050ee0f0f0500c0ee0000ee0c00c0e0c0eeeeeeee11eee0cc30eee0cc30e
+000000000000eeeeee0a88a0eeeeeeee0dddddddd0eeeeeeeeeeeee08880e0f0f0f050ee0f0f050ee0c00c00c00c0ee0c0c0eee111ee1eeee0cc300eee0c300e
+0a88a00a88a0eeeeeee0dd0ee000000e05d5d5d550eeeee0000000085550e0f0f0f050ee0f0f050ee0c0c0ee0c0c0ee0c0c0eeeeee11eeeee0cc330ee0cc330e
+e0880ee0880eeeeeeee0880ee0a88a0e0dd555dd0eeeee066d0555588880e0f0f0f0111e0f0f0111e0c0c0ee0c0c0ee0c0c0eeeeeeee11ee0ccc3330e0ccc330
+005580085500eeeeee005500ee0880ee055555550eeee06ddd0588588880eeee000eeeeeeeeeeeeeee0eeeeeeeeeeeeeeeeeeeeeeeeeee1e00ccc3300ccc3300
+08dd0ee0dd80eeeeee08dd80e005500e055555550eee06dddd05555888850ee04420eeee00eeeeeee040eeeeeeeeeeeeeeeeeee0eeeeeeeee0c3330ee0c3330e
+e050eeee050eeeeeeee0550ee08dd80e055050550ee000000055000000850ee04220eee0440eeeee0420eeeeeeeeeee00eeeee040eeeeeee0cc333300cc33330
+eeeeeeeeeeeeeeee000eeeeeee0550eee0000000ee0885555550888850850e04220eeee04220eee04220eee000eeee0440eee0420eeeeeee0001100000011000
 eeee000eeeeeeee05550eeeeeeeeeeeeeeeeeeeeee000000000000000000eee02220ee042220eee042220e04420eee04220e04220eeeeeeeee0110eeee0110ee
 e0e05550eeeeeee05055000eeeeeeeeee1111111eee11111111111111111eee04220ee0422240ee0422200422220e042220e042420eeeeeeeeeeeeeeeeeeeeee
 0e0050500eeeeee050500ee0eeeeeeeeeeeeeeeeeeeeee00eeeee0eeeeeeee042240e04224420e0422240eeee8888888888888eeeeeeeeeeeeeeeeeeeeeeeeee
@@ -2858,9 +2993,9 @@ ee00eeee00eeee00eee0ff0eeeeeeeeeeeeeeeeeeeeeeeddd558508850eeee042220ee042220eee0
 e0ff0ee0ff0ee0ff0ee0ff0eeeeeeeeeeee00eeeeeeeeeeedd550888850eee04220eee042220eee042240eeee101eeeeeeeee9eeee6eee06ddd0eeeeeeeeeeee
 e0ff0ee0ff0ee0ff0ee0880eeeeeeeeeee00a0000eeeedeeeee5500000eeee042220e04224420e0422420eeee101eeeeeeee999eee6e6e06ddd0eeeeeeeeeeee
 0daa0e0daa0e0daa0e0daa0eeeeeeeeee080885850eeeeeeeeeeeeeeeeeee0422222004242220e0422420eeee101110001199999ee6eee0dddd0eeeeeeeeeeee
-0daa0e0da00e0d0a0e0daa0eeeeeeeeeeeeeeeeeeeeeeeeedddeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000e1011099901e999ee66e6e05dd50eeeeeeeeeeee
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0666666601011109990e999ee6666e055550eeeeeeeeeeee
-eeeeeeeeeeeeeeeeeeee00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0600000601010000990eaaae455555055550eeeeeeeeeeee
+0daa0e0da00e0d0a0e0daa0eeeeeeeeeeeeeeeeeeeeeeeeedddeeeeeeeeee0000000eeeeeeeeeeeeeeeeeeeee1011099901e999ee66e6e05dd50eeeeeeeeeeee
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee066666660eeeeeeeeeeeeeeeeeeee1011109990e999ee6666e055550eeeeeeeeeeee
+eeeeeeeeeeeeeeeeeeee00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee060000060eeeeeeeeeeeeeeeeeeee1010000990eaaae455555055550eeeeeeeeeeee
 ee00eeee00eeee00eee0ff0eeeeeeeeeeeeeeee444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 e0ff0ee0ff0ee0ff0ee0ff0eeeeeeeeeeeeeeee42444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 e0ff0ee0ff0ee0ff0ee0880eeeeeeeeeeeeeeeee424424444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
