@@ -211,10 +211,10 @@ function drawtalk()
  end
 end
 
-function addtalk(_str,_talker,_bgcolor,_strcolor)
+function addtalk(_str,_talker,_bgcolor,_strcolor,_dur)
  if talk == nil or _str != talk.str then
   talk={
-   c=24,
+   c=_dur or 24,
    str=_str,
    talker=_talker,
    bgcolor=_bgcolor,
@@ -233,13 +233,11 @@ function droidtalk(_str,_droid)
 end
 
 function martiantalk(_str,_alien)
- addtalk(_str,_alien,6,13)
- talk.c=44
+ addtalk(_str,_alien,6,13,44)
 end
 
 function taurientalk(_str,_alien)
- addtalk(_str,_alien,5,6)
- talk.c=44
+ addtalk(_str,_alien,5,6,44)
 end
 
 function addtosamplecase(_sample)
@@ -1359,7 +1357,8 @@ function createplanet(_planettype)
  -- add fauna
  local _animals={}
  local _loops=_planettype.animalcount or mid(0,flrrnd(getscorepercentage()*20),50)
- for _i=1,_loops do
+ for _i=1,10 do
+ -- for _i=1,_loops do
    local _typ=rnd(_planettype.animaltypes)
    local _animal=clone(animaltypes[_typ])
    _animal.x=flrrnd(mapsize)
@@ -1376,10 +1375,8 @@ function createplanet(_planettype)
 
  -- add aliens
  local _alientype=nil
- -- if rnd() < 0.065 then
- if true then
-  -- _alientype=rnd{'martian','taurien'}
-  _alientype='martian'
+ if rnd() < 0.065 then
+  _alientype=rnd{'martian','taurien'}
 
   local _x=flrrnd(mapsize-_tooclosedist)
   local _y=flrrnd(mapsize-_tooclosedist)
@@ -1395,26 +1392,34 @@ function createplanet(_planettype)
    y=_y,
   }))
 
-  if _alientype == 'martian' then
-   add(_animals,mergerightands2t([[
-    sx=24,
-    sy=60,
-    sw=8,
-    sh=8,
+  local _alien=mergerightands2t([[
+   sx=24,
+   sw=8,
+   sh=8,
    ]],{
-    x=_x,
-    y=_y,
-    targetx=_x,
-    targety=_y,
-    typ=_alientype,
-    bloodtype=_alientype,
-    behaviour=function (_behaviouree)
-     if disttoguy(_behaviouree) < 20 and not _behaviouree.hastalked then
-      _behaviouree.hastalked=true
-      martiantalk('give us water or else',_behaviouree)
-     end
-    end,
-   }))
+   x=_x,
+   y=_y,
+   sy=_alientype == 'martian' and 60 or 68,
+   targetx=_x,
+   targety=_y,
+   typ=_alientype,
+   bloodtype=_alientype,
+   talkfunc=_alientype == 'martian' and martiantalk or taurientalk,
+   talkstr=_alientype == 'martian' and 'trade us water or else' or 'help us hunt or else',
+   behaviour=function (_behaviouree)
+    -- todo: set to hostile
+
+    if disttoguy(_behaviouree) < 20 and not _behaviouree.hastalked then
+     _behaviouree.hastalked=true
+     _behaviouree.talkfunc(_behaviouree.talkstr,_behaviouree)
+     _behaviouree.behaviour=_behaviouree.behaviour2
+    end
+   end,
+  })
+
+  if _alientype == 'martian' then
+
+   -- note: no behaviour 2
 
    add(_mapobjs,mergerightands2t([[
     sx=24,
@@ -1425,7 +1430,7 @@ function createplanet(_planettype)
     x=_x,
     y=_y,
     action={
-     title='trade water',
+     title='trade',
      func=function (_obj)
       local _waterfound=nil
       for _i=1,5 do
@@ -1437,17 +1442,47 @@ function createplanet(_planettype)
        end
       end
       if not _waterfound then
-       -- todo: add martians to ship scene
        martiantalk('you will regret this',_obj)
       else
        martiantalk('thanks, now go away',_obj)
+       -- todo: martians friendly
       end
       del(sector[1].mapobjs,_obj)
      end,
     }
    }))
+
   else -- taurien
+
+   _alien.behaviour2=function(_behaviouree)
+    for _other in all(sector[1].animals) do
+     if _other != _behaviouree and dist(_behaviouree.x,_behaviouree.y,_other.x,_other.y) < 20 then
+      -- kill animal
+      del(sector[1].animals,_other)
+      add(sector[1].mapobjs,getbloodobj(_other.x,_other.y,_other.bloodtype))
+
+      taurienshot={
+       x1=_behaviouree.x,
+       y1=_behaviouree.y-5,
+       x2=_other.x,
+       y2=_other.y,
+      }
+
+      taurientalk('well done, for a human',_behaviouree)
+
+      -- todo: tauriens friendly
+
+      sfx(rnd{40,41})
+      break
+     end
+    end
+   end
+
+
   end
+
+  add(_animals,_alien)
+
  end
 
  return {
@@ -1758,6 +1793,12 @@ function planetdraw()
    _obj.sw,
    _obj.sh,
    _obj.flipx)
+ end
+
+ if taurienshot then
+  line(taurienshot.x1,taurienshot.y1,taurienshot.x2,taurienshot.y2,7)
+  circfill(taurienshot.x2,taurienshot.y2,7,7)
+  taurienshot=nil
  end
 
  -- draw droid ship
@@ -3074,3 +3115,5 @@ __sfx__
 480300000d4502240023450224002345022400234501d400224500040022450004002145021400214501f400204501b4001f450004001f450004001e450144001d4501d4001d4500b4001c450004001b45000400
 013400002765327600276002760027600276002760027600276002760028600286000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 01220000361512a151361510010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
+00010000304512f4502f4502e4502d4502b450294502745025450234501e4501a4501745010450094500142000400004000040000400004000040000400004000040000400004000040000400004000040000400
+0001000033451334503245032450314502e4502d4502a45026450224501f4501a450154500f450084500140000400004000040000400004000040000400004000040000400004000040000400004000040000400
