@@ -22,12 +22,13 @@ tools are: 1 = trap, 2 = deterrer, 3 = drill, 4 = spare part)
 46 = tool storage 1
 47 = tool storage 2
 
-50 = last seed sample 1 color
-51 = last seed sample 2 color
-52 = last seed sample 3 color
-53 = last seed sample 4 color
+last seed
+50 = sample 1 color
+51 = sample 2 color
+52 = sample 3 color
+53 = sample 4 color
 
-59 = is game saved
+59 = is ongoing game
 
 61 = current nr of seeds
 62 = current score
@@ -40,7 +41,7 @@ function debug(s)
  printh(tostr(s),'debug',false)
 end
 
-poke(0x5f5c,-1) -- disable auto-repeat for btnp
+poke(0x5f5c,-1) -- disable btnp auto-repeat btnp
 
 -- note: set special char o-button to look like c-button if gpio 1 is set, pico8_gpio[0]=1 in js
 poke(0x5600,unpack(split'5,7,5,0,0'))
@@ -106,7 +107,6 @@ function wrap(_min,_n,_max)
  return (((_n-_min)%(_max-_min))+(_max-_min))%(_max-_min)+_min
 end
 
-
 -- 78 token s2t (depends on trimsplit)
 function s2t(_t)
  local _result={}
@@ -119,8 +119,6 @@ function s2t(_t)
     _value=({true,false})[_i]
    end
   end
-  -- todo
-  -- if _value starts with '{' then _value = s2t(_value)
   if type(_value) == 'string' then
    _value=sub(_value,2,#_value-1)
   end
@@ -178,7 +176,6 @@ end
 
 function drawtalk()
  if talk then
-  -- draw
   local _talker=talk.talker
   local _y=_talker.y-33
   local _x1=_talker.x-talk.strwidth/2
@@ -192,7 +189,6 @@ function drawtalk()
   line(_talker.x,_y,_talker.x,_talker.y-8,talk.bgcolor)
   print(talk.str,_x1+2,_y+2,talk.strcolor)
 
-  -- update
   talk.c-=1
   if talk.c == 0 then
    talk=nil
@@ -293,7 +289,6 @@ end
 
 function resetgame()
  -- note: global vars
- -- sector={}
 
  guy={incryo=true}
 
@@ -339,9 +334,9 @@ function resetgame()
 end
 
 -- global constants
-floorys=split'91,80'
+mapsize=255
 
-toolnames=split'trap,deterrer,drill,spare part'
+floorys,toolnames=split'91,80',split'trap,deterrer,drill,spare part'
 
 tools={
  s2t[[
@@ -416,9 +411,6 @@ function getnewtrap(_x,_y)
   {
    x=_x,
    y=_y,
-   -- sy=41, -- note: set by closetrap
-   -- sw=4,
-   -- sh=4,
    behaviour=laidtrapbehaviour,
  }))
 end
@@ -708,7 +700,7 @@ animaltypes={
 }
 
 
--- sx,sy,sw,sh,samplecolor,ground,solid,dangerous,sunken,walksfx,action
+-- sx,sy,sw,sh,samplecolor,ground,solid,lava,sunken,walksfx,action
 
 objtypes={
  
@@ -927,7 +919,6 @@ plantsamplechances=s2t[[
  7=0.01
  ]]
  
-
 planettypes={
  martianworld=mergerightands2t([[
   groundcolor=12,
@@ -1000,9 +991,6 @@ planettypes={
   },
  }),
 }
-
-
-mapsize=255
 
 groundcolors=split'1,2,3,4,5,6,7,9,13,14,15,18,19,20,21,22,23,27,28,29'
 shadowcolors=split'17,18,19,20,21,22,6,na,4,na,na,na,29,8,31,na,na,16,1,18,18,5,26,na,na,na,3,1,21'
@@ -1361,7 +1349,7 @@ function createplanet(_planettype)
 
  -- add fauna
  local _animals={}
- local _loops=rnd(_planettype.animalcount) or mid(0,flrrnd(getscorepercentage()*20),50)
+ local _loops=(_planettype.animalcount and rnd(_planettype.animalcount)) or mid(0,flrrnd(getscorepercentage()*20),50)
  for _i=1,_loops do
    local _typ=rnd(_planettype.animaltypes)
    local _animal=clone(animaltypes[_typ])
@@ -1379,9 +1367,11 @@ function createplanet(_planettype)
 
  -- add aliens
  local _alientype=nil
- if (alienhostile == nil and #_animals > 0 and rnd() < 0.065) or _planettype.alientype then
+ -- if (alienhostile == nil and #_animals > 0 and rnd() < 0.065) or _planettype.alientype then
+  if true then
 
-  _alientype=_planettype.alientype or rnd{'martian','taurien'}
+  -- _alientype=_planettype.alientype or rnd{'martian','taurien'}
+  _alientype='martian'
 
   local _x=flrrnd(mapsize-_tooclosedist)
   local _y=flrrnd(mapsize-_tooclosedist)
@@ -1449,8 +1439,10 @@ function createplanet(_planettype)
       end
       if not _waterfound then
        martiantalk('you will regret this',_alien) -- note: _alien from outer scope
+       sfx(46)
       else
        martiantalk('thanks, now go away',_alien)
+       sfx(45)
        alienhostile=nil
       end
       del(sector[1].mapobjs,_obj)
@@ -2641,6 +2633,7 @@ function shipinit()
 
  actiontitle=''
  showbrokentitle=nil
+ repairts=0
 
  camera()
 
@@ -2687,8 +2680,10 @@ function shipupdate()
        dset(45,0)
        dset(floordatapos[_obj.floor]+_obj.index,0)
        sfx(36)
+       repairts=t()
+       goto label1
       end
-     elseif _obj.inputhandler then
+     elseif _obj.inputhandler and t() - repairts > 1 then
       actiontitle=_obj.actiontitle or ''
       _obj.inputhandler(_obj)
      end
@@ -2697,6 +2692,7 @@ function shipupdate()
     end
    end
   end
+  ::label1::
 
   -- update alien faction
   if alienhostile then
@@ -2864,7 +2860,11 @@ function shipdraw()
  -- draw martian/taurien ship
  local _alientype=alienhostile or (sector and sector[1].alientype)
  if _alientype then
-  sspr(79,_alientype == 'martian' and 45 or 29,49,16,5,14)
+  local _x=5
+  if alienhostile == nil and (traveling == 'orbiting' or traveling == 'warping') then
+   _x+=travelc*2.5
+  end
+  sspr(79,_alientype == 'martian' and 45 or 29,49,16,_x,14)
  end
 
  -- draw ship
@@ -3174,3 +3174,5 @@ __sfx__
 000400000a150001000a150001000a150001000a150001000a150001000a150001000a150001000a150001000a150001000a150001000a150001000a130001000a11000100001000010000100001000010000100
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 380e0000180501805018050180501a0501a0501a0501a0501c0501c0501e050200502105021050210502105021040210302102221015000000000021050210202205022050220502204222032220222201321000
+000200002d5501655012550105501255020550235502455028550255502c5502c5502d5502e55029550225502f5502f550345502f550000003a55038550385500000000000000000000000000000000000000000
+00020000325503355033550235501d5501e5502b5502b5502d550325503055028550245502155033550355501b550185503355014550135501255011550255500050000500005000050000500005000050000500
