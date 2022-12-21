@@ -959,7 +959,7 @@ planettypes={
  taurienworld=mergerightands2t([[
    groundcolor=2,
    surfacecolor=4,
-   animalcount=3,
+   animalcount=5,
    objdist=28,
    alientype='taurien'
   ]],{
@@ -982,7 +982,7 @@ planettypes={
  droidworld=mergerightands2t([[
   groundcolor=5,
   surfacecolor=13,
-  animalcount=8,
+  animalcount=12,
   objdist=18,
   droidworld=true
   ]],{
@@ -1128,7 +1128,7 @@ function createplanettype()
  while #_objtypes < _objtypeslen do
   local _objtypelen=#objtypes-(_scorepercentage < 0.4 and 2 or _scorepercentage < 0.6 and 1 or 0) -- never have flowers and or berrybushes if not enough points
   local _index=mid(
-    (_wpal[2] == 7 or rnd(_scorepercentage) > 0.25) and 3 or 1, -- if white/snow then never show lava
+    (_wpal[2] == 7 or (_scorepercentage > 0.25 and rnd(_scorepercentage) > 0.0875)) and 3 or 1, -- if white/snow then never show lava
     flr((rnd(2)-1+_scorepercentage)*_objtypelen),
     _objtypelen)
   add(_objtypes,objtypes[_index])
@@ -1361,7 +1361,7 @@ function createplanet(_planettype)
 
  -- add fauna
  local _animals={}
- local _loops=_planettype.animalcount or mid(0,flrrnd(getscorepercentage()*20),50)
+ local _loops=rnd(_planettype.animalcount) or mid(0,flrrnd(getscorepercentage()*20),50)
  for _i=1,_loops do
    local _typ=rnd(_planettype.animaltypes)
    local _animal=clone(animaltypes[_typ])
@@ -2680,7 +2680,7 @@ function shipupdate()
       _obj.firstframe=true
      end
      _obj.inrange=true
-     if dget(45) == 4 and _obj.broken and not _obj.cantbreak then -- carrying spare part
+     if dget(45) == 4 and _obj.broken and not _obj.cantbreak then -- note: 45 = carrying spare part
       showrepairtitle=true
       if btnp(4) then
        _obj.broken=nil
@@ -2979,6 +2979,10 @@ function deaddraw()
 end
 
 -- splash
+function _init()
+ sfx(44)
+end
+
 function _update()
 
  -- update
@@ -3168,3 +3172,5 @@ __sfx__
 00010000304512f4502f4502e4502d4502b450294502745025450234501e4501a4501745010450094500142000400004000040000400004000040000400004000040000400004000040000400004000040000400
 0001000033451334503245032450314502e4502d4502a45026450224501f4501a450154500f450084500140000400004000040000400004000040000400004000040000400004000040000400004000040000400
 000400000a150001000a150001000a150001000a150001000a150001000a150001000a150001000a150001000a150001000a150001000a150001000a130001000a11000100001000010000100001000010000100
+001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+380e0000180501805018050180501a0501a0501a0501a0501c0501c0501e050200502105021050210502105021040210302102221015000000000021050210202205022050220502204222032220222201321000
