@@ -1367,11 +1367,9 @@ function createplanet(_planettype)
 
  -- add aliens
  local _alientype=nil
- -- if (alienhostile == nil and #_animals > 0 and rnd() < 0.065) or _planettype.alientype then
-  if true then
+ if (alienhostile == nil and #_animals > 0 and rnd() < 0.065) or _planettype.alientype then
 
-  -- _alientype=_planettype.alientype or rnd{'martian','taurien'}
-  _alientype='martian'
+  _alientype=_planettype.alientype or rnd{'martian','taurien'}
 
   local _x=flrrnd(mapsize-_tooclosedist)
   local _y=flrrnd(mapsize-_tooclosedist)
@@ -2490,7 +2488,7 @@ function resetshipobjs()
      if traveling != 'orbiting' and traveling != 'warping' then
       if not _obj.broken then
        if _blink then
-        if droidalertc == 0 or _obj.rebootingc then
+        if droidalertc == 0 or alienhostile or _obj.rebootingc then
          pset(103,76,8)
         elseif sector[1].haswreck or sector[1].hasartifact then
          pset(103,76,11)
