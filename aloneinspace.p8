@@ -330,7 +330,7 @@ function resetgame()
 
  traveling,travelc='warping',60
 
- deaddrawies,particles,talk={},{}
+ deaddrawies,particles,talk,alienhostile,alienfiringc={},{}
 end
 
 -- global constants
@@ -476,8 +476,12 @@ end
 function scaredbehaviour(_behaviouree)
  _behaviouree.scaredc-=1
  if _behaviouree.scaredc <= 0 then
-  _behaviouree.behaviour=_behaviouree.oldbehaviour
+  _behaviouree.behaviour=_behaviouree.oldbehaviour or sighthunting
  else
+  if not _behaviouree.scaredx then
+   _behaviouree.scaredx=guy.x
+   _behaviouree.scaredy=guy.y
+  end
   local _a=atan2(_behaviouree.scaredx-_behaviouree.x,_behaviouree.scaredy-_behaviouree.y)+0.5
   _behaviouree.x+=cos(_a)*_behaviouree.spd
   _behaviouree.y+=sin(_a)*_behaviouree.spd
@@ -621,7 +625,19 @@ animaltypes={
   sightradius=32,
   spd=0.75,
   huntingspd=0.75,
-  c=0
+  c=0,
+  bloodtype='fire'
+ ]],
+ rabbit=s2t[[
+  sx=0,
+  sy=70,
+  sw=8,
+  sh=5,
+  sightradius=32,
+  spd=1,
+  huntingspd=1,
+  c=0,
+  scaredc=3000
  ]],
  spider=s2t[[
   sx=0,
@@ -631,7 +647,8 @@ animaltypes={
   sightradius=38,
   spd=0.25,
   huntingspd=1.25,
-  c=0
+  c=0,
+  bloodtype='fire'
  ]],
  bull=s2t[[
   sx=0,
@@ -651,7 +668,8 @@ animaltypes={
   sightradius=36,
   spd=0.25,
   huntingspd=0.875,
-  c=0
+  c=0,
+  bloodtype='fire'
  ]],
  gnawer=s2t[[
   sx=0,
@@ -816,16 +834,7 @@ objtypes={
    action=takesampleaction,
   }),
 
- -- 12, shadow marsh
- s2t[[
-  sx='48',
-  sy='38',
-  sw='5',
-  sh='4',
-  ground=true
- ]],
-
- -- 13, water marsh
+ -- 12, water marsh
  s2t[[
   sx='48',
   sy='42',
@@ -834,7 +843,7 @@ objtypes={
   ground=true
  ]],
 
- -- 14, leafshadow marsh
+ -- 13, leafshadow marsh
  s2t[[
   sx='48',
   sy='46',
@@ -843,7 +852,7 @@ objtypes={
   ground=true
  ]],
 
- -- 15, grass
+ -- 14, grass
  s2t[[
   sx='80;87;94',
   sy='67;67;67',
@@ -851,7 +860,7 @@ objtypes={
   sh='5;5;5'
  ]],
 
- -- 16, cactuses
+ -- 15, cactuses
  mergerightands2t([[
   sx='53;60',
   sy='0;0',
@@ -863,7 +872,7 @@ objtypes={
    action=takesampleaction,
   }),
 
- -- 17, mushrooms
+ -- 16, mushrooms
  mergerightands2t([[
   sx='46',
   sy='0',
@@ -874,7 +883,7 @@ objtypes={
    action=takesampleaction,
   }),
 
- -- 18, trees
+ -- 17, trees
  mergerightands2t([[
   sx='16;23;112;120',
   sy='10;11;62;63',
@@ -886,7 +895,7 @@ objtypes={
    action=takesampleaction,
   }),
 
- -- 19, flowers
+ -- 18, flowers
  mergerightands2t([[
   sx='0;7',
   sy='98;98',
@@ -897,7 +906,7 @@ objtypes={
    action=takesampleaction,
   }),
 
-  -- 20, berrybush
+  -- 19, berrybush
   mergerightands2t([[
   sx='32',
   sy='0',
@@ -938,9 +947,9 @@ planettypes={
     ground=true
     ]],
     -- martian pillars
-    s2t[[
-     sx='0;0;7;14',
-    sy='63;67;67;63',
+   s2t[[
+    sx='80;0;7;28',
+    sy='63;63;63;88',
     sw='6;7;7;11',
     sh='4;7;7;8',
     solid='1;1;1;1'
@@ -954,7 +963,7 @@ planettypes={
    objdist=28,
    alientype='taurien'
   ]],{
-   animaltypes=split'bull,bear',
+   animaltypes=split'bull,bear,rabbit,rabbit,rabbit',
    wpal=split'133,132,131,141,3',
    objtypes={
     objtypes[4], -- cracks
@@ -1110,13 +1119,22 @@ function createplanettype()
  end
 
  -- flora types
- local _objtypes={}
+ local _objtypes={
+  -- always shadow marsh
+  s2t[[
+   sx='48',
+   sy='38',
+   sw='5',
+   sh='4',
+   ground=true
+  ]]
+ }
  local _objtypeslen=rnd(split'3,4,4,5,5,5,6,7,8,9')
 
  while #_objtypes < _objtypeslen do
   local _objtypelen=#objtypes-(_scorepercentage < 0.4 and 2 or _scorepercentage < 0.6 and 1 or 0) -- never have flowers and or berrybushes if not enough points
   local _index=mid(
-    (_wpal[2] == 7 or (_scorepercentage > 0.25 and rnd(_scorepercentage) > 0.0875)) and 3 or 1, -- if white/snow then never show lava
+   (_wpal[2] == 7 or rnd(_scorepercentage) > 0.0875) and 3 or 1, -- if white/snow then never have lava
     flr((rnd(2)-1+_scorepercentage)*_objtypelen),
     _objtypelen)
   add(_objtypes,objtypes[_index])
@@ -1349,7 +1367,7 @@ function createplanet(_planettype)
 
  -- add fauna
  local _animals={}
- local _loops=(_planettype.animalcount and rnd(_planettype.animalcount)) or mid(0,flrrnd(getscorepercentage()*20),50)
+ local _loops=(_planettype.animalcount and flrrnd(_planettype.animalcount)) or mid(0,flrrnd(getscorepercentage()*20),50)
  for _i=1,_loops do
    local _typ=rnd(_planettype.animaltypes)
    local _animal=clone(animaltypes[_typ])
@@ -1360,16 +1378,17 @@ function createplanet(_planettype)
     _animal.targety=_animal.y
     _animal.typ=_typ
     _animal.bloodtype=_animal.bloodtype or 'taurien'
-    _animal.behaviour=sighthunting
+    _animal.behaviour=_animal.scaredc and scaredbehaviour or sighthunting
     add(_animals,_animal)
   end
  end
 
  -- add aliens
  local _alientype=nil
- if (alienhostile == nil and #_animals > 0 and rnd() < 0.065) or _planettype.alientype then
+ local _rndalientype=_planettype.alientype or rnd{'martian','taurien'}
+ if (alienhostile == nil and rnd() < 0.065 and (_rndalientype == 'taurien' and #_animals > 0 or _rndalientype == 'martian')) or _planettype.alientype then
 
-  _alientype=_planettype.alientype or rnd{'martian','taurien'}
+  _alientype=_rndalientype
 
   local _x=flrrnd(mapsize-_tooclosedist)
   local _y=flrrnd(mapsize-_tooclosedist)
@@ -1463,22 +1482,16 @@ function createplanet(_planettype)
        x2=_other.x,
        y2=_other.y,
       }
-
       taurientalk('well done, for a human',_behaviouree)
-
       alienhostile=nil
-
       sfx(rnd{40,41})
       break
      end
     end
    end
-
-
   end
 
   add(_animals,_alien)
-
  end
 
  return {
@@ -1496,15 +1509,13 @@ end
 
 function nextsector()
  sfx(-1,2)
- 
  droidalertc,droidfiringc,droidlandingc,droidlandingx,droidlandingy,alienhostile,alienfiringc=nil
-
  sector={}
-
  local _ispopulatedsector=nil
+ local _scorepercentage=getscorepercentage()
 
  for _i=1,rnd(split'1,1,2,2,2,2,3,3') do
-  if _ispopulatedsector == nil and rnd() < (getscorepercentage())*0.25 then
+  if _ispopulatedsector == nil and _scorepercentage > 0.1 and rnd() < _scorepercentage*0.25 then
    add(sector,createplanet(planettypes.droidworld))
    _ispopulatedsector=true
   elseif _ispopulatedsector == nil and  rnd() < 0.0675 then
@@ -1532,9 +1543,7 @@ function resetplanetcamera(_drawies)
 end
 
 function planetinit()
- lookinginsamplecase=nil
-
- droidlandingc=nil
+ lookinginsamplecase,droidlandingc=nil
 
  guy=mergeright(guy,mergerightands2t([[
   sx=0,
@@ -1552,7 +1561,6 @@ function planetinit()
  }))
 
  pal(sector[1].wpal,1)
-
  camera(guy.x/2,guy.y/2)
 
  _update=planetupdate
@@ -1560,11 +1568,7 @@ function planetinit()
 end
 
 function planetupdate()
- local _movex=0
- local _movey=0
-
- local _spd=1
-
+ local _movex,_movey,_spd=0,0,1
  guy.sx=0
 
  if guy.panting then
@@ -1786,16 +1790,7 @@ function planetdraw()
   if _obj.ground then
    _y=_obj.y-flr(_obj.sh/2)
   end
-  sspr(
-   _obj.sx,
-   _obj.sy,
-   _obj.sw,
-   _obj.sh,
-   _obj.x-flr(_obj.sw/2),
-   _y,
-   _obj.sw,
-   _obj.sh,
-   _obj.flipx)
+  sspr(_obj.sx,_obj.sy,_obj.sw,_obj.sh,_obj.x-flr(_obj.sw/2),_y,_obj.sw,_obj.sh,_obj.flipx)
  end
 
  if taurienshot then
@@ -1832,7 +1827,6 @@ function planetdraw()
   drawsamplecase(_x,_y)
  end
 
- -- draw talks
  drawtalk()
 end
 
@@ -1840,16 +1834,10 @@ end
 -- ship scene
 
 function drawdoor(_obj)
- -- if _obj.firstframe then
- --  sfx(26)
- -- end
  if _obj.inrange then
   sspr(89,85,3,6,_obj.x,_obj.y)
   _obj.c=6
  else
-  -- if _obj.c == 6 then
-  --  sfx(10)
-  -- end
   _obj.c-=1
   if _obj.c > 0 then
    local _d=(6-_obj.c)
@@ -1865,7 +1853,6 @@ function drawelevator(_obj)
   pset(62,84,11)
   rectfill(61,_obj.y,63,_obj.y+4,6)
   _obj.c=6
-
   actiontitle='\x94\x83 elevator'
 
  elseif _obj.c > 0 then
@@ -1923,7 +1910,6 @@ end
 function storagedraw(_obj)
  if _obj.inrange then
   local _datapos=_obj.datapos
-  
   actiontitle='sample storage'
   
   if _obj.broken then
@@ -1933,7 +1919,6 @@ function storagedraw(_obj)
   end
 
   local _showsamplecasearrow=nil
-
   local _x=_obj.x1-4
   sspr(92,0,11,13,_x,98)
 
@@ -1985,6 +1970,7 @@ function toolstoragedraw(_obj)
  end
 end
 
+colortohex=split'1,2,3,4,5,6,7,8,9,a,b,c,d,e,f'
 samplecolorvalues={
  [13]=1, -- water
  [6]=2, -- stonish
@@ -1996,12 +1982,9 @@ samplecolorvalues={
  [7]=12, -- droid blood
 }
 
-colortohex=split'1,2,3,4,5,6,7,8,9,a,b,c,d,e,f'
-
 function getseedquality()
  local _result=0
  local _samples=clone(seed)
-
  local _kinds={}
 
  for _color=1,15 do
@@ -2234,7 +2217,6 @@ function resetshipobjs()
     draw=function(_obj)
      if dget(9) > 0 then
       line(36,79,36,75+(5-dget(9)),12)
-
       rectfill(19,73,20,79,12)
 
       local _offx=(t()*78)%2 > 1 and 1 or 0
@@ -2256,7 +2238,6 @@ function resetshipobjs()
 
      if _obj.inrange then
       actiontitle='engine'
-
       drawsamplecase(39,98,true)
 
       if dget(9) < 5 and #samples > 0 then
@@ -2354,7 +2335,6 @@ function resetshipobjs()
       else
        drawseed(#seed == 4)
       end
-
      end,
    }),
    -- elevator
@@ -2432,8 +2412,6 @@ function resetshipobjs()
 
       print('\fbseeds: '..tostr(dget(61)),23,35)
      end
-
-
 
      _obj.c-=1
      if _obj.c <= 0 then
@@ -2608,10 +2586,8 @@ function addbrokenparticle(_x,_y)
 end
 
 function shipinit()
- lookinginsamplecase=true
  pal(split'1,130,3,133,5,6,7,8,9,137,11,12,13,14,15',1)
-
- stars={}
+ stars,particles={},{}
 
  for i=1,30 do
   add(stars,{
@@ -2622,16 +2598,9 @@ function shipinit()
   })
  end
 
- particles={}
+ guy.x,guy.y,guy.floor=guy.incryo and 52 or 37,91,1
 
- guy.x=guy.incryo and 52 or 37
- guy.y=91
-
- guy.floor=1 -- 0 space, 1 below, 2 deck
-
- actiontitle=''
- showbrokentitle=nil
- repairts=0
+ actiontitle,repairts,lookinginsamplecase,showbrokentitle,talk='',0,true
 
  camera()
 
@@ -2652,13 +2621,10 @@ function shipupdate()
 
   if guy.floor > 0 then
    guy.x=mid(27,guy.x,97)
-
    guy.y=floorys[guy.floor]
   end
 
-  actiontitle=''
-  showrepairtitle=nil
-  showbrokentitle=nil
+  actiontitle,showrepairtitle,showbrokentitle=''
 
   for _i=1,2 do
    local _floorobjs=shipobjs[_i]
@@ -2697,9 +2663,7 @@ function shipupdate()
    if not alienfiringc then
     alienfiringc=90+flrrnd(60)
    end
-
    alienfiringc-=1
-
    if alienfiringc == 0 then
     breakrandomshipobj()
     alienfiringc=nil
@@ -2714,9 +2678,7 @@ function shipupdate()
    if not droidfiringc then
     droidfiringc=90+flrrnd(60)
    end
-
    droidfiringc-=1
-
    if droidfiringc == 0 then
     breakrandomshipobj()
     droidfiringc=nil
@@ -2732,9 +2694,7 @@ function shipupdate()
     sfx(23)
    end
   end
-
   travelc-=1
-
   if travelc <= 0 then
    local _fuelconsumption=1
    if shipobjs[2][1].broken then -- engine
@@ -2757,14 +2717,12 @@ function shipupdate()
    end
 
    if traveling == 'down' then
-    traveling=nil
-    travelc=0
+    travelc,traveling=0
     planetinit()
     return
    end
 
-   traveling=nil
-   travelc=0
+   travelc,traveling=0
   end
  end
 
@@ -2926,11 +2884,9 @@ function deadinit(_drawies)
  end
 
  dset(59,0) -- reset save
-
+ pal(split'1,136,3,4,5,6,7,136,9,137,138,8,13,14,15',1)
  ts=t()
 
- pal(split'1,136,3,4,5,6,7,136,9,137,138,8,13,14,15',1)
- 
  _update=deadupdate
  _draw=deaddraw
 end
@@ -2954,16 +2910,7 @@ function deaddraw()
    if _obj.ground then
     _y=_obj.y-flr(_obj.sh/2)
    end
-   sspr(
-    _obj.sx,
-    _obj.sy,
-    _obj.sw,
-    _obj.sh,
-    _obj.x-flr(_obj.sw/2),
-    _y,
-    _obj.sw,
-    _obj.sh,
-    _obj.flipx)
+   sspr(_obj.sx,_obj.sy,_obj.sw,_obj.sh,_obj.x-flr(_obj.sw/2),_y,_obj.sw,_obj.sh,_obj.flipx)
   end
  end
 
@@ -3061,18 +3008,18 @@ ee0500ee050ee0500505005005050050e0d7d7dd0eeeeeeee00000eeeeeeeeeeeeeeeeeeeeeeeeee
 e111e11111e1111111e11eeeeeee0eeee0d7d7dd50eeeeee0bbb770eeeeeeeeeee0000eeeee0000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 1eee1eeeee1eeeeeee1eeeeeee0000ee0dddd7ddd0eee000bbbbbb7000eeeee0e060600eee060600eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 e111e11111e1111111eeee111076660e07d5d7dd50e00d60bbbbbbb06d00ee060606050ee0606050eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eeeeeeeeeeee
-e000eeeeeeeeeeee000000eee06bb60e0dd5d7ddd00d6dd600000006dd6d0060606050ee0606050eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0c0eeeeee0eeee
-02220eeeeeeeeee02222220ee06bb60e07ddd7dd500dd6dd6666666dd6dd0060606050ee0606050eeeeeeeeeeeeeeeeeeeeeeeeeeeeee1eeee0c0eeeee0c0eee
-0d2d0eeeeeeeee0220022220ee0dd0ee0dd7d7ddd0e00d66ddddddd66d00e0606060111e06060111eeeeeeeeeeeeeeeeeeeeeeeeeeee1eeee0cc0eeeee0c0eee
-0d2d01eeeeeeee0d0b70ddd0ee0dd0ee05d7dddd50eee0000000000000eeeeeeee0000eeeee0000eeeeeeeeeeeeeeeeeeeeeeeeee111e11eee0cc0eeee0cc0ee
-eee00eee00eeee020bb0d220ee0dd0ee05d7d7ddd0eeee11111111111eeeeee0e0f0f00eee0f0f0000eeeeeeeeee0000eee00ee11eeeeeeeee0c30eee0ccc0ee
-ee0220e0220eee0dd00dddd0eeeeeeee05d7d7d550eeeeeeeeeeeeee0000ee0f0f0f050ee0f0f0500c0ee0000ee0c00c0e0c0eeeeeeee11eee0cc30eee0cc30e
-ee02d0e0d20eee02ddddd220eeeeeeee0dddddddd0eeeeeeeeeeeee08880e0f0f0f050ee0f0f050ee0c00c00c00c0ee0c0c0eee111ee1eeee0cc300eee0c300e
-e0ddd0e0ddd0ee0dddddddd01000000e05d5d5d550eeeee0000000085550e0f0f0f050ee0f0f050ee0c0c0ee0c0c0ee0c0c0eeeeee11eeeee0cc330ee0cc330e
-e0d2d0e0d2d0eeeeeeeeeeeee0a88a0e0dd555dd0eeeee066d0555588880e0f0f0f0111e0f0f0111e0c0c0ee0c0c0ee0c0c0eeeeeeee11ee0ccc3330e0ccc330
-0dd2d0e0d2dd0eeeeeeeeeeeee0880ee055555550eeee06ddd0588588880eeee000eeeeeeeeeeeeeee0eeeeeeeeeeeeeeeeeeeeeeeeeee1e00ccc3300ccc3300
-0d22d010d22d01eeeeeeeeeee005500e055555550eee06dddd05555888850ee04420eeee00eeeeeee040eeeeeeeeeeeeeeeeeee0eee000eee0c3330ee0c3330e
-eeeeeeeeeeeeeeeeeeeeeeeee08dd80e055050550ee000000055000000850ee04220eee0440eeeee0420eeeeeeeeeee00eeeee040e05110e0cc333300cc33330
+eee00eee00eeeeeeeeeeeeeee06bb60e0dd5d7ddd00d6dd600000006dd6d0060606050ee0606050ee000eeeeeeeeeeeeeeeeeeeeeeeeeeeeee0c0eeeeee0eeee
+ee0220e0220eeeeeeeeeeeeee06bb60e07ddd7dd500dd6dd6666666dd6dd0060606050ee0606050e02220eeeeeeeeeeeeeeeeeeeeeeee1eeee0c0eeeee0c0eee
+ee02d0e0d20eeeeeeeeeeeeeee0dd0ee0dd7d7ddd0e00d66ddddddd66d00e0606060111e060601110d2d0eeeeeeeeeeeeeeeeeeeeeee1eeee0cc0eeeee0c0eee
+e0ddd0e0ddd0eeeeeeeeeeeeee0dd0ee05d7dddd50eee0000000000000eeeeeeee0000eeeee0000e0d2d01eeeeeeeeeeeeeeeeeee111e11eee0cc0eeee0cc0ee
+e0d2d0e0d2d0eeeeeeeeeeeeee0dd0ee05d7d7ddd0eeee11111111111eeeeee0e0f0f00eee0f0f0000eeeeeeeeee0000eee00ee11eeeeeeeee0c30eee0ccc0ee
+0dd2d0e0d2dd0eeeeeeeeeeeeeeeeeee05d7d7d550eeeeeeeeeeeeee0000ee0f0f0f050ee0f0f0500c0ee0000ee0c00c0e0c0eeeeeeee11eee0cc30eee0cc30e
+0d22d010d22d01eeeeeeeeeeeeeeeeee0dddddddd0eeeeeeeeeeeee08880e0f0f0f050ee0f0f050ee0c00c00c00c0ee0c0c0eee111ee1eeee0cc300eee0c300e
+eee00000eee00000eeeeeeeee000000e05d5d5d550eeeee0000000085550e0f0f0f050ee0f0f050ee0c0c0ee0c0c0ee0c0c0eeeeee11eeeee0cc330ee0cc330e
+00e06060e0006060eeeeeeeee0a88a0e0dd555dd0eeeee066d0555588880e0f0f0f0111e0f0f0111e0c0c0ee0c0c0ee0c0c0eeeeeeee11ee0ccc3330e0ccc330
+07006060e0706060eeeeeeeeee0880ee055555550eeee06ddd0588588880eeee000eeeeeeeeeeeeeee0eeeeeeeeeeeeeeeeeeeeeeeeeee1e00ccc3300ccc3300
+e0665650e0665650eeeeeeeee005500e055555550eee06dddd05555888850ee04420eeee00eeeeeee040eeeeeeeeeeeeeeeeeee0eee000eee0c3330ee0c3330e
+06666660e0666660eeeeeeeee08dd80e055050550ee000000055000000850ee04220eee0440eeeee0420eeeeeeeeeee00eeeee040e05110e0cc333300cc33330
 eeeeeeeeeeeeeeee000eeeeeee0550eee0000000ee0885555550888850850e04220eeee04220eee04220eee000eeee0440eee0420e01110e0001100000011000
 eeee000eeeeeeee05550eeeeeeeeeeeeeeeeeeeeee000000000000000000eee02220ee042220eee042220e04420eee04220e04220ee0000eee0110eeee0110ee
 e0e05550eeeeeee05055000eeeeeeeeee1111111eee11111111111111111eee04220ee0422240ee0422200422220e042220e042420051110eeeeeeeeeeeeeeee
@@ -3086,14 +3033,14 @@ ee00eeee00eeee00eee0ff0eeeeeeeeeeeeeeeeeeeeeeeddd558508850eeee042220ee042220eee0
 e0ff0ee0ff0ee0ff0ee0ff0eeeeeeeeeeee00eeeeeeeeeeedd550888850eee04220eee042220eee042240eeee101eeeeeeeee9eeee6eee06ddd0eee0000eeeee
 e0ff0ee0ff0ee0ff0ee0880eeeeeeeeeee00a0000eeeedeeeee5500000eeee042220e04224420e0422420eeee101eeeeeeee999eee6e6e06ddd0ee088880eeee
 0daa0e0daa0e0daa0e0daa0eeeeeeeeee080885850eeeeeeeeeeeeeeeeeee0422222004242220e0422420eeee101110001199999ee6eee0dddd0ee055510000e
-0daa0e0da00e0d0a0e0daa0eeeeeeeeeeeeeeeeeeeeeeeeedddeeeeeeeeee0000000eeeeeeeeeeeeeeeeeeeee1011099901e999ee66e6e05dd50ee055510ddd0
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee066666660eeeeeeeeeeeeeeeeeeee1011109990e999ee6666e055550ee05551000d0
-eeeeeeeeeeeeeeeeeeee00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee060000060eeeeeeeeeeeeeeeeeeee1010000990eaaae455555055550ee088820e010
-ee00eeee00eeee00eee0ff0eeeeeeeeeeeeeeee444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-e0ff0ee0ff0ee0ff0ee0ff0eeeeeeeeeeeeeeee42444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-e0ff0ee0ff0ee0ff0ee0880eeeeeeeeeeeeeeeee424424444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-0daa600daa600daa600daa60eeeeeeeeeeeeeeee42444244444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-0daa0e0da00e0d0a0e0daa0eeeeeeeeeeeeeeeeee424442444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+0daa0e0da00e0d0a0e0daa0eeeeeee000000eeeeeeeeeeeedddeeeeeeeeee0000000eeeeeeeeeeeeeeeeeeeee1011099901e999ee66e6e05dd50ee055510ddd0
+eeeeeeeeeeeeeeeeeeeeeeeeeeeee02222220eeeeeeeeeeeeeeeeeeeeeee066666660eeeeeeeeeeeeeeeeeeee1011109990e999ee6666e055550ee05551000d0
+eeeeeeeeeeeeeeeeeeee00eeeeee0220022220eeeeeeeeeeeeeeeeeeeeee060000060eeeeeeeeeeeeeeeeeeee1010000990eaaae455555055550ee088820e010
+ee00eeee00eeee00eee0ff0eeeee0d0b70ddd0e444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+e0ff0ee0ff0ee0ff0ee0ff0eeeee020bb0d220e42444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+e0ff0ee0ff0ee0ff0ee0880eeeee0dd00dddd0ee424424444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+0daa600daa600daa600daa60eeee02ddddd220ee42444244444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+0daa0e0da00e0d0a0e0daa0eeeee0dddddddd01ee424442444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eeeeeeeeeeeeeeeeeeeeeeee00eeeeeeeeee00eee42444424444444eeeeeeeeee244444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eeeeeeeeeeeeeeeeee00000e040eeeeeeee020eeee424444244444444eeeeeeeee2222eeeeeeee4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eeeee0000eeeeeeee044420e04200eeeeee020eeee42444442444444444eeeeeee2444eeeeeeee4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
