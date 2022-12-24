@@ -862,11 +862,11 @@ objtypes={
 
  -- 15, cactuses
  mergerightands2t([[
-  sx='53;60',
-  sy='0;0',
-  sw='7;7',
-  sh='9;9',
-  solid='1;1',
+  sx='53;60;60',
+  sy='0;0;0',
+  sw='7;7;7',
+  sh='9;9;8',
+  solid='1;1;1',
   samplecolor=13
   ]],{
    action=takesampleaction,
