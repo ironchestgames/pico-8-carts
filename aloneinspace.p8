@@ -1318,9 +1318,7 @@ function createplanet(_planettype)
  for _i=1,70 do
   local _tries,_x,_y,_tooclose=0
   repeat
-   _x=flrrnd(mapsize-_tooclosedist)
-   _y=flrrnd(mapsize-_tooclosedist)
-   _tooclose=nil
+   _x,_y,_tooclose=flrrnd(mapsize-_tooclosedist),flrrnd(mapsize-_tooclosedist)
 
    for _other in all(_mapobjs) do
     if dist(_x,_y,_other.x,_other.y) < _tooclosedist then
@@ -1330,7 +1328,6 @@ function createplanet(_planettype)
    end
 
    _tries+=1
-
    if _tries > 10 then
     break
    end
@@ -1358,8 +1355,7 @@ function createplanet(_planettype)
    _obj.sy=split(_obj.sy,';')[_idx]+_samplecolorindex0*_obj.sh
 
    _obj.solid=_obj.solid and split(_obj.solid,';')[_idx] == 1
-   _obj.x=_x
-   _obj.y=_y
+   _obj.x,_obj.y=_x,_y
 
    add(_mapobjs,_obj)
   end
@@ -1471,7 +1467,7 @@ function createplanet(_planettype)
 
    _alien.behaviour2=function(_behaviouree)
     for _other in all(sector[1].animals) do
-     if _other != _behaviouree and dist(_behaviouree.x,_behaviouree.y,_other.x,_other.y) < 20 then
+     if _other != _behaviouree and _other.bloodtype and dist(_behaviouree.x,_behaviouree.y,_other.x,_other.y) < 20 then
       -- kill animal
       del(sector[1].animals,_other)
       add(sector[1].mapobjs,getbloodobj(_other.x,_other.y,_other.bloodtype))
