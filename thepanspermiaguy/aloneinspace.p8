@@ -4,7 +4,7 @@ __lua__
 -- the panspermia guy 1.0
 -- by ironchest games
 
-cartdata'ironchestgames_thepanspermiaguy_v1-dev15'
+cartdata'ironchestgames_thepanspermiaguy_v1'
 
 --[[ cartdata layout
 
@@ -36,7 +36,7 @@ last seed
 
 --]]
 
-printh('debug started','debug',true)
+-- printh('debug started','debug',true)
 function debug(s)
  printh(tostr(s),'debug',false)
 end
@@ -2843,8 +2843,8 @@ function _update()
 
  -- draw
  cls(0)
- print('\^t\^wthe\npanspermia\n       guy',26,42,5)
- print('\^t\^wthe\npanspermia\n       guy',26,41,7)
+ print('\f9the\f7\^t\^w\npanspermia',26,41)
+ print('\f9guy',93,58)
  print('\014\x8e\015 '..(dget(59) == 0 and 'start' or 'continue'),42,120,10)
 end
 
