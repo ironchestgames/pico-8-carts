@@ -384,9 +384,6 @@ function laidtrapbehaviour(_behaviouree)
    -- kill animal
    del(sector[1].animals,_other)
    add(sector[1].mapobjs,getbloodobj(_other.x,_other.y,_other.bloodtype))
-   if _other.bloodtype == 'droid' then
-    breakrandomshipobj()
-   end
    sfx(33)
 
    -- close trap
