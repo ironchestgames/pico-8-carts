@@ -160,7 +160,7 @@ function getbloodobj(_x,_y,_bloodtype)
 end
 
 function getscorepercentage()
- return dget(62)/720 -- 720 is top threshold
+ return dget(62)/640 -- 640 is top threshold
 end
 
 function disttoguy(_other)
@@ -1158,13 +1158,15 @@ end
 function nextsector()
  sfx(-1,2)
  droidalertc,droidfiringc,droidlandingc,droidlandingx,droidlandingy,alienhostile,alienfiringc=nil
+ _lastsectordroids=sector and sector.wasdroids
  sector={}
  local _ispopulatedsector=nil
  local _scorepercentage=getscorepercentage()
 
  for _i=1,rnd(split'1,1,2,2,2,2,3,3') do
-  if _ispopulatedsector == nil and _scorepercentage > 0.1 and rnd() < _scorepercentage*0.25 then
+  if _lastsectordroids == nil and _ispopulatedsector == nil and _scorepercentage > 0.1 and rnd() < _scorepercentage*0.125 then
    add(sector,createplanet(planettypes.droidworld))
+   sector.wasdroids=true
    _ispopulatedsector=true
   elseif _ispopulatedsector == nil and  rnd() < 0.0675 then
    add(sector,createplanet(rnd{planettypes.martianworld,planettypes.taurienworld}))
