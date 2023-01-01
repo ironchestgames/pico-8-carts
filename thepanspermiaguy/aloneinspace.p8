@@ -7,47 +7,34 @@ __lua__
 cartdata'ironchestgames_thepanspermiaguy_v1'
 
 --[[ cartdata layout
-
 1,2,3,4,5 = sample case
 6,7,8 = sample storages
 9 = fuel
-
 11 - 25 = broken ship objects floor 1
 26 - 40 = broken ship objects floor 2
-
 41,42,43,44 = seed cannon samples
-
-tools are: 1 = trap, 2 = deterrer, 3 = drill, 4 = spare part)
 45 = tool carrying
 46 = tool storage 1
 47 = tool storage 2
-
-last seed
-50 = sample 1 color
-51 = sample 2 color
-52 = sample 3 color
-53 = sample 4 color
-
+48 = droids friendly
+50-53 = sample colors of last seed
 59 = is ongoing game
-
 61 = current nr of seeds
 62 = current score
 63 = highscore
-
 --]]
 
-printh('debug started','debug',true)
-function debug(s)
- printh(tostr(s),'debug',false)
-end
+-- printh('debug started','debug',true)
+-- function debug(s)
+--  printh(tostr(s),'debug',false)
+-- end
 
-poke(0x5f5c,-1) -- disable btnp auto-repeat btnp
+poke(0x5f5c,-1) -- disable btnp auto-repeat
 
--- note: set special char o-button to look like c-button if gpio 1 is set, pico8_gpio[0]=1
+-- note: set pico8_gpio[0]=1 to make o-button char into c-button char
 poke(0x5600,unpack(split'5,7,5,0,0'))
 poke(0x5a70,unpack(split('62,99,'..(peek(0x5f80) == 0 and 107 or 123)..',99,62')))
 
--- pink as transparent
 palt(14,true)
 palt(0,false)
 
@@ -244,7 +231,11 @@ function breakrandomshipobj()
  if _obj.datapos then
   dset(_obj.datapos,0)
  end
- hitpos={x=_obj.x1+(_obj.x2-_obj.x1),y=floorys[_floorindex]}
+ local _x1,_y1=109,23
+ if alienfiringc == 0 then
+  _x1,_y1=21,26
+ end
+ hitpos={x1=_x1,y1=_y1,x2=_obj.x1+(_obj.x2-_obj.x1),y2=floorys[_floorindex]}
 end
 
 function drawsamplecase(_x,_y,_showarrow)
@@ -265,7 +256,7 @@ function drawsamplecase(_x,_y,_showarrow)
 end
 
 function updatedroidalert()
- if droidalertc and droidalertc > 0 then
+ if dget(48) == 0 and droidalertc and droidalertc > 0 then
   droidalertc-=1
   if droidalertc == 1 then
    sfx(21,2)
@@ -312,13 +303,14 @@ function resetgame()
 end
 
 -- global constants
-mapsize,floorys,toolnames=255,split'91,80',split'trap,deterrer,drill,spare part'
+mapsize,floorys,toolnames=255,split'91,80',split'trap,deterrer,drill,spare part,spider-droid talisman'
 
 tools={
  s2t'sx=28,sy=41,sw=4,sh=4,toolnr=1',
  s2t'sx=16,sy=38,sw=3,sh=4,toolnr=2',
  s2t'sx=20,sy=43,sw=4,sh=5,drillc=150,toolnr=3',
  s2t'sx=28,sy=45,sw=4,sh=4,toolnr=4',
+ s2t'sx=64,sy=29,sw=4,sh=4,toolnr=5',
 }
 
 pickupactionfunc=function (_obj)
@@ -353,6 +345,7 @@ end
 function getnewdeterrer(_x,_y) return getnewtool(_x,_y,2) end
 function getnewdrill(_x,_y) return getnewtool(_x,_y,3) end
 function getnewsparepart(_x,_y) return getnewtool(_x,_y,4) end
+function getnewtalisman(_x,_y) return getnewtool(_x,_y,5) end
 
 takesampleaction={
  title='take sample',
@@ -386,6 +379,9 @@ function laidtrapbehaviour(_behaviouree)
    -- kill animal
    del(sector[1].animals,_other)
    add(sector[1].mapobjs,getbloodobj(_other.x,_other.y,_other.bloodtype))
+   if _other.bloodtype == 'droid' then
+    dset(48,0)
+   end
    sfx(33)
 
    -- close trap
@@ -471,15 +467,28 @@ function laiddrillbehaviour(_behaviouree)
 end
 
 function droidbehaviour(_behaviouree)
- if not _behaviouree.talkingc then
-  sfx(29)
-  _behaviouree.talkingc=140
- end
- if _behaviouree.talkingc > 0 then
-  droidtalk('stop spreading life',_behaviouree)
-  _behaviouree.talkingc-=1
- elseif _behaviouree.talkingc <= 0 then
-  sighthunting(_behaviouree)
+ _behaviouree.sy=52
+ if dget(48) != 0 then
+  _behaviouree.sy=60
+  if disttoguy(_behaviouree) < 24 then
+   if not _behaviouree.hastalked then
+    sfx(47)
+    _behaviouree.hastalked=true
+   end
+   droidtalk('thank you',_behaviouree)
+   _behaviouree.flipx=_behaviouree.x > guy.x
+  end
+ else
+  if not _behaviouree.talkingc then
+   sfx(29)
+   _behaviouree.talkingc=140
+  end
+  if _behaviouree.talkingc > 0 then
+   droidtalk('stop spreading life',_behaviouree)
+   _behaviouree.talkingc-=1
+  elseif _behaviouree.talkingc <= 0 then
+   sighthunting(_behaviouree)
+  end
  end
 end
 
@@ -526,14 +535,14 @@ end
 animaltypes={
  bear=s2t'sx=0,sy=8,sw=8,sh=8,sightradius=36,spd=0.75,huntingspd=1,c=0',
  bat=s2t'sx=0,sy=16,sw=7,sh=6,sightradius=32,spd=0.75,huntingspd=0.75,c=0,bloodtype="fire"',
- rabbit=s2t'sx=0,sy=70,sw=8,sh=5,sightradius=32,spd=1,huntingspd=1,c=0,scaredc=3000',
+ rabbit=s2tmr('sx=0,sy=70,sw=8,sh=5,sightradius=32,spd=1,huntingspd=1,c=0,scaredc=3000',{behaviour=scaredbehaviour}),
  spider=s2t'sx=0,sy=75,sw=12,sh=7,sightradius=38,spd=0.25,huntingspd=1.25,c=0,bloodtype="fire"',
  bull=s2t'sx=0,sy=38,sw=8,sh=8,sightradius=28,spd=0.125,huntingspd=1,c=0',
  snake=s2t'sx=0,sy=0,sw=8,sh=8,sightradius=36,spd=0.25,huntingspd=0.875,c=0,bloodtype="fire"',
  gnawer=s2t'sx=0,sy=22,sw=8,sh=8,sightradius=48,spd=0.75,huntingspd=1.25,c=0',
  firegnawer=s2t'sx=0,sy=30,sw=8,sh=8,sightradius=48,spd=0.75,huntingspd=1.25,c=0,bloodtype="fire"',
  slime=s2t'sx=0,sy=46,sw=9,sh=6,sightradius=72,spd=0.25,huntingspd=0.5,c=0,bloodtype="martian"',
- droid=s2t'sx=16,sy=52,sw=8,sh=8,sightradius=128,spd=0.05,huntingspd=2,c=0,bloodtype="droid",isscary=true',
+ droid=s2tmr('sx=16,sy=52,sw=8,sh=8,sightradius=128,spd=0.05,huntingspd=2,c=0,bloodtype="droid",isscary=true,talkingc=0',{behaviour=droidbehaviour})
 }
 
 -- sx,sy,sw,sh,samplecolor,ground,solid,lava,sunken,walksfx,action
@@ -955,13 +964,13 @@ function createplanet(_planettype)
 
  -- add wreck
  local _haswreck=nil
- if rnd() < 0.12 then
+ if rnd() < 0.0875 then
   _haswreck=true
   local _wrecktype=rnd{'martianwreck','taurienwreck'}
   local _x,_y=flrrnd(mapsize-_tooclosedist),flrrnd(mapsize-_tooclosedist)
 
   -- add tool
-  if rnd() < 0.5 then
+  if rnd() < 0.385 then
    add(_mapobjs,getnewsparepart(_x-34,_y-2))
   end
 
@@ -986,11 +995,11 @@ function createplanet(_planettype)
 
  -- add artifact
  local _hasartifact=nil
- if rnd() < 0.1 then
+ if rnd() < 0.0875 then
   _hasartifact=true
   local _x,_y=flrrnd(mapsize-32),flrrnd(mapsize-32)
   local _ruincount,_sy=flrrnd(7)+4,rnd(split'96,104,112,120')
-  add(_mapobjs,rnd({getnewtrap,getnewdeterrer,getnewdrill,getnewsparepart})(_x,_y))
+  add(_mapobjs,rnd({getnewtrap,getnewdeterrer,getnewdrill,getnewsparepart,getnewtalisman})(_x,_y))
   for _i=0,_ruincount-1 do
    local _a=_i/_ruincount+0.05
    add(_mapobjs,s2tmr('sw=8,sh=8,solid=true',{
@@ -1001,6 +1010,26 @@ function createplanet(_planettype)
  end
 
  -- add flora
+ if _planettype == planettypes.droidworld then
+  add(_mapobjs,s2tmr('sx=63,sy=33,sw=6,sh=7',{
+   x=mapsize,y=mapsize,
+   action={
+    title='place talisman',
+    func=function(_obj)
+     if dget(45) == 5 then
+      _obj.sy,_obj.sh=29,11
+      droidalertc=nil
+      dset(48,1)
+      dset(45,0)
+      sfx(-1,2)
+      sfx(48)
+     else
+      sfx(31)
+     end
+    end,
+   }
+  }))
+ end
  for _i=1,70 do
   local _tries,_x,_y,_tooclose=0
   repeat
@@ -1053,11 +1082,16 @@ function createplanet(_planettype)
    local _animal=clone(animaltypes[_typ])
    _animal.x,_animal.y=flrrnd(mapsize),flrrnd(mapsize)
    if dist(mapsize/2,mapsize/2,_animal.x,_animal.y) > 60 then
-    _animal.targetx=_animal.x
-    _animal.targety=_animal.y
-    _animal.typ=_typ
-    _animal.bloodtype=_animal.bloodtype or 'taurien'
-    _animal.behaviour=_animal.scaredc and scaredbehaviour or sighthunting
+    _animal.targetx,
+    _animal.targety,
+    _animal.typ,
+    _animal.bloodtype,
+    _animal.behaviour=
+     _animal.x,
+     _animal.y,
+     _typ,
+     _animal.bloodtype or 'taurien',
+     _animal.behaviour or sighthunting
     add(_animals,_animal)
   end
  end
@@ -1179,8 +1213,7 @@ end
 
 function resetplanetcamera(_drawies)
  camera()
- local _diffx=_drawies[2].x-guy.x
- local _diffy=_drawies[2].y-guy.y
+ local _diffx,_diffy=_drawies[2].x-guy.x,_drawies[2].y-guy.y
  _drawies[2].x-=_diffx+62
  _drawies[2].y-=_diffy+63
  guy.x,guy.y=62,65
@@ -1220,8 +1253,7 @@ function planetupdate()
  end
 
  if _movex == 0 and _movey == 0 then
-  guy.walkingc=0
-  guy.runningc=max(0,guy.runningc-2)
+  guy.walkingc,guy.runningc=0,max(0,guy.runningc-2)
 
   if guy.runningc == 0 then
    guy.panting=nil
@@ -1230,33 +1262,27 @@ function planetupdate()
   lookinginsamplecase=(not guy.panting) and btn(4)
 
   if dget(45) != 0 and btnp(5) then
+   local _base={
+    x=guy.x,y=guy.y,
+    targetx=guy.x,targety=guy.y
+   }
    if dget(45) == 1 then -- trap
-    add(sector[1].animals,s2tmr('sx=28,sy=38,sw=7,sh=3,toolnr=1',{
-     x=guy.x,y=guy.y,
-     targetx=guy.x,targety=guy.y,
-     behaviour=laidtrapbehaviour,
-    }))
+    add(sector[1].animals,s2tmr('sx=28,sy=38,sw=7,sh=3,toolnr=1',mr(_base,{behaviour=laidtrapbehaviour})))
     sfx(34)
 
    elseif dget(45) == 2 then -- deterrer
-    add(sector[1].animals,mr(clone(tools[2]),{
-     c=300,
-     x=guy.x,y=guy.y,
-     targetx=guy.x,targety=guy.y,
-     behaviour=laiddeterrerbehaviour,
-    }))
+    add(sector[1].animals,mr(clone(tools[2]),mr(_base,{c=300,behaviour=laiddeterrerbehaviour})))
     sfx(39)
     
    elseif dget(45) == 3 then -- drill
-    add(sector[1].animals,mr(clone(tools[3]),{
-     x=guy.x,y=guy.y,
-     targetx=guy.x,targety=guy.y,
-     behaviour=laiddrillbehaviour,
-    }))
+    add(sector[1].animals,mr(clone(tools[3]),mr(_base,{behaviour=laiddrillbehaviour})))
     sfx(42)
 
    elseif dget(45) == 4 then -- spare part
     add(sector[1].mapobjs,getnewsparepart(guy.x,guy.y))
+
+   elseif dget(45) == 5 then -- droid talisman
+    add(sector[1].mapobjs,getnewtalisman(guy.x,guy.y))
    end
 
    dset(45,0)
@@ -1364,6 +1390,7 @@ function planetupdate()
      x=droidlandingx+16,y=droidlandingy+16,
      targetx=droidlandingx+16,targety=droidlandingy+16,
      behaviour=droidbehaviour,
+     talkingc=false,
     }))
    end
   end
@@ -1415,12 +1442,13 @@ function planetdraw()
 
  -- draw guy action
  if guy.action then
-  local _strlen=#guy.action.title*4+14
-  local _targetx=guy.action.target.x
-  local _y=guy.action.target.y-22
-  rectfill(_targetx-_strlen/2,_y,_targetx+_strlen/2,_y+8,0)
+  local _halfstrlen,_targetx,_y=
+   (#guy.action.title*4+14)/2,
+   guy.action.target.x,
+   guy.action.target.y-22
+  rectfill(_targetx-_halfstrlen,_y,_targetx+_halfstrlen,_y+8,0)
   line(_targetx,_y,_targetx,guy.action.target.y-guy.action.target.sh-2,0)
-  print('\f9\014\x8e\015 '..guy.action.title,_targetx+2-_strlen/2,_y+2)
+  print('\f9\014\x8e\015 '..guy.action.title,_targetx+2-_halfstrlen,_y+2)
  end
 
  -- draw sample case
@@ -1455,8 +1483,7 @@ function drawelevator(_obj)
   pset(62,73,11)
   pset(62,84,11)
   rectfill(61,_obj.y,63,_obj.y+4,6)
-  _obj.c=6
-  actiontitle='\x94\x83 elevator'
+  _obj.c,actiontitle=6,'\x94\x83 elevator'
 
  elseif _obj.c > 0 then
   local _d=2-flr(_obj.c/2)
@@ -2255,11 +2282,7 @@ function shipdraw()
  end
 
  if hitpos then
-  local _x1,_y1=109,23
-  if alienfiringc == 0 then
-   _x1,_y1=21,26
-  end
-  line(109,23,hitpos.x,hitpos.y,7)
+  line(hitpos.x1,hitpos.y1,hitpos.x2,hitpos.y2,7)
  end
 
  -- draw martian/taurien ship
@@ -2283,7 +2306,7 @@ function shipdraw()
  end
 
  if hitpos then
-  circfill(hitpos.x,hitpos.y,9,7)
+  circfill(hitpos.x2,hitpos.y2,9,7)
  end
 
  -- draw guy
@@ -2418,17 +2441,17 @@ e0777770ee0787800f0cc0e0fc0eeeeee0ccc0ee000eeee000eee09999999990eeeeeeeeeee7777e
 07778880e0777770e0cc0eee00c0eeee0ccbcc008880ee04440eee0999999990eeeee77eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 0777888007778880ee0c0eeee0c0eeee0bccc30e07000ee07000eee00999990eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 0777777007777770eeee00eeeeeeeeee0cccb30e078880e074440eeee00000eeeeeeeeeeee777eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-07070070e070770e00e090ee0eeeeeeee0c330ee07070ee07070eeeee0000eeeeeeeeeeeeeeeeee111eeeeeeeeeeeeee1eeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eee0000eeeeeeeee0900c0e090e00eeeee000eeeeeeee00e0eeee0ee0aaaa0eeeeeeeeeeeeebbbbe111eeeeeeeee1eee11eeeeeee1eeeee1eeeeeeeeeeeeeeee
-ee088880eee0000ee0cc0000c0090eeee0ccc0ee0eee040040ee0400a9999a0eeeeeebbeeeeeeee11111eeeeeee1eeee111eeeeee1eeee1eee1eeeeeeeeeeeee
-ee089890ee088880000c090e0cc0eeee0cc7cc0040e040ee040e02009999990eeeeeeeeeeeeeeeee11111eeee1111eee1111eee1e1ee1111ee11eeeeeeeeeeee
-e0888880ee089890090cc0e09c0eeeee07ccc30e040020ee020040ee099990eeeeeeeeeeeebbbeee1111111111111111111111111111111111111eeeeeeee1ee
-0888aaa0e0888880e0cc0eee00c0eeee0ccc630e02040eeee0420eeee0000eeeeeeeeeeeeeeeeeeee1111111111111111111111111111111111111eeeeee1eee
-0888aaa00888aaa0ee0c0eeee0c0eeeee0c330eee020eeeeee040eeeeeeeeaeeeeeeeeeeeee8888ee11111111111111111111111111111111111111eee1111ee
-0888888008888880eeeeeeeeeeeeeeeeeeeeeeeee040eeeeee040eeeeeeeaeeeeeeee88eeeeeeee1111111111111111111111111111111111111111111111111
-08080080e080880eeeeeeeeeeeeeeeeeeeeeeeee04220eeee04220eeeaaaeaaeeeeeeeeeeeeeeee1111111111111111111111111111111111111111111111111
-eee0ee0eeee0ee0ee0ee0ee0ee0e00e0e00eeeeeeeeeeeee11eeeeeaaeeeeeeeeeeeeeeeee888ee1111111111111111111111111111111111111111111111111
-eee0000eeee0000e0800a00700900606060eeeeeeeeeeeeeeeeeeeeeeeeeeaaeeeeeeeeeeeeeeeeeeeee1111111111111111111111111111111111111111111e
+07070070e070770e00e090ee0eeeeeeee0c330ee07070ee07070eeeee0000eeee000eeeeeeeeeee111eeeeeeeeeeeeee1eeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+eee0000eeeeeeeee0900c0e090e00eeeee000eeeeeeee00e0eeee0ee0aaaa0ee0770eeeeeeebbbbe111eeeeeeeee1eee11eeeeeee1eeeee1eeeeeeeeeeeeeeee
+ee088880eee0000ee0cc0000c0090eeee0ccc0ee0eee040040ee0400a9999a0e07d0ebbeeeeeeee11111eeeeeee1eeee111eeeeee1eeee1eee1eeeeeeeeeeeee
+ee089890ee088880000c090e0cc0eeee0cc7cc0040e040ee040e02009999990e0dd0eeeeeeeeeeee11111eeee1111eee1111eee1e1ee1111ee11eeeeeeeeeeee
+e0888880ee089890090cc0e09c0eeeee07ccc30e040020ee020040ee099990ee0550eeeeeebbbeee1111111111111111111111111111111111111eeeeeeee1ee
+0888aaa0e0888880e0cc0eee00c0eeee0ccc630e02040eeee0420eeee0000ee0dddd0eeeeeeeeeeee1111111111111111111111111111111111111eeeeee1eee
+0888aaa00888aaa0ee0c0eeee0c0eeeee0c330eee020eeeeee040eeeeeeeeae057750eeeeee8888ee11111111111111111111111111111111111111eee1111ee
+0888888008888880eeeeeeeeeeeeeeeeeeeeeeeee040eeeeee040eeeeeeeaee05dd5088eeeeeeee1111111111111111111111111111111111111111111111111
+08080080e080880eeeeeeeeeeeeeeeeeeeeeeeee04220eeee04220eeeaaaeaa05dd50eeeeeeeeee1111111111111111111111111111111111111111111111111
+eee0ee0eeee0ee0ee0ee0ee0ee0e00e0e00eeeeeeeeeeeee11eeeeeaaeeeeee07dd70eeeee888ee1111111111111111111111111111111111111111111111111
+eee0000eeee0000e0800a00700900606060eeeeeeeeeeeeeeeeeeeeeeeeeeaa055550eeeeeeeeeeeeeee1111111111111111111111111111111111111111111e
 0e044440ee044440060060060060055d550eeeeeeeeeeeeeeeeeeeeaaaeeaeee00eee0000eeeeeee11111111111111111111111111111111111111111111111e
 e0447070004470700600600600600000e00eee00eee00eeeee111eeeeeaaeeee0d0e0aa990eeeeee1111111111111111111111111111111111111111111111ee
 e0444040e044404006006006006005600ff0e0ff0e0ff0eeddeeeeeeeeeeaaee0dd0aaaaa900eeee111111111111111111111111111111111111111111111eee
@@ -2437,10 +2460,10 @@ e000000ee000000eeeee06600dd005600aa0e0aa0e0aa0eeeeeeeeeeeeeeeee05dddddddddd660ee
 e0ee0e0eee00e0eeeeee0dd00660000e0aa0e0a00e00a0eeeedddeeeeeeeeeee00000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eee0000eeeeeeeeeeeeee060e0d009b0e00eee00eee00eee33eeeeeeeeeeeeeee111111111111eeeeeeeeeeee11111111111111eeeeeeeeeeeeeeeeeeeeeeeee
 ee0bbbb0eee00000eeeeee0eee0e09900ff0e0ff0e0ff0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1111111111111111111111eeeeeeeeeeeeeeeeeeeee
-e0bb7b7b0e0bbbbb0eeeeeeee0000bb00ff0e0ff0e0ff0eeeeeeeeeeeeeeee00000eeeeeeeeeeeeeee1111111111111111111111111111eeeeeeeeeeeeeeeeee
-e0bbbbbb00bbb7b7b0eeeeee077000000aa600aa600aa60eee333eeeeeeee0ddddd00eeeeeeeeeeee111111111111111111111111111111eeeeeeeeeeeeeeeee
-e0bbbbbb00bbbbbbb0eeeeee07d0eeee0aa0e0a00e00a0eeeeeeeeeeeeee0d66666dd0eeeeeddeee11111111111111111111111111111111eeeeeeeeeeeeeeee
-ee000000ee0000000eeeeeee0dd0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0d6d000d6dd0eeeeeeee1111111111111111111111111111111111eeeeeeeeeeeeeee
+e0bb7b7b0e0bbbbb0eeeeeeeeeee0bb00ff0e0ff0e0ff0eeeeeeeeeeeeeeee00000eeeeeeeeeeeeeee1111111111111111111111111111eeeeeeeeeeeeeeeeee
+e0bbbbbb00bbb7b7b0eeeeeeeeee00000aa600aa600aa60eee333eeeeeeee0ddddd00eeeeeeeeeeee111111111111111111111111111111eeeeeeeeeeeeeeeee
+e0bbbbbb00bbbbbbb0eeeeeeeeeeeeee0aa0e0a00e00a0eeeeeeeeeeeeee0d66666dd0eeeeeddeee11111111111111111111111111111111eeeeeeeeeeeeeeee
+ee000000ee0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0d6d000d6dd0eeeeeeee1111111111111111111111111111111111eeeeeeeeeeeeeee
 ee0000eeee0000eeee0000eeeeeeeeeeeeeeee00eeeeeeeeeeeeeeeeee0d6d07bb0d6dd0eeeeeee1111111111111111111111111111111111eeeeeeeeeeeeeee
 e0dddd0ee0dddd0ee0dddd0ee00eeeeeeeeee0dd0eeeeeeeeeeeeeeeee0dd07bbbb0d6d0eeeeeeee11111111111111111111111111111111eeeeeeeeeeeeeeee
 e0d7d70ee0d7d70ee0d7d70e0220eeeeeeee0dd50eeeeeeeeee0eeeeeeeed0bbbbb0d6d0eeeeeeeeeeeee1111111111111111111111eeeeeeeeeeeeeeeeeeeee
@@ -2450,13 +2473,13 @@ e00ddd0eee0ddd0eee0ddd0e0d20eeeeeee0dddd0eeeeeeee6e60eeeddeeeeeebb0dddd0eddeeeee
 0505005005050050050500500d2dd0eee0ddd7d50eeeeeeeeeeeeeeeeeeeeeeeeeeeedddeeeeeeeeeeeeeeeeeeeee111111eeeeeeeeeeeeeeeeeeeeeeeeeeeee
 ee0500ee050ee050050500500d22d01ee0d7d7dd0eeeeeeee00000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 ee0000eeee0000eeee0000eeeeee0eeee0d7d7dd50eeeeee0bbb770eeeeeeeeeee0000eeeee0000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-e0dddd0ee0dddd0ee0ffff0eee0000ee0dddd7ddd0eee000bbbbbb7000eeeee0e060600eee060600eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-e0d7d70ee0d7d70ee0f7f70ee076660e07d5d7dd50e00d60bbbbbbb06d00ee060606050ee0606050eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eeeeeeeeeeee
-e00ddd0eee0ddd0eee0fff0ee06bb60e0dd5d7ddd00d6dd600000006dd6d0060606050ee0606050ee000eeeeeeeeeeeeeeeeeeeeeeeeeeeeee0c0eeeeee0eeee
-0d0000d0e000000ee000000ee06bb60e07ddd7dd500dd6dd6666666dd6dd0060606050ee0606050e02220eeeeeeeeeeeeeeeeeeeeeeee1eeee0c0eeeee0c0eee
-050d00500d0d00d00f0f00f0ee0dd0ee0dd7d7ddd0e00d66ddddddd66d00e0606060111e060601110d2d0eeeeeeeeeeeeeeeeeeeeeee1eeee0cc0eeeee0c0eee
-05050050050500500f0f00f0ee0dd0ee05d7dddd50eee0000000000000eeeeeeee0000eeeee0000e0d2d01eeeeeeeeeeeeeeeeeee111e11eee0cc0eeee0cc0ee
-ee0500ee050ee0500f0f00f0ee0dd0ee05d7d7ddd0eeee11111111111eeeeee0e0f0f00eee0f0f0000eeeeeeeeee0000eee00ee11eeeeeeeee0c30eee0ccc0ee
+e0ffff0ee0ffff0ee0ffff0eee0000ee0dddd7ddd0eee000bbbbbb7000eeeee0e060600eee060600eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+e0f7f70ee0f7f70ee0f7f70ee076660e07d5d7dd50e00d60bbbbbbb06d00ee060606050ee0606050eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eeeeeeeeeeee
+ee0fff0eee0fff0eee0fff0ee06bb60e0dd5d7ddd00d6dd600000006dd6d0060606050ee0606050ee000eeeeeeeeeeeeeeeeeeeeeeeeeeeeee0c0eeeeee0eeee
+e000000ee000000ee000000ee06bb60e07ddd7dd500dd6dd6666666dd6dd0060606050ee0606050e02220eeeeeeeeeeeeeeeeeeeeeeee1eeee0c0eeeee0c0eee
+0f0f00f00f0f00f00f0f00f0ee0dd0ee0dd7d7ddd0e00d66ddddddd66d00e0606060111e060601110d2d0eeeeeeeeeeeeeeeeeeeeeee1eeee0cc0eeeee0c0eee
+0f0f00f00f0f00f00f0f00f0ee0dd0ee05d7dddd50eee0000000000000eeeeeeee0000eeeee0000e0d2d01eeeeeeeeeeeeeeeeeee111e11eee0cc0eeee0cc0ee
+0f0f00f00f0f00f00f0f00f0ee0dd0ee05d7d7ddd0eeee11111111111eeeeee0e0f0f00eee0f0f0000eeeeeeeeee0000eee00ee11eeeeeeeee0c30eee0ccc0ee
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee05d7d7d550eeeeeeeeeeeeee0000ee0f0f0f050ee0f0f0500c0ee0000ee0c00c0e0c0eeeeeeee11eee0cc30eee0cc30e
 eeeeeeeeeeeeeeeeeeeee000eeeeeeee0dddddddd0eeeeeeeeeeeee08880e0f0f0f050ee0f0f050ee0c00c00c00c0ee0c0c0eee111ee1eeee0cc300eee0c300e
 eee00000eee00000eeee05550000000e05d5d5d550eeeee0000000085550e0f0f0f050ee0f0f050ee0c0c0ee0c0c0ee0c0c0eeeeee11eeeee0cc330ee0cc330e
@@ -2695,3 +2718,5 @@ __sfx__
 380e0000180501805018050180501a0501a0501a0501a0501c0501c0501e050200502105021050210502105021040210302102221015000000000021050210202205022050220502204222032220222201321000
 000200002d5501655012550105501255020550235502455028550255502c5502c5502d5502e55029550225502f5502f550345502f550000003a55038550385500000000000000000000000000000000000000000
 00020000325503355033550235501d5501e5502b5502b5502d550325503055028550245502155033550355501b550185503355014550135501255011550255500050000500005000050000500005000050000500
+00040000325402f5402a55012550005002a550005000e550005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
+00080000251502a1502b1502c150001002e1500010030150241003115031150301000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
