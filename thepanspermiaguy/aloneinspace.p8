@@ -256,7 +256,7 @@ function drawsamplecase(_x,_y,_showarrow)
    line(_lx,_y+6,_lx,_y+8,samples[_i])
   end
   if _showarrow and _i == samplesel then
-   sspr(99,85,5,6,_lx-2,_y+15)
+   sspr(100,85,5,6,_lx-2,_y+15)
    if btn(4) then
     print('\fa\x8b  \x91',_lx-11,_y+16)
    end
@@ -708,15 +708,15 @@ planettypes={
    objtypes={
     -- craters etc
     s2t[[
-     sx='0;4;10;19',
-     sy='60;60;60;60',
+     sx='68;72;78;87',
+     sy='88;88;88;88',
      sw='5;7;9;6',
      sh='3;3;3;3',
      ground=true
     ]],
     s2t[[
-     sx='0;4;10;19',
-     sy='60;60;60;60',
+     sx='68;72;78;87',
+     sy='88;88;88;88',
      sw='5;7;9;6',
      sh='3;3;3;3',
      ground=true
@@ -724,8 +724,8 @@ planettypes={
     objtypes[7], -- skulls, ribs
       -- martian pillars
     s2t[[
-     sx='80;0;7;28',
-     sy='63;63;63;88',
+     sx='80;24;35;24',
+     sy='63;53;78;77',
      sw='6;7;7;11',
      sh='4;7;7;8',
      solid='1;1;1;1'
@@ -747,8 +747,8 @@ planettypes={
     objtypes[8], -- canyon rocks
     -- taurien industry
     s2t[[
-     sx='106;106;16;15;117',
-     sy='73;76;69;63;77',
+     sx='106;106;16;29;117',
+     sy='73;76;69;90;77',
      sw='5;6;9;10;11',
      sh='3;3;6;6;14',
      solid='1;1;1;1;1'
@@ -1158,17 +1158,14 @@ end
 function nextsector()
  sfx(-1,2)
  droidalertc,droidfiringc,droidlandingc,droidlandingx,droidlandingy,alienhostile,alienfiringc=nil
- _lastsectordroids=sector and sector.wasdroids
+ local _scorepercentage,_lastsectordroids,_ispopulatedsector=getscorepercentage(),sector and sector.wasdroids
  sector={}
- local _ispopulatedsector=nil
- local _scorepercentage=getscorepercentage()
 
  for _i=1,rnd(split'1,1,2,2,2,2,3,3') do
   if _lastsectordroids == nil and _ispopulatedsector == nil and _scorepercentage > 0.1 and rnd() < _scorepercentage*0.125 then
    add(sector,createplanet(planettypes.droidworld))
-   sector.wasdroids=true
-   _ispopulatedsector=true
-  elseif _ispopulatedsector == nil and  rnd() < 0.0675 then
+   _ispopulatedsector,sector.wasdroids=true,true
+  elseif _ispopulatedsector == nil and rnd() < 0.0675 then
    add(sector,createplanet(rnd{planettypes.martianworld,planettypes.taurienworld}))
    _ispopulatedsector=true
   else
@@ -1243,7 +1240,7 @@ function planetupdate()
 
    elseif dget(45) == 2 then -- deterrer
     add(sector[1].animals,mr(clone(tools[2]),{
-     c=360,
+     c=300,
      x=guy.x,y=guy.y,
      targetx=guy.x,targety=guy.y,
      behaviour=laiddeterrerbehaviour,
@@ -1297,41 +1294,36 @@ function planetupdate()
    if dist(guy.x-_movex,guy.y-_movey,_obj.x,_obj.y) < _obj.sw * 0.5 and (guy.runningc > 0 and _obj.solid or _obj.lava) then
     _movex*=-3
     _movey*=-3
-    guy.panting=true
-    guy.runningc=24
+    guy.panting,guy.runningc=true,24
     guytalk(rnd(split'ouch,oof,argh,ow,owie,oww'))
     sfx(rnd{16,17})
    end
   end
-
  end
 
- guy.walksfx=6
- guy.action=nil
- guy.sunken=nil
-
+ guy.walksfx,guy.action,guy.sunken=6
  local _mapobjs=sector[1].mapobjs
 
  if droidlandingx then
-  droidlandingx=mapwrap(droidlandingx+_movex)
-  droidlandingy=mapwrap(droidlandingy+_movey)
+  droidlandingx,droidlandingy=mapwrap(droidlandingx+_movex),mapwrap(droidlandingy+_movey)
  end
 
  for _animal in all(sector[1].animals) do
-  _animal.x=mapwrap(_animal.x+_movex)
-  _animal.y=mapwrap(_animal.y+_movey)
-  _animal.targetx=mapwrap(_animal.targetx+_movex)
-  _animal.targety=mapwrap(_animal.targety+_movey)
+  _animal.x,
+  _animal.y,
+  _animal.targetx,
+  _animal.targety=
+    mapwrap(_animal.x+_movex),
+    mapwrap(_animal.y+_movey),
+    mapwrap(_animal.targetx+_movex),
+    mapwrap(_animal.targety+_movey)
  end
 
  for _obj in all(_mapobjs) do
-  _obj.x=mapwrap(_obj.x+_movex)
-  _obj.y=mapwrap(_obj.y+_movey)
+  _obj.x,_obj.y=mapwrap(_obj.x+_movex),mapwrap(_obj.y+_movey)
 
   if (_obj.action or _obj.walksfx or _obj.sunken) and dist(guy.x,guy.y,_obj.x,_obj.y) < 5 then
-   guy.walksfx=_obj.walksfx or guy.walksfx
-   guy.sunken=_obj.sunken
-
+   guy.walksfx,guy.sunken=_obj.walksfx or guy.walksfx,_obj.sunken
    if _obj.action then
     guy.action=_obj.action
     guy.action.target=_obj
@@ -1362,19 +1354,15 @@ function planetupdate()
 
  if droidalertc == 0 then
   if not droidlandingc then
-   droidlandingc=180
-   droidlandingx=guy.x
-   droidlandingy=guy.y
+   droidlandingc,droidlandingx,droidlandingy=180,guy.x,guy.y
   end
   if droidlandingc > 0 then
    droidlandingc-=1
 
    if droidlandingc == 0 then
     add(sector[1].animals,mr(clone(animaltypes.droid),{
-     x=droidlandingx+16,
-     y=droidlandingy+16,
-     targetx=droidlandingx+16,
-     targety=droidlandingy+16,
+     x=droidlandingx+16,y=droidlandingy+16,
+     targetx=droidlandingx+16,targety=droidlandingy+16,
      behaviour=droidbehaviour,
     }))
    end
@@ -1396,11 +1384,9 @@ function planetdraw()
  local _mapobjs=sector[1].mapobjs
  local _drawies=clone(_mapobjs)
  add(_drawies,guy)
-
  for _animal in all(sector[1].animals) do
   add(_drawies,_animal)
  end
-
  sortbyy(_drawies)
 
  for _obj in all(_drawies) do
@@ -1439,9 +1425,8 @@ function planetdraw()
 
  -- draw sample case
  if lookinginsamplecase or guy.samplingc > 0 then
-  local _x=guy.x-10
-  local _y=guy.y+10
-  sspr(60,88,9,3,_x+8,_y-3)
+  local _x,_y=guy.x-10,guy.y+10
+  sspr(59,88,9,3,_x+8,_y-3)
   drawsamplecase(_x,_y)
  end
 
@@ -1453,13 +1438,13 @@ end
 
 function drawdoor(_obj)
  if _obj.inrange then
-  sspr(89,85,3,6,_obj.x,_obj.y)
+  sspr(86,78,3,6,_obj.x,_obj.y)
   _obj.c=6
  else
   _obj.c-=1
   if _obj.c > 0 then
    local _d=(6-_obj.c)
-   sspr(89,85,3,6-_d,_obj.x,_obj.y+_d)
+   sspr(86,78,3,6-_d,_obj.x,_obj.y+_d)
   end
  end
 end
@@ -1651,7 +1636,7 @@ function resetshipobjs()
     end,
     draw=function(_obj)
      if _obj.inrange and not travelblocked then
-      sspr(92,87,7,4,31,84)
+      sspr(93,87,7,4,31,84)
       actiontitle='\014\x8e\015 go to surface'
      end
     end,
@@ -1673,7 +1658,7 @@ function resetshipobjs()
     end,
     draw=function(_obj)
      if guy.incryo then
-      sspr(110,84,6,7,48,84)
+      sspr(111,84,6,7,48,84)
      end
      if _obj.inrange then
       if guy.incryo and _update != deadupdate then
@@ -1869,7 +1854,7 @@ function resetshipobjs()
 
       if _obj.seedy then
        if _obj.seedy > 30 then
-        sspr(104,85,6,6,47,57)
+        sspr(105,85,6,6,47,57)
        end
        _obj.seedy-=8
        pset(43,75,11)
@@ -2327,7 +2312,7 @@ function shipdraw()
  elseif showbrokentitle then
   print('\f8broken',52,32)
  else
-  print(actiontitle,64-#actiontitle*2,32,9)
+  print(actiontitle,67-#actiontitle*2,32,9)
  end
 
  -- draw talks
@@ -2452,28 +2437,28 @@ e000000ee000000eeeee06600dd005600aa0e0aa0e0aa0eeeeeeeeeeeeeeeee05dddddddddd660ee
 e0ee0e0eee00e0eeeeee0dd00660000e0aa0e0a00e00a0eeeedddeeeeeeeeeee00000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eee0000eeeeeeeeeeeeee060e0d009b0e00eee00eee00eee33eeeeeeeeeeeeeee111111111111eeeeeeeeeeee11111111111111eeeeeeeeeeeeeeeeeeeeeeeee
 ee0bbbb0eee00000eeeeee0eee0e09900ff0e0ff0e0ff0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1111111111111111111111eeeeeeeeeeeeeeeeeeeee
-e0bb7b7b0e0bbbbb0eeeeeeeeeee0bb00ff0e0ff0e0ff0eeeeeeeeeeeeeeee00000eeeeeeeeeeeeeee1111111111111111111111111111eeeeeeeeeeeeeeeeee
-e0bbbbbb00bbb7b7b0eeeeeeeeee00000aa600aa600aa60eee333eeeeeeee0ddddd00eeeeeeeeeeee111111111111111111111111111111eeeeeeeeeeeeeeeee
-e0bbbbbb00bbbbbbb0eeeeeeeeeeeeee0aa0e0a00e00a0eeeeeeeeeeeeee0d66666dd0eeeeeddeee11111111111111111111111111111111eeeeeeeeeeeeeeee
-ee000000ee0000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0d6d000d6dd0eeeeeeee1111111111111111111111111111111111eeeeeeeeeeeeeee
-ee0000eeee0000eeee0000eeee0000eeeeeeee00eeeeeeeeeeeeeeeeee0d6d07bb0d6dd0eeeeeee1111111111111111111111111111111111eeeeeeeeeeeeeee
-e0dddd0ee0dddd0ee0dddd0ee0dddd0eeeeee0dd0eeeeeeeeeeeeeeeee0dd07bbbb0d6d0eeeeeeee11111111111111111111111111111111eeeeeeeeeeeeeeee
-e0d7d70ee0d7d70ee0d7d70ee0d7d70eeeee0dd50eeeeeeeeee0eeeeeeeed0bbbbb0d6d0eeeeeeeeeeeee1111111111111111111111eeeeeeeeeeeeeeeeeeeee
-e00ddd0eee0ddd0eee0ddd0eee0ddd0eeee0dddd0eeeeeeee6e60eeeddeeeeeebb0dddd0eddeeeeeeeeeeeeee11111111111111eeeeeeeeeeeeeeeeeeeeeeeee
-0d0000d0e000000ee000000ee000000eee0dd7d50eeeeeee06bb000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111111111eeeeeeeeeeeeeeeeeeeeeeeeee
-050d00500d0d00d00d0d00d00d0d00d0ee0dd7dd0eeeeeee06bbddd0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1111111111eeeeeeeeeeeeeeeeeeeeeeeeeee
-05050050050500500505005005050050e0ddd7d50eeeeeeeeeeeeeeeeeeeeeeeeeeeedddeeeeeeeeeeeeeeeeeeeee111111eeeeeeeeeeeeeeeeeeeeeeeeeeeee
-ee0500ee050ee0500505005005050050e0d7d7dd0eeeeeeee00000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-e111e11111e1111111e11eeeeeee0eeee0d7d7dd50eeeeee0bbb770eeeeeeeeeee0000eeeee0000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-1eee1eeeee1eeeeeee1eeeeeee0000ee0dddd7ddd0eee000bbbbbb7000eeeee0e060600eee060600eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-e111e11111e1111111eeee111076660e07d5d7dd50e00d60bbbbbbb06d00ee060606050ee0606050eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eeeeeeeeeeee
-eee00eee00eeeeee0000eeeee06bb60e0dd5d7ddd00d6dd600000006dd6d0060606050ee0606050ee000eeeeeeeeeeeeeeeeeeeeeeeeeeeeee0c0eeeeee0eeee
-ee0220e0220eeee088880eeee06bb60e07ddd7dd500dd6dd6666666dd6dd0060606050ee0606050e02220eeeeeeeeeeeeeeeeeeeeeeee1eeee0c0eeeee0c0eee
-ee02d0e0d20eeee055510000ee0dd0ee0dd7d7ddd0e00d66ddddddd66d00e0606060111e060601110d2d0eeeeeeeeeeeeeeeeeeeeeee1eeee0cc0eeeee0c0eee
-e0ddd0e0ddd0eee055510ddd0e0dd0ee05d7dddd50eee0000000000000eeeeeeee0000eeeee0000e0d2d01eeeeeeeeeeeeeeeeeee111e11eee0cc0eeee0cc0ee
-e0d2d0e0d2d0eee05551000d0e0dd0ee05d7d7ddd0eeee11111111111eeeeee0e0f0f00eee0f0f0000eeeeeeeeee0000eee00ee11eeeeeeeee0c30eee0ccc0ee
-0dd2d0e0d2dd0ee088820e010eeeeeee05d7d7d550eeeeeeeeeeeeee0000ee0f0f0f050ee0f0f0500c0ee0000ee0c00c0e0c0eeeeeeee11eee0cc30eee0cc30e
-0d22d010d22d01eeeeeee000eeeeeeee0dddddddd0eeeeeeeeeeeee08880e0f0f0f050ee0f0f050ee0c00c00c00c0ee0c0c0eee111ee1eeee0cc300eee0c300e
+e0bb7b7b0e0bbbbb0eeeeeeee0000bb00ff0e0ff0e0ff0eeeeeeeeeeeeeeee00000eeeeeeeeeeeeeee1111111111111111111111111111eeeeeeeeeeeeeeeeee
+e0bbbbbb00bbb7b7b0eeeeee077000000aa600aa600aa60eee333eeeeeeee0ddddd00eeeeeeeeeeee111111111111111111111111111111eeeeeeeeeeeeeeeee
+e0bbbbbb00bbbbbbb0eeeeee07d0eeee0aa0e0a00e00a0eeeeeeeeeeeeee0d66666dd0eeeeeddeee11111111111111111111111111111111eeeeeeeeeeeeeeee
+ee000000ee0000000eeeeeee0dd0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0d6d000d6dd0eeeeeeee1111111111111111111111111111111111eeeeeeeeeeeeeee
+ee0000eeee0000eeee0000eeeeeeeeeeeeeeee00eeeeeeeeeeeeeeeeee0d6d07bb0d6dd0eeeeeee1111111111111111111111111111111111eeeeeeeeeeeeeee
+e0dddd0ee0dddd0ee0dddd0ee00eeeeeeeeee0dd0eeeeeeeeeeeeeeeee0dd07bbbb0d6d0eeeeeeee11111111111111111111111111111111eeeeeeeeeeeeeeee
+e0d7d70ee0d7d70ee0d7d70e0220eeeeeeee0dd50eeeeeeeeee0eeeeeeeed0bbbbb0d6d0eeeeeeeeeeeee1111111111111111111111eeeeeeeeeeeeeeeeeeeee
+e00ddd0eee0ddd0eee0ddd0e0d20eeeeeee0dddd0eeeeeeee6e60eeeddeeeeeebb0dddd0eddeeeeeeeeeeeeee11111111111111eeeeeeeeeeeeeeeeeeeeeeeee
+0d0000d0e000000ee000000e0ddd0eeeee0dd7d50eeeeeee06bb000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee111111111111eeeeeeeeeeeeeeeeeeeeeeeeee
+050d00500d0d00d00d0d00d00d2d0eeeee0dd7dd0eeeeeee06bbddd0eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee1111111111eeeeeeeeeeeeeeeeeeeeeeeeeee
+0505005005050050050500500d2dd0eee0ddd7d50eeeeeeeeeeeeeeeeeeeeeeeeeeeedddeeeeeeeeeeeeeeeeeeeee111111eeeeeeeeeeeeeeeeeeeeeeeeeeeee
+ee0500ee050ee050050500500d22d01ee0d7d7dd0eeeeeeee00000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+ee0000eeee0000eeee0000eeeeee0eeee0d7d7dd50eeeeee0bbb770eeeeeeeeeee0000eeeee0000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+e0dddd0ee0dddd0ee0ffff0eee0000ee0dddd7ddd0eee000bbbbbb7000eeeee0e060600eee060600eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+e0d7d70ee0d7d70ee0f7f70ee076660e07d5d7dd50e00d60bbbbbbb06d00ee060606050ee0606050eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0eeeeeeeeeeee
+e00ddd0eee0ddd0eee0fff0ee06bb60e0dd5d7ddd00d6dd600000006dd6d0060606050ee0606050ee000eeeeeeeeeeeeeeeeeeeeeeeeeeeeee0c0eeeeee0eeee
+0d0000d0e000000ee000000ee06bb60e07ddd7dd500dd6dd6666666dd6dd0060606050ee0606050e02220eeeeeeeeeeeeeeeeeeeeeeee1eeee0c0eeeee0c0eee
+050d00500d0d00d00f0f00f0ee0dd0ee0dd7d7ddd0e00d66ddddddd66d00e0606060111e060601110d2d0eeeeeeeeeeeeeeeeeeeeeee1eeee0cc0eeeee0c0eee
+05050050050500500f0f00f0ee0dd0ee05d7dddd50eee0000000000000eeeeeeee0000eeeee0000e0d2d01eeeeeeeeeeeeeeeeeee111e11eee0cc0eeee0cc0ee
+ee0500ee050ee0500f0f00f0ee0dd0ee05d7d7ddd0eeee11111111111eeeeee0e0f0f00eee0f0f0000eeeeeeeeee0000eee00ee11eeeeeeeee0c30eee0ccc0ee
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee05d7d7d550eeeeeeeeeeeeee0000ee0f0f0f050ee0f0f0500c0ee0000ee0c00c0e0c0eeeeeeee11eee0cc30eee0cc30e
+eeeeeeeeeeeeeeeeeeeee000eeeeeeee0dddddddd0eeeeeeeeeeeee08880e0f0f0f050ee0f0f050ee0c00c00c00c0ee0c0c0eee111ee1eeee0cc300eee0c300e
 eee00000eee00000eeee05550000000e05d5d5d550eeeee0000000085550e0f0f0f050ee0f0f050ee0c0c0ee0c0c0ee0c0c0eeeeee11eeeee0cc330ee0cc330e
 00e06060e0006060e0e0055100a88a0e0dd555dd0eeeee066d0555588880e0f0f0f0111e0f0f0111e0c0c0ee0c0c0ee0c0c0eeeeeeee11ee0ccc3330e0ccc330
 07006060e07060600d0d05510e0880ee055555550eeee06ddd0588588880eeee000eeeeeeeeeeeeeee0eeeeeeeeeeeeeeeeeeeeeeeeeee1e00ccc3300ccc3300
@@ -2481,25 +2466,25 @@ e0665650e06656500d0d08820005500e055555550eee06dddd05555888850ee04420eeee00eeeeee
 06666660e066666001010882008dd80e055050550ee000000055000000850ee04220eee0440eeeee0420eeeeeeeeeee00eeeee040e05110e0cc333300cc33330
 eeeeeeeeeeeeeeee000eeeeeee0550eee0000000ee0885555550888850850e04220eeee04220eee04220eee000eeee0440eee0420e01110e0001100000011000
 eeee000eeeeeeee05550eeeeeeeeeeeeeeeeeeeeee000000000000000000eee02220ee042220eee042220e04420eee04220e04220ee0000eee0110eeee0110ee
-e0e05550eeeeeee05055000eeeeeeeeee1111111eee11111111111111111eee04220ee0422240ee0422200422220e042220e042420051110eeeeee0000e0000e
-0e0050500eeeeee050500ee0eeeeeeeeeeeeeeeeeeeeee00eeeee0eeeeeeee042240e04224420e0422240eeee8888888888888eeee011110eeeeee0880e0880e
-0ee0000dd0eeeee0000dd0eeeeeeeeeeeeeeeeeeeeeee050eeee080eeeeee0422422004222220e0422420eeee888888eeee888eeeeeeeeecccccce0510e0510e
-eeee0e09d90eeee0e009d90eeeeeeeeeeeeeeeeeeeee0850eee08880eeeeeeeeeeeeeeeeeeeeeeeee0eeeeeee88888eeeeee88cccceeccccccc66e0510e0510e
-eeee0ee0000eeee0eee000eeeeeeeeeeeeeeeeeeeee08850ee0558880eeeeeee00eeeeeeeeeeeeee040eeeeee88888eeeeee88ddddccc6c66c666e0510e0510e
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee05555800eeeeee0440eeeee000eeeee040eeeeee88888eeeeee88cccceeccccccc6600500e00000
-eeeeeeeeeeeeeeeeeeee00eeeeeeeeeeeeeeeeeeeeddee00055585050eeeeee04220eee04440eee04220eeeee88888eeeeee88ddddeeeeecccccc08008008820
-ee00eeee00eeee00eee0ff0eeeeeeeeeeeeeeeeeeeeeeeddd558508850eeee042220ee042220eee04220eeeee888888eeee888cccceeeee0000ee08208208820
-e0ff0ee0ff0ee0ff0ee0ff0eeeeeeeeeeee00eeeeeeeeeeedd550888850eee04220eee042220eee042240eeee101eeeeeeeee9eeee6eee06ddd0e00000000000
-e0ff0ee0ff0ee0ff0ee0880eeeeeeeeeee00a0000eeeedeeeee5500000eeee042220e04224420e0422420eeee101eeeeeeee999eee6e6e06ddd0e05555555110
-0daa0e0daa0e0daa0e0daa0eeeeeeeeee080885850eeeeeeeeeeeeeeeeeee0422222004242220e0422420eeee101110001199999ee6eee0dddd0e08000008220
-0daa0e0da00e0d0a0e0daa0eeeeeee000000eeeeeeeeeeeedddeeeeeeeeee0000000eeeeeeeeeeeeeeeeeeeee1011099901e999ee66e6e05dd50e080ddd08220
-eeeeeeeeeeeeeeeeeeeeeeeeeeeee02222220eeeeeeeeeeeeeeeeeeeeeee066666660eeeeeeeeeeeeeeeeeeee1011109990e999ee6666e055550e05000005110
-eeeeeeeeeeeeeeeeeeee00eeeeee0220022220eeeeeeeeeeeeeeeeeeeeee060000060eeeeeeeeeeeeeeeeeeee1010000990eaaae455555055550e05555555110
-ee00eeee00eeee00eee0ff0eeeee0d0b70ddd0e444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-e0ff0ee0ff0ee0ff0ee0ff0eeeee020bb0d220e42444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-e0ff0ee0ff0ee0ff0ee0880eeeee0dd00dddd0ee424424444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-0daa600daa600daa600daa60eeee02ddddd220ee42444244444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-0daa0e0da00e0d0a0e0daa0eeeee0dddddddd01ee424442444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+e0e05550eeeeeee05055000eee000000eee11111eee11111111111111111eee04220ee0422240ee0422200422220e042220e042420051110eeeeee0000e0000e
+0e0050500eeeeee050500ee0e02222220eeeee00eeeeee00eeeee0eeeeeeee042240e04224420e0422240e1018888888888888eeee011110eeeeee0880e0880e
+0ee0000dd0eeeee0000dd0ee0220022220eee0220eeee050eeee080eeeeee0422422004222220e0422420e101888888eeee888eeeeeeeeecccccce0510e0510e
+eeee0e09d90eeee0e009d90e0d0b70ddd0eee02d0eee0850eee08880eeeeeeeeeeeeeeeeeeeeeeeee0eeee10188888eeeeee88cccceeccccccc66e0510e0510e
+eeee0ee0000eeee0eee000ee020bb0d220ee0ddd0ee08850ee0558880eeeeeee00eeeeeeeeeeeeee040eee10188888eeeeee88ddddccc6c66c666e0510e0510e
+eeeeeeeeeeeeeeeeeeeeeeee0dd00dddd0ee0d2d0eeeeeeee05555800eeeeee0440eeeee000eeeee040eee10188888eeeeee88cccceeccccccc6600500e00000
+eeeeeeeeeeeeeeeeeeee00ee02ddddd220e0dd2d0eddee00055585050eeeeee04220eee04440eee04220ee10188888eeeeee88ddddeeeeecccccc08008008820
+ee00eeee00eeee00eee0ff0e0dddddddd010d22d01eeeeddd558508850eeee042220ee042220eee04220eeeee888888eeee888cccceeeeee0000e08208208820
+e0ff0ee0ff0ee0ff0ee0ff0eeeeeeeeeeee00eeeeeeeeeeedd550888850eee04220eee042220eee042240eeeeeeeeeeeeeeeee9eeee6eee06ddd000000000000
+e0ff0ee0ff0ee0ff0ee0880eeeeeeeeeee00a0000eeeedeeeee5500000eeee042220e04224420e0422420eeeeeeeeeeeeeeee999eee6e6e06ddd005555555110
+0daa0e0daa0e0daa0e0daa0eeeeeeeeee080885850eeeeeeeeeeeeeeeeeee0422222004242220e0422420eeeeeeee110001199999ee6eee0dddd008000008220
+0daa0e0da00e0d0a0e0daa0eeeeeeeeeeeeeeeeeeeeeeeeedddeeeeeeeee0000000ee111e11111e1111111e11eeee1099901e999ee66e6e05dd50080ddd08220
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0666666601eee1eeeee1eeeeeee1eeeeee1109990e999ee6666e05555005000005110
+eeeeeeeeeeeeeeeeeeee00eeeeeeee0000eeeeeeeeeeeeeeeeeeeeeeeee060000060e111e11111e1111111eeee1110000990eaaae45555505555005555555110
+ee00eeee00eeee00eee0ff0eeeeee088880eeee444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+e0ff0ee0ff0ee0ff0ee0ff0eeeeee055510000e42444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+e0ff0ee0ff0ee0ff0ee0880eeeeee055510ddd0e424424444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+0daa600daa600daa600daa60eeeee05551000d0e42444244444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+0daa0e0da00e0d0a0e0daa0eeeeee088820e010ee424442444444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eeeeeeeeeeeeeeeeeeeeeeee00eeeeeeeeee00eee42444424444444eeeeeeeeee244444eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eeeeeeeeeeeeeeeeee00000e040eeeeeeee020eeee424444244444444eeeeeeeee2222eeeeeeee4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eeeee0000eeeeeeee044420e04200eeeeee020eeee42444442444444444eeeeeee2444eeeeeeee4eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
