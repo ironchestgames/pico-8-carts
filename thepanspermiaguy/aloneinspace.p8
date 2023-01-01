@@ -234,15 +234,17 @@ function clearseedcannon()
 end
 
 floordatapos={10,25}
+local hitpos
 function breakrandomshipobj()
  local _floorindex=rnd{1,2}
  local _objindex=flr(1+rnd(#shipobjs[_floorindex]))
  dset(floordatapos[_floorindex]+_objindex,1)
  local _obj=shipobjs[_floorindex][_objindex]
- _obj.broken,_obj.brokenthisframe=true,true
+ _obj.broken=true
  if _obj.datapos then
   dset(_obj.datapos,0)
  end
+ hitpos={x=_obj.x1+(_obj.x2-_obj.x1),y=floorys[_floorindex]}
 end
 
 function drawsamplecase(_x,_y,_showarrow)
@@ -953,7 +955,7 @@ function createplanet(_planettype)
 
  -- add wreck
  local _haswreck=nil
- if rnd() < 0.065 then
+ if rnd() < 0.1 then
   _haswreck=true
   local _wrecktype=rnd{'martianwreck','taurienwreck'}
   local _x,_y=flrrnd(mapsize-_tooclosedist),flrrnd(mapsize-_tooclosedist)
@@ -984,7 +986,7 @@ function createplanet(_planettype)
 
  -- add artifact
  local _hasartifact=nil
- if rnd() < 0.065 then
+ if rnd() < 0.1 then
   _hasartifact=true
   local _x,_y=flrrnd(mapsize-32),flrrnd(mapsize-32)
   local _ruincount,_sy=flrrnd(7)+4,rnd(split'96,104,112,120')
@@ -2086,6 +2088,7 @@ function shipinit()
 end
 
 function shipupdate()
+ hitpos=nil
  
  if not traveling then
   actiontitle,showrepairtitle,showbrokentitle=''
@@ -2264,13 +2267,8 @@ function shipdraw()
   circfill(93,23,12,7)
  end
 
- if droidfiringc and droidfiringc < 3 then
-  line(109,23,65,80,7)
- end
-
- -- alien shot
- if alienfiringc and alienfiringc < 3 then
-  line(21,26,65,80,7)
+ if hitpos then
+  line(109,23,hitpos.x,hitpos.y,7)
  end
 
  -- draw martian/taurien ship
@@ -2290,11 +2288,11 @@ function shipdraw()
  for _floori,_floorobjs in ipairs(shipobjs) do
   for _obj in all(_floorobjs) do
    _obj.draw(_obj)
-   if _obj.brokenthisframe then
-    circfill(_obj.x1+(_obj.x2-_obj.x1),floorys[_floori],9,7)
-    _obj.brokenthisframe=nil
-   end
   end
+ end
+
+ if hitpos then
+  circfill(hitpos.x,hitpos.y,9,7)
  end
 
  -- draw guy
