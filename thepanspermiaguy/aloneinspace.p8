@@ -160,7 +160,7 @@ function getbloodobj(_x,_y,_bloodtype)
 end
 
 function getscorepercentage()
- return dget(62)/1000 -- 1000 is top threshold
+ return dget(62)/720 -- 720 is top threshold
 end
 
 function disttoguy(_other)
