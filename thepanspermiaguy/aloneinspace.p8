@@ -233,7 +233,7 @@ function clearseedcannon()
  seed={}
 end
 
-floordatapos={10,25}
+local floordatapos={10,25}
 local hitpos
 function breakrandomshipobj()
  local _floorindex=rnd{1,2}
@@ -955,13 +955,13 @@ function createplanet(_planettype)
 
  -- add wreck
  local _haswreck=nil
- if rnd() < 0.1 then
+ if rnd() < 0.12 then
   _haswreck=true
   local _wrecktype=rnd{'martianwreck','taurienwreck'}
   local _x,_y=flrrnd(mapsize-_tooclosedist),flrrnd(mapsize-_tooclosedist)
 
   -- add tool
-  if rnd() < 0.385 then
+  if rnd() < 0.5 then
    add(_mapobjs,getnewsparepart(_x-34,_y-2))
   end
 
@@ -2268,6 +2268,10 @@ function shipdraw()
  end
 
  if hitpos then
+  local _x1,_y1=109,23
+  if alienfiringc == 0 then
+   _x1,_y1=21,26
+  end
   line(109,23,hitpos.x,hitpos.y,7)
  end
 
