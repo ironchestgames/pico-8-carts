@@ -898,7 +898,7 @@ function createplanettype()
  local _objtypeslen=rnd(split'3,4,4,5,5,5,6,7,8,9')
 
  while #_objtypes < _objtypeslen do
-  local _objtypelen=#objtypes-(_scorepercentage < 0.4 and 2 or _scorepercentage < 0.6 and 1 or 0) -- never have flowers and or berrybushes if not enough points
+  local _objtypelen=#objtypes-(_scorepercentage < 0.35 and 2 or _scorepercentage < 0.75 and 1 or 0) -- never have flowers and or berrybushes if not enough points
   local _index=mid(
    (_wpal[2] == 7 or rnd(_scorepercentage) > 0.0875) and 3 or 1, -- if white/snow then never have lava
     flr((rnd(2)-1+_scorepercentage)*_objtypelen),
