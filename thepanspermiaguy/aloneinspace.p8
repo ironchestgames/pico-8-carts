@@ -36,7 +36,7 @@ last seed
 
 --]]
 
--- printh('debug started','debug',true)
+printh('debug started','debug',true)
 function debug(s)
  printh(tostr(s),'debug',false)
 end
@@ -65,14 +65,14 @@ function contains(_t,_value)
 end
 
 function trimsplit(_str)
- local _newstr=''
+ local _result=''
  for _i=1,#_str do
   local _chr=_str[_i]
   if _chr != ' ' and _chr != '\n' then
-   _newstr..=_chr
+   _result..=_chr
   end
  end
- return split(_newstr)
+ return split(_result)
 end
 
 function clone(_t)
@@ -107,10 +107,9 @@ function wrap(_min,_n,_max)
  return (((_n-_min)%(_max-_min))+(_max-_min))%(_max-_min)+_min
 end
 
--- 78 token s2t (depends on trimsplit)
+-- 77 token s2t (depends on trimsplit)
 function s2t(_t)
- local _result={}
- local _kvstrings=trimsplit(_t)
+ local _result,_kvstrings={},trimsplit(_t)
  for _kvstring in all(_kvstrings) do
   local _kvpair=split(_kvstring,'=')
   local _value=_kvpair[2]
@@ -127,15 +126,15 @@ function s2t(_t)
  return _result
 end
 
-function mergeright(_t1,_t2)
+function mr(_t1,_t2) -- mergeright
  for _k,_v in pairs(_t2) do
   _t1[_k]=_v
  end
  return _t1
 end
 
-function mergerightands2t(_t1,_t2)
- return mergeright(s2t(_t1),_t2)
+function s2tmr(_t1,_t2)
+ return mr(s2t(_t1),_t2)
 end
 
 -- helpers
@@ -152,17 +151,11 @@ local bloodtypes={
 
 function getbloodobj(_x,_y,_bloodtype)
  local _type=bloodtypes[_bloodtype]
- return mergerightands2t([[
-  sx=69,
-  sw=10,
-  sh=5,
-  ground=true
-  ]],{
+ return s2tmr('sx=69,sw=10,sh=5,ground=true',{
+  x=_x,y=_y,
   sy=_type[1],
   samplecolor=_type[2],
   action=takesampleaction,
-  x=_x,
-  y=_y,
  })
 end
 
@@ -320,35 +313,10 @@ end
 mapsize,floorys,toolnames=255,split'91,80',split'trap,deterrer,drill,spare part'
 
 tools={
- s2t[[
-  sx=28,
-  sy=41,
-  sw=4,
-  sh=4,
-  toolnr=1
- ]],
- s2t[[
-  sx=16,
-  sy=38,
-  sw=3,
-  sh=4,
-  toolnr=2
- ]],
- s2t[[
-  sx=20,
-  sy=43,
-  sw=4,
-  sh=5,
-  drillc=150,
-  toolnr=3
- ]],
- s2t[[
-  sx=28,
-  sy=45,
-  sw=4,
-  sh=4,
-  toolnr=4
- ]],
+ s2t'sx=28,sy=41,sw=4,sh=4,toolnr=1',
+ s2t'sx=16,sy=38,sw=3,sh=4,toolnr=2',
+ s2t'sx=20,sy=43,sw=4,sh=5,drillc=150,toolnr=3',
+ s2t'sx=28,sy=45,sw=4,sh=4,toolnr=4',
 }
 
 pickupactionfunc=function (_obj)
@@ -362,47 +330,27 @@ pickupactionfunc=function (_obj)
 end
 
 function closetrap(_trap)
- return mergeright(_trap,{
-  action={
-   title='pick up trap',
-   func=pickupactionfunc,
-  },
-  sy=41,sw=4,sh=4,
- })
+ return mr(_trap,s2tmr('sy=41,sw=4,sh=4',{
+  action={title='pick up trap',func=pickupactionfunc},
+ }))
 end
 
 function getnewtool(_x,_y,_toolindex)
- return mergeright(clone(tools[_toolindex]),{
+ return mr(clone(tools[_toolindex]),{
   x=_x,y=_y,
-  action={
-   title='pick up '..toolnames[_toolindex],
-   func=pickupactionfunc,
-  },
+  action={title='pick up '..toolnames[_toolindex],func=pickupactionfunc},
  })
 end
 
 function getnewtrap(_x,_y)
- return closetrap(mergerightands2t([[
-  sx=28,
-  toolnr=1
-  ]],
-  {
-   x=_x,y=_y,
-   behaviour=laidtrapbehaviour,
+ return closetrap(s2tmr('sx=28,toolnr=1',{
+   x=_x,y=_y,behaviour=laidtrapbehaviour,
  }))
 end
 
-function getnewdeterrer(_x,_y)
- return getnewtool(_x,_y,2)
-end
-
-function getnewdrill(_x,_y)
- return getnewtool(_x,_y,3)
-end
-
-function getnewsparepart(_x,_y)
- return getnewtool(_x,_y,4)
-end
+function getnewdeterrer(_x,_y) return getnewtool(_x,_y,2) end
+function getnewdrill(_x,_y) return getnewtool(_x,_y,3) end
+function getnewsparepart(_x,_y) return getnewtool(_x,_y,4) end
 
 takesampleaction={
  title='take sample',
@@ -500,7 +448,7 @@ function laiddrillbehaviour(_behaviouree)
  if _behaviouree.drillc <= 0 then
   del(sector[1].animals,_behaviouree)
   add(sector[1].mapobjs,getnewdrill(_behaviouree.x,_behaviouree.y))
-  add(sector[1].mapobjs,mergerightands2t([[
+  add(sector[1].mapobjs,s2tmr([[
    sx=53,
    sy=9,
    sw=8,
@@ -577,114 +525,16 @@ function sighthunting(_behaviouree)
 end
 
 animaltypes={
- bear=s2t[[
-  sx=0,
-  sy=8,
-  sw=8,
-  sh=8,
-  sightradius=36,
-  spd=0.75,
-  huntingspd=1,
-  c=0
- ]],
- bat=s2t[[
-  sx=0,
-  sy=16,
-  sw=7,
-  sh=6,
-  sightradius=32,
-  spd=0.75,
-  huntingspd=0.75,
-  c=0,
-  bloodtype='fire'
- ]],
- rabbit=s2t[[
-  sx=0,
-  sy=70,
-  sw=8,
-  sh=5,
-  sightradius=32,
-  spd=1,
-  huntingspd=1,
-  c=0,
-  scaredc=3000
- ]],
- spider=s2t[[
-  sx=0,
-  sy=75,
-  sw=12,
-  sh=7,
-  sightradius=38,
-  spd=0.25,
-  huntingspd=1.25,
-  c=0,
-  bloodtype='fire'
- ]],
- bull=s2t[[
-  sx=0,
-  sy=38,
-  sw=8,
-  sh=8,
-  sightradius=28,
-  spd=0.125,
-  huntingspd=1,
-  c=0
- ]],
- snake=s2t[[
-  sx=0,
-  sy=0,
-  sw=8,
-  sh=8,
-  sightradius=36,
-  spd=0.25,
-  huntingspd=0.875,
-  c=0,
-  bloodtype='fire'
- ]],
- gnawer=s2t[[
-  sx=0,
-  sy=22,
-  sw=8,
-  sh=8,
-  sightradius=48,
-  spd=0.75,
-  huntingspd=1.25,
-  c=0
- ]],
- firegnawer=s2t[[
-  sx=0,
-  sy=30,
-  sw=8,
-  sh=8,
-  sightradius=48,
-  spd=0.75,
-  huntingspd=1.25,
-  c=0,
-  bloodtype='fire'
- ]],
- slime=s2t[[
-  sx=0,
-  sy=46,
-  sw=9,
-  sh=6,
-  sightradius=72,
-  spd=0.25,
-  huntingspd=0.5,
-  c=0,
-  bloodtype='martian'
- ]],
- droid=s2t[[
-  sx=16,
-  sy=52,
-  sw=8,
-  sh=8,
-  sightradius=128,
-  spd=0.05,
-  huntingspd=2,
-  c=0,
-  bloodtype='droid',
-  isscary=true
- ]],
+ bear=s2t'sx=0,sy=8,sw=8,sh=8,sightradius=36,spd=0.75,huntingspd=1,c=0',
+ bat=s2t'sx=0,sy=16,sw=7,sh=6,sightradius=32,spd=0.75,huntingspd=0.75,c=0,bloodtype="fire"',
+ rabbit=s2t'sx=0,sy=70,sw=8,sh=5,sightradius=32,spd=1,huntingspd=1,c=0,scaredc=3000',
+ spider=s2t'sx=0,sy=75,sw=12,sh=7,sightradius=38,spd=0.25,huntingspd=1.25,c=0,bloodtype="fire"',
+ bull=s2t'sx=0,sy=38,sw=8,sh=8,sightradius=28,spd=0.125,huntingspd=1,c=0',
+ snake=s2t'sx=0,sy=0,sw=8,sh=8,sightradius=36,spd=0.25,huntingspd=0.875,c=0,bloodtype="fire"',
+ gnawer=s2t'sx=0,sy=22,sw=8,sh=8,sightradius=48,spd=0.75,huntingspd=1.25,c=0',
+ firegnawer=s2t'sx=0,sy=30,sw=8,sh=8,sightradius=48,spd=0.75,huntingspd=1.25,c=0,bloodtype="fire"',
+ slime=s2t'sx=0,sy=46,sw=9,sh=6,sightradius=72,spd=0.25,huntingspd=0.5,c=0,bloodtype="martian"',
+ droid=s2t'sx=16,sy=52,sw=8,sh=8,sightradius=128,spd=0.05,huntingspd=2,c=0,bloodtype="droid",isscary=true',
 }
 
 -- sx,sy,sw,sh,samplecolor,ground,solid,lava,sunken,walksfx,action
@@ -695,8 +545,7 @@ objtypes={
   sy='22;29',
   sw='11;8',
   sh='7;6',
-  lava=true,
-  ground=true
+  lava=true,ground=true
  ]],
  -- 2, lavacracks
  s2t[[
@@ -731,29 +580,22 @@ objtypes={
   solid='1;1;0;0'
  ]],
  -- 6, lakes
- mergerightands2t([[
+ s2tmr([[
   sx='53;53',
   sy='9;15',
   sw='8;11',
   sh='6;7',
-  ground=true,
-  samplecolor=13,
-  sunken=true,
-  walksfx=7
-  ]],{
-   action=takesampleaction,
-  }),
+  ground=true,samplecolor=13,sunken=true,walksfx=7
+  ]],{action=takesampleaction}),
  -- 7, skulls and ribs
- mergerightands2t([[
+ s2tmr([[
   sx='61;72;24;16',
   sy='60;60;0;0',
   sw='10;8;8;8',
   sh='6;6;4;5',
   samplecolor='6;15',
   solid='1;0;0;0'
-  ]],{
-   action=takesampleaction,
-  }),
+  ]],{action=takesampleaction}),
  -- 8, canyon stones
  s2t[[
   sx='61;61;85',
@@ -763,15 +605,13 @@ objtypes={
   solid='1;1;0'
  ]],
  -- 9, flowerbush
- mergerightands2t([[
+ s2tmr([[
   sx='16;23',
   sy='20;20',
   sw='7;6',
   sh='8;8',
   samplecolor='15;9'
-  ]],{
-   action=takesampleaction,
-  }),
+  ]],{action=takesampleaction}),
  -- 10, dead trees
  s2t[[
   sx='39;47',
@@ -781,15 +621,13 @@ objtypes={
   solid='1;1'
  ]],
  -- 11, red caps
- mergerightands2t([[
+ s2tmr([[
   sx='39',
   sy='0',
   sw='7',
   sh='5',
   samplecolor='6;15;9;10;11;7'
-  ]],{
-   action=takesampleaction,
-  }),
+  ]],{action=takesampleaction}),
  -- 12, water marsh
  s2t[[
   sx='48',
@@ -814,63 +652,53 @@ objtypes={
   sh='5;5;5'
  ]],
  -- 15, cactuses
- mergerightands2t([[
+ s2tmr([[
   sx='53;60;60',
   sy='0;0;0',
   sw='7;7;7',
   sh='9;9;8',
   solid='1;1;1',
   samplecolor=13
-  ]],{
-   action=takesampleaction,
-  }),
+  ]],{action=takesampleaction}),
  -- 16, mushrooms
- mergerightands2t([[
+ s2tmr([[
   sx='46',
   sy='0',
   sw='7',
   sh='5',
   samplecolor='15;9;10;8;11;7'
-  ]],{
-   action=takesampleaction,
-  }),
+  ]],{action=takesampleaction}),
  -- 17, trees
- mergerightands2t([[
+ s2tmr([[
   sx='16;23;112;120',
   sy='10;11;62;63',
   sw='7;7;8;8',
   sh='10;9;15;14',
   solid='1;1;1;1',
   samplecolor=6
-  ]],{
-   action=takesampleaction,
-  }),
+  ]],{action=takesampleaction}),
  -- 18, flowers
- mergerightands2t([[
+ s2tmr([[
   sx='0;7',
   sy='98;98',
   sw='7;7',
   sh='5;5',
   samplecolor='15;9;10;8;11;7'
-  ]],{
-   action=takesampleaction,
-  }),
+  ]],{action=takesampleaction}),
   -- 19, berrybush
-  mergerightands2t([[
+  s2tmr([[
   sx='32',
   sy='0',
   sw='7',
   sh='6',
   samplecolor='15;9;10;8;11;7'
-  ]],{
-   action=takesampleaction,
-  }),
+  ]],{action=takesampleaction}),
 }
 
 plantsamplechances=s2t'15=1,9=1,10=0.675,6=0.5,8=0.05,11=0.025,7=0.01'
  
 planettypes={
- martianworld=mergerightands2t([[
+ martianworld=s2tmr([[
   groundcolor=12,
   surfacecolor=15,
   animalcount=0,
@@ -879,25 +707,25 @@ planettypes={
   ]],{
    wpal=split'142,134,1,1,143',
    objtypes={
-   -- craters etc
-   s2t[[
-    sx='0;4;10;19',
-    sy='60;60;60;60',
-    sw='5;7;9;6',
-    sh='3;3;3;3',
-    ground=true
+    -- craters etc
+    s2t[[
+      sx='0;4;10;19',
+      sy='60;60;60;60',
+      sw='5;7;9;6',
+      sh='3;3;3;3',
+      ground=true
     ]],
-    -- martian pillars
-   s2t[[
-    sx='80;0;7;28',
-    sy='63;63;63;88',
-    sw='6;7;7;11',
-    sh='4;7;7;8',
-    solid='1;1;1;1'
-    ]],
+      -- martian pillars
+    s2t[[
+      sx='80;0;7;28',
+      sy='63;63;63;88',
+      sw='6;7;7;11',
+      sh='4;7;7;8',
+      solid='1;1;1;1'
+     ]],
   }
  }),
- taurienworld=mergerightands2t([[
+ taurienworld=s2tmr([[
    groundcolor=2,
    surfacecolor=4,
    animalcount=5,
@@ -920,7 +748,7 @@ planettypes={
     ]],
    },
   }),
- droidworld=mergerightands2t([[
+ droidworld=s2tmr([[
   groundcolor=5,
   surfacecolor=13,
   animalcount=12,
@@ -949,74 +777,73 @@ surfacecolors=split'1,4,3,4,5,6,7,na,9,na,na,na,13,13,9,na,na,2,3,2,4,5,3,na,na,
 
 leafshadows=split'1,2,3,4,5,6,8,13,14,15,18,19,20,21,22,23,24,25,26,27,28,29,30,31'
 leafcolors={
- split'19,28', -- 1
- split'4,24', -- 2
- split'27', -- 3
- split'25,30', -- 4
- split'3,22', -- 5
- split'7', -- 6
+ '19,28', -- 1
+ '4,24', -- 2
+ '27', -- 3
+ '25,30', -- 4
+ '3,22', -- 5
+ '7', -- 6
  nil,
- split'14', -- 8
+ '14', -- 8
  nil,nil,nil,nil,
- split'6,14,22', -- 13
- split'15', -- 14
- split'7', -- 15
+ '6,14,22', -- 13
+ '15', -- 14
+ '7', -- 15
  nil,nil,
- split'20,21', -- 18
- split'3,28', -- 19
- split'4', -- 20
- split'5,29', -- 21
- split'15', -- 22
- split'7', -- 23
- split'8', -- 24
- split'9', -- 25
- split'10,23', -- 26
- split'11,26', -- 27
- split'11,13', -- 28
- split'13', -- 29
- split'14,31', -- 30
- split'15', -- 31
+ '20,21', -- 18
+ '3,28', -- 19
+ '4', -- 20
+ '5,29', -- 21
+ '15', -- 22
+ '7', -- 23
+ '8', -- 24
+ '9', -- 25
+ '10,23', -- 26
+ '11,26', -- 27
+ '11,13', -- 28
+ '13', -- 29
+ '14,31', -- 30
+ '15', -- 31
 }
 
 stonecolors=split'1,2,3,4,5,6,7,8,9,12,13,14,18,19,20,21,22,23,27,28,29,30'
 stonehighlights={
- split'2,3,5,13,19,20,24,28,29', -- 1
- split'3,4,5,13,14,22,24,25,29,30', -- 2
- split'6,11,12,26,27', -- 3
- split'9,14,25,30,31', -- 4
- split'3,6,8,13,14,15,22,24,25,30,31', -- 5
- split'3,7,27', -- 6
- split'6', -- 7
- split'9,14,30,31', -- 8
- split'10,15', -- 9
+ '2,3,5,13,19,20,24,28,29', -- 1
+ '3,4,5,13,14,22,24,25,29,30', -- 2
+ '6,11,12,26,27', -- 3
+ '9,14,25,30,31', -- 4
+ '3,6,8,13,14,15,22,24,25,30,31', -- 5
+ '3,7,27', -- 6
+ '6', -- 7
+ '9,14,30,31', -- 8
+ '10,15', -- 9
  nil,nil,
- split'6,7,15,23,26,31', -- 12
- split'6,12,14,15,23,31', -- 13
- split'15,31', -- 14
+ '6,7,15,23,26,31', -- 12
+ '6,12,14,15,23,31', -- 13
+ '15,31', -- 14
  nil,nil,nil,
- split'2,5,21,29', -- 18
- split'3,13,22,27,28', -- 19
- split'4,13,22,24,30', -- 20
- split'2,4,5,13,28,29', -- 21
- split'6,9,15,31', -- 22
- split'7', -- 23
+ '2,5,21,29', -- 18
+ '3,13,22,27,28', -- 19
+ '4,13,22,24,30', -- 20
+ '2,4,5,13,28,29', -- 21
+ '6,9,15,31', -- 22
+ '7', -- 23
  nil,nil,nil,
- split'11,23,26', -- 27
- split'6,12,22,27,31', -- 28
- split'3,4,13,22,24,25', -- 29
- split'9,31', -- 30
+ '11,23,26', -- 27
+ '6,12,22,27,31', -- 28
+ '3,4,13,22,24,25', -- 29
+ '9,31', -- 30
 }
 
-function fixcolor(_color)
- if _color > 15 then
-  return _color+112
- end
- return _color
+for _i=1,31 do
+ leafcolors[_i]=leafcolors[_i] and split(leafcolors[_i])
+ stonehighlights[_i]=stonehighlights[_i] and split(stonehighlights[_i])
 end
 
 function fixpal(_pal)
  for _i=1,#_pal do
-  _pal[_i]=fixcolor(_pal[_i])
+  local _color=_pal[_i]
+  _pal[_i]=_color > 15 and _color+112 or _color
  end
  return _pal
 end
@@ -1060,16 +887,7 @@ function createplanettype()
  end
 
  -- flora types
- local _objtypes={
-  -- always shadow marsh
-  s2t[[
-   sx='48',
-   sy='38',
-   sw='5',
-   sh='4',
-   ground=true
-  ]]
- }
+ local _objtypes={s2t'sx="48",sy="38",sw="5",sh="4",ground=true'} -- always add shadow marsh
  local _objtypeslen=rnd(split'3,4,4,5,5,5,6,7,8,9')
 
  while #_objtypes < _objtypeslen do
@@ -1083,9 +901,7 @@ function createplanettype()
 
  -- fauna types
  local _allanimaltypes=split'bear,bat,spider,bull,snake,gnawer,firegnawer,slime'
-
  local _animaltypes={}
-
  local _animaltypeslen=rnd(split'1,1,1,1,2,2,2,3,3,4')
  for _i=1,_animaltypeslen do
   add(_animaltypes,rnd(_allanimaltypes))
@@ -1116,19 +932,12 @@ function createplanet(_planettype)
 
  local _mapobjs={
   -- shuttle
-  mergerightands2t([[
-   sx=63,
-   sy=40,
-   sw=15,
-   sh=7
-   ]],{
-   x=mapsize/2,
-   y=mapsize/2-10,
+  s2tmr('sx=63,sy=40,sw=15,sh=7',{
+   x=mapsize/2,y=mapsize/2-10,
    action={
     title='go back to ship',
     func=function()
-     traveling='up'
-     travelc=30
+     traveling,travelc='up',30
      sfx(27)
      shipinit()
      return true
@@ -1141,10 +950,8 @@ function createplanet(_planettype)
  local _haswreck=nil
  if rnd() < 0.065 then
   _haswreck=true
-
   local _wrecktype=rnd{'martianwreck','taurienwreck'}
-  local _x=flrrnd(mapsize-_tooclosedist)
-  local _y=flrrnd(mapsize-_tooclosedist)
+  local _x,_y=flrrnd(mapsize-_tooclosedist),flrrnd(mapsize-_tooclosedist)
 
   -- add tool
   if rnd() < 0.385 then
@@ -1152,77 +959,20 @@ function createplanet(_planettype)
   end
 
   local function addwreckobj(_x,_y,_strobj)
-   add(_mapobjs,mergerightands2t(_strobj,{
-    x=_x,
-    y=_y,
-   }))
+   add(_mapobjs,s2tmr(_strobj,{x=_x,y=_y}))
   end
 
   if _wrecktype == 'martianwreck' then
-   -- ship wreck
-   addwreckobj(_x,_y,[[
-    sx=58,
-    sy=48,
-    sw=14,
-    sh=8,
-    solid=true
-    ]])
-
-   -- debris
-   addwreckobj(_x+1,_y-2,[[
-    sx=56,
-    sy=50,
-    sw=21,
-    sh=9,
-    ground=true
-    ]])
-
-   -- corpse
-   addwreckobj(_x-14,_y+2,[[
-    sx=48,
-    sy=54,
-    sw=8,
-    sh=4
-    ]])
-
+   addwreckobj(_x,_y,'sx=58,sy=48,sw=14,sh=8,solid=true') -- ship wreck
+   addwreckobj(_x+1,_y-2,'sx=56,sy=50,sw=21,sh=9,ground=true') -- debris
+   addwreckobj(_x-14,_y+2,'sx=48,sy=54,sw=8,sh=4') -- corpse
    add(_mapobjs,getbloodobj(_x-23,_y+3,'martian'))
 
   else -- taurienwreck
-   -- ship wreck
-   addwreckobj(_x,_y,[[
-    sx=49,
-    sy=78,
-    sw=10,
-    sh=9,
-    solid=true
-    ]])
-
-   -- small wing
-   addwreckobj(_x-8,_y-5,[[
-    sx=44,
-    sy=78,
-    sw=5,
-    sh=4,
-    solid=true
-    ]])
-
-   -- debris
-   addwreckobj(_x-8,_y-1,[[
-    sx=42,
-    sy=83,
-    sw=9,
-    sh=6,
-    ground=true
-    ]])
-
-   -- corpse
-   addwreckobj(_x-17,_y,[[
-    sx=33,
-    sy=85,
-    sw=9,
-    sh=3
-    ]])
-
+   addwreckobj(_x,_y,'sx=49,sy=78,sw=10,sh=9,solid=true') -- ship wreck
+   addwreckobj(_x-8,_y-5,'sx=44,sy=78,sw=5,sh=4,solid=true') -- small wing
+   addwreckobj(_x-8,_y-1,'sx=42,sy=83,sw=9,sh=6,ground=true') -- debris
+   addwreckobj(_x-17,_y,'sx=33,sy=85,sw=9,sh=3') -- corpse
    add(_mapobjs,getbloodobj(_x-26,_y+1,'taurien'))
   end
  end
@@ -1231,29 +981,17 @@ function createplanet(_planettype)
  local _hasartifact=nil
  if rnd() < 0.065 then
   _hasartifact=true
-
-  _x=flrrnd(mapsize-32)
-  _y=flrrnd(mapsize-32)
-
+  local _x,_y=flrrnd(mapsize-32),flrrnd(mapsize-32)
+  local _ruincount,_sy=flrrnd(7)+4,rnd(split'96,104,112,120')
   add(_mapobjs,rnd({getnewtrap,getnewdeterrer,getnewdrill,getnewsparepart})(_x,_y))
-
-  local _ruincount=flrrnd(7)+4
-  local _sy=rnd(split'96,104,112,120')
   for _i=0,_ruincount-1 do
    local _a=_i/_ruincount+0.05
-   add(_mapobjs,mergerightands2t([[
-    sw=8,
-    sh=8,
-    solid=true
-    ]],{
-    x=_x+cos(_a)*_ruincount*5,
-    y=_y+sin(_a)*_ruincount*5,
-    sx=rnd(split'15,23,31'),
-    sy=_sy,
+   add(_mapobjs,s2tmr('sw=8,sh=8,solid=true',{
+    x=_x+cos(_a)*_ruincount*5,y=_y+sin(_a)*_ruincount*5,
+    sx=rnd(split'15,23,31'),sy=_sy,
    }))
   end
  end
-
 
  -- add flora
  for _i=1,70 do
@@ -1294,10 +1032,8 @@ function createplanet(_planettype)
    _obj.sw=split(_obj.sw,';')[_idx]
    _obj.sh=split(_obj.sh,';')[_idx]
    _obj.sy=split(_obj.sy,';')[_idx]+_samplecolorindex0*_obj.sh
-
    _obj.solid=_obj.solid and split(_obj.solid,';')[_idx] == 1
    _obj.x,_obj.y=_x,_y
-
    add(_mapobjs,_obj)
   end
  end
@@ -1308,8 +1044,7 @@ function createplanet(_planettype)
  for _i=1,_loops do
    local _typ=rnd(_planettype.animaltypes)
    local _animal=clone(animaltypes[_typ])
-   _animal.x=flrrnd(mapsize)
-   _animal.y=flrrnd(mapsize)
+   _animal.x,_animal.y=flrrnd(mapsize),flrrnd(mapsize)
    if dist(mapsize/2,mapsize/2,_animal.x,_animal.y) > 60 then
     _animal.targetx=_animal.x
     _animal.targety=_animal.y
@@ -1326,13 +1061,12 @@ function createplanet(_planettype)
  if (alienhostile == nil and rnd() < 0.065 and (_rndalientype == 'taurien' and #_animals > 0 or _rndalientype == 'martian')) or _planettype.alientype then
   _alientype=_rndalientype
   local _x,_y=flrrnd(mapsize-_tooclosedist),flrrnd(mapsize-_tooclosedist)
-  
-  add(_mapobjs,mergerightands2t('sx=42,sw=19,sh=10,solid=true',{
+  add(_mapobjs,s2tmr('sx=42,sw=19,sh=10,solid=true',{
    sy=_alientype == 'martian' and 58 or 68,
    x=_x+15,y=_y,
   }))
 
-  local _alien=mergerightands2t('sx=25,sw=6,sh=8',{
+  local _alien=s2tmr('sx=25,sw=6,sh=8',{
    x=_x,y=_y,
    sy=_alientype == 'martian' and 60 or 68,
    targetx=_x,
@@ -1343,7 +1077,6 @@ function createplanet(_planettype)
    talkstr=_alientype == 'martian' and 'trade us water or else' or 'help us hunt or else',
    behaviour=function (_behaviouree)
     alienhostile=_alientype
-
     if disttoguy(_behaviouree) < 20 then
      _behaviouree.talkfunc(_behaviouree.talkstr,_behaviouree)
      _behaviouree.behaviour=_behaviouree.behaviour2
@@ -1352,12 +1085,10 @@ function createplanet(_planettype)
   })
 
   if _alientype == 'martian' then
-
    _alien.behaviour2=function ()
     -- pass
    end
-
-   add(_mapobjs,mergerightands2t('sx=25,sy=60,sw=6,sh=8',{
+   add(_mapobjs,s2tmr('sx=25,sy=60,sw=6,sh=8',{
     x=_x,y=_y,
     action={
      title='trade',
@@ -1442,39 +1173,20 @@ end
 
 function resetplanetcamera(_drawies)
  camera()
-
  local _diffx=_drawies[2].x-guy.x
  local _diffy=_drawies[2].y-guy.y
  _drawies[2].x-=_diffx+62
  _drawies[2].y-=_diffy+63
-
- guy.x=62
- guy.y=65
+ guy.x,guy.y=62,65
 end
 
 function planetinit()
  lookinginsamplecase,droidlandingc=nil
-
- guy=mergeright(guy,mergerightands2t([[
-  sx=0,
-  sy=83,
-  sw=6,
-  sh=6,
-  walkingc=0,
-  runningc=0,
-  walksfx=6,
-  samplingc=0
-  ]],{
-  x=mapsize/2,
-  y=mapsize/2,
-  scared=nil,
- }))
-
+ guy=mr(guy,s2tmr('sx=0,sy=83,sw=6,sh=6,walkingc=0,runningc=0,walksfx=6,samplingc=0',{x=mapsize/2,y=mapsize/2,scared=nil}))
  pal(sector[1].wpal,1)
  camera(guy.x/2,guy.y/2)
 
- _update=planetupdate
- _draw=planetdraw
+ _update,_draw=planetupdate,planetdraw
 end
 
 function planetupdate()
@@ -1512,40 +1224,27 @@ function planetupdate()
   lookinginsamplecase=(not guy.panting) and btn(4)
 
   if dget(45) != 0 and btnp(5) then
-
    if dget(45) == 1 then -- trap
-    add(sector[1].animals,mergerightands2t([[
-     sx=28,
-     sy=38,
-     sw=7,
-     sh=3,
-     toolnr=1
-     ]],{
-     x=guy.x,
-     y=guy.y,
-     targetx=guy.x,
-     targety=guy.y,
+    add(sector[1].animals,s2tmr('sx=28,sy=38,sw=7,sh=3,toolnr=1',{
+     x=guy.x,y=guy.y,
+     targetx=guy.x,targety=guy.y,
      behaviour=laidtrapbehaviour,
     }))
     sfx(34)
 
    elseif dget(45) == 2 then -- deterrer
-    add(sector[1].animals,mergeright(clone(tools[2]),{
+    add(sector[1].animals,mr(clone(tools[2]),{
      c=360,
-     x=guy.x,
-     y=guy.y,
-     targetx=guy.x,
-     targety=guy.y,
+     x=guy.x,y=guy.y,
+     targetx=guy.x,targety=guy.y,
      behaviour=laiddeterrerbehaviour,
     }))
     sfx(39)
     
    elseif dget(45) == 3 then -- drill
-    add(sector[1].animals,mergeright(clone(tools[3]),{
-     x=guy.x,
-     y=guy.y,
-     targetx=guy.x,
-     targety=guy.y,
+    add(sector[1].animals,mr(clone(tools[3]),{
+     x=guy.x,y=guy.y,
+     targetx=guy.x,targety=guy.y,
      behaviour=laiddrillbehaviour,
     }))
     sfx(42)
@@ -1662,7 +1361,7 @@ function planetupdate()
    droidlandingc-=1
 
    if droidlandingc == 0 then
-    add(sector[1].animals,mergeright(clone(animaltypes.droid),{
+    add(sector[1].animals,mr(clone(animaltypes.droid),{
      x=droidlandingx+16,
      y=droidlandingy+16,
      targetx=droidlandingx+16,
@@ -1918,12 +1617,7 @@ function resetshipobjs()
  shipobjs={
   { -- floor 1
    -- elevator
-   mergerightands2t([[
-    x1=60,
-    x2=65,
-    c=0,
-    y=86
-    ]],{
+   s2tmr('x1=60,x2=65,c=0,y=86',{
     inputhandler=function(_obj)
      if btnp(2) then
       if not (_obj.broken and rnd() < 0.5) then
@@ -1938,11 +1632,7 @@ function resetshipobjs()
     draw=drawelevator,
    }),
    -- small ship
-   mergerightands2t([[
-    x1=29,
-    x2=40,
-    cantbreak=true
-    ]],{
+   s2tmr('x1=29,x2=40,cantbreak=true',{
     inputhandler=function(_obj)
      if btnp(4) and not travelblocked then
       traveling='down'
@@ -1958,11 +1648,7 @@ function resetshipobjs()
     end,
    }),
    -- cryo
-   mergerightands2t([[
-    x1=50,
-    x2=53,
-    cantbreak=true
-    ]],{
+   s2tmr('x1=50,x2=53,cantbreak=true',{
     inputhandler=function(_obj)
      if guy.incryo then
       if btnp(4) then
@@ -1991,43 +1677,26 @@ function resetshipobjs()
     end,
    }),
    -- storage 1
-   mergerightands2t([[
-    x1=71,
-    x2=76,
-    datapos=6
-    ]],{
+   s2tmr('x1=71,x2=76,datapos=6',{
     inputhandler=storageinputhandler,
     draw=storagedraw,
    }),
    -- storage 2
-   mergerightands2t([[
-    x1=77,
-    x2=82,
-    datapos=7
-    ]],{
+   s2tmr('x1=77,x2=82,datapos=7',{
     inputhandler=storageinputhandler,
     draw=storagedraw,
    }),
    -- storage 3
-   mergerightands2t([[
-    x1=83,
-    x2=88,
-    datapos=8
-    ]],{
+   s2tmr('x1=83,x2=88,datapos=8',{
     inputhandler=storageinputhandler,
     draw=storagedraw,
    }),
    -- water converter
-   mergerightands2t([[
-    x1=94,
-    x2=99
-    ]],{
+   s2tmr('x1=94,x2=99',{
     inputhandler=function(_obj)
      sampleselectinputhandler(_obj)
-
      if _obj.inputlastframe == true and not btn(4) then
       _obj.inputlastframe=nil
-
       if _obj.broken or #samples == 0 then
        sfx(31)
        return
@@ -2040,9 +1709,7 @@ function resetshipobjs()
     draw=function(_obj)
      if _obj.inrange then
       actiontitle='water converter'
-
       drawsamplecase(80,98,true)
-
       if _obj.broken then
        showbrokentitle=true
       elseif #samples > 0 then
@@ -2052,47 +1719,19 @@ function resetshipobjs()
     end,
    }),
    -- door
-   mergerightands2t([[
-    x1=43,
-    x2=49,
-    x=44,
-    y=85,
-    c=0,
-    cantbreak=true
-    ]],{
+   s2tmr('x1=43,x2=49,x=44,y=85,c=0,cantbreak=true',{
     draw=drawdoor,
    }),
    -- door
-   mergerightands2t([[
-    x1=54,
-    x2=60,
-    x=55,
-    y=85,
-    c=0,
-    cantbreak=true
-    ]],{
+   s2tmr('x1=54,x2=60,x=55,y=85,c=0,cantbreak=true',{
     draw=drawdoor,
    }),
    -- door
-   mergerightands2t([[
-    x1=66,
-    x2=72,
-    x=67,
-    y=85,
-    c=0,
-    cantbreak=true
-    ]],{
+   s2tmr('x1=66,x2=72,x=67,y=85,c=0,cantbreak=true',{
     draw=drawdoor,
    }),
    -- door
-   mergerightands2t([[
-    x1=88,
-    x2=94,
-    x=89,
-    y=85,
-    c=0,
-    cantbreak=true
-    ]],{
+   s2tmr('x1=88,x2=94,x=89,y=85,c=0,cantbreak=true',{
     draw=drawdoor,
    }),
   },
@@ -2100,17 +1739,11 @@ function resetshipobjs()
   -- floor 2
   {
    -- engine
-   mergerightands2t([[
-    x1=28,
-    x2=37,
-    c=0
-    ]],{
+   s2tmr('x1=28,x2=37,c=0',{
     inputhandler=function(_obj)
      sampleselectinputhandler(_obj)
-
      if _obj.inputlastframe == true and not btn(4) then
       _obj.inputlastframe=nil
-
       if samples[samplesel] != 13 then
        guytalk('only water for fuel')
        sfx(31)
@@ -2128,7 +1761,6 @@ function resetshipobjs()
      if dget(9) > 0 then
       line(36,79,36,75+(5-dget(9)),12)
       rectfill(19,73,20,79,12)
-
       local _offx=(t()*78)%2 > 1 and 1 or 0
       sspr(106,79,11-_offx,5,10+_offx,74)
      end
@@ -2149,7 +1781,6 @@ function resetshipobjs()
      if _obj.inrange then
       actiontitle='engine'
       drawsamplecase(39,98,true)
-
       if dget(9) < 5 and #samples > 0 then
        actiontitle='\014\x8e\015 refuel with water'
       end
@@ -2157,11 +1788,7 @@ function resetshipobjs()
     end,
    }),
    -- seed cannon
-   mergerightands2t([[
-     x1=44,
-     x2=49,
-     c=0
-     ]],{
+   s2tmr('x1=44,x2=49,c=0',{
      inputhandler=function(_obj)
       if _obj.c == 0 then
        sampleselectinputhandler(_obj)
@@ -2222,7 +1849,6 @@ function resetshipobjs()
          sfx(31)
         end
        end
-
        pset(43,75,11)
 
       elseif _obj.inrange and #seed == 4 then
@@ -2248,12 +1874,7 @@ function resetshipobjs()
      end,
    }),
    -- elevator
-   mergerightands2t([[
-    x1=60,
-    x2=65,
-    c=0,
-    y=75
-    ]],{
+   s2tmr('x1=60,x2=65,c=0,y=75',{
     inputhandler=function(_obj)
      if btnp(3) then
       if not (_obj.broken and rnd() < 0.5) then
@@ -2268,31 +1889,17 @@ function resetshipobjs()
     draw=drawelevator,
    }),
    -- tool storage 1
-   mergerightands2t([[
-    x1=72,
-    x2=76,
-    datapos=46,
-    cantbreak=true
-    ]],{
+   s2tmr('x1=72,x2=76,datapos=46,cantbreak=true',{
     inputhandler=toolstorageinputhandler,
     draw=toolstoragedraw,
    }),
    -- tool storage 1
-   mergerightands2t([[
-    x1=78,
-    x2=82,
-    datapos=47,
-    cantbreak=true
-    ]],{
+   s2tmr('x1=78,x2=82,datapos=47,cantbreak=true',{
     inputhandler=toolstorageinputhandler,
     draw=toolstoragedraw,
    }),
    -- score tracker
-   mergerightands2t([[
-    x1=87,
-    x2=92,
-    c=0
-    ]],{
+   s2tmr('x1=87,x2=92,c=0',{
     draw=function(_obj)
      if _obj.inrange then
       rectfill(19,11,109,51,5)
@@ -2328,11 +1935,7 @@ function resetshipobjs()
     end,
    }),
    -- navcom
-   mergerightands2t([[
-    x1=96,
-    x2=97,
-    c=0,
-    ]],{
+   s2tmr('x1=96,x2=97,c=0',{
     inputhandler=function(_obj)
      if btnp(4) then
       if _obj.broken then
@@ -2399,7 +2002,6 @@ function resetshipobjs()
        end
        print(_obj.broken and rnd() > 0.5 and '\fb\x81n4vcdm\x84' or '\fb\x98navcom\x98',21,14)
        print('\fborbiting planet',21,23)
-
        cursor(21,32)
        if _obj.broken then
         print('\f8\x96system unstable\x96')
@@ -2426,47 +2028,19 @@ function resetshipobjs()
     end,
    }),
    -- door
-   mergerightands2t([[
-    x1=38,
-    x2=43,
-    x=39,
-    y=74,
-    c=0,
-    cantbreak=true
-    ]],{
+   s2tmr('x1=38,x2=43,x=39,y=74,c=0,cantbreak=true',{
     draw=drawdoor,
    }),
    -- door
-   mergerightands2t([[
-    x1=54,
-    x2=60,
-    x=55,
-    y=74,
-    c=0,
-    cantbreak=true
-    ]],{
+   s2tmr('x1=54,x2=60,x=55,y=74,c=0,cantbreak=true',{
     draw=drawdoor,
    }),
    -- door
-   mergerightands2t([[
-    x1=66,
-    x2=72,
-    x=67,
-    y=74,
-    c=0,
-    cantbreak=true
-    ]],{
+   s2tmr('x1=66,x2=72,x=67,y=74,c=0,cantbreak=true',{
     draw=drawdoor
    }),
    -- door
-   mergerightands2t([[
-    x1=81,
-    x2=87,
-    x=82,
-    y=74,
-    c=0,
-    cantbreak=true
-    ]],{
+   s2tmr('x1=81,x2=87,x=82,y=74,c=0,cantbreak=true',{
     draw=drawdoor,
    }),
   },
@@ -2475,12 +2049,7 @@ end
 
 function addbrokenparticle(_x,_y)
  if rnd() > 0.85 and #particles < 20 then
-  add(particles,mergerightands2t([[
-   ax=0.9,
-   ay=0.9,
-   col=9,
-   life=5
-   ]],{
+  add(particles,s2tmr('ax=0.9,ay=0.9,col=9,life=5',{
     x=_x,
     y=_y,
     vx=rnd(2)-1,
@@ -2508,13 +2077,14 @@ function shipinit()
 
  camera()
 
- _update=shipupdate
- _draw=shipdraw
+ _update,_draw=shipupdate,shipdraw
 end
 
 function shipupdate()
  
  if not traveling then
+  actiontitle,showrepairtitle,showbrokentitle=''
+
   if guy.incryo == nil and not btn(4) then
    if btn(0) then
     guy.x-=1
@@ -2522,20 +2092,12 @@ function shipupdate()
     guy.x+=1
    end
   end
-
-  if guy.floor > 0 then
-   guy.x=mid(27,guy.x,97)
-   guy.y=floorys[guy.floor]
-  end
-
-  actiontitle,showrepairtitle,showbrokentitle=''
+  guy.x,guy.y=mid(27,guy.x,97),floorys[guy.floor]
 
   for _i=1,2 do
    local _floorobjs=shipobjs[_i]
    for _j,_obj in ipairs(_floorobjs) do
-    _obj.firstframe=nil
-    _obj.floor=_i
-    _obj.index=_j
+    _obj.floor,_obj.index,_obj.firstframe=_i,_j
     if _i == guy.floor and mid(_obj.x1,guy.x,_obj.x2) == guy.x then
      if not _obj.inrange then
       _obj.firstframe=true
@@ -2661,25 +2223,15 @@ function shipupdate()
   end
   _s.x-=_s.spd*_spd
   if _s.x < 0 then
-   _s.x=188
-   _s.y=flrrnd(128)
+   _s.x,_s.y=188,flrrnd(128)
   end
  end
-
 end
 
 function shipdraw()
- cls(0)
-
- if droidfiringc == 1 or alienfiringc == 1 then
-  cls(13)
- end
-
+ cls((droidfiringc == 1 or alienfiringc == 1) and 13 or 0)
  if traveling == 'warping' then
-  cls(1)
-  if travelc == 1 then
-   cls(7)
-  end
+  cls(travelc == 1 and 7 or 1)
  end
 
  -- draw stars
@@ -2703,18 +2255,17 @@ function shipdraw()
  -- draw droid ship
  if droidalertc == 0 then
   sspr(79,13,49,16,74,16)
-
  elseif droidalertc == 1 then
-  circfill(93,23,12,7) -- note: warp vfx
+  circfill(93,23,12,7)
  end
 
  if droidfiringc and droidfiringc < 3 then
-  line(109,23,65,80,7) -- note: laser vfx
+  line(109,23,65,80,7)
  end
 
  -- alien shot
  if alienfiringc and alienfiringc < 3 then
-  line(21,26,65,80,7) -- note: laser vfx
+  line(21,26,65,80,7)
  end
 
  -- draw martian/taurien ship
@@ -2750,9 +2301,7 @@ function shipdraw()
  if traveling == 'down' then
   rectfill(24,84,41,90,1)
   pset(26+(30-travelc),92+(30-travelc),6)
- end
-
- if traveling == 'up' then
+ elseif traveling == 'up' then
   rectfill(24,84,41,90,1)
   pset(26+travelc,92+travelc,6)
  end
@@ -2769,8 +2318,7 @@ function shipdraw()
  elseif showbrokentitle then
   print('\f8broken',52,32)
  else
-  local _strlen=#actiontitle*4
-  print(actiontitle,64-_strlen/2,32,9)
+  print(actiontitle,64-#actiontitle*2,32,9)
  end
 
  -- draw talks
@@ -2791,8 +2339,7 @@ function deadinit(_drawies)
  pal(split'1,136,3,4,5,6,7,136,9,137,138,8,13,14,15',1)
  ts=t()
 
- _update=deadupdate
- _draw=deaddraw
+ _update,_draw=deadupdate,deaddraw
 end
 
 function deadupdate()
@@ -2833,7 +2380,6 @@ function _init()
 end
 
 function _update()
-
  -- update
  if btnp(4) then
   resetgame()
