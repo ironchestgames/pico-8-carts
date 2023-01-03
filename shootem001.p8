@@ -1,23 +1,20 @@
 pico-8 cartridge // http://www.pico-8.com
-version 35
+version 38
 __lua__
 
 
 printh('debug started','debug',true)
-function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
- local ss={_s2,_s3,_s4,_s5,_s6,_s7,_s8}
- local result=tostr(_s1)
- for s in all(ss) do
-  result=result..', '..tostr(s)
- end
- printh(result,'debug',false)
+function debug(s)
+ printh(tostr(s),'debug',false)
 end
 
 pal(0,129,1) -- black -> darker-blue
 pal(3,139,1) -- green -> medium-green
 pal(4,141,1) -- brown -> mauve
 pal(11,138,1) -- light-green -> lime-green
+pal(14,136,1) -- flesh -> dark-red
 
+-- utils
 local function shuffle(_l,_len)
  for _i=_len,2,-1 do
   local _j=flr(rnd(_i))+1
@@ -26,11 +23,97 @@ local function shuffle(_l,_len)
  return _l
 end
 
-local pickerscene
+function dist(_x1,_y1,_x2,_y2)
+ local _dx,_dy=(_x2-_x1)*.1,(_y2-_y1)*.1
+ return sqrt(_dx*_dx+_dy*_dy)*10
+end
 
-local ship
 
-local bullets={}
+-- helpers
+local function drawcloak(_ship)
+ palt(0,false)
+ fillp(rnd()*32767)
+ circfill(_ship.x+rnd()*2-1,_ship.y+rnd()*2-1,6,1)
+ circfill(_ship.x+rnd()*2-1,_ship.y+rnd()*2-1,6,0)
+ fillp()
+ palt(0,true)
+end
+
+local function drawshield(_ship)
+ circ(_ship.x,_ship.y,6,1)
+ fillp(rnd()*32767)
+ circ(_ship.x+rnd()*2-1,_ship.y+rnd()*2-1,6,12)
+ fillp()
+end
+
+local function getclosest(_x,_y,_list)
+ local _closest=_list[1]
+ local _closestlen=300
+ for _obj in all(_list) do
+  local _dist=dist(_x,_y,_obj.x,_obj.y)
+  if _dist < _closestlen then
+   _closestlen=_dist
+   _closest=_obj
+  end
+ end
+ return _closest
+end
+
+local function updateship(_ship)
+ local _playerindex=_ship.playerindex
+ local _newx,_newy=_ship.x,_ship.y
+
+ _ship.spd=1
+ if _ship.boost then
+  _ship.spd=2
+ end
+ 
+ if btn(0,_playerindex) then
+  _newx+=-_ship.spd
+ end
+ if btn(1,_playerindex) then
+  _newx+=_ship.spd
+ end
+ if btn(2,_playerindex) then
+  _newy+=-_ship.spd
+ end
+ if btn(3,_playerindex) then
+  _newy+=_ship.spd
+ end
+ 
+ _ship.x=mid(4,_newx,124)
+ _ship.y=mid(4,_newy,119)
+ 
+ -- _ship fire
+ _ship.frame=0
+ if btn(4,_playerindex) then
+  _ship.firetim-=1
+
+  _ship.passivecount+=0.125
+  _ship[_ship.passive]=nil
+
+  if _ship.firetim <= 1 then
+   add(bullets,{x=_ship.x+_ship.boffs[1],y=_ship.y+_ship.boffs[3],spdx=0,spdy=-3,s=45,friendly=true})
+   add(bullets,{x=_ship.x+_ship.boffs[2],y=_ship.y+_ship.boffs[3],spdx=0,spdy=-3,s=45,friendly=true})
+   _ship.firetim=_ship.firespd
+   _ship.frame=1
+  end
+ else
+  _ship.firetim=0
+
+  if _ship.hp > 1 and _ship.passivecount > 0 then
+   _ship[_ship.passive]=true
+   _ship.passivecount-=1
+  else
+   _ship[_ship.passive]=nil
+  end
+ end
+
+ _ship.passivecount=mid(0,_ship.passivecount,120)
+end
+
+ships={}
+bullets={}
 
 local enemyupdate={
  [16]=function(_e)
@@ -41,14 +124,14 @@ local enemyupdate={
 
   _e.c+=1
 
-  _e.dx+=mid(-1,ship.x-_e.x,1)*0.025*(_e.ifactor*0.5)
+  _e.dx+=mid(-1,_e.target.x-_e.x,1)*0.025*(_e.ifactor*0.5)
   _e.dx*=0.98
 
   if _e.c >= 80 then
    add(bullets,{x=_e.x,y=_e.y+4,spdx=0,spdy=2,s=46})
    _e.c=0
   end
-  if _e.y > ship.y then
+  if _e.y > _e.target.y then
    _e.dy*=1.04
   end
  end,
@@ -57,7 +140,7 @@ local enemyupdate={
 
   _e.c+=1
 
-  local _a=atan2(ship.x-_e.x,ship.y-_e.y)
+  local _a=atan2(_e.target.x-_e.x,_e.target.y-_e.y)
   _e.dx=cos(_a)*0.5
   _e.dy+=0.011+(_e.ifactor*0.003)
 
@@ -72,8 +155,8 @@ local enemyupdate={
   newenemyexhaustp(_e.x+2,_e.y-8)
 
   if not _e.gx then
-   _e.gx=ship.x
-   _e.gy=ship.y
+   _e.gx=_e.target.x
+   _e.gy=_e.target.y
   end
 
   local _dx=_e.x-_e.gx
@@ -82,7 +165,7 @@ local enemyupdate={
    _e.dx=0
    _e.dy=0
    if _e.c == 10 then
-    local _a=atan2(ship.x-_e.x,ship.y-_e.y)
+    local _a=atan2(_e.target.x-_e.x,_e.target.y-_e.y)
     add(bullets,{x=_e.x,y=_e.y,spdx=cos(_a),spdy=sin(_a),s=47})
    end
   end
@@ -233,7 +316,7 @@ local function gamescene()
     local _typ=shuffle(types,#types)[1]
     add(spawnqueue,{
      typ=_typ,
-     x=rnd()*128,y=-4,
+     x=rnd()*128,y=-16,
      dy=0.5,dx=0,
      c=0,
      hp=enemyhps[_typ],
@@ -248,7 +331,7 @@ local function gamescene()
    spawnqueue[60]={
     typ=1,
     isboss=true,
-    x=rnd()*128,y=-4,
+    x=rnd()*128,y=-16,
     dy=0.5,dx=0,
     c=0,
     hp=100,
@@ -294,56 +377,9 @@ local function gamescene()
   end
   
   -- ship moving
-  local _newx=ship.x
-  local _newy=ship.y
-
-  ship.spd=1
-  if ship.boost then
-   ship.spd=2
+  for _ship in all(ships) do
+   updateship(_ship)
   end
-  
-  if btn(0) then
-   _newx+=-ship.spd
-  end
-  if btn(1) then
-   _newx+=ship.spd
-  end
-  if btn(2) then
-   _newy+=-ship.spd
-  end
-  if btn(3) then
-   _newy+=ship.spd
-  end
-  
-  ship.x=mid(4,_newx,124)
-  ship.y=mid(4,_newy,119)
-  
-  -- ship fire
-  ship.frame=0
-  if btn(4) then
-   ship.firetim-=1
-
-   ship.passivecount+=0.125
-   ship[ship.passive]=nil
-
-   if ship.firetim <= 1 then
-    add(bullets,{x=ship.x+ship.boffs[1],y=ship.y+ship.boffs[3],spdx=0,spdy=-3,s=45,friendly=true})
-    add(bullets,{x=ship.x+ship.boffs[2],y=ship.y+ship.boffs[3],spdx=0,spdy=-3,s=45,friendly=true})
-    ship.firetim=ship.firespd
-    ship.frame=1
-   end
-  else
-   ship.firetim=0
-
-   if ship.hp > 1 and ship.passivecount > 0 then
-    ship[ship.passive]=true
-    ship.passivecount-=1
-   else
-    ship[ship.passive]=nil
-   end
-  end
-
-  ship.passivecount=mid(0,ship.passivecount,120)
 
   -- bullets
   for _b in all(bullets) do
@@ -391,25 +427,32 @@ local function gamescene()
      end
     end
    else
-    local _dx=ship.x-_b.x
-    local _dy=ship.y-_b.y
-    if sqrt(_dx^2+_dy^2) < 6 then
-     newexplosion(ship.x,ship.y)
-     if not ship.shield then
-      ship.hp-=1
+    for _ship in all(ships) do
+     local _dx=_ship.x-_b.x
+     local _dy=_ship.y-_b.y
+     if sqrt(_dx^2+_dy^2) < 6 then
+      newexplosion(_ship.x,_ship.y)
+      if not _ship.shield then
+       _ship.hp-=1
+      end
+      del(bullets,_b)
      end
-     del(bullets,_b)
     end
    end
 
-   if _b.x<0 or _b.x>128 or
-     _b.y<0 or _b.y>128 then
+   if _b.x<0 or _b.x>128 or _b.y<0 or _b.y>128 then
     del(bullets,_b)
    end
   end
 
   -- enemies
   for _e in all(enemies) do
+   if _e.y == -16 then
+    _e.target=getclosest(_e.x,_e.y,ships)
+    debug('_e.target')
+    debug(_e.target)
+   end
+
    _e.f(_e)
    _e.x+=_e.dx
    _e.y+=_e.dy
@@ -427,12 +470,14 @@ local function gamescene()
     newburningp(_e.x,_e.y,-1)
    end
 
-   local _dx=ship.x-_e.x
-   local _dy=ship.y-_e.y
-   if sqrt(_dx^2+_dy^2) < 6 and not ship.cloak then
-    newexplosion(ship.x,ship.y)
-    ship.hp=0
-    del(enemies,_e)
+   for _ship in all(ships) do
+    local _dx=_ship.x-_e.x
+    local _dy=_ship.y-_e.y
+    if sqrt(_dx^2+_dy^2) < 6 and not _ship.cloak then
+     newexplosion(_ship.x,_ship.y)
+     _ship.hp=0
+     del(enemies,_e)
+    end
    end
 
    if _e.y > 132 then
@@ -443,22 +488,28 @@ local function gamescene()
    end
   end
 
-  if ship.boost then
-   newexhaustp(ship.x,ship.y+4,boostexhaustcolors)
-   newexhaustp(ship.x,ship.y+4,boostexhaustcolors)
-  elseif ship.passive == 'cloak' then
-   newexhaustp(ship.x+2,ship.y+4)
-   newexhaustp(ship.x+2,ship.y+4)
-   newexhaustp(ship.x-2,ship.y+4)
-   newexhaustp(ship.x-2,ship.y+4)
-  else
-   newexhaustp(ship.x,ship.y+4)
-   newexhaustp(ship.x,ship.y+4)
+  for _ship in all(ships) do
+   if _ship.boost then
+    newexhaustp(_ship.x,_ship.y+4,boostexhaustcolors)
+    newexhaustp(_ship.x,_ship.y+4,boostexhaustcolors)
+   elseif _ship.passive == 'cloak' then
+    newexhaustp(_ship.x+2,_ship.y+4)
+    newexhaustp(_ship.x+2,_ship.y+4)
+    newexhaustp(_ship.x-2,_ship.y+4)
+    newexhaustp(_ship.x-2,_ship.y+4)
+   else
+    newexhaustp(_ship.x,_ship.y+4)
+    newexhaustp(_ship.x,_ship.y+4)
+   end
+
+   if _ship.hp == 1 then
+    newburningp(_ship.x-2,_ship.y+2,1)
+   elseif _ship.hp <= 0 then
+    del(ships,_ship)
+   end
   end
 
-  if ship.hp == 1 then
-   newburningp(ship.x-2,ship.y+2,1)
-  elseif ship.hp <= 0 then
+  if #ships == 0 then
    isgameover=true
   end
  end
@@ -473,23 +524,15 @@ local function gamescene()
    end
   end
 
-  -- draw ship
-  if not isgameover then
-   spr(ship.s+ship.frame,ship.x-4,ship.y-4)
+  -- draw ships
+  for _ship in all(ships) do
+   spr(_ship.s+_ship.frame,_ship.x-4,_ship.y-4)
 
-   if ship.cloak then
-    palt(0,false)
-    fillp(rnd()*32767)
-    circfill(ship.x+rnd()*2-1,ship.y+rnd()*2-1,6,1)
-    circfill(ship.x+rnd()*2-1,ship.y+rnd()*2-1,6,0)
-    fillp()
-    palt(0,true)
+   if _ship.cloak then
+    drawcloak(_ship)
 
-   elseif ship.shield then
-    circ(ship.x,ship.y,6,1)
-    fillp(rnd()*32767)
-    circ(ship.x+rnd()*2-1,ship.y+rnd()*2-1,6,12)
-    fillp()
+   elseif _ship.shield then
+    drawshield(_ship)
    end
   end
 
@@ -512,49 +555,83 @@ local function gamescene()
    circfill(_p.x,_p.y,_p.r,_p.col)
   end
 
-  if ship.hp == 1 then
-   rect(3,123,63,127,2)
-   print('warning',35,123,8+flr(t()*2)%2)
+  for _ship in all(ships) do
+   if _ship.hp == 1 then
+    rect(3,123,63,127,2)
+    print('warning',35,123,8+flr(t()*2)%2)
 
-  else
-   rectfill(3,123,63,127,1)
-   if ship.passivecount > 0 then
-    rectfill(3,123,3+(ship.passivecount/2),127,3)
+   else
+    rectfill(3,123,63,127,1)
+    if _ship.passivecount > 0 then
+     rectfill(3,123,3+(_ship.passivecount/2),127,3)
+    end
+    local _col=7
+    if _ship.cloak or _ship.shield or _ship.boost then
+     _col=3+(flr(t()*12)%2)*8
+    end
+    print(_ship.passive,5,123,_col)
    end
-   local _col=7
-   if ship.cloak or ship.shield or ship.boost then
-    _col=3+(flr(t()*12)%2)*8
-   end
-   print(ship.passive,5,123,_col)
   end
  end
 end
 
 pickerscene=function()
- local _seli=1
+ local _sel1i=1
+ local _sel2i=2
  local _passives={'shield','boost','cloak'}
+ ships={}
  _update60=function()
-  if btnp(0) then
-   _seli-=1
-  elseif btnp(1) then
-   _seli+=1
+  if btnp(0,0) then
+   _sel1i-=1
+  elseif btnp(1,0) then
+   _sel1i+=1
   end
-  _seli=mid(1,_seli,3)
+  _sel1i=mid(1,_sel1i,3)
 
-  if btnp(4) then
+  if btnp(4,0) then
 
-   ship={x=64,y=110,spd=1,frame=0,firespd=10,firetim=0,passivecount=60,hp=2,passive=_passives[_seli]} -- shield / cloak / boost
+   local _ship1={x=64,y=110,spd=1,frame=0,firespd=10,firetim=0,passivecount=60,hp=2,passive=_passives[_sel1i],playerindex=0}
 
-   if ship.passive == 'shield' then
-    ship.s=0
-    ship.boffs={-4,3,-1}
-   elseif ship.passive == 'boost' then
-    ship.s=2
-    ship.boffs={-3,2,-6}
-   elseif ship.passive == 'cloak' then
-    ship.s=4
-    ship.boffs={-2,1,-4}
+   if _ship1.passive == 'shield' then
+    _ship1.s=0
+    _ship1.boffs={-4,3,-1}
+   elseif _ship1.passive == 'boost' then
+    _ship1.s=2
+    _ship1.boffs={-3,2,-6}
+   elseif _ship1.passive == 'cloak' then
+    _ship1.s=4
+    _ship1.boffs={-2,1,-4}
    end
+
+   add(ships,_ship1)
+  end
+
+  if btnp(0,1) then
+   _sel2i-=1
+  elseif btnp(1,1) then
+   _sel2i+=1
+  end
+  _sel2i=mid(1,_sel2i,3)
+
+  if btnp(4,1) then
+
+   local _ship2={x=64,y=110,spd=1,frame=0,firespd=10,firetim=0,passivecount=60,hp=2,passive=_passives[_sel2i],playerindex=1}
+
+   if _ship2.passive == 'shield' then
+    _ship2.s=0
+    _ship2.boffs={-4,3,-1}
+   elseif _ship2.passive == 'boost' then
+    _ship2.s=2
+    _ship2.boffs={-3,2,-6}
+   elseif _ship2.passive == 'cloak' then
+    _ship2.s=4
+    _ship2.boffs={-2,1,-4}
+   end
+
+   add(ships,_ship2)
+  end
+
+  if #ships == 2 then
    gamescene()
   end
  end
@@ -563,12 +640,15 @@ pickerscene=function()
   cls()
   for _i=0,2 do
    spr(_i*2,32+_i*27,64)
-   if _i+1 == _seli then
+   if _i+1 == _sel1i then
     pset(36+_i*27,60,10)
    end
+   if _i+1 == _sel2i then
+    pset(36+_i*27,58,11)
+   end
+   local _s=_passives[_i+1]
+   print(_s,26+_i*28,90,10)
   end
-  local _s=_passives[_seli]
-  print(_s,64-#_s*2,90,10)
  end
 end
 
@@ -584,15 +664,15 @@ __gfx__
 706996077077770788d99d88776776776d5dd5d67777777700000000000000000000000000000000000000000000000000000000000000000000000000000000
 796996977777777768d88d867767767766dddd667777777700000000000000000000000000000000000000000000000000000000000000000000000000000000
 69699696777777776608806677077077055005500660066000000000000000000000000000000000000000000000000000000000000000000000000000000000
-05500550055005500005500000055000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-04422440044224404dd44dd44dd44dd4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-42444424424444244dd44dd44dd44dd4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-4bb443344bb443344dd44dd44dd44dd4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-04bb334004bb334040de8d0440de8d04000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-04233240042332400008800000088000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00244200002442000004400000044000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00044000000440000004400000044000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000550055000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000700000000000000000000
+00055000000550000005500000055000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0d0dd0d00d0dd0d0d000000dd000000d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+4d4dd4d44d4dd4d4d405504dd405504d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+dd4dd4dddd4dd4ddd44dd44dd44dd44d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+4d0bc0d44d0bc0d4d44dd44dd44dd44d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+4d0cc0d44d0cc0d4d44a944dd44a944d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0d0000d00d0000d00d4994d00d4994d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0d0000d00d0000d000d99d0000d99d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000550055000000004400000044000000000000000000000000000000000000000000000000000000000000000000000000000000700000000000000000000
 000042444424000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007000000000000000bb000
 00042424424240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000700000000000000baab00
 0042424224242400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000070000000000000ba77ab0
