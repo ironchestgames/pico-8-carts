@@ -14,8 +14,45 @@ end
 pal(0,129,1)
 pal(split'1,2,139,141,5,6,7,8,9,10,138,12,13,14,136',1)
 
+local unlocked
+local masks={0b00000001,0b00000010,0b00000100,0b00001000,0b00010000,0b00100000,0b01000000,0b10000000}
+local function loadunlocked()
+ unlocked={}
+ for _i=0,22 do
+  local _n=dget(_i)
+  for _j=1,#masks do
+   unlocked[_i*8+_j]=(masks[_j] & _n) != 0
+  end
+ end
+end
+
+local function persistunlocked()
+ for _i=0,#unlocked,8 do
+  local _n=0
+  for _j=0,7 do
+   _n=_n | (unlocked[_i+_j] and 2^_j or 0)
+  end
+  dset(_i,_n)
+ end
+end
+
+loadunlocked()
+
+local _shipcount=0
+while _shipcount < 2 do
+ _shipcount=0
+ for _i=0,#unlocked do
+  if unlocked[_i] then
+   _shipcount+=1
+  end
+ end
+
+ unlocked[flr(rnd(#unlocked))]=true
+ persistunlocked()
+end
+
 -- utils
-function clone(_t)
+local function clone(_t)
  local _result={}
  for _k,_v in pairs(_t) do
   _result[_k]=_v
@@ -23,7 +60,7 @@ function clone(_t)
  return _result
 end
 
-function mr(_t1,_t2)
+local function mr(_t1,_t2)
  for _k,_v in pairs(_t2) do
   _t1[_k]=_v
  end
