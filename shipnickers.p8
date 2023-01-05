@@ -15,9 +15,9 @@ pal(0,129,1)
 pal(split'1,2,139,141,5,6,7,8,9,10,138,12,13,14,136',1)
 
 local unlocked
-local masks={0b00000001,0b00000010,0b00000100,0b00001000,0b00010000,0b00100000,0b01000000,0b10000000}
 local function loadunlocked()
  unlocked={}
+ local masks={0b00000001,0b00000010,0b00000100,0b00001000,0b00010000,0b00100000,0b01000000,0b10000000}
  for _i=0,22 do
   local _n=dget(_i)
   for _j=1,#masks do
@@ -36,19 +36,16 @@ local function persistunlocked()
  end
 end
 
-loadunlocked()
-
-local _shipcount=0
-while _shipcount < 2 do
- _shipcount=0
+local function getrandomlocked()
+ local _indeces={}
  for _i=0,#unlocked do
-  if unlocked[_i] then
-   _shipcount+=1
+  if not unlocked[_i] then
+   add(_indeces,_i)
   end
  end
-
- unlocked[flr(rnd(#unlocked))]=true
- persistunlocked()
+ if #_indeces > 0 then
+  return rnd(_indeces)
+ end
 end
 
 -- utils
@@ -492,7 +489,31 @@ local function gameinit()
  _update60,_draw=gameupdate,gamedraw
 end
 
-_init=gameinit
+_init=function ()
+ loadunlocked()
+
+ -- unlock to random ships if no ships are unlocked
+ local _shipcount=0
+ for _i=0,#unlocked do
+  if unlocked[_i] then
+   _shipcount+=1
+  end
+ end
+
+ if _shipcount == 0 then
+  unlocked[getrandomlocked()]=true
+  unlocked[getrandomlocked()]=true
+ end
+
+ persistunlocked()
+
+ for _i=0,169 do
+  -- debug(unlocked[_i])
+  debug(dget(_i))
+ end
+
+ gameinit()
+end
 
 
 __gfx__
