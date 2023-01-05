@@ -11,6 +11,8 @@ function debug(s)
  printh(tostr(s),'debug',false)
 end
 
+poke(0x5f5c,-1) -- disable btnp auto-repeat
+
 pal(0,129,1)
 pal(split'1,2,139,141,5,6,7,8,9,10,138,12,13,14,136',1)
 
@@ -65,7 +67,7 @@ local function mr(_t1,_t2)
 end
 
 local function dist(x1,y1,x2,y2)
- return sqrt(dx*dx+dy*dy)
+ return sqrt(((x2-x1)^2)+((y2-y1)^2))
 end
 
 local function isaabbscolliding(a,b)
@@ -74,9 +76,61 @@ local function isaabbscolliding(a,b)
 end
 
 -- globals
-local ships,bullets,stars,ps
+local ships,bullets,stars,ps,psfollow,enemies,enemybullets
 
 -- helpers
+local burningcolors={10,9,5}
+local function newburning(_x,_y)
+ local _life=8+rnd()*4
+ add(ps,{
+  x=_x,
+  y=_y,
+  r=0.5,
+  spdx=(rnd()-0.5)*0.125,
+  spdy=rnd()*0.25+1,
+  spdr=0.25*rnd(),
+  colors=burningcolors,
+  life=_life,
+  lifec=_life,
+ })
+end
+
+local hitcolors={7,7,10}
+local function newhit(_x,_y)
+ for _i=1,7 do
+  add(ps,{
+   x=_x+(rnd()-0.5)*5,
+   y=_y+(rnd()-0.5)*5,
+   r=rnd()*5,
+   spdx=(rnd()-0.5)*2,
+   spdy=rnd()-0.5,
+   spdr=-0.2,
+   colors=hitcolors,
+   life=4,
+   lifec=4,
+  })
+ end
+end
+
+local explosioncolors={7,7,10,9,8}
+local function newexplosion(_x,_y)
+ for _i=1,7 do
+  local _life=11
+  add(ps,{
+   x=_x,
+   y=_y,
+   r=rnd()*5,
+   spdx=(rnd()-0.5),
+   spdy=rnd()-1,
+   spdr=rnd()*0.2+0.5,
+   colors=explosioncolors,
+   life=_life,
+   lifec=_life,
+   ondeath=explosionsmoke,
+  })
+ end
+end
+
 local function newexhaustp(_xoff,_yoff,_ship,_colors,_life)
  add(psfollow,{
   x=0,
@@ -163,7 +217,9 @@ local function shootmissile(_ship,_life)
  add(bullets,{
   x=_ship.x,y=_ship.y,
   sx=16,sy=123,sw=3,sh=5,
+  hw=2,hh=3,
   spdx=rnd(0.5)-0.25,spdy=0,accy=-0.05,
+  dmg=12,
   life=_life,
   ondeath=explode,
   p={
@@ -225,6 +281,72 @@ local secondarysprites={
  boost={23,123,2,5},
 }
 
+-- enemies
+
+local function enemyshootmissile(_enemy)
+ add(enemybullets,{
+  x=_enemy.x,y=_enemy.y,
+  sx=16,sy=118,sw=3,sh=5,
+  hw=2,hh=3,
+  spdx=rnd(0.5)-0.25,spdy=0.1,accy=0.05,
+  life=1000,
+  ondeath=explode,
+  p={
+   xoff=1,
+   yoff=0,
+   r=0.1,
+   spdx=0,
+   spdy=0.1,
+   spdr=0,
+   colors={7,10,11},
+   life=3,
+  },
+ })
+end
+
+local function newkamikaze()
+ add(enemies,{
+  x=rnd(128),y=-12,
+  hw=4,hh=4,
+  spdx=0,spdy=0,
+  s=176,
+  hp=4,
+  update=function(_enemy)
+   if _enemy.target == nil then
+    _enemy.target=getclosest(_enemy.x,_enemy.y,ships)
+    _enemy.ifactor=rnd()
+   end
+   if _enemy.target then
+    local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
+    _enemy.spdx=cos(_a)*0.5
+    _enemy.spdy+=0.011+(_enemy.ifactor*0.003)
+   end
+  end,
+ })
+end
+
+local function newbomber()
+ add(enemies,{
+  x=rnd(128),y=-12,
+  hw=4,hh=4,
+  spdx=0,spdy=rnd(0.25)+0.25,
+  accx=0,
+  s=179,
+  hp=11,
+  ts=t(),
+  update=function(_enemy)
+   if t()-_enemy.ts > 0.875 then
+    _enemy.accx=rnd{0.0125,-0.0125}
+    if rnd() > 0.375 then
+     enemyshootmissile(_enemy)
+    end
+    _enemy.ts=t()
+   end
+   _enemy.spdx=mid(-0.5,_enemy.spdx+_enemy.accx,0.5)
+  end,
+ })
+end
+
 local function gameupdate()
 
  -- update ships
@@ -258,47 +380,70 @@ local function gameupdate()
 
   local _urx,_ury=_ship.x-4,_ship.y-4
 
-  -- firing
-  local _btn4=btn(4,_plidx)
+  -- repairing/firing
   _ship.isfiring=nil
-  if _btn4 then
-   _ship.primaryc+=0.25
-   _ship.firingc-=1
-   if _ship.firingc <= 0 then
-    _ship.firingc=10
-    _ship.isfiring=true
-    for _gun in all(_ship.guns) do
-     add(bullets,{
-      x=_urx+_gun.x,y=_ury+_gun.y,
-      sx=19,sy=124,sw=1,sh=4,
-      spdx=0,spdy=-3,accy=0,
-      life=1000,
-      p={
-       xoff=0,yoff=4,r=0.1,
-       spdx=0,spdy=-0.1,spdr=0,
-       colors={_ship.bulletcolor},
-       life=2,
-      },
-     })
+
+  if _ship.hp < 3 then
+   newburning(_ship.x,_ship.y)
+   _ship.primaryc=max(0,_ship.primaryc-0.0875)
+   if btnp(4,_plidx) then
+    _ship.primaryc+=2.5
+    if _ship.primaryc >= 37 then
+     _ship.hp=3
+     _ship.primaryc=0
     end
    end
   else
-   _ship.primaryc-=0.25
-   _ship.firingc=0
-  end
-  _ship.primaryc=mid(0,_ship.primaryc,38)
-  primary[_ship.primary](_btn4,_ship)
-  _ship.lastbtn4=_btn4
+   local _btn4=btn(4,_plidx)
+   if _btn4 then
+    _ship.primaryc+=0.25
+    _ship.firingc-=1
+    if _ship.firingc <= 0 then
+     _ship.firingc=10
+     _ship.isfiring=true
+     for _gun in all(_ship.guns) do
+      add(bullets,{
+       x=_urx+_gun.x,y=_ury+_gun.y,
+       hw=1,hh=2,
+       sx=19,sy=124,sw=1,sh=4,
+       spdx=0,spdy=-3,accy=0,
+       dmg=1,
+       life=1000,
+       p={
+        xoff=0,yoff=4,r=0.1,
+        spdx=0,spdy=-0.1,spdr=0,
+        colors={_ship.bulletcolor},
+        life=2,
+       },
+      })
+     end
+    end
+   else
+    _ship.primaryc=max(0,_ship.primaryc-0.25)
+    _ship.firingc=0
+   end
 
-  secondary[_ship.secondary](_ship)
+   _ship.primaryc=mid(0,_ship.primaryc,38)
+   primary[_ship.primary](_btn4,_ship)
+   _ship.lastbtn4=_btn4
+  end
+
+  if _ship.hp >= 2 then
+   secondary[_ship.secondary](_ship)
+  end
 
   for _e in all(_ship.exhausts) do
    newexhaustp(_e.x,_e.y,_ship,_ship.isboosting and boostcolors or _ship.exhaustcolors,_ship.isboosting and 8 or 4)
    newexhaustp(_e.x+1,_e.y,_ship,_ship.isboosting and boostcolors or _ship.exhaustcolors,_ship.isboosting and 8 or 4)
   end
+
+  if _ship.hp == 0 then
+   newexplosion(_ship.x,_ship.y)
+   del(ships,_ship)
+  end
  end
 
- -- update bullets
+ -- update friendly bullets
  for _b in all(bullets) do
   _b.x+=_b.spdx
   _b.y+=_b.spdy
@@ -314,6 +459,14 @@ local function gameupdate()
    lifec=rnd(_b.p.life)+_b.p.life,
   }))
 
+  for _enemy in all(enemies) do
+   if isaabbscolliding(_b,_enemy) then
+    _enemy.hp-=_b.dmg
+    _b.life=0
+    newhit(_enemy.x,_enemy.y)
+   end
+  end
+
   if _b.life <= 0 then
    if _b.ondeath then
     _b.ondeath(_b)
@@ -322,6 +475,76 @@ local function gameupdate()
   elseif _b.x<0 or _b.x>128 or _b.y<0 or _b.y>128 then
    del(bullets,_b)
   end
+ end
+
+ -- update enemy bullets
+ for _b in all(enemybullets) do
+  _b.x+=_b.spdx
+  _b.y+=_b.spdy
+
+  _b.spdy+=_b.accy
+  
+  _b.life-=1
+
+  add(ps,mr(clone(_b.p),{
+   x=_b.x+_b.p.xoff,
+   y=_b.y+_b.p.yoff,
+   life=rnd(_b.p.life)+_b.p.life,
+   lifec=rnd(_b.p.life)+_b.p.life,
+  }))
+
+  for _ship in all(ships) do
+   if isaabbscolliding(_b,_ship) then
+    _ship.hp-=1
+    _b.life=0
+    newhit(_ship.x,_ship.y)
+   end
+  end
+
+  if _b.life <= 0 then
+   if _b.ondeath then
+    _b.ondeath(_b)
+   end
+   del(enemybullets,_b)
+  elseif _b.x<0 or _b.x>128 or _b.y<0 or _b.y>128 then
+   del(enemybullets,_b)
+  end
+ end
+
+ -- update enemies
+ if t()-enemyts > 1 then
+  enemyts=t()
+  rnd{newkamikaze,newbomber}()
+ end
+
+ for _enemy in all(enemies) do
+  if _enemy.hp <= 0 then
+   newexplosion(_enemy.x,_enemy.y)
+   del(enemies,_enemy)
+  else
+   _enemy.x+=_enemy.spdx
+   _enemy.y+=_enemy.spdy
+   _enemy.update(_enemy)
+
+   if _enemy.y > 140 then
+    _enemy.spdy=0
+    _enemy.spdx=0
+    _enemy.y=-12
+    _enemy.target=nil
+   end
+   for _ship in all(ships) do
+    if isaabbscolliding(_enemy,_ship) and not _ship.iscloaking then
+     newexplosion(_enemy.x,_enemy.y)
+     del(enemies,_enemy)
+     _ship.hp-=1
+     _ship.primaryc=0
+    end
+   end
+  end
+ end
+
+ if #ships == 0 then
+  -- todo: game over
  end
 
 end
@@ -339,9 +562,19 @@ local function gamedraw()
   pset(_s.x,_s.y,1)
  end
 
+ -- draw enemybullets
+ for _b in all(enemybullets) do
+  sspr(_b.sx,_b.sy,_b.sw,_b.sh,_b.x,_b.y)
+ end
+
  -- draw bullets
  for _b in all(bullets) do
   sspr(_b.sx,_b.sy,_b.sw,_b.sh,_b.x,_b.y)
+ end
+
+ -- draw enemies
+ for _enemy in all(enemies) do
+  spr(_enemy.s,_enemy.x-4,_enemy.y-4)
  end
 
  -- draw ships
@@ -393,33 +626,47 @@ local function gamedraw()
   local _xoff=1+_ship.plidx*65
 
   -- primary
-  rectfill(_xoff,122,_xoff+38,126,1)
-  rect(_xoff+2,123,_xoff+4,125,13)
-  print(_ship.primary,_xoff+37-#_ship.primary*4,122,13)
-  clip(_xoff,122,_ship.primaryc,5)
-  rectfill(_xoff,122,_xoff+38,126,weaponcolors[_ship.primary])
-  rect(_xoff+2,123,_xoff+4,125,7)
-  print(_ship.primary,_xoff+37-#_ship.primary*4,122,7)
-  clip()
+  if _ship.hp < 3 then
+   sspr(45,123,38,5,_xoff,122)
+   sspr(45,118,_ship.primaryc,5,_xoff,122)
+  else
+   rectfill(_xoff,122,_xoff+37,126,1)
+   rect(_xoff+2,123,_xoff+4,125,13)
+   print(_ship.primary,_xoff+37-#_ship.primary*4,122,13)
+   clip(_xoff,122,_ship.primaryc,5)
+   rectfill(_xoff,122,_xoff+37,126,weaponcolors[_ship.primary])
+   rect(_xoff+2,123,_xoff+4,125,7)
+   print(_ship.primary,_xoff+37-#_ship.primary*4,122,7)
+   clip()
+  end
 
   -- secondary
-  color(weaponcolors[_ship.secondary])
-  rectfill(_xoff+41,122,_xoff+45,126)
-  rectfill(_xoff+46,123,_xoff+46,125)
-  pset(_xoff+47,124)
-  sspr(20,125,3,3,_xoff+42,123)
+  if _ship.hp < 2 then
+   sspr(25,123,20,5,_xoff+41,122)
+  else
+   color(weaponcolors[_ship.secondary])
+   rectfill(_xoff+41,122,_xoff+45,126)
+   rectfill(_xoff+46,123,_xoff+46,125)
+   pset(_xoff+47,124)
+   sspr(20,125,3,3,_xoff+42,123)
 
-  for _i=1,_ship.secondaryshots do
-   local _sx,_sy,_sw,_sh=unpack(secondarysprites[_ship.secondary])
-   sspr(_sx,_sy,_sw,_sh,_xoff+47+_i*(_sw+1),122)
+   for _i=1,_ship.secondaryshots do
+    local _sx,_sy,_sw,_sh=unpack(secondarysprites[_ship.secondary])
+    sspr(_sx,_sy,_sw,_sh,_xoff+47+_i*(_sw+1),122)
+   end
   end
+
  end
+
 end
 
 local function gameinit()
+ enemyts=t()
  ps={}
  psfollow={}
  bullets={}
+ enemies={}
+ enemybullets={}
 
  stars={}
  for i=1,24 do
@@ -436,7 +683,8 @@ local function gameinit()
   hw=4,
   hh=4,
   spd=1,
-  hp=2,
+  hp=3,
+  repairc=0,
   plidx=0,
   firingc=0,
   primaryc=30,
@@ -456,7 +704,8 @@ local function gameinit()
   hw=4,
   hh=4,
   spd=1,
-  hp=2,
+  hp=3,
+  repairc=0,
   plidx=1,
   firingc=0,
   primaryc=30,
@@ -605,14 +854,14 @@ fddb3ddf065225600000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000007777777700000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000007777777700000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000007777777700000000000000000000000000000000000000000000000000000000
-d000000d000550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-d405504d0d0dd0d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-d44dd44d4d4dd4d40000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-d44dd44ddd4dd4dd0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-d44a944d4d0bc0d40000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0d4994d04d0cc0d40000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00d99d000d0000d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000440000d0000d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d000000d000550000005500005500550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d405504d4dd44dd40d0dd0d0044dd440000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d44dd44d4dd44dd44d4dd4d4444dd444000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d44dd44d4dd44dd4dd4dd4dd44bddb44000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d44a944d40d7ed044d0bc0d404babb40000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0d4994d0000ee0004d0cc0d404dabd40000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00d99d00000ee0000d0000d000dddd00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00044000000550000d0000d0000dd000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -635,13 +884,13 @@ d44a944d4d0bc0d40000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-77777777777777770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-77777777777777770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-77777777777777770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-77777777777777770600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-77777777777777770607000aa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-777777777777777706077079a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-77777777777777770607070890000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-7777777777777777f6fa707080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000004d4000000000000000000000000003333333333333bbb3bbb3bbb3bbb3bbb3bbb33000000000000000000000000000000000000000000000
+00000000000000000d00000000000000000000000000033bbb33333333b3b3b333b3b3b3b33b33b3b33000000000000000000000000000000000000000000000
+77777777777777770d00000000000000000000000000033b3b33333333bb33bb33bbb3bbb33b33bb333000000000000000000000000000000000000000000000
+77777777777777770d00000000000000000000000000033bbb33333333b3b3b333b333b3b33b33b3b33000000000000000000000000000000000000000000000
+77777777777777770d0000000000000000000000000003333333333333b3b3bbb3b333b3b3bbb3b3b33000000000000000000000000000000000000000000000
+77777777777777770600000002222200002200222002222222222222228882888288828882888288822000000000000000000000000000000000000000000000
+77777777777777770607000aa2000020002020222020020888000000008080800080808080080080802000000000000000000000000000000000000000000000
+777777777777777706077079a2000002002020202020020808000000008800880088808880080088002000000000000000000000000000000000000000000000
+77777777777777770607070892000020002020202020220888000000008080800080008080080080802000000000000000000000000000000000000000000000
+7777777777777777f6fa707082222200002220202022222222222222228282888282228282888282822000000000000000000000000000000000000000000000
