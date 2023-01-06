@@ -112,31 +112,27 @@ local function isaabbscolliding(a,b)
 end
 
 -- globals
-local ships,bullets,stars,ps,psfollow,enemies,enemybullets,boss
+local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemybullets,boss
 
 local psets={
  {{3,1,11},{3,3,3}},
  {{3,2,8},{3,4,2}},
-}
-
-local guns={
- {{x=2,y=0},{x=5,y=0}},
- {{x=2,y=0},{x=5,y=0}},
-}
-
-local exhaustcolors={
- split'7,14,8',
- split'7,10,9',
+ {{3,3,14},{3,5,8}},
+ {{3,3,10},{3,5,9}},
 }
 
 local exhausts={
  {{x=-1,y=3}},
  {{x=-3,y=4},{x=1,y=4}},
+ {{x=-4,y=4},{x=2,y=4}},
+ {{x=-1,y=4}},
 }
 
 local hangar={
- [0]=s2t's=0,bulletcolor=9,primary="missile",secondary="missile",secondaryshots=3,psets=1,guns=1,exhaustcolors=1,exhausts=1',
- s2t's=1,bulletcolor=12,primary="missile",secondary="boost",secondaryshots=3,psets=2,guns=1,exhaustcolors=2,exhausts=2',
+ [0]=s2t's=0,bulletcolor=9,primary="missile",secondary="missile",secondaryshots=3,psets=1,guns="2;0;5;0",exhaustcolors="7;14;8",exhausts=1',
+ s2t's=1,bulletcolor=12,primary="missile",secondary="boost",secondaryshots=3,psets=2,guns="2;0;5;0",exhaustcolors="7;10;9",exhausts=2',
+ [13]=s2t's=13,bulletcolor=9,primary="boost",secondary="missile",secondaryshots=3,psets=4,guns="1;0;6;0",exhaustcolors="11;3;4",exhausts=4',
+ [14]=s2t's=14,bulletcolor=3,primary="boost",secondary="boost",secondaryshots=3,psets=3,guns="1;0;6;0",exhaustcolors="11;12;5",exhausts=3',
 }
 
 -- helpers
@@ -277,26 +273,17 @@ local function explode(_obj)
 end
 
 -- weapons
-
+local missilepcolors=split'7,10,9'
 local function shootmissile(_ship,_life)
  add(bullets,{
   x=_ship.x,y=_ship.y,
   sx=16,sy=123,sw=3,sh=5,
   hw=2,hh=3,
-  spdx=rnd(0.5)-0.25,spdy=0,accy=-0.05,
+  spdx=rnd(0.5)-0.25,spdy=-rnd(0.175),accy=-0.05,
   dmg=12,
   life=_life,
   ondeath=explode,
-  p={
-   xoff=1,
-   yoff=5,
-   r=0.1,
-   spdx=0,
-   spdy=-0.1,
-   spdr=0,
-   colors={7,10,9},
-   life=3,
-  },
+  p=mr(s2t'xoff=1,yoff=5,r=0.1,spdx=0,spdy=-0.1,spdr=0,life=3',{colors=missilepcolors}),
  })
 end
 
@@ -348,6 +335,20 @@ local secondarysprites={
 
 -- enemies
 
+local function newenemyexhaustp(_x,_y,_colors)
+ add(bottomps,{
+  x=_x,
+  y=_y,
+  r=0.1,
+  spdx=0,
+  spdy=-rnd(),
+  spdr=0,
+  colors=_colors,
+  life=4,
+  lifec=4,
+ })
+end
+
 local function enemyshootmissile(_enemy)
  add(enemybullets,{
   x=_enemy.x,y=_enemy.y,
@@ -369,6 +370,7 @@ local function enemyshootmissile(_enemy)
  })
 end
 
+local kamikazeexhaustcolors={10,9,4}
 local function newkamikaze()
  add(enemies,{
   x=rnd(128),y=-12,
@@ -377,10 +379,15 @@ local function newkamikaze()
   s=176,
   hp=4,
   update=function(_enemy)
+   local _x=flr(_enemy.x)
+   local _y=flr(_enemy.y)
+   newenemyexhaustp(_x-1,_y-3,kamikazeexhaustcolors)
+   newenemyexhaustp(_x,_y-3,kamikazeexhaustcolors)
    if _enemy.target == nil then
     _enemy.target=getclosest(_enemy.x,_enemy.y,ships)
     _enemy.ifactor=rnd()
    end
+   debug(_enemy.target)
    if _enemy.target then
     local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
     _enemy.spdx=cos(_a)*0.5
@@ -390,16 +397,28 @@ local function newkamikaze()
  })
 end
 
+local bomberexhaustcolors={11,3,5}
 local function newbomber()
+ local _spdy=rnd(0.25)+0.325
  add(enemies,{
-  x=rnd(128),y=-12,
+  x=0,y=-12,
   hw=4,hh=4,
-  spdx=0,spdy=rnd(0.25)+0.25,
+  spdx=0,spdy=_spdy,ogspdy=_spdy,
   accx=0,
   s=179,
   hp=11,
   ts=t(),
   update=function(_enemy)
+   local _x=flr(_enemy.x)
+   local _y=flr(_enemy.y)
+   newenemyexhaustp(_x-3,_y-4,bomberexhaustcolors)
+   newenemyexhaustp(_x-2,_y-4,bomberexhaustcolors)
+   newenemyexhaustp(_x+1,_y-4,bomberexhaustcolors)
+   newenemyexhaustp(_x+2,_y-4,bomberexhaustcolors)
+   if not _enemy.target then
+    _enemy.x=rnd(128)
+    _enemy.target=true
+   end
    if t()-_enemy.ts > 0.875 then
     _enemy.accx=rnd{0.0125,-0.0125}
     if rnd() > 0.375 then
@@ -408,6 +427,7 @@ local function newbomber()
     _enemy.ts=t()
    end
    _enemy.spdx=mid(-0.5,_enemy.spdx+_enemy.accx,0.5)
+   _enemy.spdy=_enemy.ogspdy
   end,
  })
 end
@@ -517,7 +537,7 @@ function gameupdate()
   
   _b.life-=1
 
-  add(ps,mr(clone(_b.p),{
+  add(bottomps,mr(clone(_b.p),{
    x=_b.x+_b.p.xoff,
    y=_b.y+_b.p.yoff,
    life=rnd(_b.p.life)+_b.p.life,
@@ -551,7 +571,7 @@ function gameupdate()
   
   _b.life-=1
 
-  add(ps,mr(clone(_b.p),{
+  add(bottomps,mr(clone(_b.p),{
    x=_b.x+_b.p.xoff,
    y=_b.y+_b.p.yoff,
    life=rnd(_b.p.life)+_b.p.life,
@@ -578,7 +598,7 @@ function gameupdate()
  end
 
  -- update enemies
- if t()-enemyts > 1 then
+ if t()-enemyts > 1 and #enemies < 20 then
   enemyts=t()
   rnd{newkamikaze,newbomber}()
  end
@@ -592,7 +612,7 @@ function gameupdate()
    _enemy.y+=_enemy.spdy
    _enemy.update(_enemy)
 
-   if _enemy.y > 140 then
+   if _enemy.y > 140 or _enemy.x < -20 or _enemy.x > 148 then
     _enemy.spdy=0
     _enemy.spdx=0
     _enemy.y=-12
@@ -613,7 +633,7 @@ function gameupdate()
   gameoverts=t()
  end
 
- if gameoverts and t()-gameoverts > 2 and btnp(4) then
+ if gameoverts and t()-gameoverts > 1 and btnp(4) then
   pickerinit()
  end
 
@@ -630,6 +650,19 @@ function gamedraw()
    _s.x=flr(rnd()*128)
   end
   pset(_s.x,_s.y,1)
+ end
+
+ -- draw particles below
+ for _p in all(bottomps) do
+  _p.x+=_p.spdx
+  _p.y+=_p.spdy
+  _p.r+=_p.spdr
+  _p.lifec-=1
+  _p.col=_p.colors[flr(#_p.colors*((_p.life-_p.lifec)/_p.life))+1]
+  circfill(_p.x,_p.y,_p.r,_p.col)
+  if _p.x<0 or _p.x>128 or _p.y<0 or _p.y>128 or _p.lifec<0 then
+   del(bottomps,_p)
+  end
  end
 
  -- draw enemybullets
@@ -660,7 +693,7 @@ function gamedraw()
   end
  end
 
- -- draw particles
+ -- draw particles above
  for _p in all(psfollow) do
   _p.x+=_p.spdx
   _p.y+=_p.spdy
@@ -668,7 +701,8 @@ function gamedraw()
   _p.lifec-=1
   _p.col=_p.colors[flr(#_p.colors*((_p.life-_p.lifec)/_p.life))+1]
   circfill(_p.x+_p.follow.x+_p.xoff,_p.follow.y+_p.yoff+_p.y,_p.r,_p.col)
-  if _p.lifec<0 then
+
+  if _p.x<0 or _p.x>128 or _p.y<0 or _p.y>128 or _p.lifec<0 then
    del(psfollow,_p)
    if _p.ondeath then
     _p.ondeath(_p.x,_p.y)
@@ -683,7 +717,7 @@ function gamedraw()
   _p.lifec-=1
   _p.col=_p.colors[flr(#_p.colors*((_p.life-_p.lifec)/_p.life))+1]
   circfill(_p.x,_p.y,_p.r,_p.col)
-  if _p.lifec<0 then
+  if _p.x<0 or _p.x>128 or _p.y<0 or _p.y>128 or _p.lifec<0 then
    del(ps,_p)
    if _p.ondeath then
     _p.ondeath(_p.x,_p.y)
@@ -732,9 +766,16 @@ function gamedraw()
   drawblinktext('bummer',8)
  end
 
- if t()-gamestartts < 2.5 then
+ if t()-gamestartts < 1.5 then
   drawblinktext('nick phase!',10)
  end
+
+ print(#enemies,0,0,8)
+ print(#ps,20,0,7)
+ print(#bullets,40,0,9)
+ print(#enemybullets,60,0,15)
+ print(#bottomps,80,0,5)
+ print(#psfollow,100,0,13)
 
 end
 
@@ -744,6 +785,7 @@ function gameinit()
  enemyts=t()
  ps={}
  psfollow={}
+ bottomps={}
  bullets={}
  enemies={}
  enemybullets={}
@@ -813,9 +855,10 @@ function pickerupdate()
    if btnp(5,_i) and _i == 1 then
     picks[_i]=nil
    elseif btnp(4,_i) and unlocked[_i] then
-    local _ship=mr(mr(clone(hangar[picks[_i]]),{plidx=_i,x=32+_i*64}),s2t'y=110,hw=4,hh=4,spd=1,hp=3,repairc=0,firingc=0,primaryc=30,secondaryc=0')
-    _ship.guns=guns[_ship.guns]
-    _ship.exhaustcolors=exhaustcolors[_ship.exhaustcolors]
+    local _ship=mr(mr(clone(hangar[picks[_i]]),{plidx=_i,x=32+_i*64}),s2t'y=110,hw=3,hh=3,spd=1,hp=3,repairc=0,firingc=0,primaryc=30,secondaryc=0')
+    local _guns=split(_ship.guns,';')
+    _ship.guns={{x=_guns[1],y=_guns[2]},{x=_guns[3],y=_guns[4]}}
+    _ship.exhaustcolors=split(_ship.exhaustcolors,';')
     _ship.exhausts=exhausts[_ship.exhausts]
     _ship.psets=psets[_ship.psets]
     ships[_i+1]=_ship
@@ -881,9 +924,14 @@ _init=function ()
   unlocked[getrandomlocked()]=true
  end
 
+ for _i=0,169 do
+  unlocked[_i]=false
+ end
+
  unlocked[0]=true
  unlocked[1]=true
- unlocked[2]=false
+ unlocked[13]=true
+ unlocked[14]=true
 
  persistunlocked()
 
@@ -898,14 +946,14 @@ end
 
 
 __gfx__
-ff0000ff044004406969969600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-fd0550df66dddd667969969700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-fdd44ddf6d5dd5d67069960700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-ffd44dff6d5825d6006bc60000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-fddb3ddf06522560006cc60000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0fd33df000522500000cc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00d33d00005dd5000009900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00044000000dd0000009900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+ff0000ff04400440000000000000000000000000000000000000000000000000000000000000000000000000000000000000000066088066aa0990aa00000000
+fd0550df66dddd66000000000000000000000000000000000000000000000000000000000000000000000000000000000000000068288286a959959a00000000
+fdd44ddf6d5dd5d60000000000000000000000000000000000000000000000000000000000000000000000000000000000000000882a9288995e859900000000
+ffd44dff6d5825d60000000000000000000000000000000000000000000000000000000000000000000000000000000000000000780990877908809700000000
+fddb3ddf065225600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000780990877908809700000000
+0fd33df0005225000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000780000877900009700000000
+00d33d00005dd5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000780000877900009700000000
+00044000000dd0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000070000700700007000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
