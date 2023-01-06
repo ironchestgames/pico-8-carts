@@ -381,7 +381,7 @@ local function enemyshootmissile(_enemy)
   x=_enemy.x,y=_enemy.y,
   sx=16,sy=118,sw=3,sh=5,
   hw=2,hh=3,
-  spdx=rnd(0.5)-0.25,spdy=0.1,accy=0.05,
+  spdx=rnd(0.5)-0.25,spdy=0.1,accy=0.05,spdfactor=1,
   life=1000,
   ondeath=explode,
   p={
@@ -394,6 +394,61 @@ local function enemyshootmissile(_enemy)
    colors={7,10,11},
    life=4,
   },
+ })
+end
+
+local function enemyshootmine(_enemy)
+ add(enemybullets,{
+  x=_enemy.x,y=_enemy.y,
+  sx=0,sy=108,sw=2,sh=2,
+  hw=2,hh=2,
+  frame=0,
+  spdfactor=0.96+rnd(0.01),
+  spdx=rnd(0.5)-0.25,spdy=1.5,accy=0,
+  life=110,
+  update=function(_obj)
+   _obj.frame+=(t()*0.375)/_obj.life
+   if _obj.frame > 2 then
+    _obj.frame=0
+   end
+   _obj.sx=_obj.sw*flr(_obj.frame)
+  end,
+  ondeath=explode,
+ })
+end
+
+local minelayerexhaustcolors={12}
+local function newminelayer()
+ add(enemies,{
+  x=rnd(128),y=-12,
+  hw=4,hh=4,
+  spdx=0,spdy=0,
+  s=178,
+  hp=6,
+  ts=t(),
+  update=function(_enemy)
+   local _x=flr(_enemy.x)
+   local _y=flr(_enemy.y)
+   newenemyexhaustp(_x-1,_y-3,minelayerexhaustcolors)
+   newenemyexhaustp(_x,_y-3,minelayerexhaustcolors)
+   if _enemy.target then
+    if t()-_enemy.ts > _enemy.duration or dist(_enemy.x,_enemy.y,_enemy.target.x,_enemy.target.y) < 0.5 then
+     _enemy.target=nil
+    end
+   else
+    _enemy.spdx=0
+    _enemy.spdy=0
+    if t()-_enemy.ts > 1.5 then
+     enemyshootmine(_enemy)
+     _enemy.ts=t()
+     _enemy.duration=1+rnd(2)
+     _enemy.target={x=4+rnd(120),y=rnd(92)}
+     local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
+     _enemy.spdx=cos(_a)*0.75
+     _enemy.spdy=sin(_a)*0.75
+    end
+   end
+  end,
  })
 end
 
@@ -603,15 +658,24 @@ function gameupdate()
   _b.y+=_b.spdy
 
   _b.spdy+=_b.accy
+
+  _b.spdx*=_b.spdfactor
+  _b.spdy*=_b.spdfactor
   
   _b.life-=1
 
-  add(bottomps,mr(clone(_b.p),{
-   x=_b.x+_b.p.xoff,
-   y=_b.y+_b.p.yoff,
-   life=rnd(_b.p.life)+_b.p.life,
-   lifec=rnd(_b.p.life)+_b.p.life,
-  }))
+  if _b.update then
+   _b.update(_b)
+  end
+
+  if _b.p then
+   add(bottomps,mr(clone(_b.p),{
+    x=_b.x+_b.p.xoff,
+    y=_b.y+_b.p.yoff,
+    life=rnd(_b.p.life)+_b.p.life,
+    lifec=rnd(_b.p.life)+_b.p.life,
+   }))
+  end
 
   for _ship in all(ships) do
    if isaabbscolliding(_b,_ship) then
@@ -635,7 +699,7 @@ function gameupdate()
  -- update enemies
  if t()-enemyts > max(0.8,4*lockedpercentage) and #enemies < 20 or #enemies < 3 then
   enemyts=t()
-  rnd{newkamikaze,newkamikaze,newbomber}()
+  rnd{newkamikaze,newkamikaze,newbomber,newminelayer}()
  end
 
  for _enemy in all(enemies) do
@@ -1094,8 +1158,8 @@ d44a944d40d7ed044d0bc0d404babb40000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+c55c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+5cc50000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 85580000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 58850000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
