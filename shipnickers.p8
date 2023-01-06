@@ -106,33 +106,23 @@ local function s2t(_t)
  return _result
 end
 
+local function mrs2t(_s,_t)
+ return mr(s2t(_s),_t)
+end
+
 local function isaabbscolliding(a,b)
  return a.x-a.hw < b.x+b.hw and a.x+a.hw > b.x-b.hw and
   a.y-a.hh < b.y+b.hh and a.y+a.hh > b.y-b.hh
 end
 
 -- globals
-local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemybullets,boss
-
-local psets={
- {{3,1,11},{3,3,3}},
- {{3,2,8},{3,4,2}},
- {{3,3,14},{3,5,8}},
- {{3,3,10},{3,5,9}},
-}
-
-local exhausts={
- {{x=-1,y=3}},
- {{x=-3,y=4},{x=1,y=4}},
- {{x=-4,y=4},{x=2,y=4}},
- {{x=-1,y=4}},
-}
+local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemybullets,boss,lockedpercentage
 
 local hangar={
- [0]=s2t's=0,bulletcolor=9,primary="missile",secondary="missile",secondaryshots=3,psets=1,guns="2;0;5;0",exhaustcolors="7;14;8",exhausts=1',
- s2t's=1,bulletcolor=12,primary="missile",secondary="boost",secondaryshots=3,psets=2,guns="2;0;5;0",exhaustcolors="7;10;9",exhausts=2',
- [13]=s2t's=13,bulletcolor=9,primary="boost",secondary="missile",secondaryshots=3,psets=4,guns="1;0;6;0",exhaustcolors="11;3;4",exhausts=4',
- [14]=s2t's=14,bulletcolor=3,primary="boost",secondary="boost",secondaryshots=3,psets=3,guns="1;0;6;0",exhaustcolors="11;12;5",exhausts=3',
+ [0]=mrs2t('s=0,bulletcolor=9,primary="missile",secondary="missile",secondaryshots=3,psets="3;1;11;3;3;3",guns="2;0;5;0",exhaustcolors="7;14;8"',{exhausts={{x=-1,y=3}}}),
+ mrs2t('s=1,bulletcolor=12,primary="missile",secondary="boost",secondaryshots=3,psets="3;2;8;3;4;2",guns="2;0;5;0",exhaustcolors="7;10;9"',{exhausts={{x=-3,y=4},{x=1,y=4}}}),
+ [13]=mrs2t('s=13,bulletcolor=9,primary="boost",secondary="missile",secondaryshots=3,psets="3;3;10;3;5;9",guns="1;0;6;0",exhaustcolors="11;3;4"',{exhausts={{x=-1,y=4}}}),
+ [14]=mrs2t('s=14,bulletcolor=3,primary="boost",secondary="boost",secondaryshots=3,psets="3;3;14;3;5;8",guns="1;0;6;0",exhaustcolors="11;12;5"',{exhausts={{x=-4,y=4},{x=2,y=4}}}),
 }
 
 -- helpers
@@ -344,8 +334,8 @@ local function newenemyexhaustp(_x,_y,_colors)
   spdy=-rnd(),
   spdr=0,
   colors=_colors,
-  life=4,
-  lifec=4,
+  life=2,
+  lifec=3,
  })
 end
 
@@ -365,12 +355,12 @@ local function enemyshootmissile(_enemy)
    spdy=0.1,
    spdr=0,
    colors={7,10,11},
-   life=3,
+   life=4,
   },
  })
 end
 
-local kamikazeexhaustcolors={10,9,4}
+local kamikazeexhaustcolors={10,9}
 local function newkamikaze()
  add(enemies,{
   x=rnd(128),y=-12,
@@ -387,7 +377,6 @@ local function newkamikaze()
     _enemy.target=getclosest(_enemy.x,_enemy.y,ships)
     _enemy.ifactor=rnd()
    end
-   debug(_enemy.target)
    if _enemy.target then
     local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
     _enemy.spdx=cos(_a)*0.5
@@ -397,7 +386,7 @@ local function newkamikaze()
  })
 end
 
-local bomberexhaustcolors={11,3,5}
+local bomberexhaustcolors={11,3}
 local function newbomber()
  local _spdy=rnd(0.25)+0.325
  add(enemies,{
@@ -598,7 +587,7 @@ function gameupdate()
  end
 
  -- update enemies
- if t()-enemyts > 1 and #enemies < 20 then
+ if t()-enemyts > max(0.8,4*lockedpercentage) and #enemies < 20 or #enemies < 3 then
   enemyts=t()
   rnd{newkamikaze,newbomber}()
  end
@@ -790,6 +779,9 @@ function gameinit()
  enemies={}
  enemybullets={}
 
+ local _lockedcount=getlockedcount()
+ lockedpercentage=169/_lockedcount
+
  -- boss={
  --  x=32,
  --  y=110,
@@ -857,10 +849,10 @@ function pickerupdate()
    elseif btnp(4,_i) and unlocked[_i] then
     local _ship=mr(mr(clone(hangar[picks[_i]]),{plidx=_i,x=32+_i*64}),s2t'y=110,hw=3,hh=3,spd=1,hp=3,repairc=0,firingc=0,primaryc=30,secondaryc=0')
     local _guns=split(_ship.guns,';')
+    local _psets=split(_ship.psets,';')
     _ship.guns={{x=_guns[1],y=_guns[2]},{x=_guns[3],y=_guns[4]}}
     _ship.exhaustcolors=split(_ship.exhaustcolors,';')
-    _ship.exhausts=exhausts[_ship.exhausts]
-    _ship.psets=psets[_ship.psets]
+    _ship.psets={{_psets[1],_psets[2],_psets[3]},{_psets[4],_psets[5],_psets[6]}}
     ships[_i+1]=_ship
 
     local _pickcount=mycount(picks)
