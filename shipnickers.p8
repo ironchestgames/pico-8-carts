@@ -69,6 +69,14 @@ local function clone(_t)
  return _result
 end
 
+local function mycount(_t)
+ local _c=0
+ for _ in pairs(_t) do
+  _c+=1
+ end
+ return _c
+end
+
 local function mr(_t1,_t2)
  for _k,_v in pairs(_t2) do
   _t1[_k]=_v
@@ -80,6 +88,24 @@ local function dist(x1,y1,x2,y2)
  return sqrt(((x2-x1)^2)+((y2-y1)^2))
 end
 
+local function s2t(_t)
+ local _result,_kvstrings={},split(_t)
+ for _kvstring in all(_kvstrings) do
+  local _kvpair=split(_kvstring,'=')
+  local _value=_kvpair[2]
+  for _i,_v in ipairs(split'true,false,nil') do
+   if _value == _v then
+    _value=({true,false})[_i]
+   end
+  end
+  if type(_value) == 'string' then
+   _value=sub(_value,2,#_value-1)
+  end
+  _result[_kvpair[1]]=_value
+ end
+ return _result
+end
+
 local function isaabbscolliding(a,b)
  return a.x-a.hw < b.x+b.hw and a.x+a.hw > b.x-b.hw and
   a.y-a.hh < b.y+b.hh and a.y+a.hh > b.y-b.hh
@@ -87,6 +113,31 @@ end
 
 -- globals
 local ships,bullets,stars,ps,psfollow,enemies,enemybullets,boss
+
+local psets={
+ {{3,1,11},{3,3,3}},
+ {{3,2,8},{3,4,2}},
+}
+
+local guns={
+ {{x=2,y=0},{x=5,y=0}},
+ {{x=2,y=0},{x=5,y=0}},
+}
+
+local exhaustcolors={
+ split'7,14,8',
+ split'7,10,9',
+}
+
+local exhausts={
+ {{x=-1,y=3}},
+ {{x=-3,y=4},{x=1,y=4}},
+}
+
+local hangar={
+ [0]=s2t's=0,bulletcolor=9,primary="missile",secondary="missile",secondaryshots=3,psets=1,guns=1,exhaustcolors=1,exhausts=1',
+ s2t's=1,bulletcolor=12,primary="missile",secondary="boost",secondaryshots=3,psets=2,guns=1,exhaustcolors=2,exhausts=2',
+}
 
 -- helpers
 local function drawblinktext(_str,_startcolor)
@@ -563,7 +614,7 @@ function gameupdate()
  end
 
  if gameoverts and t()-gameoverts > 2 and btnp(4) then
-  gameinit()
+  pickerinit()
  end
 
 end
@@ -681,9 +732,14 @@ function gamedraw()
   drawblinktext('bummer',8)
  end
 
+ if t()-gamestartts < 2.5 then
+  drawblinktext('nick phase!',10)
+ end
+
 end
 
 function gameinit()
+ gamestartts=t()
  gameoverts=nil
  enemyts=t()
  ps={}
@@ -722,50 +778,6 @@ function gameinit()
   })
  end
 
- ships={{
-  x=32,
-  y=110,
-  hw=4,
-  hh=4,
-  spd=1,
-  hp=3,
-  repairc=0,
-  plidx=0,
-  firingc=0,
-  primaryc=30,
-  secondaryc=0,
-  s=1,
-  psets={{3,2,8},{3,4,2}},
-  guns={{x=2,y=0},{x=5,y=0}},
-  bulletcolor=9,
-  exhaustcolors={7,10,9},
-  exhausts={{x=-3,y=4},{x=1,y=4}},
-  primary='boost',
-  secondary='missile',
-  secondaryshots=3,
- },{
-  x=96,
-  y=110,
-  hw=4,
-  hh=4,
-  spd=1,
-  hp=3,
-  repairc=0,
-  plidx=1,
-  firingc=0,
-  primaryc=30,
-  secondaryc=0,
-  s=0,
-  psets={{3,1,11},{3,3,3}},
-  guns={{x=2,y=0},{x=5,y=0}},
-  bulletcolor=12,
-  exhaustcolors={7,14,8},
-  exhausts={{x=-1,y=3}},
-  primary='missile',
-  secondary='boost',
-  secondaryshots=3,
- }}
-
  -- create ship flashes
  for _ship in all(ships) do
   local _shipsx,_shipsy=(_ship.s%15)*8,flr(_ship.s/16)*8
@@ -783,19 +795,41 @@ function gameinit()
  _update60,_draw=gameupdate,gamedraw
 end
 
-local picks={[0]=0,0}
+local picks={[0]=0}
 function pickerupdate()
  for _i=0,1 do
-  if btnp(0,_i) then
-   picks[_i]-=1
-  elseif btnp(1,_i) then
-   picks[_i]+=1
-  elseif btnp(2,_i) then
-   picks[_i]-=13
-  elseif btnp(3,_i) then
-   picks[_i]+=13
+  if picks[_i] then
+   if btnp(0,_i) then
+    picks[_i]-=1
+   elseif btnp(1,_i) then
+    picks[_i]+=1
+   elseif btnp(2,_i) then
+    picks[_i]-=13
+   elseif btnp(3,_i) then
+    picks[_i]+=13
+   end
+   picks[_i]=mid(0,picks[_i],168)
+
+   if btnp(5,_i) and _i == 1 then
+    picks[_i]=nil
+   elseif btnp(4,_i) and unlocked[_i] then
+    local _ship=mr(mr(clone(hangar[picks[_i]]),{plidx=_i,x=32+_i*64}),s2t'y=110,hw=4,hh=4,spd=1,hp=3,repairc=0,firingc=0,primaryc=30,secondaryc=0')
+    _ship.guns=guns[_ship.guns]
+    _ship.exhaustcolors=exhaustcolors[_ship.exhaustcolors]
+    _ship.exhausts=exhausts[_ship.exhausts]
+    _ship.psets=psets[_ship.psets]
+    ships[_i+1]=_ship
+
+    local _pickcount=mycount(picks)
+    if _pickcount > 0 and _pickcount == mycount(ships) then
+     gameinit()
+    end
+   end
+  else
+   if btnp(4,_i) then
+    picks[_i]=0
+   end
   end
-  picks[_i]=mid(0,picks[_i],168)
  end
 end
 
@@ -812,12 +846,21 @@ function pickerdraw()
  end
  for _i=0,1 do
   local _pick=picks[_i]
-  local _x,_y=5+(_pick%13)*9,2+flr(_pick/13)*9
-  rect(_x,_y,_x+9,_y+9,10+_i)
+  if _pick then
+   local _x,_y=5+(_pick%13)*9,2+flr(_pick/13)*9
+   rect(_x,_y,_x+9,_y+9,11+_i)
+   local _s='?????'
+   if unlocked[_pick] then
+    local _ship=hangar[_pick]
+    _s=_ship.primary..','.._ship.secondary
+   end
+   print(_s,1+_i*127-_i*#_s*4,122,11+_i)
+  end
  end
 end
 
 function pickerinit()
+ ships={}
  _update60,_draw=pickerupdate,pickerdraw
 end
 
@@ -846,7 +889,7 @@ _init=function ()
 
  for _i=0,169 do
   -- debug(unlocked[_i])
-  debug(dget(_i))
+  -- debug(dget(_i))
  end
 
  -- gameinit()
@@ -967,14 +1010,14 @@ d44a944d40d7ed044d0bc0d404babb40000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-10000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-11011011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-11111111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-11111111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-11100111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00111100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 01100110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00100100000000004d4000000000000000000000000003333333333333bbb3bbb3bbb3bbb3bbb3bbb33000000000000000000000000000000000000000000000
-00011000000000000d00000000000000000000000000033bbb33333333b3b3b333b3b3b3b33b33b3b33000000000000000000000000000000000000000000000
+00000110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00011100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00011000000000004d4000000000000000000000000003333333333333bbb3bbb3bbb3bbb3bbb3bbb33000000000000000000000000000000000000000000000
+00000000000000000d00000000000000000000000000033bbb33333333b3b3b333b3b3b3b33b33b3b33000000000000000000000000000000000000000000000
 77777777777777770d00000000000000000000000000033b3b33333333bb33bb33bbb3bbb33b33bb333000000000000000000000000000000000000000000000
 77777777777777770d00000000000000000000000000033bbb33333333b3b3b333b333b3b33b33b3b33000000000000000000000000000000000000000000000
 77777777777777770d0000000000000000000000000003333333333333b3b3bbb3b333b3b3bbb3b3b33000000000000000000000000000000000000000000000
