@@ -126,9 +126,7 @@ local hangar={
  [14]=mrs2t('s=14,bulletcolor=3,primary="boost",secondary="boost",secondaryshots=3,psets="3;3;14;3;5;8",guns="1;0;6;0",exhaustcolors="11;12;5"',{exhausts={{x=-4,y=4},{x=2,y=4}}}),
  [15]=mrs2t('s=15,bulletcolor=5,primary="boost",secondary="mines",secondaryshots=3,psets="3;2;7;3;4;6",guns="0;4;7;4",exhaustcolors="10;9;2"',{exhausts={{x=-2,y=4},{x=0,y=4}}}),
  [26]=mrs2t('s=26,bulletcolor=14,primary="mines",secondary="missile",secondaryshots=3,psets="3;1;5;3;1;5",guns="1;1;6;1",exhaustcolors="10;9;4"',{exhausts={{x=-3,y=4},{x=1,y=4}}}),
-
  [27]=mrs2t('s=27,bulletcolor=11,primary="mines",secondary="boost",secondaryshots=3,psets="3;1;6;3;3;5",guns="1;2;6;2",exhaustcolors="7;11;3"',{exhausts={{x=-1,y=4}}}),
-
  [28]=mrs2t('s=28,bulletcolor=11,primary="mines",secondary="mines",secondaryshots=3,psets="3;3;12;3;4;1",guns="0;2;7;2",exhaustcolors="7;6;5"',{exhausts={{x=-1,y=4}}}),
 }
 
@@ -137,7 +135,7 @@ local function drawblinktext(_str,_startcolor)
  print('\^w\^t'.._str,64-#_str*4,48,_startcolor+flr((t()*12)%3))
 end
 
-local burningcolors={10,9,5}
+local burningcolors=split'10,9,5'
 local function newburning(_x,_y)
  local _life=8+rnd()*4
  add(ps,{
@@ -153,7 +151,7 @@ local function newburning(_x,_y)
  })
 end
 
-local hitcolors={7,7,10}
+local hitcolors=split'7,7,10'
 local function newhit(_x,_y)
  for _i=1,7 do
   add(ps,{
@@ -186,7 +184,7 @@ local function explosionsmoke(_x,_y)
  })
 end
 
-local explosioncolors={7,7,10,9,8}
+local explosioncolors=split'7,7,10,9,8'
 local function newexplosion(_x,_y)
  for _i=1,7 do
   local _life=11
@@ -251,7 +249,7 @@ local function getclosest(_x,_y,_list)
  return _closest
 end
 
-local explosioncolors={7,7,10,9,8}
+local explosioncolors=split'7,7,10,9,8'
 local function explode(_obj)
  for _i=1,7 do
   add(ps,{
@@ -352,18 +350,14 @@ local secondary={
  end,
 }
 
-local weaponcolors={
- missile=2,
- boost=15,
- mines=5,
-}
+local weaponcolors=s2t'missile=2,boost=15,mines=5'
 
-local boostcolors={7,10,9,8}
+local boostcolors=split'7,10,9,8'
 
 local secondarysprites={
- missile={16,123,3,5},
- boost={23,123,2,5},
- mines={2,110,2,2},
+ missile=split'16,123,3,5',
+ boost=split'23,123,2,5',
+ mines=split'2,110,2,2',
 }
 
 -- enemies
@@ -403,7 +397,7 @@ local function enemyshootmissile(_enemy)
  })
 end
 
-local kamikazeexhaustcolors={10,9}
+local kamikazeexhaustcolors=split'10,9'
 local function newkamikaze()
  add(enemies,{
   x=rnd(128),y=-12,
@@ -429,7 +423,7 @@ local function newkamikaze()
  })
 end
 
-local bomberexhaustcolors={11,3}
+local bomberexhaustcolors=split'11,3'
 local function newbomber()
  local _spdy=rnd(0.25)+0.325
  add(enemies,{
@@ -898,10 +892,10 @@ function pickerupdate()
    elseif btnp(4,_i) and unlocked[_i] then
     local _ship=mr(mr(clone(hangar[picks[_i]]),{plidx=_i,x=32+_i*64}),s2t'y=110,hw=3,hh=3,spd=1,hp=3,repairc=0,firingc=0,primaryc=30,secondaryc=0')
     local _guns=split(_ship.guns,';')
-    local _psets=split(_ship.psets,';')
     _ship.guns={{x=_guns[1],y=_guns[2]},{x=_guns[3],y=_guns[4]}}
-    _ship.exhaustcolors=split(_ship.exhaustcolors,';')
+    local _psets=split(_ship.psets,';')
     _ship.psets={{_psets[1],_psets[2],_psets[3]},{_psets[4],_psets[5],_psets[6]}}
+    _ship.exhaustcolors=split(_ship.exhaustcolors,';')
     ships[_i+1]=_ship
 
     local _pickcount=mycount(picks)
