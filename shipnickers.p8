@@ -119,15 +119,15 @@ end
 local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemybullets,boss,lockedpercentage
 
 local hangar={
- [0]=mrs2t('s=0,bulletcolor=9,primary="missile",secondary="missile",secondaryshots=3,psets="3;1;11;3;3;3",guns="2;0;5;0",exhaustcolors="7;14;8"',{exhausts={{x=-1,y=3}}}),
- mrs2t('s=1,bulletcolor=12,primary="missile",secondary="boost",secondaryshots=3,psets="3;2;8;3;4;2",guns="2;0;5;0",exhaustcolors="7;10;9"',{exhausts={{x=-3,y=4},{x=1,y=4}}}),
- mrs2t('s=2,bulletcolor=10,primary="missile",secondary="mines",secondaryshots=3,psets="3;1;10;3;3;11",guns="1;1;6;1",exhaustcolors="7;10;4"',{exhausts={{x=-1,y=4}}}),
- [13]=mrs2t('s=13,bulletcolor=9,primary="boost",secondary="missile",secondaryshots=3,psets="3;3;10;3;5;9",guns="1;0;6;0",exhaustcolors="11;3;4"',{exhausts={{x=-1,y=4}}}),
- [14]=mrs2t('s=14,bulletcolor=3,primary="boost",secondary="boost",secondaryshots=3,psets="3;3;14;3;5;8",guns="1;0;6;0",exhaustcolors="11;12;5"',{exhausts={{x=-4,y=4},{x=2,y=4}}}),
- [15]=mrs2t('s=15,bulletcolor=5,primary="boost",secondary="mines",secondaryshots=3,psets="3;2;7;3;4;6",guns="0;4;7;4",exhaustcolors="10;9;2"',{exhausts={{x=-2,y=4},{x=0,y=4}}}),
- [26]=mrs2t('s=26,bulletcolor=14,primary="mines",secondary="missile",secondaryshots=3,psets="3;1;5;3;1;5",guns="1;1;6;1",exhaustcolors="10;9;4"',{exhausts={{x=-3,y=4},{x=1,y=4}}}),
- [27]=mrs2t('s=27,bulletcolor=11,primary="mines",secondary="boost",secondaryshots=3,psets="3;1;6;3;3;5",guns="1;2;6;2",exhaustcolors="7;11;3"',{exhausts={{x=-1,y=4}}}),
- [28]=mrs2t('s=28,bulletcolor=11,primary="mines",secondary="mines",secondaryshots=3,psets="3;3;12;3;4;1",guns="0;2;7;2",exhaustcolors="7;6;5"',{exhausts={{x=-1,y=4}}}),
+ [0]=mrs2t's=0,bulletcolor=9,primary="missile",secondary="missile",secondaryshots=3,psets="3;1;11;3;3;3",guns="2;0;5;0",exhaustcolors="7;14;8",exhausts="-1;3;0;3"',
+ mrs2t's=1,bulletcolor=12,primary="missile",secondary="boost",secondaryshots=3,psets="3;2;8;3;4;2",guns="2;0;5;0",exhaustcolors="7;10;9",exhausts="-3;4;-2;4;1;4;2;4"',
+ mrs2t's=2,bulletcolor=10,primary="missile",secondary="mines",secondaryshots=3,psets="3;1;10;3;3;11",guns="1;1;6;1",exhaustcolors="7;10;4",exhausts="-1;4;0;4"',
+ [13]=mrs2t's=13,bulletcolor=9,primary="boost",secondary="missile",secondaryshots=3,psets="3;3;10;3;5;9",guns="1;0;6;0",exhaustcolors="11;3;4",exhausts="-3;4;2;4"',
+ [14]=mrs2t's=14,bulletcolor=3,primary="boost",secondary="boost",secondaryshots=3,psets="3;3;14;3;5;8",guns="1;0;6;0",exhaustcolors="11;12;5",exhausts="-4;4;-3;4;2;4;3;4"',
+ [15]=mrs2t's=15,bulletcolor=5,primary="boost",secondary="mines",secondaryshots=3,psets="3;2;7;3;4;6",guns="0;4;7;4",exhaustcolors="10;9;2",exhausts="-4;4;-1;4;0;4;3;4"',
+ [26]=mrs2t's=26,bulletcolor=14,primary="mines",secondary="missile",secondaryshots=3,psets="3;1;5;3;1;5",guns="1;1;6;1",exhaustcolors="10;9;4",exhausts="-3;4;-2;4;1;4;2;4"',
+ [27]=mrs2t's=27,bulletcolor=11,primary="mines",secondary="boost",secondaryshots=3,psets="3;1;6;3;3;5",guns="2;2;5;2",exhaustcolors="7;11;3",exhausts="-2;4;1;4"',
+ [28]=mrs2t's=28,bulletcolor=11,primary="mines",secondary="mines",secondaryshots=3,psets="3;3;12;3;4;1",guns="0;2;7;2",exhaustcolors="7;6;5",exhausts="-2;4;1;4"',
 }
 
 -- helpers
@@ -598,9 +598,8 @@ function gameupdate()
    secondary[_ship.secondary](_ship)
   end
 
-  for _e in all(_ship.exhausts) do
-   newexhaustp(_e.x,_e.y,_ship,_ship.isboosting and boostcolors or _ship.exhaustcolors,_ship.isboosting and 8 or 4)
-   newexhaustp(_e.x+1,_e.y,_ship,_ship.isboosting and boostcolors or _ship.exhaustcolors,_ship.isboosting and 8 or 4)
+  for _i=1,#_ship.exhausts,2 do
+   newexhaustp(_ship.exhausts[_i],_ship.exhausts[_i+1],_ship,_ship.isboosting and boostcolors or _ship.exhaustcolors,_ship.isboosting and 8 or 4)
   end
 
   if _ship.hp == 0 then
@@ -960,6 +959,7 @@ function pickerupdate()
     local _psets=split(_ship.psets,';')
     _ship.psets={{_psets[1],_psets[2],_psets[3]},{_psets[4],_psets[5],_psets[6]}}
     _ship.exhaustcolors=split(_ship.exhaustcolors,';')
+    _ship.exhausts=split(_ship.exhausts,';')
     ships[_i+1]=_ship
 
     local _pickcount=mycount(picks)
