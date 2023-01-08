@@ -5,9 +5,6 @@ __lua__
 -- by ironchest games
 
 --[[
- - add ispointinside, change dist to that for minelayers
- - change all timers and tickers to go by t()
- - add menu option for 30/60 fps
  - add bosses
  - add shield
  - add cloak
@@ -120,6 +117,10 @@ end
 
 local function mrs2t(_s,_t)
  return mr(s2t(_s),_t)
+end
+
+local function ispointinsideaabb(_x,_y,_ax,_ay,_ahw,_ahh)
+ return _x > _ax-_ahw and _x < _ax+_ahw and _y > _ay-_ahh and _y < _ay+_ahh
 end
 
 local function isaabbscolliding(a,b)
@@ -444,7 +445,7 @@ local function newminelayer()
    newenemyexhaustp(_x-1,_y-3,minelayerexhaustcolors)
    newenemyexhaustp(_x,_y-3,minelayerexhaustcolors)
    if _enemy.target then
-    if t()-_enemy.ts > _enemy.duration or dist(_enemy.x,_enemy.y,_enemy.target.x,_enemy.target.y) < 0.5 then
+    if t()-_enemy.ts > _enemy.duration or ispointinsideaabb(_enemy.target.x,_enemy.target.y,_enemy.x,_enemy.y,_enemy.hw,_enemy.hh) then
      _enemy.target=nil
     end
    else
@@ -770,7 +771,7 @@ function gamedraw()
   _p.lifec-=1
   _p.col=_p.colors[flr(#_p.colors*((_p.life-_p.lifec)/_p.life))+1]
   circfill(_p.x,_p.y,_p.r,_p.col)
-  if _p.x<0 or _p.x>128 or _p.y<0 or _p.y>128 or _p.lifec<0 then
+  if _p.lifec<0 then
    del(bottomps,_p)
   end
  end
@@ -811,8 +812,7 @@ function gamedraw()
   _p.lifec-=1
   _p.col=_p.colors[flr(#_p.colors*((_p.life-_p.lifec)/_p.life))+1]
   circfill(_p.x+_p.follow.x+_p.xoff,_p.follow.y+_p.yoff+_p.y,_p.r,_p.col)
-
-  if _p.x<0 or _p.x>128 or _p.y<0 or _p.y>128 or _p.lifec<0 then
+  if _p.lifec<0 then
    del(psfollow,_p)
   end
  end
@@ -877,12 +877,12 @@ function gamedraw()
   drawblinktext('nick phase!',10)
  end
 
- print(#enemies,0,0,8)
- print(#ps,20,0,7)
- print(#bullets,40,0,9)
- print(#enemybullets,60,0,15)
- print(#bottomps,80,0,5)
- print(#psfollow,100,0,13)
+ -- print(#enemies,0,0,8)
+ -- print(#ps,20,0,7)
+ -- print(#bullets,40,0,9)
+ -- print(#enemybullets,60,0,15)
+ -- print(#bottomps,80,0,5)
+ -- print(#psfollow,100,0,13)
 
 end
 
