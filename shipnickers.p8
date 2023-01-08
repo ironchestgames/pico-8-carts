@@ -32,7 +32,13 @@ local function loadunlocked()
  for _i=0,22 do
   local _n=dget(_i)
   for _j=1,#masks do
-   unlocked[_i*8+_j]=(masks[_j] & _n) != 0
+   local _jj=_j-1
+   unlocked[_i*7+_jj]=(masks[_j] & _n) != 0
+   if unlocked[_i*7+_jj] == true then
+    debug('----')
+    debug(_i*7)
+    debug(_jj)
+   end
   end
  end
 end
@@ -43,9 +49,19 @@ local function persistunlocked()
   for _j=0,7 do
    _n=_n | (unlocked[_i+_j] and 2^_j or 0)
   end
-  dset(_i,_n)
+  dset(_i,_n) -- todo: this is wrong yeah?
  end
 end
+
+-- local function persistunlocked()
+--  for _i=0,#unlocked,7 do
+--   local _n=0
+--   for _j=0,7 do
+--    _n=_n | (unlocked[_i+_j] and 2^_j or 0)
+--   end
+--   dset(_i/7,_n)
+--  end
+-- end
 
 local function getrandomlocked()
  local _indeces={}
@@ -146,6 +162,32 @@ local hangar={
 -- helpers
 local function drawblinktext(_str,_startcolor)
  print('\^w\^t'.._str,64-#_str*4,48,_startcolor+flr((t()*12)%3))
+end
+
+local function getship(_hangaridx)
+ local _ship=mr(clone(hangar[_hangaridx]),s2t'y=110,hw=3,hh=3,spd=1,hp=3,repairc=0,firingc=0,primaryc=30,secondaryc=0')
+ local _guns=split(_ship.guns,';')
+ _ship.guns={{x=_guns[1],y=_guns[2]},{x=_guns[3],y=_guns[4]}}
+ local _psets=split(_ship.psets,';')
+ _ship.psets={{_psets[1],_psets[2],_psets[3]},{_psets[4],_psets[5],_psets[6]}}
+ _ship.exhaustcolors=split(_ship.exhaustcolors,';')
+ _ship.exhausts=split(_ship.exhausts,';')
+ return _ship
+end
+
+local function createshipflashes()
+ for _ship in all(ships) do
+  local _shipsx,_shipsy=(_ship.s%16)*8,flr(_ship.s/16)*8
+  for _x=0,7 do
+   for _y=0,7 do
+    local _col=0
+    if sget(_shipsx+_x,_shipsy+(7-_y)) != 0 then
+     _col=7
+    end
+    sset(8*_ship.plidx+_x,120+_y,_col)
+   end
+  end
+ end
 end
 
 local burningcolors=split'10,9,5'
@@ -375,6 +417,24 @@ local secondarysprites={
 
 -- enemies
 
+-- todo: meld with newexhaustp?
+local function newbossexhaustp(_xoff,_yoff,_ship,_colors,_life)
+ add(psfollow,{
+  x=0,
+  y=0,
+  follow=_ship,
+  xoff=_xoff,
+  yoff=_yoff,
+  r=0,
+  spdx=0,
+  spdy=-(0.1+rnd()-0.1),
+  spdr=0,
+  colors=_colors,
+  life=_life,
+  lifec=_life,
+ })
+end
+
 local function newenemyexhaustp(_x,_y,_colors)
  add(bottomps,{
   x=_x,
@@ -429,6 +489,15 @@ local function enemyshootmine(_enemy)
   ondeath=explode,
  })
 end
+
+local bossweapons={
+ missile=enemyshootmissile,
+ mines=enemyshootmine,
+ boost=function()
+  boss.boostts=t()
+  boss.boost=0.5
+ end
+}
 
 local minelayerexhaustcolors={12}
 local function newminelayer()
@@ -528,6 +597,11 @@ end
 
 function gameupdate()
 
+ local _curt=t()
+ if escapets then
+  hasescaped=_curt-escapets > escapeduration
+ end
+
  -- update ships
  for _ship in all(ships) do
   local _plidx=_ship.plidx
@@ -619,6 +693,22 @@ function gameupdate()
    newexplosion(_ship.x,_ship.y)
    del(ships,_ship)
   end
+
+  if boss and isaabbscolliding(_ship,boss) then
+   if nickitts then
+    ships[_plidx+1]=mr(getship(boss.s),{plidx=_plidx,x=_ship.x,y=_ship.y,hp=1})
+    createshipflashes()
+    nickedts=_curt
+    escapets=_curt
+    nickitts=nil
+    boss=nil
+   else
+    newexplosion(_ship.x,_ship.y)
+    newexplosion(boss.x,boss.y)
+    boss=nil
+    _ship.hp=0
+   end
+  end
  end
 
  -- update friendly bullets
@@ -644,6 +734,12 @@ function gameupdate()
     life=rnd(_b.p.life)+_b.p.life,
     lifec=rnd(_b.p.life)+_b.p.life,
    }))
+  end
+
+  if boss and isaabbscolliding(_b,boss) then
+   boss.hp-=_b.dmg
+   _b.life=0
+   newhit(boss.x,boss.y)
   end
 
   for _enemy in all(enemies) do
@@ -708,8 +804,63 @@ function gameupdate()
   end
  end
 
+ -- update boss
+ if boss then
+  if boss.hp > 0 then
+   for _i=1,#boss.exhausts,2 do
+    newbossexhaustp(boss.exhausts[_i],-(boss.exhausts[_i+1]+0.5),boss,boss.boostts and boostcolors or boss.exhaustcolors,boss.boostts and 8 or 4)
+   end
+  else
+   for _i=1,#boss.exhausts,2 do
+    newexhaustp(boss.exhausts[_i],boss.exhausts[_i+1],boss,boss.exhaustcolors,4)
+   end
+  end
+
+  local _bossdt=_curt-boss.ts
+  if boss.hp <= 0 then
+   newburning(boss.x,boss.y)
+   if not nickitts then
+    nickitts=_curt
+   end
+  else
+   if _bossdt > boss.flyduration then
+    if _bossdt > boss.flyduration+boss.waitduration then
+     bossweapons[rnd{boss.primary,boss.primary,boss.primary,boss.secondary}](boss)
+     boss.waitduration=0.875+rnd(1.75)
+     boss.flyduration=0.875+rnd(5)
+     boss.ts=_curt
+    end
+   else
+    if boss.targetx == nil or ispointinsideaabb(boss.targetx,boss.targety,boss.x,boss.y,boss.hw,boss.hh) then
+     boss.targetx=4+rnd(120)
+     boss.targety=8+rnd(36)
+    end
+
+    if boss.boostts and t()-boss.boostts > 2.25 then
+     boss.boost=0
+     boss.boostts=nil
+    end
+
+    local _absx=abs(boss.targetx-boss.x)
+    local _spd=0.5+boss.boost
+    if _absx > 1 and boss.targetx-boss.x < 0 then
+     boss.x-=_spd
+    elseif _absx > 1 and boss.targetx-boss.x > 0 then
+     boss.x+=_spd
+    end
+
+    local _absy=abs(boss.targety-boss.y)
+    if _absy > 1 and boss.targety-boss.y < 0 then
+     boss.y-=_spd
+    elseif _absy > 1 and boss.targety-boss.y > 0 then
+     boss.y+=_spd
+    end
+   end
+  end
+ end
+
  -- update enemies
- if t()-enemyts > max(0.8,4*lockedpercentage) and #enemies < 20 or #enemies < 3 then
+ if nickitts == nil and (not hasescaped) and (t()-enemyts > max(0.8,4*lockedpercentage) and #enemies < 20 or #enemies < 3) then
   enemyts=t()
   rnd{newkamikaze,newkamikaze,newbomber,newminelayer}()
  end
@@ -723,11 +874,17 @@ function gameupdate()
    _enemy.y+=_enemy.spdy
    _enemy.update(_enemy)
 
-   if _enemy.y > 140 or _enemy.x < -20 or _enemy.x > 148 then
-    _enemy.spdy=0
-    _enemy.spdx=0
-    _enemy.y=-12
-    _enemy.target=nil
+   local _isoutside=_enemy.y > 140 or _enemy.x < -20 or _enemy.x > 148
+
+   if _isoutside then
+    if hasescaped then
+     del(enemies,_enemy)
+    else
+     _enemy.spdy=0
+     _enemy.spdx=0
+     _enemy.y=-12
+     _enemy.target=nil
+    end
    end
    for _ship in all(ships) do
     if isaabbscolliding(_enemy,_ship) and not _ship.iscloaking then
@@ -738,6 +895,24 @@ function gameupdate()
     end
    end
   end
+ end
+
+ if hasescaped and #enemies == 0 and not madeitts then
+  madeitts=t()
+  exit=s2t'x=64,y=0,hw=64,hh=8'
+ end
+
+ local _isshipinsideexit=nil
+ if exit then
+  for _ship in all(ships) do
+   if isaabbscolliding(_ship,exit) then
+    _isshipinsideexit=true
+   end
+  end
+ end
+ if hasescaped and madeitts and _isshipinsideexit then
+  pickerinit()
+  return
  end
 
  if #ships == 0 and not gameoverts then
@@ -791,6 +966,11 @@ function gamedraw()
   spr(_enemy.s,_enemy.x-4,_enemy.y-4)
  end
 
+ -- draw exit
+ if exit then
+  print('to secret hangar',32,3,10+flr((t()*12)%2))
+ end
+
  -- draw ships
  for _ship in all(ships) do
   local _urx,_ury=_ship.x-4,_ship.y-4
@@ -801,6 +981,19 @@ function gamedraw()
 
   if _ship.isfiring then
    spr(240+_ship.plidx,_urx,_ury)
+  end
+ end
+
+ -- draw boss
+ if boss then
+  local _urx,_ury=flr(boss.x)-4,flr(boss.y)-4
+  if boss.hp > 0 then
+   spr(boss.s,_urx,_ury)
+  else
+   spr(boss.s,_urx,_ury,1,1,false,true)
+   for _pset in all(boss.psets) do
+    pset(_urx+_pset[1],_ury+_pset[2],_pset[3])
+   end
   end
  end
 
@@ -833,37 +1026,45 @@ function gamedraw()
  end
 
  -- draw gui
+ if boss then
+  rectfill(0,127,boss.hp,127,2)
+ end
+ 
+ if escapets then
+  rectfill(0,127,127*((t()-escapets)/escapeduration),127,13)
+ end
+
  for _ship in all(ships) do
   local _xoff=1+_ship.plidx*65
 
   -- primary
   if _ship.hp < 3 then
-   sspr(45,123,38,5,_xoff,122)
-   sspr(45,118,_ship.primaryc,5,_xoff,122)
+   sspr(45,123,38,5,_xoff,121)
+   sspr(45,118,_ship.primaryc,5,_xoff,121)
   else
-   rectfill(_xoff,122,_xoff+37,126,1)
-   rect(_xoff+2,123,_xoff+4,125,13)
-   print(_ship.primary,_xoff+37-#_ship.primary*4,122,13)
-   clip(_xoff,122,_ship.primaryc,5)
-   rectfill(_xoff,122,_xoff+37,126,weaponcolors[_ship.primary])
-   rect(_xoff+2,123,_xoff+4,125,7)
-   print(_ship.primary,_xoff+37-#_ship.primary*4,122,7)
+   rectfill(_xoff,122,_xoff+37,125,1)
+   rect(_xoff+2,123,_xoff+4,124,13)
+   print(_ship.primary,_xoff+37-#_ship.primary*4,121,13)
+   clip(_xoff,121,_ship.primaryc,5)
+   rectfill(_xoff,121,_xoff+37,125,weaponcolors[_ship.primary])
+   rect(_xoff+2,122,_xoff+4,124,7)
+   print(_ship.primary,_xoff+37-#_ship.primary*4,121,7)
    clip()
   end
 
   -- secondary
   if _ship.hp < 2 then
-   sspr(25,123,20,5,_xoff+41,122)
+   sspr(25,123,20,5,_xoff+41,121)
   else
    color(weaponcolors[_ship.secondary])
-   rectfill(_xoff+41,122,_xoff+45,126)
-   rectfill(_xoff+46,123,_xoff+46,125)
-   pset(_xoff+47,124)
-   sspr(20,125,3,3,_xoff+42,123)
+   rectfill(_xoff+41,121,_xoff+45,125)
+   rectfill(_xoff+46,122,_xoff+46,124)
+   pset(_xoff+47,123)
+   sspr(20,125,3,3,_xoff+42,122)
 
    for _i=1,_ship.secondaryshots do
     local _sx,_sy,_sw,_sh=unpack(secondarysprites[_ship.secondary])
-    sspr(_sx,_sy,_sw,_sh,_xoff+47+_i*(_sw+1),122)
+    sspr(_sx,_sy,_sw,_sh,_xoff+47+_i*(_sw+1),121)
    end
   end
 
@@ -875,6 +1076,18 @@ function gamedraw()
 
  if t()-gamestartts < 1.5 then
   drawblinktext('nick phase!',10)
+ end
+
+ if nickitts and t()-nickitts < 1.5 then
+  drawblinktext('nick it!',6)
+ end
+
+ if nickedts and t()-nickedts < 1.5 then
+  drawblinktext('escape!',9)
+ end
+
+ if madeitts then
+  drawblinktext('made it!',10)
  end
 
  -- print(#enemies,0,0,8)
@@ -889,6 +1102,13 @@ end
 function gameinit()
  gamestartts=t()
  gameoverts=nil
+ nickitts=nil
+ nickedts=nil
+ escapets=nil
+ madeitts=nil
+ hasescaped=nil
+ escapeduration=24
+ exit=nil
  enemyts=t()
  ps={}
  psfollow={}
@@ -900,27 +1120,6 @@ function gameinit()
  local _lockedcount=getlockedcount()
  lockedpercentage=169/_lockedcount
 
- -- boss={
- --  x=32,
- --  y=110,
- --  hw=4,
- --  hh=4,
- --  spd=1,
- --  hp=32,
- --  firingc=0,
- --  primaryc=30,
- --  secondaryc=0,
- --  s=2,
- --  psets={{3,2,8},{3,4,2}},
- --  guns={{x=2,y=0},{x=5,y=0}},
- --  bulletcolor=9,
- --  exhaustcolors={7,10,9},
- --  exhausts={{x=-3,y=4},{x=1,y=4}},
- --  primary='boost',
- --  secondary='missile',
- --  secondaryshots=3,
- -- }
-
  stars={}
  for i=1,24 do
   add(stars,{
@@ -930,19 +1129,7 @@ function gameinit()
   })
  end
 
- -- create ship flashes
- for _ship in all(ships) do
-  local _shipsx,_shipsy=(_ship.s%16)*8,flr(_ship.s/16)*8
-  for _x=0,7 do
-   for _y=0,7 do
-    local _col=0
-    if sget(_shipsx+_x,_shipsy+(7-_y)) != 0 then
-     _col=7
-    end
-    sset(8*_ship.plidx+_x,120+_y,_col)
-   end
-  end
- end
+ createshipflashes()
 
  _update60,_draw=gameupdate,gamedraw
 end
@@ -964,18 +1151,22 @@ function pickerupdate()
 
    if btnp(5,_i) and _i == 1 then
     picks[_i]=nil
-   elseif btnp(4,_i) and unlocked[_i] then
-    local _ship=mr(mr(clone(hangar[picks[_i]]),{plidx=_i,x=32+_i*64}),s2t'y=110,hw=3,hh=3,spd=1,hp=3,repairc=0,firingc=0,primaryc=30,secondaryc=0')
-    local _guns=split(_ship.guns,';')
-    _ship.guns={{x=_guns[1],y=_guns[2]},{x=_guns[3],y=_guns[4]}}
-    local _psets=split(_ship.psets,';')
-    _ship.psets={{_psets[1],_psets[2],_psets[3]},{_psets[4],_psets[5],_psets[6]}}
-    _ship.exhaustcolors=split(_ship.exhaustcolors,';')
-    _ship.exhausts=split(_ship.exhausts,';')
+   elseif btnp(4,_i) and unlocked[picks[_i]] then
+    local _ship=mr(getship(picks[_i]),{plidx=_i,x=32+_i*64})
     ships[_i+1]=_ship
 
     local _pickcount=mycount(picks)
     if _pickcount > 0 and _pickcount == mycount(ships) then
+     -- boss=mr(getship(getrandomlocked()),{
+     boss=mr(getship(rnd{3,13,14,15,26,27,28}),{
+      x=64,y=0,
+      hp=127,
+      ts=0,
+      flyduration=8,
+      waitduration=2,
+      boost=0,
+     })
+
      gameinit()
     end
    end
@@ -1014,6 +1205,10 @@ function pickerdraw()
 end
 
 function pickerinit()
+ for _ship in all(ships or {}) do
+  unlocked[_ship.s]=true
+ end
+ persistunlocked()
  ships={}
  _update60,_draw=pickerupdate,pickerdraw
 end
@@ -1021,7 +1216,7 @@ end
 
 _init=function ()
  loadunlocked()
-
+ 
  -- unlock to random ships if no ships are unlocked
  local _shipcount=0
  for _i=0,#unlocked do
@@ -1031,32 +1226,33 @@ _init=function ()
  end
 
  if _shipcount == 0 then
+  debug('get two random unlocks')
   unlocked[getrandomlocked()]=true
   unlocked[getrandomlocked()]=true
  end
 
- for _i=0,169 do
-  unlocked[_i]=false
- end
-
- unlocked[0]=true
- unlocked[1]=true
- unlocked[2]=true
- unlocked[13]=true
- unlocked[14]=true
- unlocked[15]=true
- unlocked[26]=true
- unlocked[27]=true
- unlocked[28]=true
-
+ -- for _i=0,169 do
+ --  unlocked[_i]=false
+ -- end
+ 
+ -- unlocked[0]=true
+ -- unlocked[1]=true
+ -- unlocked[28]=false
+ -- unlocked[2]=false
+ -- unlocked[13]=false
+ -- unlocked[14]=false
+ -- unlocked[15]=false
+ -- unlocked[26]=false
+ -- unlocked[27]=false
+ 
  persistunlocked()
-
- for _i=0,169 do
+ loadunlocked()
+ 
+ -- for _i=0,169 do
   -- debug(unlocked[_i])
   -- debug(dget(_i))
- end
+ -- end
 
- -- gameinit()
  pickerinit()
 end
 
