@@ -5,7 +5,6 @@ __lua__
 -- by ironchest games
 
 --[[
- - fix secondary bug
  - add laser
  - add slicer
 --]]
@@ -200,6 +199,8 @@ local hangar={
  [82]=mrs2t's=82,bulletcolor=6,primary="flak",secondary="cloak",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="7;10;11",exhausts="-3;3;2;3"',
  [83]=mrs2t's=83,bulletcolor=12,primary="flak",secondary="blink",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="7;6;15",exhausts="-3;3;2;3"',
  [84]=mrs2t's=84,bulletcolor=9,primary="flak",secondary="flak",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4"',
+
+ [91]=mrs2t's=91,bulletcolor=9,primary="beam",secondary="beam",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4"',
 }
 
 -- helpers
@@ -299,25 +300,6 @@ local function explosionsmoke(_x,_y)
  })
 end
 
-local explosioncolors=split'7,7,10,9,8'
-local function newexplosion(_x,_y) -- todo: same as explode?
- for _i=1,7 do
-  local _life=11
-  add(ps,{
-   x=_x,
-   y=_y,
-   r=rnd()*5,
-   spdx=(rnd()-0.5),
-   spdy=rnd()-1,
-   spdr=rnd()*0.2+0.5,
-   colors=explosioncolors,
-   life=_life,
-   lifec=_life,
-   ondeath=explosionsmoke,
-  })
- end
-end
-
 local function newexhaustp(_xoff,_yoff,_ship,_colors,_life)
  add(psfollow,{
   x=0,
@@ -401,47 +383,57 @@ local function fizzle(_obj)
 end
 
 -- weapons
+local function drawbullet(_bullet)
+ sspr(19,124,1,4,_bullet.x,_bullet.y)
+end
+
+local function drawmine(_bullet)
+ _bullet.frame+=(t()*0.375)/_bullet.life
+ if _bullet.frame > 2 then
+  _bullet.frame=0
+ end
+ sspr(2*flr(_bullet.frame),110,2,2,_bullet.x,_bullet.y)
+end
 local function shootmine(_ship,_life,_angle)
  add(bullets,{
   x=_ship.x,y=_ship.y,
-  sx=0,sy=110,sw=2,sh=2,
   hw=2,hh=2,
   frame=0,
   spdfactor=0.96+rnd(0.01),
   spdx=cos(_angle+rnd(0.02)),spdy=sin(_angle+rnd(0.02)),accy=0,
   dmg=6,
   life=_life,
-  update=function(_obj)
-   _obj.frame+=(t()*0.375)/_obj.life
-   if _obj.frame > 2 then
-    _obj.frame=0
-   end
-   _obj.sx=_obj.sw*flr(_obj.frame)
-  end,
+  draw=drawmine,
   ondeath=explode,
  })
 end
 
 local missilepcolors=split'7,10,9'
+local function drawmissile(_bullet)
+ sspr(16,123,3,5,_bullet.x,_bullet.y)
+end
 local function shootmissile(_ship,_life)
  add(bullets,{
   x=_ship.x,y=_ship.y,
-  sx=16,sy=123,sw=3,sh=5,
   hw=2,hh=3,
   spdx=rnd(0.5)-0.25,spdy=-rnd(0.175),accy=-0.05,spdfactor=1,
   dmg=12,
   life=_life,
   ondeath=explode,
+  draw=drawmissile,
   p=mr(s2t'xoff=1,yoff=5,r=0.1,spdx=0,spdy=-0.1,spdr=0,life=3',{colors=missilepcolors}),
  })
 end
 
+local flakcolors={11,3,5}
+local function drawflakbullet(_bullet)
+ pset(_bullet.x,_bullet.y,flakcolors[flr((t()*12)%3)+1])
+end
 local function shootflak(_ship,_amount,_life)
  for _i=1,_amount do
   local _spdx,_spdy=2+rnd(2),rnd(0.5)-0.25
   add(bullets,{
    x=_ship.x,y=_ship.y,
-   sx=19+flr(rnd(3)),sy=123,sw=1,sh=1,
    hw=1,hh=1,
    spdx=_spdx,
    spdy=_spdy,
@@ -449,11 +441,11 @@ local function shootflak(_ship,_amount,_life)
    spdfactor=0.9,
    dmg=1,
    life=_life+rnd(20)-40,
+   draw=drawflakbullet,
    ondeath=fizzle,
   })
   add(bullets,{
    x=_ship.x,y=_ship.y,
-   sx=19+flr(rnd(3)),sy=123,sw=1,sh=1,
    hw=1,hh=1,
    spdx=-_spdx,
    spdy=_spdy,
@@ -461,6 +453,7 @@ local function shootflak(_ship,_amount,_life)
    spdfactor=0.95,
    dmg=1,
    life=_life+rnd(20)-40,
+   draw=drawflakbullet,
    ondeath=fizzle,
   })
  end
@@ -524,7 +517,10 @@ local primary={
    shootflak(_ship,max(2,flr(_ship.primaryc/4)),_ship.primaryc*3.5)
    _ship.primaryc=0
   end
- end
+ end,
+ beam=function(_btn4,_ship)
+  _ship.isbeaming=not _btn4 and _ship.primaryc > 0
+ end,
 }
 
 local secondary={
@@ -585,9 +581,19 @@ local secondary={
    _ship.secondaryshots-=1
   end
  end,
+ beam=function(_ship)
+  _ship.secondaryc-=1
+  if btnp(5,_ship.plidx) and _ship.secondaryshots > 0 then
+   _ship.secondaryshots-=1
+   _ship.secondaryc=60
+  end
+  if _ship.secondaryc > 0 then
+   _ship.isbeaming=true
+  end
+ end
 }
 
-local weaponcolors=s2t'missile=15,boost=2,mines=5,shield=12,cloak=4,blink=3,flak=11'
+local weaponcolors=s2t'missile=15,boost=2,mines=5,shield=12,cloak=4,blink=3,flak=11,beam=8'
 
 local boostcolors=split'7,10,9,8'
 
@@ -599,6 +605,7 @@ local secondarysprites={
  cloak=split'39,119,3,4',
  blink=split'21,120,2,5',
  flak=split'19,118,2,5',
+ beam=split'21,115,3,5',
 }
 
 -- enemies
@@ -635,13 +642,16 @@ local function newenemyexhaustp(_x,_y,_colors)
  })
 end
 
+local function drawenemymissile(_bullet)
+ sspr(16,118,3,5,_bullet.x,_bullet.y)
+end
 local function enemyshootmissile(_enemy)
  add(enemybullets,{
   x=_enemy.x,y=_enemy.y,
-  sx=16,sy=118,sw=3,sh=5,
   hw=2,hh=3,
   spdx=rnd(0.5)-0.25,spdy=0.1,accy=0.05,spdfactor=1,
   life=1000,
+  draw=drawenemymissile,
   ondeath=explode,
   p={
    xoff=1,
@@ -656,22 +666,22 @@ local function enemyshootmissile(_enemy)
  })
 end
 
+local function drawenemymine(_bullet)
+ _bullet.frame+=(t()*0.375)/_bullet.life
+ if _bullet.frame > 2 then
+  _bullet.frame=0
+ end
+ sspr(2*flr(_bullet.frame),108,2,2,_bullet.x,_bullet.y)
+end
 local function enemyshootmine(_enemy)
  add(enemybullets,{
   x=_enemy.x,y=_enemy.y,
-  sx=0,sy=108,sw=2,sh=2,
   hw=2,hh=2,
   frame=0,
   spdfactor=0.96+rnd(0.01),
   spdx=rnd(0.5)-0.25,spdy=1.5,accy=0,
   life=110,
-  update=function(_obj)
-   _obj.frame+=(t()*0.375)/_obj.life
-   if _obj.frame > 2 then
-    _obj.frame=0
-   end
-   _obj.sx=_obj.sw*flr(_obj.frame)
-  end,
+  draw=drawenemymine,
   ondeath=explode,
  })
 end
@@ -799,6 +809,10 @@ function gameupdate()
   if _ship.isboosting then
    _ship.spd=2
   end
+
+  if _ship.isbeaming then
+   _ship.spd*=0.5
+  end
   
   -- move
   if btn(0,_plidx) then
@@ -826,6 +840,7 @@ function gameupdate()
    _ship.isshielding=nil
    _ship.iscloaking=nil
    _ship.isboosting=nil
+   _ship.isbeaming=nil
   end
 
   if _ship.hp < 3 then
@@ -850,10 +865,10 @@ function gameupdate()
       add(bullets,{
        x=_urx+_gun.x,y=_ury+_gun.y,
        hw=1,hh=2,
-       sx=19,sy=124,sw=1,sh=4,
        spdx=0,spdy=-3,accy=0,spdfactor=1,
        dmg=1,
        life=1000,
+       draw=drawbullet,
        p={
         xoff=0,yoff=4,r=0.1,
         spdx=0,spdy=-0.1,spdr=0,
@@ -884,7 +899,7 @@ function gameupdate()
   end
 
   if _ship.hp == 0 then
-   newexplosion(_ship.x,_ship.y)
+   explode(_ship)
    del(ships,_ship)
   end
 
@@ -897,15 +912,15 @@ function gameupdate()
     nickitts=nil
     boss=nil
    else
-    newexplosion(_ship.x,_ship.y)
-    newexplosion(boss.x,boss.y)
+    explode(_ship)
+    explode(boss)
     boss=nil
     _ship.hp=0
    end
   end
  end
 
- -- update friendly bullets
+ -- update bullets (friendly)
  for _b in all(bullets) do
   _b.x+=_b.spdx
   _b.y+=_b.spdy
@@ -1063,7 +1078,7 @@ function gameupdate()
 
  for _enemy in all(enemies) do
   if _enemy.hp <= 0 then
-   newexplosion(_enemy.x,_enemy.y)
+   explode(_enemy)
    del(enemies,_enemy)
   else
    _enemy.x+=_enemy.spdx
@@ -1084,7 +1099,7 @@ function gameupdate()
    end
    for _ship in all(ships) do
     if isaabbscolliding(_enemy,_ship) and not _ship.iscloaking then
-     newexplosion(_enemy.x,_enemy.y)
+     explode(_enemy)
      del(enemies,_enemy)
      _ship.hp-=1
      _ship.primaryc=0
@@ -1149,12 +1164,12 @@ function gamedraw()
 
  -- draw enemybullets
  for _b in all(enemybullets) do
-  sspr(_b.sx,_b.sy,_b.sw,_b.sh,_b.x,_b.y)
+  _b.draw(_b)
  end
 
  -- draw bullets
  for _b in all(bullets) do
-  sspr(_b.sx,_b.sy,_b.sw,_b.sh,_b.x,_b.y)
+  _b.draw(_b)
  end
 
  -- draw enemies
@@ -1226,6 +1241,17 @@ function gamedraw()
    if _p.ondeath then
     _p.ondeath(_p.x,_p.y)
    end
+  end
+ end
+
+ -- draw top fx
+ for _ship in all(ships) do
+  if _ship.isshielding then
+   drawshield(_ship.x,_ship.y)
+  end
+
+  if _ship.iscloaking then
+   drawcloak(_ship.x,_ship.y)
   end
  end
 
@@ -1446,8 +1472,9 @@ _init=function ()
  
  unlocked[0]=true
  unlocked[1]=true
+ unlocked[2]=true
  -- unlocked[52]=true
- unlocked[71]=true
+ unlocked[91]=true
  -- unlocked[28]=false
  -- unlocked[2]=false
  -- unlocked[13]=true
@@ -1487,9 +1514,9 @@ d46dd64d52288225b500005bd554455d000000000000000000000000000000000000000000000000
 006446005005500530000003d540045d0000000000000000000000000000000000000000000000000220022005500550005dd500f000000fc0c44c0c05550000
 000dd0000000000000000000000000000000000000000000000000000009900000088000060660600c0000c00070070000077000000330000000000000000000
 040ab0400000000000000000000000000000000000000000000000000009900000888800600b30066c0000c607000070007d470000f33f000000000000000000
-04dbbd40000000000000000000000000000000000000000000000000000bc000028a982060f33f066c0b30c67600006707c44c7000f7cf000000000000000000
-dd5bb5dd000000000000000000000000000000000000000000000000006cc600229a9922f046640f6c0330c6760b3067c6c44c6c03c7cc300000000000000000
-d55dd55d000000000000000000000000000000000000000000000000006cc60028988982404664046c4334c676d33d67c6c77c6c3fc66cf30000000000000000
+04dbbd40000000000000000000000000000000000000000000000000000bc000028a982060f33f066c0b30c67600006707c44c7000f7bf000000000000000000
+dd5bb5dd000000000000000000000000000000000000000000000000006cc600229a9922f046640f6c0330c6760b3067c6c44c6c03b7bb300000000000000000
+d55dd55d000000000000000000000000000000000000000000000000006cc60028988982404664046c4334c676d33d67c6c77c6c3fb66bf30000000000000000
 000dd00000000000000000000000000000000000000000000000000070699607d828828d400ff004c6d66d6c76d77d6776c77c673f3663f30000000000000000
 0d5dd5d000000000000000000000000000000000000000000000000079699697d828828d45466454cc4664cc07677670760cc067303663030000000000000000
 0d5445d00000000000000000000000000000000000000000000000006969969605055050404664040c0550c00067760070000007000440000000000000000000
@@ -1509,14 +1536,14 @@ d55dd55d000000000000000000000000000000000000000000000000006cc6002898898240466404
 00000000000bb000080880809f6ff6f96f6ff6f60f6ff6f0deeaaeedfd9ff9df00000000000000000000000000000000000000000000000060f33f06fd0df0df
 000000000b3bb3b0884884889f6ff6f9f66ff66f66f66f660dedded00fdffdf000000000000000000000000000000000000000000000000063f33f36550dd055
 000000000b3553b08505505890d55d0905500550f6d66d6f005dd500005ff500000000000000000000000000000000000000000000000000f3f33f3f00055000
-00033000030000300005500000088000000ff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000a9000c300003c000550000006d0000d0ab0d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00599500cd0000dc000e2000000dd0000d4bb4d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-04599540cd0a90dc00f22f00008dd800454bb4540000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-54533545dd0990dd00f22f000e8dd8e0545ff5450000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-005335003d5995d3d0f55f0d2e8ee8e2000ff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-04355340dc5cc5cdd5f55f5d2e8ee8e2045ff5400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-54355345dc0cc0cdf5f55f5f005ee500054dd4500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00033000030000300005500000088000000ff0000000000000000000000000000000000000000000000000000300003000000000000000000000000000000000
+000a9000c300003c000550000006d0000d0ab0d00000000000000000000000000000000000000000000000000b3003b000000000000000000000000000000000
+00599500cd0000dc000e2000000dd0000d4bb4d000000000000000000000000000000000000000000000000000be2b0000000000000000000000000000000000
+04599540cd0a90dc00f22f00008dd800454bb4540000000000000000000000000000000000000000000000000002200000000000000000000000000000000000
+54533545dd0990dd00f22f000e8dd8e0545ff5450000000000000000000000000000000000000000000000000b3223b000000000000000000000000000000000
+005335003d5995d3d0f55f0d2e8ee8e2000ff000000000000000000000000000000000000000000000000000b33bb33b00000000000000000000000000000000
+04355340dc5cc5cdd5f55f5d2e8ee8e2045ff540000000000000000000000000000000000000000000000000b30bb03b00000000000000000000000000000000
+54355345dc0cc0cdf5f55f5f005ee500054dd450000000000000000000000000000000000000000000000000b004400b00000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
