@@ -881,6 +881,50 @@ local function enemyshootmine(_enemy)
  })
 end
 
+local function drawenemybullet(_bullet)
+ sspr(23,120,1,3,_bullet.x,_bullet.y)
+end
+local enemybulletpcolors=split'2,2,4'
+local function enemyshootbullet(_enemy)
+ sfx(8)
+ add(enemybullets,{
+  x=_enemy.x+3,y=_enemy.y,
+  hw=1,hh=2,
+  spdx=0,spdy=2,accy=0,spdfactor=1,
+  life=1000,
+  draw=drawenemybullet,
+  ondeath=explode,
+  p={
+   xoff=0,
+   yoff=0,
+   r=0.1,
+   spdx=0,
+   spdy=0,
+   spdr=0,
+   colors=enemybulletpcolors,
+   life=3,
+  },
+ })
+ add(enemybullets,{
+  x=_enemy.x-4,y=_enemy.y,
+  hw=1,hh=2,
+  spdx=0,spdy=2,accy=0,spdfactor=1,
+  life=1000,
+  draw=drawenemybullet,
+  ondeath=explode,
+  p={
+   xoff=0,
+   yoff=0,
+   r=0.1,
+   spdx=0,
+   spdy=0,
+   spdr=0,
+   colors=enemybulletpcolors,
+   life=3,
+  },
+ })
+end
+
 local bossweapons={
  missile=enemyshootmissile,
  mines=enemyshootmine,
@@ -983,6 +1027,34 @@ local function newbomber()
    end
    _enemy.spdx=mid(-0.5,_enemy.spdx+_enemy.accx,0.5)
    _enemy.spdy=_enemy.ogspdy
+  end,
+ })
+end
+
+local fighterexhaustcolors=split'14,2,4'
+local function newfighter()
+ add(enemies,{
+  x=0,y=-12,
+  hw=4,hh=4,
+  spdx=0,spdy=0,
+  accx=0,
+  s=177,
+  hp=5,
+  ts=t(),
+  update=function(_enemy)
+   local _x=flr(_enemy.x)
+   local _y=flr(_enemy.y)
+   newenemyexhaustp(_x-1,_y-4,fighterexhaustcolors)
+   newenemyexhaustp(_x,_y-4,fighterexhaustcolors)
+   if not _enemy.target then
+    _enemy.x=flr(8+rnd(120))
+    _enemy.target=true
+    _enemy.spdy=rnd(0.5)+0.5
+   end
+   if t()-_enemy.ts > 0.875 then
+     enemyshootbullet(_enemy)
+     _enemy.ts=t()
+   end
   end,
  })
 end
@@ -1307,7 +1379,7 @@ function gameupdate()
  -- update enemies
  if nickitts == nil and (not hasescaped) and (t()-enemyts > max(0.8,4*lockedpercentage) and #enemies < 20 or #enemies < 3) then
   enemyts=t()
-  rnd{newkamikaze,newkamikaze,newbomber,newminelayer}()
+  rnd{newkamikaze,newkamikaze,newbomber,newminelayer,newfighter}()
  end
 
  for _enemy in all(enemies) do
