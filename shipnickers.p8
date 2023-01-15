@@ -8,14 +8,13 @@ __lua__
  -- add all burner ships
  -- add all bolt ships
  -- add all boss weapons
- -- fix unlock persistence
  -- add "new" blink to hangar
  -- add game event sfx
  -- fix mines sfx
  -- add splash
 --]]
 
-cartdata'ironchestgames_shipnickers_v1-dev1'
+cartdata'ironchestgames_shipnickers_v1-dev2'
 
 printh('debug started','debug',true)
 function debug(s)
@@ -27,64 +26,22 @@ poke(0x5f5c,-1) -- disable btnp auto-repeat
 pal(0,129,1)
 pal(split'1,136,139,141,5,6,7,8,9,10,138,12,13,14,134',1)
 
-local unlocked
-local function loadunlocked()
- unlocked={}
- local masks={0b00000001,0b00000010,0b00000100,0b00001000,0b00010000,0b00100000,0b01000000,0b10000000}
- for _i=0,22 do
-  local _n=dget(_i)
-  for _j=1,#masks do
-   local _jj=_j-1
-   unlocked[_i*7+_jj]=(masks[_j] & _n) != 0
-   if unlocked[_i*7+_jj] == true then
-    debug('----')
-    debug(_i*7)
-    debug(_jj)
-   end
-  end
- end
+local function unlock(_n)
+ poke(0x5e00+_n,1)
 end
 
-local function persistunlocked()
- for _i=0,#unlocked,8 do
-  local _n=0
-  for _j=0,7 do
-   _n=_n | (unlocked[_i+_j] and 2^_j or 0)
-  end
-  dset(_i,_n) -- todo: this is wrong yeah?
- end
+local function isunlocked(_n)
+ return peek(0x5e00+_n) == 1
 end
 
--- local function persistunlocked()
---  for _i=0,#unlocked,7 do
---   local _n=0
---   for _j=0,7 do
---    _n=_n | (unlocked[_i+_j] and 2^_j or 0)
---   end
---   dset(_i/7,_n)
---  end
--- end
-
-local function getrandomlocked()
- local _indeces={}
- for _i=0,#unlocked do
-  if not unlocked[_i] then
-   add(_indeces,_i)
+local function getlocked()
+ local _locked={}
+ for _i=0,99 do
+  if not isunlocked(_i) then
+   add(_locked,_i)
   end
  end
- if #_indeces > 0 then
-  return rnd(_indeces)
- end
-end
-
-local function getlockedcount()
- local _count=0
- for _i=0,#unlocked do
-  if not unlocked[_i] then
-   _count+=1
-  end
- end
- return _count
+ return _locked
 end
 
 -- utils
@@ -656,7 +613,8 @@ local primary={
  end,
  mines=function(_btn4,_ship)
   if _btn4 and _ship.primaryc > 1 and not _ship.lastbtn4 then
-   shootmine(_ship,_ship.primaryc*3.5+15,0.2+rnd(0.1))
+   shootmine(_ship,_ship.primaryc*3.5+15,0.375+rnd(0.1))
+   shootmine(_ship,_ship.primaryc*3.5+15,0.125-rnd(0.1))
    _ship.primaryc=0
   end
  end,
@@ -1785,8 +1743,7 @@ function gameinit()
  enemybullets={}
  cargos={}
 
- local _lockedcount=getlockedcount()
- lockedpercentage=169/_lockedcount
+ lockedpercentage=100/#getlocked()
 
  stars={}
  for i=1,24 do
@@ -1819,7 +1776,7 @@ function pickerupdate()
 
    if btnp(5,_i) and _i == 1 then
     picks[_i]=nil
-   elseif btnp(4,_i) and unlocked[picks[_i]] then
+   elseif btnp(4,_i) and isunlocked(picks[_i]) then
     local _ship=mr(getship(picks[_i]),{plidx=_i,x=32+_i*64})
     ships[_i+1]=_ship
 
@@ -1850,7 +1807,7 @@ function pickerdraw()
  cls()
  for _x=0,9 do
   for _y=0,9 do
-   if unlocked[_y*10+_x] then
+   if isunlocked(_y*10+_x) then
     spr(_y*10+_x,6+_x*9,3+_y*9)
    else
     spr(224,6+_x*9,3+_y*9)
@@ -1863,7 +1820,7 @@ function pickerdraw()
    local _x,_y=5+(_pick%10)*9,2+flr(_pick/10)*9
    rect(_x,_y,_x+9,_y+9,11+_i)
    local _s='?????'
-   if unlocked[_pick] then
+   if isunlocked(_pick) then
     local _ship=hangar[_pick]
     _s=_ship.primary..','.._ship.secondary
    end
@@ -1875,54 +1832,24 @@ end
 function pickerinit()
  sfx(-2,1)
  for _ship in all(ships or {}) do
-  unlocked[_ship.s]=true
+  unlock(_ship.s)
  end
- persistunlocked()
  ships={}
  _update60,_draw=pickerupdate,pickerdraw
 end
 
 
 _init=function ()
- loadunlocked()
- 
- -- unlock to random ships if no ships are unlocked
- local _shipcount=0
- for _i=0,#unlocked do
-  if unlocked[_i] then
-   _shipcount+=1
-  end
+ if #getlocked() == 100 then
+  unlock(rnd(getlocked()))
+  unlock(rnd(getlocked()))
  end
 
- if _shipcount == 0 then
-  debug('get two random unlocks')
-  unlocked[getrandomlocked()]=true
-  unlocked[getrandomlocked()]=true
- end
-
- for _i=0,99 do
-  unlocked[_i]=false
- end
- 
- unlocked[0]=true
- unlocked[1]=true
- unlocked[2]=true
- unlocked[13]=true
- unlocked[77]=true
- -- unlocked[13]=true
- -- unlocked[14]=true
- -- unlocked[15]=true
- 
- -- persistunlocked()
- -- loadunlocked()
- 
- -- for _i=0,169 do
-  -- debug(unlocked[_i])
-  -- debug(dget(_i))
- -- end
+ unlock(20)
 
  pickerinit()
 end
+
 __gfx__
 00044000000dd000000dd000000cc000000550000900009000022000000220000060060000088000000880000009900007000070000660000002200000033000
 00db3d00005dd500040ab04000dabd00004b3400090000900057e500005225000600006000088000000650000097690078000087006dd6000007600000ba9b00
