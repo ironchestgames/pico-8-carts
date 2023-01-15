@@ -5,16 +5,17 @@ __lua__
 -- by ironchest games
 
 --[[
- -- add all burner ships
- -- add all bolt ships
+ -- fix boss collision crash
+ -- fix psets
  -- add boss weapon sfx channel
  -- add "new" blink to hangar
+ -- unify game event code
  -- add game event sfx
  -- fix mines sfx
  -- add splash
 --]]
 
-cartdata'ironchestgames_shipnickers_v1-dev2'
+cartdata'ironchestgames_shipnickers_v1-dev3'
 
 printh('debug started','debug',true)
 function debug(s)
@@ -107,7 +108,7 @@ end
 local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemybullets,boss,cargos,lockedpercentage
 
 local hangar={
- [0]=mrs2t's=0,bulletcolor=9,primary="missile",secondary="missile",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;0;5;0",exhaustcolors="7;14;8",exhausts="-1;3;0;3"',
+ [0]=mrs2t's=0,bulletcolor=9,primary="missile",secondary="missile",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;1;5;1",exhaustcolors="7;14;8",exhausts="-1;3;0;3"',
  mrs2t's=1,bulletcolor=12,primary="missile",secondary="boost",secondaryshots=3,psets="3;5;2;3;3;8",guns="2;0;5;0",exhaustcolors="7;10;9",exhausts="-3;4;-2;4;1;4;2;4"',
  mrs2t's=2,bulletcolor=10,primary="missile",secondary="mines",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;1;6;1",exhaustcolors="7;10;4",exhausts="-1;4;0;4"',
  mrs2t's=3,bulletcolor=10,primary="missile",secondary="shield",secondaryshots=3,psets="3;6;11;3;4;10",guns="2;0;5;0",exhaustcolors="7;9;4",exhausts="-1;3;0;3"',
@@ -116,98 +117,106 @@ local hangar={
  mrs2t's=6,bulletcolor=15,primary="missile",secondary="flak",secondaryshots=3,psets="3;6;11;3;4;10",guns="2;0;5;0",exhaustcolors="10;9;5",exhausts="-4;4;-3;4;-1;4;0;4;2;4;3;4"',
  mrs2t's=7,bulletcolor=12,primary="missile",secondary="beam",secondaryshots=3,psets="3;6;11;3;4;10",guns="2;1;5;1",exhaustcolors="12;12;13",exhausts="-3;4;-2;4;1;4;2;4"',
  mrs2t's=8,bulletcolor=12,primary="missile",secondary="burner",secondaryshots=3,psets="3;6;11;3;4;10",guns="2;1;5;1",exhaustcolors="12;12;13",exhausts="-3;4;-2;4;1;4;2;4"',
- -- 9 bolt
+ mrs2t's=9,bulletcolor=12,primary="missile",secondary="bolt",secondaryshots=3,psets="3;6;11;3;4;10",guns="0;3;7;3",exhaustcolors="7;12;15",exhausts="-1;4;0;4"',
 
- [10]=mrs2t's=10,bulletcolor=11,primary="boost",secondary="missile",secondaryshots=3,psets="3;6;5;3;4;6",guns="2;2;5;2",exhaustcolors="7;6;13",exhausts="-3;4;-2;4;1;4;2;4"',
- [11]=mrs2t's=11,bulletcolor=3,primary="boost",secondary="boost",secondaryshots=3,psets="0;0;9;0;0;9",guns="1;0;6;0",exhaustcolors="11;12;5",exhausts="-2;3;-1;3;0;3;1;3"',
- [12]=mrs2t's=12,bulletcolor=9,primary="boost",secondary="mines",secondaryshots=3,psets="3;4;9;3;2;10",guns="1;0;6;0",exhaustcolors="11;3;4",exhausts="-4;4;-3;4;2;4;3;4"',
- [13]=mrs2t's=13,bulletcolor=15,primary="boost",secondary="shield",secondaryshots=3,psets="3;6;11;3;4;10",guns="0;4;7;4",exhaustcolors="10;15;5",exhausts="-3;3;-1;4;0;4;2;3"',
- [14]=mrs2t's=14,bulletcolor=11,primary="boost",secondary="cloak",secondaryshots=3,psets="3;6;5;3;3;6",guns="2;2;5;2",exhaustcolors="11;3;5",exhausts="-1;4;0;4"',
- [15]=mrs2t's=15,bulletcolor=12,primary="boost",secondary="blink",secondaryshots=3,psets="3;6;5;3;3;6",guns="1;2;6;2",exhaustcolors="7;14;8",exhausts="-4;4;-3;3;-2;2;1;2;2;3;3;4"',
- [16]=mrs2t's=16,bulletcolor=11,primary="boost",secondary="flak",secondaryshots=3,psets="3;6;5;3;3;6",guns="1;2;6;2",exhaustcolors="14;8;2",exhausts="-4;4;-3;4;-2;4;1;4;2;4;3;4"',
- [17]=mrs2t's=17,bulletcolor=11,primary="boost",secondary="beam",secondaryshots=3,psets="3;6;5;3;3;6",guns="1;2;6;2",exhaustcolors="11;11;5",exhausts="-3;4;-2;4;1;4;2;4"',
- -- 18 burner
- -- 19 bolt
+ mrs2t's=10,bulletcolor=11,primary="boost",secondary="missile",secondaryshots=3,psets="3;6;5;3;4;6",guns="2;2;5;2",exhaustcolors="7;6;13",exhausts="-3;4;-2;4;1;4;2;4"',
+ mrs2t's=11,bulletcolor=3,primary="boost",secondary="boost",secondaryshots=3,psets="0;0;9;0;0;9",guns="1;0;6;0",exhaustcolors="11;12;5",exhausts="-2;3;-1;3;0;3;1;3"',
+ mrs2t's=12,bulletcolor=9,primary="boost",secondary="mines",secondaryshots=3,psets="3;4;9;3;2;10",guns="1;0;6;0",exhaustcolors="11;3;4",exhausts="-4;4;-3;4;2;4;3;4"',
+ mrs2t's=13,bulletcolor=15,primary="boost",secondary="shield",secondaryshots=3,psets="3;6;11;3;4;10",guns="0;4;7;4",exhaustcolors="10;15;5",exhausts="-3;3;-1;4;0;4;2;3"',
+ mrs2t's=14,bulletcolor=11,primary="boost",secondary="cloak",secondaryshots=3,psets="3;6;5;3;3;6",guns="2;2;5;2",exhaustcolors="11;3;5",exhausts="-1;4;0;4"',
+ mrs2t's=15,bulletcolor=12,primary="boost",secondary="blink",secondaryshots=3,psets="3;6;5;3;3;6",guns="1;2;6;2",exhaustcolors="7;14;8",exhausts="-4;4;-3;3;-2;2;1;2;2;3;3;4"',
+ mrs2t's=16,bulletcolor=11,primary="boost",secondary="flak",secondaryshots=3,psets="3;6;5;3;3;6",guns="1;2;6;2",exhaustcolors="14;8;2",exhausts="-4;4;-3;4;-2;4;1;4;2;4;3;4"',
+ mrs2t's=17,bulletcolor=11,primary="boost",secondary="beam",secondaryshots=3,psets="3;6;5;3;3;6",guns="1;2;6;2",exhaustcolors="11;11;5",exhausts="-3;4;-2;4;1;4;2;4"',
+ mrs2t's=18,bulletcolor=11,primary="boost",secondary="burner",secondaryshots=3,psets="3;6;5;3;3;6",guns="1;2;6;2",exhaustcolors="10;11;5",exhausts="-3;4;-1;4;0;4;2;4"',
+ mrs2t's=19,bulletcolor=14,primary="boost",secondary="bolt",secondaryshots=3,psets="3;6;5;3;3;6",guns="1;1;6;1",exhaustcolors="7;7;15",exhausts="-3;3;2;3"',
  
- [20]=mrs2t's=20,bulletcolor=14,primary="mines",secondary="missile",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;1;6;1",exhaustcolors="10;9;4",exhausts="-3;4;-2;4;1;4;2;4"',
- [21]=mrs2t's=21,bulletcolor=5,primary="mines",secondary="boost",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-3;4;-2;4;1;4;2;4"',
- [22]=mrs2t's=22,bulletcolor=11,primary="mines",secondary="mines",secondaryshots=3,psets="3;4;1;3;3;12",guns="0;2;7;2",exhaustcolors="7;6;5",exhausts="-2;4;1;4"',
- [23]=mrs2t's=23,bulletcolor=15,primary="mines",secondary="shield",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;1;6;1",exhaustcolors="10;14;13",exhausts="-1;3;0;3"',
- [24]=mrs2t's=24,bulletcolor=11,primary="mines",secondary="cloak",secondaryshots=3,psets="3;6;5;3;3;6",guns="2;2;5;2",exhaustcolors="10;11;5",exhausts="-1;4;0;4"',
- [25]=mrs2t's=25,bulletcolor=11,primary="mines",secondary="blink",secondaryshots=3,psets="3;6;5;3;3;6",guns="1;2;3;2",exhaustcolors="10;11;5",exhausts="-3;4;-2;4;-1;4"',
- [26]=mrs2t's=26,bulletcolor=9,primary="mines",secondary="flak",secondaryshots=3,psets="3;6;5;3;3;6",guns="1;0;6;0",exhaustcolors="10;9;15",exhausts="-1;4;0;4"',
- [27]=mrs2t's=27,bulletcolor=14,primary="mines",secondary="beam",secondaryshots=3,psets="3;6;5;3;3;6",guns="1;0;6;0",exhaustcolors="7;7;13",exhausts="-1;3;0;3"',
- -- 28 burner
- -- 29 bolt
+ mrs2t's=20,bulletcolor=14,primary="mines",secondary="missile",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;1;6;1",exhaustcolors="10;9;4",exhausts="-3;4;-2;4;1;4;2;4"',
+ mrs2t's=21,bulletcolor=5,primary="mines",secondary="boost",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-3;4;-2;4;1;4;2;4"',
+ mrs2t's=22,bulletcolor=11,primary="mines",secondary="mines",secondaryshots=3,psets="3;4;1;3;3;12",guns="0;2;7;2",exhaustcolors="7;6;5",exhausts="-2;4;1;4"',
+ mrs2t's=23,bulletcolor=15,primary="mines",secondary="shield",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;1;6;1",exhaustcolors="10;14;13",exhausts="-1;3;0;3"',
+ mrs2t's=24,bulletcolor=11,primary="mines",secondary="cloak",secondaryshots=3,psets="3;6;5;3;3;6",guns="2;2;5;2",exhaustcolors="10;11;5",exhausts="-1;4;0;4"',
+ mrs2t's=25,bulletcolor=11,primary="mines",secondary="blink",secondaryshots=3,psets="3;6;5;3;3;6",guns="1;2;3;2",exhaustcolors="10;11;5",exhausts="-3;4;-2;4;-1;4"',
+ mrs2t's=26,bulletcolor=9,primary="mines",secondary="flak",secondaryshots=3,psets="3;6;5;3;3;6",guns="1;0;6;0",exhaustcolors="10;9;15",exhausts="-1;4;0;4"',
+ mrs2t's=27,bulletcolor=14,primary="mines",secondary="beam",secondaryshots=3,psets="3;6;5;3;3;6",guns="1;0;6;0",exhaustcolors="7;7;13",exhausts="-1;3;0;3"',
+ mrs2t's=28,bulletcolor=9,primary="mines",secondary="burner",secondaryshots=3,psets="3;6;5;3;3;6",guns="2;1;5;1",exhaustcolors="14;8;5",exhausts="-2;4;1;4"',
+ mrs2t's=29,bulletcolor=11,primary="mines",secondary="bolt",secondaryshots=3,psets="3;6;5;3;3;6",guns="1;2;6;2",exhaustcolors="11;11;4",exhausts="-1;3;0;3"',
 
- [30]=mrs2t's=30,bulletcolor=5,primary="shield",secondary="missile",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="7;10;15",exhausts="-1;4;0;4"',
- [31]=mrs2t's=31,bulletcolor=12,primary="shield",secondary="boost",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;1;6;1",exhaustcolors="11;12;13",exhausts="-3;4;-1;4;0;4;2;4"',
- [32]=mrs2t's=32,bulletcolor=9,primary="shield",secondary="mines",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;0;6;0",exhaustcolors="7;10;15",exhausts="-1;4;0;4"',
- [33]=mrs2t's=33,bulletcolor=10,primary="shield",secondary="shield",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;0;6;0",exhaustcolors="7;10;5",exhausts="-1;4;0;4"',
- [34]=mrs2t's=34,bulletcolor=8,primary="shield",secondary="cloak",secondaryshots=3,psets="0;1;13;0;1;13",guns="2;0;5;0",exhaustcolors="14;8;2",exhausts="-2;4;1;4"',
- [35]=mrs2t's=35,bulletcolor=10,primary="shield",secondary="blink",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;2;6;2",exhaustcolors="10;11;15",exhausts="-1;3;0;3"',
- [36]=mrs2t's=36,bulletcolor=9,primary="shield",secondary="flak",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;1;5;1",exhaustcolors="10;14;8",exhausts="-1;4;0;4"',
- [37]=mrs2t's=37,bulletcolor=6,primary="shield",secondary="beam",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;1;6;1",exhaustcolors="10;14;15",exhausts="-1;4;0;4"',
- -- 38 burner
- -- 39 bolt
+ mrs2t's=30,bulletcolor=5,primary="shield",secondary="missile",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="7;10;15",exhausts="-1;4;0;4"',
+ mrs2t's=31,bulletcolor=12,primary="shield",secondary="boost",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;1;6;1",exhaustcolors="11;12;13",exhausts="-3;4;-1;4;0;4;2;4"',
+ mrs2t's=32,bulletcolor=9,primary="shield",secondary="mines",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;0;6;0",exhaustcolors="7;10;15",exhausts="-1;4;0;4"',
+ mrs2t's=33,bulletcolor=10,primary="shield",secondary="shield",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;0;6;0",exhaustcolors="7;10;5",exhausts="-1;4;0;4"',
+ mrs2t's=34,bulletcolor=8,primary="shield",secondary="cloak",secondaryshots=3,psets="0;1;13;0;1;13",guns="2;0;5;0",exhaustcolors="14;8;2",exhausts="-2;4;1;4"',
+ mrs2t's=35,bulletcolor=10,primary="shield",secondary="blink",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;2;6;2",exhaustcolors="10;11;15",exhausts="-1;3;0;3"',
+ mrs2t's=36,bulletcolor=9,primary="shield",secondary="flak",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;1;5;1",exhaustcolors="10;14;8",exhausts="-1;4;0;4"',
+ mrs2t's=37,bulletcolor=6,primary="shield",secondary="beam",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;1;6;1",exhaustcolors="10;14;15",exhausts="-1;4;0;4"',
+ mrs2t's=38,bulletcolor=11,primary="shield",secondary="burner",secondaryshots=3,psets="3;6;3;3;4;11",guns="0;3;7;3",exhaustcolors="3;3;5",exhausts="-3;4;-2;4;1;4;2;4"',
+ mrs2t's=39,bulletcolor=3,primary="shield",secondary="bolt",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;2;6;2",exhaustcolors="10;10;3",exhausts="-3;3;-1;4;0;4;2;3"',
  
- [40]=mrs2t's=40,bulletcolor=14,primary="cloak",secondary="missile",secondaryshots=3,psets="3;6;5;3;4;6",guns="1;1;6;1",exhaustcolors="7;11;3",exhausts="-2;4;1;4"',
- [41]=mrs2t's=41,bulletcolor=15,primary="cloak",secondary="boost",secondaryshots=3,psets="3;6;11;3;4;10",guns="0;4;7;4",exhaustcolors="8;2;4",exhausts="-3;3;2;3"',
- [42]=mrs2t's=42,bulletcolor=5,primary="cloak",secondary="mines",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="7;10;15",exhausts="-1;4;0;4"',
- [43]=mrs2t's=43,bulletcolor=4,primary="cloak",secondary="shield",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;0;6;0",exhaustcolors="7;9;5",exhausts="-1;2;0;2"',
- [44]=mrs2t's=44,bulletcolor=7,primary="cloak",secondary="cloak",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;1;6;1",exhaustcolors="9;8;2",exhausts="-1;3;0;3"',
- [45]=mrs2t's=45,bulletcolor=7,primary="cloak",secondary="blink",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;1;5;1",exhaustcolors="12;3;15"',
- [46]=mrs2t's=46,bulletcolor=7,primary="cloak",secondary="flak",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;0;5;0",exhaustcolors="14;2;5",exhausts="-2;4;1;4"',
- [47]=mrs2t's=47,bulletcolor=14,primary="cloak",secondary="beam",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;0;6;0",exhaustcolors="10;11;3",exhausts="-3;4;2;4"',
- -- 48 burner
- -- 49 bolt
+ mrs2t's=40,bulletcolor=14,primary="cloak",secondary="missile",secondaryshots=3,psets="3;6;5;3;4;6",guns="1;1;6;1",exhaustcolors="7;11;3",exhausts="-2;4;1;4"',
+ mrs2t's=41,bulletcolor=15,primary="cloak",secondary="boost",secondaryshots=3,psets="3;6;11;3;4;10",guns="0;4;7;4",exhaustcolors="8;2;4",exhausts="-3;3;2;3"',
+ mrs2t's=42,bulletcolor=5,primary="cloak",secondary="mines",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="7;10;15",exhausts="-1;4;0;4"',
+ mrs2t's=43,bulletcolor=4,primary="cloak",secondary="shield",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;0;6;0",exhaustcolors="7;9;5",exhausts="-1;2;0;2"',
+ mrs2t's=44,bulletcolor=7,primary="cloak",secondary="cloak",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;1;6;1",exhaustcolors="9;8;2",exhausts="-1;3;0;3"',
+ mrs2t's=45,bulletcolor=7,primary="cloak",secondary="blink",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;1;5;1",exhaustcolors="12;3;15"',
+ mrs2t's=46,bulletcolor=7,primary="cloak",secondary="flak",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;0;5;0",exhaustcolors="14;2;5",exhausts="-2;4;1;4"',
+ mrs2t's=47,bulletcolor=14,primary="cloak",secondary="beam",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;0;6;0",exhaustcolors="10;11;3",exhausts="-3;4;2;4"',
+ mrs2t's=48,bulletcolor=8,primary="cloak",secondary="burner",secondaryshots=3,psets="3;6;3;3;4;11",guns="0;4;7;4",exhaustcolors="7;8;5",exhausts="-1;4;0;4"',
+ mrs2t's=49,bulletcolor=11,primary="cloak",secondary="bolt",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;1;6;1",exhaustcolors="9;9;2",exhausts="-1;4;0;4"',
  
- [50]=mrs2t's=50,bulletcolor=10,primary="blink",secondary="missile",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;1;6;1",exhaustcolors="7;10;4",exhausts="-1;4;0;4"',
- [51]=mrs2t's=51,bulletcolor=9,primary="blink",secondary="boost",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;1;6;1",exhaustcolors="7;6;13",exhausts="-3;4;-1;4;0;4;2;4"',
- [52]=mrs2t's=52,bulletcolor=11,primary="blink",secondary="mines",secondaryshots=3,psets="3;5;2;3;3;8",guns="2;1;5;1",exhaustcolors="7;10;15",exhausts="-1;4;0;4"',
- [53]=mrs2t's=53,bulletcolor=14,primary="blink",secondary="shield",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;2;6;2",exhaustcolors="7;9;15",exhausts="-3;4;-2;4;1;4;2;4"',
- [54]=mrs2t's=54,bulletcolor=9,primary="blink",secondary="cloak",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;2;5;2",exhaustcolors="7;8;2",exhausts="-2;4;1;4"',
- [55]=mrs2t's=55,bulletcolor=6,primary="blink",secondary="blink",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;2;7;2",exhaustcolors="7;10;11",exhausts="-3;3;2;3"',
- [56]=mrs2t's=56,bulletcolor=2,primary="blink",secondary="flak",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;0;5;0",exhaustcolors="10;11;5",exhausts="-3;3;-2;4;1;4;2;3"',
- [57]=mrs2t's=57,bulletcolor=10,primary="blink",secondary="beam",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;0;5;0",exhaustcolors="7;14;15",exhausts="-3;4;-1;4;0;4;2;4"',
- -- 58 burner
- -- 59 bolt
+ mrs2t's=50,bulletcolor=10,primary="blink",secondary="missile",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;1;6;1",exhaustcolors="7;10;4",exhausts="-1;4;0;4"',
+ mrs2t's=51,bulletcolor=9,primary="blink",secondary="boost",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;1;6;1",exhaustcolors="7;6;13",exhausts="-3;4;-1;4;0;4;2;4"',
+ mrs2t's=52,bulletcolor=11,primary="blink",secondary="mines",secondaryshots=3,psets="3;5;2;3;3;8",guns="2;1;5;1",exhaustcolors="7;10;15",exhausts="-1;4;0;4"',
+ mrs2t's=53,bulletcolor=14,primary="blink",secondary="shield",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;2;6;2",exhaustcolors="7;9;15",exhausts="-3;4;-2;4;1;4;2;4"',
+ mrs2t's=54,bulletcolor=9,primary="blink",secondary="cloak",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;2;5;2",exhaustcolors="7;8;2",exhausts="-2;4;1;4"',
+ mrs2t's=55,bulletcolor=6,primary="blink",secondary="blink",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;2;7;2",exhaustcolors="7;10;11",exhausts="-3;3;2;3"',
+ mrs2t's=56,bulletcolor=2,primary="blink",secondary="flak",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;0;5;0",exhaustcolors="10;11;5",exhausts="-3;3;-2;4;1;4;2;3"',
+ mrs2t's=57,bulletcolor=10,primary="blink",secondary="beam",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;0;5;0",exhaustcolors="7;14;15",exhausts="-3;4;-1;4;0;4;2;4"',
+ mrs2t's=58,bulletcolor=11,primary="blink",secondary="burner",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="11;11;3",exhausts="-3;4;-1;4;0;4;2;4"',
+ mrs2t's=59,bulletcolor=14,primary="blink",secondary="bolt",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="12;12;3",exhausts="-4;4;-3;4;2;4;3;4"',
 
- [60]=mrs2t's=60,bulletcolor=6,primary="flak",secondary="missile",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;2;5;2",exhaustcolors="7;10;11",exhausts="-3;3;2;3"',
- [61]=mrs2t's=61,bulletcolor=8,primary="flak",secondary="boost",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;2;6;2",exhaustcolors="7;15;5",exhausts="-4;3;-3;3;-1;4;0;4;2;3;3;3"',
- [62]=mrs2t's=62,bulletcolor=2,primary="flak",secondary="mines",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;1;6;1",exhaustcolors="10;9;14",exhausts="-1;4;0;4"',
- [63]=mrs2t's=63,bulletcolor=15,primary="flak",secondary="shield",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;1;6;1",exhaustcolors="7;11;3",exhausts="-1;4;0;4"',
- [64]=mrs2t's=64,bulletcolor=6,primary="flak",secondary="cloak",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="7;10;11",exhausts="-3;3;2;3"',
- [65]=mrs2t's=65,bulletcolor=12,primary="flak",secondary="blink",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="7;6;15",exhausts="-3;3;2;3"',
- [66]=mrs2t's=66,bulletcolor=9,primary="flak",secondary="flak",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4"',
- [67]=mrs2t's=67,bulletcolor=14,primary="flak",secondary="beam",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4"',
- -- 68 burner
- -- 69 bolt
+ mrs2t's=60,bulletcolor=6,primary="flak",secondary="missile",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;2;5;2",exhaustcolors="7;10;11",exhausts="-3;3;2;3"',
+ mrs2t's=61,bulletcolor=8,primary="flak",secondary="boost",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;2;6;2",exhaustcolors="7;15;5",exhausts="-4;3;-3;3;-1;4;0;4;2;3;3;3"',
+ mrs2t's=62,bulletcolor=2,primary="flak",secondary="mines",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;1;6;1",exhaustcolors="10;9;14",exhausts="-1;4;0;4"',
+ mrs2t's=63,bulletcolor=15,primary="flak",secondary="shield",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;1;6;1",exhaustcolors="7;11;3",exhausts="-1;4;0;4"',
+ mrs2t's=64,bulletcolor=6,primary="flak",secondary="cloak",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="7;10;11",exhausts="-3;3;2;3"',
+ mrs2t's=65,bulletcolor=12,primary="flak",secondary="blink",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="7;6;15",exhausts="-3;3;2;3"',
+ mrs2t's=66,bulletcolor=9,primary="flak",secondary="flak",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4"',
+ mrs2t's=67,bulletcolor=14,primary="flak",secondary="beam",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4"',
+ mrs2t's=68,bulletcolor=9,primary="flak",secondary="burner",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-1;4;0;4"',
+ mrs2t's=69,bulletcolor=9,primary="flak",secondary="bolt",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;1;5;1",exhaustcolors="10;9;15",exhausts="-1;4;0;4"',
 
- [70]=mrs2t's=70,bulletcolor=11,primary="beam",secondary="missile",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4"',
- [71]=mrs2t's=71,bulletcolor=3,primary="beam",secondary="boost",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="10;14;15",exhausts="-4;3;-3;4;2;4;3;3"',
- [72]=mrs2t's=72,bulletcolor=6,primary="beam",secondary="mines",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="7;6;5",exhausts="-1;4;0;4"',
- [73]=mrs2t's=73,bulletcolor=6,primary="beam",secondary="shield",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;1;5;1",exhaustcolors="10;11;12",exhausts="-1;4;0;4"',
- [74]=mrs2t's=74,bulletcolor=11,primary="beam",secondary="cloak",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;0;5;0",exhaustcolors="10;9;15",exhausts="-1;3;0;3"',
- [75]=mrs2t's=75,bulletcolor=12,primary="beam",secondary="blink",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="7;7;14",exhausts="-1;3;0;3"',
- [76]=mrs2t's=76,bulletcolor=8,primary="beam",secondary="flak",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="7;7;9",exhausts="-3;3;-2;3;1;3;2;3"',
- [77]=mrs2t's=77,bulletcolor=4,primary="beam",secondary="beam",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="10;10;15",exhausts="-1;4;0;4"',
- -- 68 burner
- -- 69 bolt
+ mrs2t's=70,bulletcolor=11,primary="beam",secondary="missile",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4"',
+ mrs2t's=71,bulletcolor=3,primary="beam",secondary="boost",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="10;14;15",exhausts="-4;3;-3;4;2;4;3;3"',
+ mrs2t's=72,bulletcolor=6,primary="beam",secondary="mines",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="7;6;5",exhausts="-1;4;0;4"',
+ mrs2t's=73,bulletcolor=6,primary="beam",secondary="shield",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;1;5;1",exhaustcolors="10;11;12",exhausts="-1;4;0;4"',
+ mrs2t's=74,bulletcolor=11,primary="beam",secondary="cloak",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;0;5;0",exhaustcolors="10;9;15",exhausts="-1;3;0;3"',
+ mrs2t's=75,bulletcolor=12,primary="beam",secondary="blink",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="7;7;14",exhausts="-1;3;0;3"',
+ mrs2t's=76,bulletcolor=8,primary="beam",secondary="flak",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="7;7;9",exhausts="-3;3;-2;3;1;3;2;3"',
+ mrs2t's=77,bulletcolor=4,primary="beam",secondary="beam",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="10;10;15",exhausts="-1;4;0;4"',
+ mrs2t's=78,bulletcolor=12,primary="beam",secondary="burner",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;2;6;2",exhaustcolors="10;10;5",exhausts="-3;4;-2;4;1;4;2;4"',
+ mrs2t's=79,bulletcolor=12,primary="beam",secondary="bolt",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;2;6;2",exhaustcolors="7;12;4",exhausts="-4;3;-3;4;2;4;3;3"',
 
- [80]=mrs2t's=80,bulletcolor=10,primary="burner",secondary="missile",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="11;11;15",exhausts="-3;4;-2;4;1;4;2;4"',
- [81]=mrs2t's=81,bulletcolor=14,primary="burner",secondary="boost",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;0;6;0",exhaustcolors="12;12;2",exhausts="-4;4;-3;4;2;4;3;4"',
- [82]=mrs2t's=82,bulletcolor=11,primary="burner",secondary="mines",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;1;5;1",exhaustcolors="10;9;2",exhausts="-3;4;-2;4;1;4;2;4"',
- [83]=mrs2t's=83,bulletcolor=2,primary="burner",secondary="shield",secondaryshots=3,psets="3;5;12;3;3;11",guns="4;0;6;0",exhaustcolors="10;9;2",exhausts="-4;4;-3;4;-1;4;0;4;2;4;3;4"',
- [84]=mrs2t's=84,bulletcolor=10,primary="burner",secondary="cloak",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;3;7;3",exhaustcolors="11;11;4",exhausts="-1;4;0;4"',
- [85]=mrs2t's=85,bulletcolor=12,primary="burner",secondary="blink",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;0;6;0",exhaustcolors="7;12;2",exhausts="-4;3;-3;4;2;4;3;3"',
- [86]=mrs2t's=86,bulletcolor=9,primary="burner",secondary="flak",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;0;6;0",exhaustcolors="9;9;4",exhausts="-4;4;-3;4;2;4;3;4"',
- [87]=mrs2t's=87,bulletcolor=11,primary="burner",secondary="beam",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;0;5;0",exhaustcolors="10;10;2",exhausts="-3;4;-1;4;0;4;2;4"',
- [88]=mrs2t's=88,bulletcolor=10,primary="burner",secondary="burner",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="10;10;15",exhausts="-3;4;-2;4;1;4;2;4"',
- -- 29 bolt
+ mrs2t's=80,bulletcolor=10,primary="burner",secondary="missile",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="11;11;15",exhausts="-3;4;-2;4;1;4;2;4"',
+ mrs2t's=81,bulletcolor=14,primary="burner",secondary="boost",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;0;6;0",exhaustcolors="12;12;2",exhausts="-4;4;-3;4;2;4;3;4"',
+ mrs2t's=82,bulletcolor=11,primary="burner",secondary="mines",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;1;5;1",exhaustcolors="10;9;2",exhausts="-3;4;-2;4;1;4;2;4"',
+ mrs2t's=83,bulletcolor=2,primary="burner",secondary="shield",secondaryshots=3,psets="3;5;12;3;3;11",guns="4;0;6;0",exhaustcolors="10;9;2",exhausts="-4;4;-3;4;-1;4;0;4;2;4;3;4"',
+ mrs2t's=84,bulletcolor=10,primary="burner",secondary="cloak",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;3;7;3",exhaustcolors="11;11;4",exhausts="-1;4;0;4"',
+ mrs2t's=85,bulletcolor=12,primary="burner",secondary="blink",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;0;6;0",exhaustcolors="7;12;2",exhausts="-4;3;-3;4;2;4;3;3"',
+ mrs2t's=86,bulletcolor=9,primary="burner",secondary="flak",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;0;6;0",exhaustcolors="9;9;4",exhausts="-4;4;-3;4;2;4;3;4"',
+ mrs2t's=87,bulletcolor=11,primary="burner",secondary="beam",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;0;5;0",exhaustcolors="10;10;2",exhausts="-3;4;-1;4;0;4;2;4"',
+ mrs2t's=88,bulletcolor=10,primary="burner",secondary="burner",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="10;10;15",exhausts="-3;4;-2;4;1;4;2;4"',
+ mrs2t's=89,bulletcolor=11,primary="burner",secondary="bolt",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;3;6;3",exhaustcolors="7;9;15",exhausts="-4;4;-3;4;2;4;3;4"',
 
- [99]=mrs2t's=99,bulletcolor=9,primary="bolt",secondary="bolt",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;0;6;0",exhaustcolors="14;14;4",exhausts="-1;4;0;4",flyduration=10',
-
+ mrs2t's=90,bulletcolor=10,primary="bolt",secondary="missile",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;3;7;3",exhaustcolors="7;2;5",exhausts="-1;3;0;3",flyduration=10',
+ mrs2t's=91,bulletcolor=5,primary="bolt",secondary="boost",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;1;6;1",exhaustcolors="7;7;5",exhausts="-3;3;-1;4;0;4;2;3",flyduration=10',
+ mrs2t's=92,bulletcolor=14,primary="bolt",secondary="mines",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;0;6;0",exhaustcolors="9;15;5",exhausts="-1;4;0;4",flyduration=10',
+ mrs2t's=93,bulletcolor=10,primary="bolt",secondary="shield",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;2;6;2",exhaustcolors="7;11;5",exhausts="-1;4;0;4",flyduration=10',
+ mrs2t's=94,bulletcolor=12,primary="bolt",secondary="cloak",secondaryshots=3,psets="3;5;12;3;3;11",guns="4;1;6;1",exhaustcolors="7;9;5",exhausts="-1;4;0;4;2;4;3;4",flyduration=10',
+ mrs2t's=95,bulletcolor=12,primary="bolt",secondary="blink",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;0;5;0",exhaustcolors="7;12;5",exhausts="-3;4;-2;4;1;4;2;4",flyduration=10',
+ mrs2t's=96,bulletcolor=15,primary="bolt",secondary="flak",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;3;7;3",exhaustcolors="9;8;5",exhausts="-1;4;0;4",flyduration=10',
+ mrs2t's=97,bulletcolor=7,primary="bolt",secondary="beam",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;0;5;0",exhaustcolors="1",exhausts="-3;3;-2;4;1;4;2;3",flyduration=10',
+ mrs2t's=98,bulletcolor=10,primary="bolt",secondary="burner",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;0;5;0",exhaustcolors="11;15;5",exhausts="-1;4;0;4",flyduration=10',
+ mrs2t's=99,bulletcolor=9,primary="bolt",secondary="bolt",secondaryshots=3,psets="3;5;12;3;3;11",guns="1;0;6;0",exhaustcolors="14;14;4",exhausts="-1;4;0;4",flyduration=10',
 }
 
 -- helpers
@@ -1920,7 +1929,7 @@ function pickerupdate()
    elseif btnp(3,_i) then
     picks[_i]+=10
    end
-   picks[_i]=mid(0,picks[_i],168)
+   picks[_i]=mid(0,picks[_i],99)
 
    if btnp(5,_i) and _i == 1 then
     picks[_i]=nil
