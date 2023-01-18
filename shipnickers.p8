@@ -12,7 +12,7 @@ __lua__
 --]]
 
 -- dev4 = all unlocked
-cartdata'ironchestgames_shipnickers_v1-dev6'
+cartdata'ironchestgames_shipnickers_v1-dev4'
 
 printh('debug started','debug',true)
 function debug(s)
@@ -1594,7 +1594,7 @@ function gameupdate()
  local issuperbossdead=issuperboss and (boss == nil or boss.hp <= 0)
 
  -- update enemies
- if nickitts == nil and (not (hasescaped or issuperbossdead)) and (t()-enemyts > max(0.8,4*lockedpercentage) and #enemies < 20 or #enemies < 3) then
+ if nickitts == nil and (not (hasescaped or issuperbossdead)) and (t()-enemyts > max(0.8,10*lockedpercentage) and #enemies < 20 or #enemies < 3) then
   enemyts=t()
   rnd{newkamikaze,newkamikaze,newbomber,newminelayer,newfighter,newcargoship}()
  end
@@ -1607,8 +1607,8 @@ function gameupdate()
    end
    del(enemies,_enemy)
   else
-   _enemy.x+=_enemy.spdx
-   _enemy.y+=_enemy.spdy
+   _enemy.x+=_enemy.spdx*(issuperboss and 1.5 or 1)
+   _enemy.y+=_enemy.spdy*(issuperboss and 1.25 or 1)
    _enemy.update(_enemy)
 
    local _isoutside=_enemy.y > 140 or _enemy.x < -20 or _enemy.x > 148
@@ -1711,7 +1711,7 @@ function gamedraw()
 
  -- draw enemies
  for _enemy in all(enemies) do
-  spr(_enemy.s,_enemy.x-4,_enemy.y-4)
+  spr(_enemy.s+(issuperboss and 9 or 0),_enemy.x-4,_enemy.y-4)
  end
 
  -- draw beams
