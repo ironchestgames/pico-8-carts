@@ -5,14 +5,23 @@ __lua__
 -- by ironchest games
 
 --[[
- -- add boss weapon sfx channel
  -- unify game event code
  -- add game event sfx
  -- fix mines sfx
+
+dget:
+63 - boss kills
+
+sfx channels:
+0 - looping plidx 0
+1 - looping plidx 1
+2 - looping boss sounds
+3 - general
+
 --]]
 
 -- dev4 = all unlocked
-cartdata'ironchestgames_shipnickers_v1-dev4'
+cartdata'ironchestgames_shipnickers_v1-dev6'
 
 printh('debug started','debug',true)
 function debug(s)
@@ -265,6 +274,12 @@ local function getdirs(_plidx)
  return _dx,_dy
 end
 
+local function shipsfx(_ship,_sfx)
+ if not _ship.loopingsfx then
+  sfx(_sfx,_ship.plidx)
+ end
+end
+
 local burningcolors=split'10,9,5'
 local function newburning(_x,_y)
  local _life=8+rnd()*4
@@ -283,7 +298,7 @@ end
 
 local hitcolors=split'7,7,10'
 local function newhit(_x,_y)
- sfx(11)
+ sfx(11,3)
  for _i=1,7 do
   add(ps,{
    x=_x+(rnd()-0.5)*5,
@@ -344,7 +359,7 @@ end
 local explosioncolors=split'7,7,10,9,8'
 local function explode(_obj)
  del(bullets,_obj)
- sfx(10)
+ sfx(10,3)
  for _i=1,7 do
   add(ps,{
    x=_obj.x,
@@ -364,7 +379,7 @@ end
 local fizzlecolors=split'7,9,10,5,9,15,5'
 local function fizzle(_obj)
  del(bullets,_obj)
- sfx(18)
+ sfx(18,3)
  for _i=1,5 do
   local _life=4+rnd(10)
   add(ps,{
@@ -428,7 +443,7 @@ local function drawmine(_bullet)
  sspr(2*flr(_bullet.frame),126,2,2,_bullet.x,_bullet.y)
 end
 local function shootmine(_ship,_life,_angle)
- sfx(13)
+ shipsfx(_ship,13)
  add(bullets,{
   x=_ship.x,y=_ship.y,
   hw=2,hh=2,
@@ -447,7 +462,7 @@ local function drawmissile(_bullet)
  sspr(4,123,3,5,_bullet.x,_bullet.y)
 end
 local function shootmissile(_ship,_life)
- sfx(12)
+ shipsfx(_ship,12)
  add(bullets,{
   x=_ship.x,y=_ship.y,
   hw=2,hh=3,
@@ -465,7 +480,7 @@ local function drawflakbullet(_bullet)
  pset(_bullet.x,_bullet.y,flakcolors[flr((t()*12)%3)+1])
 end
 local function shootflak(_ship,_amount,_life)
- sfx(17)
+ shipsfx(_ship,17)
  for _i=1,_amount do
   local _spdx,_spdy=1+rnd(2),rnd(1)-0.5
   add(bullets,{
@@ -497,7 +512,7 @@ end
 
 local blinkpcolors=split'7,11,11,3,5'
 local function blinkaway(_ship,_dx,_dy,_h)
- sfx(21)
+ shipsfx(_ship,21)
  local _newx,_newy=_ship.x+_dx*_h,_ship.y+_dy*_h
  for _i=1,6 do
   local _life=10+rnd(5)
@@ -621,9 +636,6 @@ local primary={
  end,
  shield=function(_btn4,_ship)
   _ship.isshielding=_ship.primaryc > 0 and not _btn4
-  if not _btn4 then
-   _ship.primaryc-=0.5
-  end
  end,
  cloak=function(_btn4,_ship)
   _ship.iscloaking=_ship.primaryc > 0 and not _btn4
@@ -828,7 +840,7 @@ local function drawenemymissile(_bullet)
 end
 local enemymissilepcolors=split'7,10,11'
 local function enemyshootmissile(_enemy)
- sfx(12)
+ sfx(12,3)
  add(enemybullets,{
   x=_enemy.x,y=_enemy.y,
   hw=2,hh=3,
@@ -857,7 +869,7 @@ local function drawenemymine(_bullet)
  sspr(2*flr(_bullet.frame),121,2,2,_bullet.x,_bullet.y)
 end
 local function enemyshootmine(_enemy)
- sfx(13)
+ sfx(13,3)
  add(enemybullets,{
   x=_enemy.x,y=_enemy.y,
   hw=2,hh=2,
@@ -875,7 +887,7 @@ local function drawenemybullet(_bullet)
 end
 local enemybulletpcolors=split'2,2,4'
 local function enemyshootbullet(_enemy)
- sfx(8)
+ sfx(8,3)
  add(enemybullets,{
   x=_enemy.x+3,y=_enemy.y,
   hw=1,hh=2,
@@ -919,7 +931,7 @@ local function drawbossflakbullet(_bullet)
  pset(_bullet.x,_bullet.y,bossflakcolors[flr((t()*12)%3)+1])
 end
 local function shootbossflak()
- sfx(17)
+ sfx(17,3)
  for _i=1,8 do
   local _spdx,_spdy=1+rnd(2),rnd(1)-0.5
   add(enemybullets,{
@@ -1001,15 +1013,15 @@ local bossweapons={
  boost=function()
   boss.boostts=t()
   boss.boost=0.5
-  sfx(15,1)
+  sfx(15,2)
  end,
  shield=function()
   boss.shieldts=t()
-  sfx(19,1)
+  sfx(19,2)
  end,
  cloak=function()
   boss.cloakts=t()
-  sfx(20,1)
+  sfx(20,2)
  end,
  blink=function()
   blinkaway(boss,rnd(blinkdirs),rnd(blinkdirs),48)
@@ -1021,11 +1033,11 @@ local bossweapons={
  beam=function()
   boss.beamts=t()
   boss.boost=-0.25
-  sfx(16,1)
+  sfx(16,2)
  end,
  burner=function()
   boss.burnerts=t()
-  sfx(15,1)
+  sfx(15,2)
  end,
  bolt=function()
   shootbossbolt()
@@ -1234,7 +1246,7 @@ function gameupdate()
    if btnp(4,_plidx) then
     _ship.primaryc+=2.5
     if _ship.primaryc >= 37 then
-     sfx(24,2)
+     sfx(24,_ship.plidx)
      _ship.hp=3
      _ship.primaryc=0
     end
@@ -1248,7 +1260,7 @@ function gameupdate()
      _ship.firingc=10
      _ship.isfiring=true
      for _gun in all(_ship.guns) do
-      sfx(8+_ship.plidx)
+      shipsfx(_ship,8+_ship.plidx)
       add(bullets,{
        x=_urx+_gun.x,y=_ury+_gun.y,
        hw=1,hh=2,
@@ -1293,20 +1305,20 @@ function gameupdate()
 
   if _ship.loopingsfx and not (_ship.isboosting or _ship.isburnering or _ship.isbeaming or _ship.isshielding or _ship.iscloaking) then
    _ship.loopingsfx=nil
-   sfx(-2,1)
+   sfx(-2,_plidx)
   elseif not _ship.loopingsfx then
    if (_ship.isboosting or _ship.isburnering) then
     _ship.loopingsfx=true
-    sfx(15,1)
+    sfx(15,_plidx)
    elseif _ship.isbeaming then
     _ship.loopingsfx=true
-    sfx(16,1)
+    sfx(16,_plidx)
    elseif _ship.isshielding then
     _ship.loopingsfx=true
-    sfx(19,1)
+    sfx(19,_plidx)
    elseif _ship.iscloaking then
     _ship.loopingsfx=true
-    sfx(20,1)
+    sfx(20,_plidx)
    end
   end
 
@@ -1314,7 +1326,7 @@ function gameupdate()
    if isaabbscolliding(_ship,_cargo) then
     del(cargos,_cargo)
     _ship.secondaryshots=3
-    -- sfx() -- todo
+    sfx(25,3)
    end
   end
 
@@ -1325,15 +1337,18 @@ function gameupdate()
     createshipflashes()
     nickedts=curt
     escapeelapsed,nickitts,boss=0
+    sfx(-2,2)
    elseif not (_ship.iscloaking or boss.cloakts) then
     explode(_ship)
     explode(boss)
     _ship.hp,boss=0
+    sfx(-2,2)
    end
   end
 
   if _ship.hp == 0 then
    explode(_ship)
+   sfx(-2,_ship.plidx)
    del(ships,_ship)
   end
  end
@@ -1421,7 +1436,7 @@ function gameupdate()
      _ship.hp-=1
      _ship.primaryc=0
      if _ship.hp > 0 then
-      sfx(21+_ship.hp,2)
+      sfx(21+_ship.hp,_ship.plidx)
      end
     end
     _b.life=0
@@ -1490,17 +1505,17 @@ function gameupdate()
 
     if boss.boostts and t()-boss.boostts > 2.25 then
      boss.boost,boss.boostts=0
-     sfx(-2,1)
+     sfx(-2,2)
     end
 
     if boss.shieldts and t()-boss.shieldts > 2.25 then
      boss.shieldts=nil
-     sfx(-2,1)
+     sfx(-2,2)
     end
 
     if boss.cloakts and t()-boss.cloakts > 2.25 then
      boss.cloakts=nil
-     sfx(-2,1)
+     sfx(-2,2)
     end
 
     if boss.beamts then
@@ -1517,7 +1532,7 @@ function gameupdate()
      })
      if t()-boss.beamts > 2 then
       boss.boost,boss.beamts=0
-      sfx(-2,1)
+      sfx(-2,2)
      end
     end
 
@@ -1535,7 +1550,7 @@ function gameupdate()
      })
      if t()-boss.burnerts > 2 then
       boss.burnerts=nil
-      sfx(-2,1)
+      sfx(-2,2)
      end
     end
 
@@ -1592,7 +1607,7 @@ function gameupdate()
      _ship.hp-=1
      _ship.primaryc=0
      if _ship.hp > 0 then
-      sfx(21+_ship.hp,2)
+      sfx(21+_ship.hp,_ship.plidx)
      end
     end
    end
@@ -1875,30 +1890,36 @@ function pickerupdate()
   if picks[_i] then
    if btnp(0,_i) then
     picks[_i]-=1
-   elseif btnp(1,_i) then
+    sfx(26)
+  elseif btnp(1,_i) then
     picks[_i]+=1
-   elseif btnp(2,_i) then
+    sfx(26)
+  elseif btnp(2,_i) then
     picks[_i]-=10
-   elseif btnp(3,_i) then
+    sfx(26)
+  elseif btnp(3,_i) then
     picks[_i]+=10
+    sfx(26)
    end
    picks[_i]=mid(0,picks[_i],99)
 
    if btnp(5,_i) and _i == 1 then
     picks[_i]=nil
-   elseif btnp(4,_i) and isunlocked(picks[_i]) then
+    sfx(27)
+  elseif btnp(4,_i) and isunlocked(picks[_i]) then
     local _ship=mr(getship(picks[_i]),{plidx=_i,x=32+_i*64})
     ships[_i+1]=_ship
+    sfx(28,3)
 
     local _pickcount=mycount(picks)
     if _pickcount > 0 and _pickcount == mycount(ships) then
-     local _locked=getlocked()
+      local _locked=getlocked()
      if #_locked == 0 then
       issuperboss=true
-      boss=mr(getship(100),s2t'x=64,y=0,hp=127,ts=0,flydurationc=3,waitdurationc=1,boost=0,flyduration=1')
+      boss=mr(getship(100),s2t'x=64,y=0,hp=127,ts=0,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2')
      else
       issuperboss=nil
-      boss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hp=127,ts=0,flydurationc=8,waitdurationc=2,boost=0')
+      boss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hp=127,ts=0,flydurationc=8,waitdurationc=2,boost=0,plidx=2')
      end
      gameinit()
     end
@@ -1948,7 +1969,9 @@ function pickerdraw()
 end
 
 function pickerinit()
+ sfx(-2,0)
  sfx(-2,1)
+ sfx(-2,2)
  if #getlocked() == 100 then
   unlock(rnd(getlocked()))
   unlock(rnd(getlocked()))
@@ -2108,7 +2131,7 @@ c55c070000000000000000000000000000000000000000000000000000000000000000000033bbb3
 58850d6d8000c0414700b108e808070070d070700a0000b0000c0022222000022202020222222222222222282828882822282828882828227777777777777777
 __sfx__
 000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+01080000121332c600226000010016633001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -2132,11 +2155,15 @@ __sfx__
 901400002541000400254100040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400
 901400002541000400254000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400
 490a00002e01022010270102e01030000350000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000400002e123291232e6202e625000002f6002e123291232e6202e62500000000000000500005000050000500005000050000500005000050000500005000050000500005000050000000000000000000000000
+010100001e0532a003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003
+000400001f0201f0201f0201d02015020110200e02009020060200202000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000300001f0201f0201f0201f0202002024020290202d020300203100036000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-011000000000027000000001b00000000000001f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+051000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000001b00016000000001b000160000000013000110001100011002110000000013000050001b0001600007000160001f000220000a0000a0001d0000c0001b00000000000000000000000000000000000000
+011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
