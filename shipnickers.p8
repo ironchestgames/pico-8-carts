@@ -12,7 +12,7 @@ __lua__
 --]]
 
 -- dev4 = all unlocked
-cartdata'ironchestgames_shipnickers_v1-dev4'
+cartdata'ironchestgames_shipnickers_v1-dev6'
 
 printh('debug started','debug',true)
 function debug(s)
@@ -475,7 +475,7 @@ local function shootflak(_ship,_amount,_life)
    spdy=_spdy,
    accy=0.01,
    spdfactor=0.9,
-   dmg=1,
+   dmg=2,
    life=_life+rnd(20)-40,
    draw=drawflakbullet,
    ondeath=fizzle,
@@ -487,7 +487,7 @@ local function shootflak(_ship,_amount,_life)
    spdy=_spdy,
    accy=0.01,
    spdfactor=0.95,
-   dmg=1,
+   dmg=2,
    life=_life+rnd(20)-40,
    draw=drawflakbullet,
    ondeath=fizzle,
