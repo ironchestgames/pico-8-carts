@@ -6,7 +6,6 @@ __lua__
 
 --[[
  -- add boss weapon sfx channel
- -- add "new" blink to hangar
  -- unify game event code
  -- add game event sfx
  -- fix mines sfx
@@ -1949,21 +1948,13 @@ function pickerupdate()
  end
 end
 
+local newship
 function pickerdraw()
  cls()
  if dget(63) > 0 then
   print('\fdsecret hangar     \f8boss kills:'..dget(63),2,1)
  else
   print('\fdsecret hangar',38,1)
- end
- for _x=0,9 do
-  for _y=0,9 do
-   if isunlocked(_y*10+_x) then
-    spr(_y*10+_x,10+_x*11,8+_y*11)
-   else
-    spr(120,10+_x*11,8+_y*11)
-   end
-  end
  end
  for _i=0,1 do
   local _pick=picks[_i]
@@ -1978,11 +1969,28 @@ function pickerdraw()
    print(_s,1+_i*127-_i*#_s*4,122,11+_i)
   end
  end
+ for _x=0,9 do
+  for _y=0,9 do
+   local _s,_x,_y=_y*10+_x,10+_x*11,8+_y*11
+   if isunlocked(_s) then
+    spr(_s,_x,_y)
+    if _s == newship then
+     print('new',_x-1,_y+5,10+flr((t()*12)%3))
+    end
+   else
+    spr(120,_x,_y)
+   end
+  end
+ end
 end
 
 function pickerinit()
  sfx(-2,1)
+ newship=nil
  for _ship in all(ships or {}) do
+  if not isunlocked(_ship.s) then
+   newship=_ship.s
+  end
   unlock(_ship.s)
  end
  ships={}
