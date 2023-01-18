@@ -5,7 +5,6 @@ __lua__
 -- by ironchest games
 
 --[[
- -- fix boss collision crash
  -- add boss weapon sfx channel
  -- add "new" blink to hangar
  -- unify game event code
@@ -1372,7 +1371,7 @@ function gameupdate()
    elseif not (_ship.iscloaking or boss.cloakts) then
     explode(_ship)
     explode(boss)
-    boss,_ship.hp=0
+    _ship.hp,boss=0
    end
   end
  end
