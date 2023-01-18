@@ -21,7 +21,7 @@ sfx channels:
 --]]
 
 -- dev4 = all unlocked
-cartdata'ironchestgames_shipnickers_v1-dev6'
+cartdata'ironchestgames_shipnickers_v1-dev4'
 
 printh('debug started','debug',true)
 function debug(s)
@@ -450,7 +450,7 @@ local function shootmine(_ship,_life,_angle)
   frame=0,
   spdfactor=0.96+rnd(0.01),
   spdx=cos(_angle+rnd(0.02)),spdy=sin(_angle+rnd(0.02)),accy=0,
-  dmg=6,
+  dmg=8,
   life=_life,
   draw=drawmine,
   ondeath=explode,
@@ -1578,7 +1578,7 @@ function gameupdate()
   _spawninterval=max(0.75,5*lockedpercentage)
   _spawnmin=6
  end
- if nickitts == nil and (not (hasescaped or issuperbossdead)) and (t()-enemyts > _spawninterval and #enemies < 14 or #enemies < _spawnmin) then
+ if nickitts == nil and (not (hasescaped or issuperbossdead)) and (t()-enemyts > _spawninterval and #enemies < 13 or #enemies < _spawnmin) then
   debug(_spawninterval)
   enemyts=t()
   rnd{newkamikaze,newkamikaze,newbomber,newminelayer,newfighter,newcargoship}()
@@ -1922,11 +1922,12 @@ function pickerupdate()
       local _locked=getlocked()
      if #_locked == 0 then
       issuperboss=true
-      boss=mr(getship(100),s2t'x=64,y=0,hp=127,ts=0,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2')
+      boss=mr(getship(100),s2t'x=64,y=0,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2')
      else
       issuperboss=nil
-      boss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hp=127,ts=0,flydurationc=8,waitdurationc=2,boost=0,plidx=2')
+      boss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2')
      end
+     boss.ts=t()
      gameinit()
     end
    end
