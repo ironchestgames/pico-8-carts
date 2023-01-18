@@ -629,8 +629,8 @@ local primary={
  end,
  mines=function(_btn4,_ship)
   if _btn4 and _ship.primaryc > 1 and not _ship.lastbtn4 then
-   shootmine(_ship,_ship.primaryc*3.5+15,0.375+rnd(0.1))
-   shootmine(_ship,_ship.primaryc*3.5+15,0.125-rnd(0.1))
+   shootmine(_ship,_ship.primaryc*4+30,0.375+rnd(0.1))
+   shootmine(_ship,_ship.primaryc*4+30,0.125-rnd(0.1))
    _ship.primaryc=0
   end
  end,
@@ -649,7 +649,7 @@ local primary={
  end,
  flak=function(_btn4,_ship)
   if _btn4 and _ship.primaryc > 1 and not _ship.lastbtn4 then
-   shootflak(_ship,max(2,flr(_ship.primaryc/3)),_ship.primaryc*5)
+   shootflak(_ship,max(2,flr(_ship.primaryc/3)),_ship.primaryc*6)
    _ship.primaryc=0
   end
  end,
@@ -699,9 +699,8 @@ local secondary={
  end,
  mines=function(_ship)
   if btnp(5,_ship.plidx) and _ship.secondaryshots > 0 then
-   local _duration=_ship.primaryc*3+30
-   shootmine(_ship,_duration,0.375)
-   shootmine(_ship,_duration,0.125)
+   shootmine(_ship,160,0.375)
+   shootmine(_ship,160,0.125)
    _ship.secondaryshots-=1
   end
  end,
@@ -709,7 +708,7 @@ local secondary={
   _ship.secondaryc-=1
   if btnp(5,_ship.plidx) and _ship.secondaryshots > 0 then
    _ship.secondaryshots-=1
-   _ship.secondaryc=60
+   _ship.secondaryc=140
   end
   if _ship.secondaryc > 0 then
    _ship.isshielding=true
@@ -719,7 +718,7 @@ local secondary={
   _ship.secondaryc-=1
   if btnp(5,_ship.plidx) and _ship.secondaryshots > 0 then
    _ship.secondaryshots-=1
-   _ship.secondaryc=90
+   _ship.secondaryc=140
   end
   if _ship.secondaryc > 0 then
    _ship.iscloaking=true
@@ -732,12 +731,12 @@ local secondary={
     (btn(5,_ship.plidx) and (btnp(0,_ship.plidx) or btnp(1,_ship.plidx) or btnp(2,_ship.plidx) or btnp(3,_ship.plidx)))
   ) then
    _ship.secondaryshots-=1
-   blinkaway(_ship,_dx,_dy,22+flr(rnd(42)))
+   blinkaway(_ship,_dx,_dy,20+flr(rnd(38)))
   end
  end,
  flak=function(_ship)
   if btnp(5,_ship.plidx) and _ship.secondaryshots > 0 then
-   shootflak(_ship,8,120)
+   shootflak(_ship,8,160)
    _ship.secondaryshots-=1
   end
  end,
@@ -1573,7 +1572,14 @@ function gameupdate()
  local issuperbossdead=issuperboss and (boss == nil or boss.hp <= 0)
 
  -- update enemies
- if nickitts == nil and (not (hasescaped or issuperbossdead)) and (t()-enemyts > max(0.75,10*lockedpercentage) and #enemies < 14 or #enemies < 3) then
+ local _spawninterval=max(0.75,10*lockedpercentage)
+ local _spawnmin=3
+ if escapeelapsed then
+  _spawninterval=max(0.75,5*lockedpercentage)
+  _spawnmin=6
+ end
+ if nickitts == nil and (not (hasescaped or issuperbossdead)) and (t()-enemyts > _spawninterval and #enemies < 14 or #enemies < _spawnmin) then
+  debug(_spawninterval)
   enemyts=t()
   rnd{newkamikaze,newkamikaze,newbomber,newminelayer,newfighter,newcargoship}()
  end
@@ -1869,7 +1875,7 @@ function gameinit()
  gamestartts,enemyts=t(),t()
  gameoverts,nickitts,nickedts,escapeelapsed,madeitts,hasescaped,exit=nil
  ps,psfollow,bottomps,bullets,enemies,enemybullets,cargos,stars={},{},{},{},{},{},{},{}
- escapeduration,lockedpercentage=30,100/(#getlocked())
+ escapeduration,lockedpercentage=40,#getlocked()/100
 
  for i=1,24 do
   add(stars,{
@@ -1949,6 +1955,9 @@ function pickerdraw()
    if isunlocked(_pick) then
     local _ship=hangar[_pick]
     _s=_ship.primary..','.._ship.secondary
+   end
+   if _pick == newship then
+    newship=nil
    end
    print(_s,1+_i*127-_i*#_s*4,122,11+_i)
   end
@@ -2162,8 +2171,12 @@ __sfx__
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-051000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000001b00016000000001b000160000000013000110001100011002110000000013000050001b0001600007000160001f000220000a0000a0001d0000c0001b00000000000000000000000000000000000000
+151e00200422500205042250221504225002050422500205042250020504225002000422502215042250421504225002050422500205042250020504225022150422500000042250420002225022250222502225
+151e00200422500205042250221504225002050422500205042250020504225002000422502215042250421504225002050422500205042250020504225022150422500000042250421502225042230000002221
 011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+__music__
+01 41424320
+02 41424321
+
