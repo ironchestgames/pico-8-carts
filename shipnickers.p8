@@ -12,12 +12,12 @@ __lua__
 --]]
 
 -- dev4 = all unlocked
-cartdata'ironchestgames_shipnickers_v1-dev6'
+cartdata'ironchestgames_shipnickers_v1-dev4'
 
-printh('debug started','debug',true)
-function debug(s)
- printh(tostr(s),'debug',false)
-end
+-- printh('debug started','debug',true)
+-- function debug(s)
+--  printh(tostr(s),'debug',false)
+-- end
 
 poke(0x5f5c,-1) -- disable btnp auto-repeat
 
@@ -1346,11 +1346,6 @@ function gameupdate()
    end
   end
 
-  if _ship.hp == 0 then
-   explode(_ship)
-   del(ships,_ship)
-  end
-
   for _cargo in all(cargos) do
    if isaabbscolliding(_ship,_cargo) then
     del(cargos,_cargo)
@@ -1371,6 +1366,11 @@ function gameupdate()
     explode(boss)
     _ship.hp,boss=0
    end
+  end
+
+  if _ship.hp == 0 then
+   explode(_ship)
+   del(ships,_ship)
   end
  end
 
@@ -1594,7 +1594,7 @@ function gameupdate()
  local issuperbossdead=issuperboss and (boss == nil or boss.hp <= 0)
 
  -- update enemies
- if nickitts == nil and (not (hasescaped or issuperbossdead)) and (t()-enemyts > max(0.8,10*lockedpercentage) and #enemies < 20 or #enemies < 3) then
+ if nickitts == nil and (not (hasescaped or issuperbossdead)) and (t()-enemyts > max(0.75,10*lockedpercentage) and #enemies < 14 or #enemies < 3) then
   enemyts=t()
   rnd{newkamikaze,newkamikaze,newbomber,newminelayer,newfighter,newcargoship}()
  end
@@ -1640,7 +1640,9 @@ function gameupdate()
    boss=nil
    dset(63,dget(63)+1)
   end
-  madeitts,exit=t(),s2t'x=64,y=0,hw=64,hh=8'
+  if ships[1] then
+   madeitts,exit=t(),s2t'x=64,y=0,hw=64,hh=8'
+  end
  end
 
  local _isshipinsideexit=nil
@@ -1651,17 +1653,15 @@ function gameupdate()
    end
   end
  end
- if (hasescaped or issuperbossdead) and madeitts and _isshipinsideexit then
-  pickerinit()
-  return
- end
 
  if #ships == 0 and not gameoverts then
   gameoverts=t()
  end
 
- if gameoverts and t()-gameoverts > 1 and btnp(4) then
+ if ((hasescaped or issuperbossdead) and madeitts and _isshipinsideexit) or
+    gameoverts and t()-gameoverts > 1 and btnp(4) then
   pickerinit()
+  return
  end
 
 end
@@ -2011,7 +2011,7 @@ _draw=function ()
  sspr(unpack(split'0,64,128,54,0,18'))
  print('\fbpress \x8e',48,121)
 end
-
+-- _init=pickerinit
 
 __gfx__
 00044000000dd000000dd000000cc000000550000900009000022000000220000060060000088000000880000009900007000070000660000002200000033000
