@@ -6,8 +6,6 @@ __lua__
 
 --[[
  -- unify game event code
- -- fix mines sfx
- -- change out cloak for aegis
 
 dget:
 63 - boss kills
@@ -20,8 +18,8 @@ sfx channels:
 
 --]]
 
--- dev4 = all unlocked
-cartdata'ironchestgames_shipnickers_v1-dev6'
+-- dev4, dev6 = all unlocked
+cartdata'ironchestgames_shipnickers_v1-dev7'
 
 printh('debug started','debug',true)
 function debug(s)
@@ -118,7 +116,7 @@ local hangar={
  s2t's=1,bulletcolor=12,primary="missile",secondary="boost",secondaryshots=3,psets="3;5;2;3;3;8",guns="2;0;5;0",exhaustcolors="7;10;9",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
  s2t's=2,bulletcolor=10,primary="missile",secondary="mines",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;1;6;1",exhaustcolors="7;10;4",exhausts="-1;4;0;4",flyduration=1',
  s2t's=3,bulletcolor=10,primary="missile",secondary="shield",secondaryshots=3,psets="3;6;11;3;4;10",guns="2;0;5;0",exhaustcolors="7;9;4",exhausts="-1;3;0;3",flyduration=1',
- s2t's=4,bulletcolor=15,primary="missile",secondary="cloak",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;0;5;0",exhaustcolors="10;11;15",exhausts="-1;3;0;3",flyduration=1',
+ s2t's=4,bulletcolor=15,primary="missile",secondary="aegis",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;0;5;0",exhaustcolors="10;11;15",exhausts="-1;3;0;3",flyduration=1',
  s2t's=5,bulletcolor=14,primary="missile",secondary="blink",secondaryshots=3,psets="3;5;3;3;3;11",guns="1;0;6;0",exhaustcolors="14;8;2",exhausts="-1;3;0;3",flyduration=1',
  s2t's=6,bulletcolor=15,primary="missile",secondary="flak",secondaryshots=3,psets="3;6;14;3;4;7",guns="2;0;5;0",exhaustcolors="10;9;5",exhausts="-4;4;-3;4;-1;4;0;4;2;4;3;4",flyduration=1',
  s2t's=7,bulletcolor=12,primary="missile",secondary="beam",secondaryshots=3,psets="3;5;8;3;3;9",guns="2;1;5;1",exhaustcolors="12;12;13",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
@@ -129,7 +127,7 @@ local hangar={
  s2t's=11,bulletcolor=3,primary="boost",secondary="boost",secondaryshots=3,psets="0;0;9;0;0;9",guns="1;0;6;0",exhaustcolors="11;12;5",exhausts="-2;3;-1;3;0;3;1;3",flyduration=1',
  s2t's=12,bulletcolor=9,primary="boost",secondary="mines",secondaryshots=3,psets="3;4;9;3;2;10",guns="1;0;6;0",exhaustcolors="11;3;4",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1',
  s2t's=13,bulletcolor=15,primary="boost",secondary="shield",secondaryshots=3,psets="3;5;11;3;3;10",guns="0;4;7;4",exhaustcolors="10;15;5",exhausts="-3;3;-1;4;0;4;2;3",flyduration=1',
- s2t's=14,bulletcolor=11,primary="boost",secondary="cloak",secondaryshots=3,psets="3;6;6;3;3;7",guns="2;2;5;2",exhaustcolors="11;3;5",exhausts="-1;4;0;4",flyduration=1',
+ s2t's=14,bulletcolor=11,primary="boost",secondary="aegis",secondaryshots=3,psets="3;6;6;3;3;7",guns="2;2;5;2",exhaustcolors="11;3;5",exhausts="-1;4;0;4",flyduration=1',
  s2t's=15,bulletcolor=12,primary="boost",secondary="blink",secondaryshots=3,psets="3;6;9;3;4;10",guns="1;2;6;2",exhaustcolors="7;14;8",exhausts="-4;4;-3;3;-2;2;1;2;2;3;3;4",flyduration=1',
  s2t's=16,bulletcolor=11,primary="boost",secondary="flak",secondaryshots=3,psets="3;6;7;3;5;7",guns="1;2;6;2",exhaustcolors="14;8;2",exhausts="-4;4;-3;4;-2;4;1;4;2;4;3;4",flyduration=1',
  s2t's=17,bulletcolor=11,primary="boost",secondary="beam",secondaryshots=3,psets="3;6;10;3;5;10",guns="1;2;6;2",exhaustcolors="11;11;5",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
@@ -137,10 +135,10 @@ local hangar={
  s2t's=19,bulletcolor=14,primary="boost",secondary="bolt",secondaryshots=3,psets="3;5;6;3;2;6",guns="1;1;6;1",exhaustcolors="7;7;15",exhausts="-3;3;2;3",flyduration=1',
  
  s2t's=20,bulletcolor=14,primary="mines",secondary="missile",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;1;6;1",exhaustcolors="10;9;4",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=21,bulletcolor=5,primary="mines",secondary="boost",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
+ s2t's=21,bulletcolor=8,primary="mines",secondary="boost",secondaryshots=3,psets="3;5;6;3;3;7",guns="0;4;7;4",exhaustcolors="7;8;5",exhausts="-1;4;0;4",flyduration=1',
  s2t's=22,bulletcolor=11,primary="mines",secondary="mines",secondaryshots=3,psets="3;4;1;3;3;12",guns="0;2;7;2",exhaustcolors="7;6;5",exhausts="-2;4;1;4",flyduration=1',
  s2t's=23,bulletcolor=15,primary="mines",secondary="shield",secondaryshots=3,psets="3;6;9;3;4;10",guns="1;1;6;1",exhaustcolors="10;14;13",exhausts="-1;3;0;3",flyduration=1',
- s2t's=24,bulletcolor=11,primary="mines",secondary="cloak",secondaryshots=3,psets="3;6;8;3;4;10",guns="2;2;5;2",exhaustcolors="10;11;5",exhausts="-1;4;0;4",flyduration=1',
+ s2t's=24,bulletcolor=11,primary="mines",secondary="aegis",secondaryshots=3,psets="3;6;8;3;4;10",guns="2;2;5;2",exhaustcolors="10;11;5",exhausts="-1;4;0;4",flyduration=1',
  s2t's=25,bulletcolor=11,primary="mines",secondary="blink",secondaryshots=3,psets="6;5;11;6;4;10",guns="1;2;3;2",exhaustcolors="10;11;5",exhausts="-3;4;-2;4;-1;4",flyduration=1',
  s2t's=26,bulletcolor=9,primary="mines",secondary="flak",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;0;6;0",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
  s2t's=27,bulletcolor=14,primary="mines",secondary="beam",secondaryshots=3,psets="3;5;13;3;3;12",guns="1;0;6;0",exhaustcolors="7;7;13",exhausts="-1;3;0;3",flyduration=1',
@@ -151,29 +149,29 @@ local hangar={
  s2t's=31,bulletcolor=12,primary="shield",secondary="boost",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;1;6;1",exhaustcolors="11;12;13",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1',
  s2t's=32,bulletcolor=9,primary="shield",secondary="mines",secondaryshots=3,psets="3;6;3;3;5;11",guns="1;0;6;0",exhaustcolors="7;10;15",exhausts="-1;4;0;4",flyduration=1',
  s2t's=33,bulletcolor=10,primary="shield",secondary="shield",secondaryshots=3,psets="3;5;3;3;3;11",guns="1;0;6;0",exhaustcolors="7;10;5",exhausts="-1;4;0;4",flyduration=1',
- s2t's=34,bulletcolor=8,primary="shield",secondary="cloak",secondaryshots=3,psets="3;4;3;3;3;11",guns="2;0;5;0",exhaustcolors="14;8;2",exhausts="-2;4;1;4",flyduration=1',
+ s2t's=34,bulletcolor=8,primary="shield",secondary="aegis",secondaryshots=3,psets="3;4;3;3;3;11",guns="2;0;5;0",exhaustcolors="14;8;2",exhausts="-2;4;1;4",flyduration=1',
  s2t's=35,bulletcolor=10,primary="shield",secondary="blink",secondaryshots=3,psets="3;6;4;3;4;13",guns="1;2;6;2",exhaustcolors="10;11;15",exhausts="-1;3;0;3",flyduration=1',
  s2t's=36,bulletcolor=9,primary="shield",secondary="flak",secondaryshots=3,psets="3;6;3;3;4;7",guns="2;1;5;1",exhaustcolors="10;14;8",exhausts="-1;4;0;4",flyduration=1',
  s2t's=37,bulletcolor=6,primary="shield",secondary="beam",secondaryshots=3,psets="3;6;2;3;4;7",guns="1;1;6;1",exhaustcolors="10;14;15",exhausts="-1;4;0;4",flyduration=1',
  s2t's=38,bulletcolor=11,primary="shield",secondary="burner",secondaryshots=3,psets="3;5;11;3;4;7",guns="0;3;7;3",exhaustcolors="3;3;5",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
  s2t's=39,bulletcolor=3,primary="shield",secondary="bolt",secondaryshots=3,psets="3;5;9;3;4;9",guns="1;2;6;2",exhaustcolors="10;10;3",exhausts="-3;3;-1;4;0;4;2;3",flyduration=1',
  
- s2t's=40,bulletcolor=14,primary="cloak",secondary="missile",secondaryshots=3,psets="3;6;5;3;4;6",guns="1;1;6;1",exhaustcolors="7;11;3",exhausts="-2;4;1;4",flyduration=1',
- s2t's=41,bulletcolor=15,primary="cloak",secondary="boost",secondaryshots=3,psets="3;6;15;3;4;10",guns="0;4;7;4",exhaustcolors="8;2;4",exhausts="-3;3;2;3",flyduration=1',
- s2t's=42,bulletcolor=5,primary="cloak",secondary="mines",secondaryshots=3,psets="3;5;8;3;3;7",guns="0;4;7;4",exhaustcolors="7;10;15",exhausts="-1;4;0;4",flyduration=1',
- s2t's=43,bulletcolor=4,primary="cloak",secondary="shield",secondaryshots=3,psets="3;4;11;3;5;12",guns="1;0;6;0",exhaustcolors="7;9;5",exhausts="-1;2;0;2",flyduration=1',
- s2t's=44,bulletcolor=7,primary="cloak",secondary="cloak",secondaryshots=3,psets="3;6;15;3;4;10",guns="1;1;6;1",exhaustcolors="9;8;2",exhausts="-1;3;0;3",flyduration=1',
- s2t's=45,bulletcolor=7,primary="cloak",secondary="blink",secondaryshots=3,psets="3;6;15;3;4;7",guns="2;1;5;1",exhaustcolors="12;3;15",flyduration=1',
- s2t's=46,bulletcolor=7,primary="cloak",secondary="flak",secondaryshots=3,psets="3;3;7;3;4;11",guns="2;0;5;0",exhaustcolors="14;2;5",exhausts="-2;4;1;4",flyduration=1',
- s2t's=47,bulletcolor=14,primary="cloak",secondary="beam",secondaryshots=3,psets="3;5;2;3;3;14",guns="1;0;6;0",exhaustcolors="10;11;3",exhausts="-3;4;2;4",flyduration=1',
- s2t's=48,bulletcolor=8,primary="cloak",secondary="burner",secondaryshots=3,psets="3;5;6;3;3;7",guns="0;4;7;4",exhaustcolors="7;8;5",exhausts="-1;4;0;4",flyduration=1',
- s2t's=49,bulletcolor=11,primary="cloak",secondary="bolt",secondaryshots=3,psets="3;6;15;3;4;9",guns="1;1;6;1",exhaustcolors="9;9;2",exhausts="-1;4;0;4",flyduration=1',
+ s2t's=40,bulletcolor=14,primary="aegis",secondary="missile",secondaryshots=3,psets="3;6;5;3;4;6",guns="1;2;6;2",exhaustcolors="10;14;4",exhausts="-2;4;1;4",flyduration=1',
+ s2t's=41,bulletcolor=15,primary="aegis",secondary="boost",secondaryshots=3,psets="3;6;15;3;4;7",guns="0;4;7;4",exhaustcolors="10;9;4",exhausts="-3;3;2;3",flyduration=1',
+ s2t's=42,bulletcolor=5,primary="aegis",secondary="mines",secondaryshots=3,psets="3;4;11;3;3;7",guns="1;1;6;1",exhaustcolors="7;10;15",exhausts="-1;4;0;4",flyduration=1',
+ s2t's=43,bulletcolor=4,primary="aegis",secondary="shield",secondaryshots=3,psets="3;4;11;3;5;12",guns="1;0;6;0",exhaustcolors="7;9;5",exhausts="-1;2;0;2",flyduration=1',
+ s2t's=44,bulletcolor=7,primary="aegis",secondary="aegis",secondaryshots=3,psets="3;6;15;3;4;10",guns="1;1;6;1",exhaustcolors="9;8;2",exhausts="-1;3;0;3",flyduration=1',
+ s2t's=45,bulletcolor=7,primary="aegis",secondary="blink",secondaryshots=3,psets="3;6;15;3;4;7",guns="2;1;5;1",exhaustcolors="1",exhausts="-4;4;3;4",flyduration=1',
+ s2t's=46,bulletcolor=10,primary="aegis",secondary="flak",secondaryshots=3,psets="3;5;11;3;3;12",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
+ s2t's=47,bulletcolor=6,primary="aegis",secondary="beam",secondaryshots=3,psets="3;3;7;3;5;6",guns="1;1;6;1",exhaustcolors="7;12;4",exhausts="-1;4;0;4",flyduration=1',
+ s2t's=48,bulletcolor=8,primary="aegis",secondary="burner",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
+ s2t's=49,bulletcolor=11,primary="aegis",secondary="bolt",secondaryshots=3,psets="3;6;15;3;4;9",guns="1;1;6;1",exhaustcolors="9;9;2",exhausts="-1;4;0;4",flyduration=1',
  
  s2t's=50,bulletcolor=10,primary="blink",secondary="missile",secondaryshots=3,psets="3;6;14;3;4;7",guns="1;1;6;1",exhaustcolors="7;10;4",exhausts="-1;4;0;4",flyduration=1',
  s2t's=51,bulletcolor=9,primary="blink",secondary="boost",secondaryshots=3,psets="3;6;6;3;4;7",guns="1;1;6;1",exhaustcolors="7;6;13",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1',
  s2t's=52,bulletcolor=11,primary="blink",secondary="mines",secondaryshots=3,psets="3;5;11;3;3;10",guns="2;1;5;1",exhaustcolors="7;10;15",exhausts="-1;4;0;4",flyduration=1',
  s2t's=53,bulletcolor=14,primary="blink",secondary="shield",secondaryshots=3,psets="3;6;12;3;4;11",guns="1;2;6;2",exhaustcolors="7;9;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=54,bulletcolor=9,primary="blink",secondary="cloak",secondaryshots=3,psets="3;5;5;3;3;10",guns="2;2;5;2",exhaustcolors="7;8;2",exhausts="-2;4;1;4",flyduration=1',
+ s2t's=54,bulletcolor=9,primary="blink",secondary="aegis",secondaryshots=3,psets="3;5;5;3;3;10",guns="2;2;5;2",exhaustcolors="7;8;2",exhausts="-2;4;1;4",flyduration=1',
  s2t's=55,bulletcolor=6,primary="blink",secondary="blink",secondaryshots=3,psets="3;5;10;3;3;7",guns="0;2;7;2",exhaustcolors="7;10;11",exhausts="-3;3;2;3",flyduration=1',
  s2t's=56,bulletcolor=2,primary="blink",secondary="flak",secondaryshots=3,psets="3;5;15;3;3;10",guns="2;0;5;0",exhaustcolors="10;11;5",exhausts="-3;3;-2;4;1;4;2;3",flyduration=1',
  s2t's=57,bulletcolor=10,primary="blink",secondary="beam",secondaryshots=3,psets="3;5;9;3;3;10",guns="2;0;5;0",exhaustcolors="7;14;15",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1',
@@ -184,7 +182,7 @@ local hangar={
  s2t's=61,bulletcolor=8,primary="flak",secondary="boost",secondaryshots=3,psets="3;5;7;3;6;6",guns="1;2;6;2",exhaustcolors="7;15;5",exhausts="-4;3;-3;3;-1;4;0;4;2;3;3;3",flyduration=1',
  s2t's=62,bulletcolor=2,primary="flak",secondary="mines",secondaryshots=3,psets="3;6;9;3;4;10",guns="1;1;6;1",exhaustcolors="10;9;14",exhausts="-1;4;0;4",flyduration=1',
  s2t's=63,bulletcolor=15,primary="flak",secondary="shield",secondaryshots=3,psets="3;2;10;3;4;9",guns="1;1;6;1",exhaustcolors="7;11;3",exhausts="-1;4;0;4",flyduration=1',
- s2t's=64,bulletcolor=6,primary="flak",secondary="cloak",secondaryshots=3,psets="3;5;2;3;3;14",guns="0;4;7;4",exhaustcolors="7;10;11",exhausts="-3;3;2;3",flyduration=1',
+ s2t's=64,bulletcolor=6,primary="flak",secondary="aegis",secondaryshots=3,psets="3;5;2;3;3;14",guns="0;4;7;4",exhaustcolors="7;10;11",exhausts="-3;3;2;3",flyduration=1',
  s2t's=65,bulletcolor=12,primary="flak",secondary="blink",secondaryshots=3,psets="3;6;13;3;3;6",guns="1;3;6;3",exhaustcolors="7;6;15",exhausts="-3;3;2;3",flyduration=1',
  s2t's=66,bulletcolor=9,primary="flak",secondary="flak",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
  s2t's=67,bulletcolor=14,primary="flak",secondary="beam",secondaryshots=3,psets="3;5;6;3;3;7",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
@@ -195,7 +193,7 @@ local hangar={
  s2t's=71,bulletcolor=3,primary="beam",secondary="boost",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;3;6;3",exhaustcolors="10;14;15",exhausts="-4;3;-3;4;2;4;3;3",flyduration=1',
  s2t's=72,bulletcolor=6,primary="beam",secondary="mines",secondaryshots=3,psets="3;4;8;3;2;9",guns="1;3;6;3",exhaustcolors="7;6;5",exhausts="-1;4;0;4",flyduration=1',
  s2t's=73,bulletcolor=6,primary="beam",secondary="shield",secondaryshots=3,psets="3;5;10;3;3;9",guns="2;1;5;1",exhaustcolors="10;11;12",exhausts="-1;4;0;4",flyduration=1',
- s2t's=74,bulletcolor=11,primary="beam",secondary="cloak",secondaryshots=3,psets="3;5;9;3;3;10",guns="2;0;5;0",exhaustcolors="10;9;15",exhausts="-1;3;0;3",flyduration=1',
+ s2t's=74,bulletcolor=11,primary="beam",secondary="aegis",secondaryshots=3,psets="3;5;9;3;3;10",guns="2;0;5;0",exhaustcolors="10;9;15",exhausts="-1;3;0;3",flyduration=1',
  s2t's=75,bulletcolor=12,primary="beam",secondary="blink",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;3;6;3",exhaustcolors="7;7;14",exhausts="-1;3;0;3",flyduration=1',
  s2t's=76,bulletcolor=8,primary="beam",secondary="flak",secondaryshots=3,psets="3;5;10;3;4;10",guns="1;3;6;3",exhaustcolors="7;7;9",exhausts="-3;3;-2;3;1;3;2;3",flyduration=1',
  s2t's=77,bulletcolor=4,primary="beam",secondary="beam",secondaryshots=3,psets="3;6;14;3;4;7",guns="1;3;6;3",exhaustcolors="10;10;15",exhausts="-1;4;0;4",flyduration=1',
@@ -206,7 +204,7 @@ local hangar={
  s2t's=81,bulletcolor=14,primary="burner",secondary="boost",secondaryshots=3,psets="3;4;8;3;2;14",guns="1;0;6;0",exhaustcolors="12;12;2",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1',
  s2t's=82,bulletcolor=11,primary="burner",secondary="mines",secondaryshots=3,psets="3;5;7;3;3;6",guns="2;1;5;1",exhaustcolors="10;9;2",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
  s2t's=83,bulletcolor=2,primary="burner",secondary="shield",secondaryshots=3,psets="0;5;2;0;4;14",guns="4;0;6;0",exhaustcolors="10;9;2",exhausts="-4;4;-3;4;-1;4;0;4;2;4;3;4",flyduration=1',
- s2t's=84,bulletcolor=10,primary="burner",secondary="cloak",secondaryshots=3,psets="3;5;6;3;3;7",guns="0;3;7;3",exhaustcolors="11;11;4",exhausts="-1;4;0;4",flyduration=1',
+ s2t's=84,bulletcolor=10,primary="burner",secondary="aegis",secondaryshots=3,psets="3;5;6;3;3;7",guns="0;3;7;3",exhaustcolors="11;11;4",exhausts="-1;4;0;4",flyduration=1',
  s2t's=85,bulletcolor=12,primary="burner",secondary="blink",secondaryshots=3,psets="3;4;12;3;3;11",guns="1;0;6;0",exhaustcolors="7;12;2",exhausts="-4;3;-3;4;2;4;3;3",flyduration=1',
  s2t's=86,bulletcolor=9,primary="burner",secondary="flak",secondaryshots=3,psets="3;5;7;3;6;11",guns="1;0;6;0",exhaustcolors="9;9;4",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1',
  s2t's=87,bulletcolor=11,primary="burner",secondary="beam",secondaryshots=3,psets="3;5;11;3;3;10",guns="2;0;5;0",exhaustcolors="10;10;2",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1',
@@ -217,7 +215,7 @@ local hangar={
  s2t's=91,bulletcolor=5,primary="bolt",secondary="boost",secondaryshots=3,psets="3;5;11;3;4;11",guns="1;1;6;1",exhaustcolors="7;7;5",exhausts="-3;3;-1;4;0;4;2;3",flyduration=10',
  s2t's=92,bulletcolor=14,primary="bolt",secondary="mines",secondaryshots=3,psets="3;5;14;3;4;9",guns="1;0;6;0",exhaustcolors="9;15;5",exhausts="-1;4;0;4",flyduration=10',
  s2t's=93,bulletcolor=10,primary="bolt",secondary="shield",secondaryshots=3,psets="3;6;2;3;4;14",guns="1;2;6;2",exhaustcolors="7;11;5",exhausts="-1;4;0;4",flyduration=10',
- s2t's=94,bulletcolor=12,primary="bolt",secondary="cloak",secondaryshots=3,psets="0;5;9;0;4;7",guns="4;1;6;1",exhaustcolors="7;9;5",exhausts="-1;4;0;4;2;4;3;4",flyduration=10',
+ s2t's=94,bulletcolor=12,primary="bolt",secondary="aegis",secondaryshots=3,psets="0;5;9;0;4;7",guns="4;1;6;1",exhaustcolors="7;9;5",exhausts="-1;4;0;4;2;4;3;4",flyduration=10',
  s2t's=95,bulletcolor=12,primary="bolt",secondary="blink",secondaryshots=3,psets="3;5;2;3;3;14",guns="2;0;5;0",exhaustcolors="7;12;5",exhausts="-3;4;-2;4;1;4;2;4",flyduration=10',
  s2t's=96,bulletcolor=15,primary="bolt",secondary="flak",secondaryshots=3,psets="3;5;9;3;3;10",guns="0;3;7;3",exhaustcolors="9;8;5",exhausts="-1;4;0;4",flyduration=10',
  s2t's=97,bulletcolor=7,primary="bolt",secondary="beam",secondaryshots=3,psets="3;5;5;3;4;6",guns="2;0;5;0",exhaustcolors="1",exhausts="-3;3;-2;4;1;4;2;3",flyduration=10',
@@ -401,13 +399,11 @@ local function drawbullet(_bullet)
  sspr(5,119,1,4,_bullet.x,_bullet.y)
 end
 
-local function drawcloak(_x,_y)
- palt(0,false)
+local function drawaegis(_x,_y)
+ circ(_x,_y,6,1)
  fillp(rnd(32767))
- circfill(_x+rnd(2)-1,_y+rnd(2)-1,6,1)
- circfill(_x+rnd(2)-1,_y+rnd(2)-1,6,0)
+ circ(_x+rnd(2)-1,_y+rnd(2)-1,6,8)
  fillp()
- palt(0,true)
 end
 
 local function drawshield(_x,_y)
@@ -637,13 +633,13 @@ local primary={
  shield=function(_btn4,_ship)
   _ship.isshielding=_ship.primaryc > 0 and not _btn4
  end,
- cloak=function(_btn4,_ship)
-  _ship.iscloaking=_ship.primaryc > 0 and not _btn4
+ aegis=function(_btn4,_ship)
+  _ship.isaegising=_ship.primaryc > 0 and not _btn4
  end,
  blink=function(_btn4,_ship)
   if _btn4 and not _ship.lastbtn4 then
    local _dx,_dy=getdirs(_ship.plidx)
-   blinkaway(_ship,_dx,_dy,_ship.primaryc*2)
+   blinkaway(_ship,_dx,_dy,_ship.primaryc*1.25)
    _ship.primaryc=0
   end
  end,
@@ -708,20 +704,20 @@ local secondary={
   _ship.secondaryc-=1
   if btnp(5,_ship.plidx) and _ship.secondaryshots > 0 then
    _ship.secondaryshots-=1
-   _ship.secondaryc=140
+   _ship.secondaryc=150
   end
   if _ship.secondaryc > 0 then
    _ship.isshielding=true
   end
  end,
- cloak=function(_ship)
+ aegis=function(_ship)
   _ship.secondaryc-=1
   if btnp(5,_ship.plidx) and _ship.secondaryshots > 0 then
    _ship.secondaryshots-=1
-   _ship.secondaryc=140
+   _ship.secondaryc=170
   end
   if _ship.secondaryc > 0 then
-   _ship.iscloaking=true
+   _ship.isaegising=true
   end
  end,
  blink=function(_ship)
@@ -774,7 +770,7 @@ local secondary={
  end,
 }
 
-local weaponcolors=s2t'missile=15,boost=9,mines=5,shield=12,cloak=4,blink=3,flak=11,beam=8,burner=14,bolt=6'
+local weaponcolors=s2t'missile=15,boost=9,mines=5,shield=12,aegis=2,blink=3,flak=11,beam=8,burner=14,bolt=6'
 
 local boostcolors=split'7,10,9,8'
 local burnercolors=split'7,7,7,14,14,12,4'
@@ -784,7 +780,7 @@ local secondarysprites={
  boost=split'8,123',
  mines=split'2,124',
  shield=split'11,123',
- cloak=split'14,123',
+ aegis=split'14,123',
  blink=split'17,123',
  flak=split'20,123',
  beam=split'23,123',
@@ -1018,12 +1014,12 @@ local bossweapons={
   boss.shieldts=t()
   sfx(19,2)
  end,
- cloak=function()
-  boss.cloakts=t()
+ aegis=function()
+  boss.aegists=t()
   sfx(20,2)
  end,
  blink=function()
-  blinkaway(boss,rnd(blinkdirs),rnd(blinkdirs),48)
+  blinkaway(boss,rnd(blinkdirs),rnd(blinkdirs),38)
   boss.y=mid(4,boss.y,64)
  end,
  flak=function()
@@ -1236,7 +1232,7 @@ function gameupdate()
   _ship.isfiring=nil
 
   if _ship.secondaryc <= 0 then
-   _ship.isshielding,_ship.iscloaking,_ship.isboosting,_ship.isbeaming,_ship.isburnering=nil
+   _ship.isshielding,_ship.isaegising,_ship.isboosting,_ship.isbeaming,_ship.isburnering=nil
   end
 
   if _ship.hp < 3 then
@@ -1302,7 +1298,7 @@ function gameupdate()
    newexhaustp(_ship.exhausts[_i],_ship.exhausts[_i+1],_ship,_exhaustcolors,_exhaustlife,_exhaustspdyfactor)
   end
 
-  if _ship.loopingsfx and not (_ship.isboosting or _ship.isburnering or _ship.isbeaming or _ship.isshielding or _ship.iscloaking) then
+  if _ship.loopingsfx and not (_ship.isboosting or _ship.isburnering or _ship.isbeaming or _ship.isshielding or _ship.isaegising) then
    _ship.loopingsfx=nil
    sfx(-2,_plidx)
   elseif not _ship.loopingsfx then
@@ -1315,7 +1311,7 @@ function gameupdate()
    elseif _ship.isshielding then
     _ship.loopingsfx=true
     sfx(19,_plidx)
-   elseif _ship.iscloaking then
+   elseif _ship.isaegising then
     _ship.loopingsfx=true
     sfx(20,_plidx)
    end
@@ -1337,7 +1333,10 @@ function gameupdate()
     nickedts=curt
     escapeelapsed,nickitts,boss=0
     sfx(1,2)
-   elseif not (_ship.iscloaking or boss.cloakts) then
+   elseif _ship.isaegising then
+    boss.hp-=0.5
+    newhit(boss.x,boss.y)
+   else
     explode(_ship)
     explode(boss)
     _ship.hp,boss=0
@@ -1499,7 +1498,11 @@ function gameupdate()
     end
    else
     if boss.targetx == nil or ispointinsideaabb(boss.targetx,boss.targety,boss.x,boss.y,boss.hw,boss.hh) then
-     boss.targetx,boss.targety=4+rnd(120),8+rnd(36)
+     local _targety=8+rnd(36)
+     if boss.aegists then
+      _targety+=42
+     end
+     boss.targetx,boss.targety=4+rnd(120),_targety
     end
 
     if boss.boostts and t()-boss.boostts > 2.25 then
@@ -1512,8 +1515,8 @@ function gameupdate()
      sfx(-2,2)
     end
 
-    if boss.cloakts and t()-boss.cloakts > 2.25 then
-     boss.cloakts=nil
+    if boss.aegists and t()-boss.aegists > 2.25 then
+     boss.aegists=nil
      sfx(-2,2)
     end
 
@@ -1606,13 +1609,15 @@ function gameupdate()
     end
    end
    for _ship in all(ships) do
-    if isaabbscolliding(_enemy,_ship) and not _ship.iscloaking then
+    if isaabbscolliding(_enemy,_ship) then
      explode(_enemy)
      del(enemies,_enemy)
-     _ship.hp-=1
-     _ship.primaryc=0
-     if _ship.hp > 0 then
-      sfx(21+_ship.hp,_ship.plidx)
+     if not _ship.isaegising then
+      _ship.hp-=1
+      _ship.primaryc=0
+      if _ship.hp > 0 then
+       sfx(21+_ship.hp,_ship.plidx)
+      end
      end
     end
    end
@@ -1716,14 +1721,6 @@ function gamedraw()
   if _ship.isfiring then
    spr(254+_ship.plidx,_urx,_ury)
   end
-
-  if _ship.isshielding then
-   drawshield(_ship.x,_ship.y)
-  end
-
-  if _ship.iscloaking then
-   drawcloak(_ship.x,_ship.y)
-  end
  end
 
  -- draw exit
@@ -1745,8 +1742,8 @@ function gamedraw()
 
    if boss.shieldts then
     drawshield(boss.x,boss.y)
-   elseif boss.cloakts then
-    drawcloak(boss.x,boss.y)
+   elseif boss.aegists then
+    drawaegis(boss.x,boss.y)
    end
 
    if boss.beamts then
@@ -1791,8 +1788,8 @@ function gamedraw()
    drawshield(_ship.x,_ship.y)
   end
 
-  if _ship.iscloaking then
-   drawcloak(_ship.x,_ship.y)
+  if _ship.isaegising then
+   drawaegis(_ship.x,_ship.y)
   end
  end
 
@@ -2020,33 +2017,33 @@ __gfx__
 08d33d80005e2500046bb6400ddbbdd004d33d40690b3096005ee500005985006d0000d60007b00000855800086766807800008706dabd60005665000b3993b0
 2dd33dd206522560d66bb66dddcbbcdd44d33d4469033096025ee520066886606d0820d600fbbf000825528082699628780a90870d4bb4d005266250b3b99b3b
 28d44d826d5225d6d66dd66ddcdccdcd06d55d6069433496245225426ff88ff66d4224d6f0fbbf0f0028820082899828780990870d4bb4d052266225bdb33bdb
-8dd44dd86d5dd5d6004dd400cdccccdc6dd55dd696d66d6924422442f652256f6d4664d6f2f88f2f022882209289982988599588d44dd44d52288225bd5335db
+8dd44dd86d5dd5d6004dd400cdccccdc6dd55dd696d66d6924422442f652256f6d4664d6f2f88f2f082882809289982988599588d44dd44d52288225bd5335db
 8d0550d866dddd660d6dd6d0dc0550cd6d0550d699466499224224226552255606d66d60f2f88f2f822882289289982968588586d46dd64d52288225b500005b
-82000028044004400d0550d0c000000c6600006609055090dd0dd0dd0540045000d66d0002f88f20855005589000000966088066006446005005500530000003
-000dd00000022000000ee00000422400000550000060060000d55d0000066000000990000f0f0000000dd0000200002000066000000660000009900000088000
-00d76d00002a9200006ee6000542245000555500006996000dd55dd0006a960000da8d000f0f0000040ab040e200002e000af000006826000009900000888800
-0f6766f0029a992005782750554664550d59e5d000dbcd000dd11dd006d99d6000d88d004f4f40ab04dbbd40e20cd02e00dffd0006f22f60000bc000028a9820
-ff6446ff2492294265282256446766440de9eed060dccd065d1c11d5dfd99dfd0d6886d04ddd40bbdd5bb5dde20dd02e0fdffdf07f6226f7006cc600229a9922
-00d44d0024422442762ee267426766244de44ed4694cc4965d1111d5dfdffdfd6d6996d6ddddd544d55dd55de24dd42edfd66dfd76f77f67006cc60028988982
-0d5445d022422422d7eeee7d422662244d5445d4d949949d5dd11dd56fdffdf66dc99cd6d545d545000dd000e242242e00d66d007ff77ff770699607d828828d
-d554455d05500550d545545d05244250dd5445ddd949949d0d5dd5d06f0dd0f6cdc99cdcd454d0450d5dd5d0220220220f6dd6f06f0550f679699697d828828d
-d540045d04500540d404404d004444000220022005500550005dd50060000006c0c44c0c055500000d5445d0e200002edf6446fd600000066969969605055050
-060660600c0000c00070070000077000000330000062260000dffd0000d66d00000cc00000dffd000006600006000060000440000006600000f00f0004000040
-600b30066c0000c607000070007d470000f33f000d6226d00dffffd00fd66df00006500005dffd50000dd00062000026004af4006007f0060f0000f0500dd005
-60f33f066c0b30c67600006707c44c7000f7bf000d67c6d05dfbbfd5dfd92dfd00d55d0055d99d5500078000620bc026041ff140644ff446fd0000dfd00e200d
-f046640f6c0330c6760b3067c6c44c6c03b7bb30d6c7cc6dfdb7bbdf6d2922d60d4554d0dd9a99dd00688600625cc526415ff514600ff006fd07b0dfd442244d
-404664046c4334c676d33d67c6c77c6c3fb66bf326c22c62fdb7bbdf6d2442d6d44cc44ddf9a99fd06d88d60625225264514415460066006fd4bb4dfd002200d
-400ff004c6d66d6c76d77d6776c77c673f3663f326222262fddbbddffdf44fdf00dccd00dff99ffd6dd44dd62202202241144114644664464d4ff4d45d4dd4d5
-45466454cc4664cc07677670760cc067303663030d2222d005dffd5004f44f400dcddcd005fddf506dd44dd6f200002f410550146006600604dffd40550dd055
-404664040c0550c000677600700000070004400000d55d000550055000d44d00d4cddc4d00dddd006dd44dd60f0000f0400000046000000600fddf00dd0000dd
-000dd00000066000000bb00000088000000ff000000ff0000006600000edde000040040000d00d00000aa0000a0000a000033000050000500003300003000030
-000dd0000d09f0d00607e06000276200000ff00000fbcf00000660000edddde00f4004f000d33d0000a7aa00a200002a0003300005076050000a9000c300003c
-000760000d7ff7d0063ee36002266220006ab6000ffccff0000a50005edaade5fddffddf00da9d000fa7aaf0a200002a000a5000df0660df00599500cd0000dc
-00d66d00677ff776b33ee33b02066020006bb60006fccf6000d55d00dea7aaedfdda9ddf00d99d000fa7aaf0a20b302a00f55f00fd4fd4dd04599540cd0a90dc
-00c66c0067766776b33bb33b00088000096bb690f6f66f6f00f55f00dea7aaedfd9a99df0bd99db004aaaa40a203302a00f55f00dd4dd4fd54533545dd0990dd
-30cddc0300066000000bb000080880809f6ff6f96f6ff6f60f6ff6f0deeaaeedfd9ff9dfbbd33dbb54faaf452253352260f33f06fd0df0df005335003d5995d3
-3dcddcd3007667000b3bb3b0884884889f6ff6f9f66ff66f66f66f660dedded00fdffdf003d33d30f5f55f5f9252252963f33f36550dd05504355340dc5cc5cd
-cdcddcdc000550000b3553b08505505890d55d0905500550f6d66d6f005dd500005ff500330330330545545099022099f3f33f3f0005500054355345dc0cc0cd
+82000028044004400d0550d0c000000c6600006609055090dd0dd0dd0540045000d66d0002f88f20055005509000000966088066006446005005500530000003
+000dd00000022000000ee0000042240000055000000dd00000d55d0000066000000990000f0f0000000dd0000200002000066000000660000009900000088000
+00d76d00002a9200006ee6000542245000555500000dd0000dd55dd0006a960000da8d000f0f0000040ab040e200002e000af000006826000009900000888800
+0f6766f0029a992005782750554664550d59e5d0000760000dd11dd006d99d6000d88d004f4f40ab04dbbd40e20cd02e00dffd0006f22f60000bc000028a9820
+ff6446ff2492294265282256446766440de9eed000d66d005d1c11d5dfd99dfd0d6886d04ddd40bbdd5bb5dde20dd02e0fdffdf07f6226f7006cc600229a9922
+00d44d0024422442762ee267426766244de44ed400c66c005d1111d5dfdffdfd6d6996d6ddddd544d55dd55de24dd42edfd66dfd76f77f67006cc60028988982
+0d5445d022422422d7eeee7d422662244d5445d430cddc035dd11dd56fdffdf66dc99cd6d545d545000dd000e242242e00d66d007ff77ff770699607d828828d
+d554455d05500550d545545d05244250dd5445dd3dcddcd30d5dd5d06f0dd0f6cdc99cdcd454d0450d5dd5d0220220220f6dd6f06f0550f679699697d828828d
+d540045d04500540d404404d0044440002200220cdcddcdc005dd50060000006c0c44c0c055500000d5445d0e200002edf6446fd600000066969969605055050
+060660600c0000c00070070000077000000330000062260000dffd0000d66d00000bb00000dffd0000f00f00060000600004400000066000000ff00000088000
+600b30066c0000c607000070007d470000f33f000d6226d00dffffd00fd66df00006500005dffd500f0000f062000026004af4006007f00600cffc0000822800
+60f33f066c0b30c67600006707c44c7000f7bf000d67c6d05dfbbfd5dfd92dfd00f55f0055d66d55fd0000df620bc026041ff140644ff4460fcb9cf008276280
+f046640f6c0330c6760b3067c6c44c6c03b7bb30d6c7cc6dfdb7bbdf6d2922d60f2552f0dd6766ddfd07b0df625cc526415ff514600ff0060f9b99f002466420
+404664046c4334c676d33d67c6c77c6c3fb66bf326c22c62fdb7bbdf6d2442d6f223b22fdf6766fdfd4bb4df625225264514415460066006df9cc9fd02466420
+400ff004c6d66d6c76d77d6776c77c673f3663f326222262fddbbddffdf44fdf00fb3f00dff66ffd4d4ff4d4220220224114411464466446dcfccfcd24422442
+45466454cc4664cc07677670760cc067303663030d2222d005dffd5004f44f400fb33bf005fddf5004dffd40f200002f41055014600660065d5dd5d524822842
+404664040c0550c000677600700000070004400000d55d000550055000d44d00f234432f00dddd0000fddf000f0000f040000004600000060440044000844800
+0060060000066000000bb00000088000000ff000000ff0000006600000edde000040040000d00d00000bb0000a0000a000033000050000500003300003000030
+006996000d09f0d00607e06000276200000ff00000fbcf00000660000edddde00f4004f000d33d0000b7bb00a200002a0003300005076050000a9000c300003c
+00dbcd000d7ff7d0063ee36002266220006ab6000ffccff0000a50005edaade5fddffddf00da9d000fb7bbf0a200002a000a5000df0660df00599500cd0000dc
+60dccd06677ff776b33ee33b02066020006bb60006fccf6000d55d00dea7aaedfdda9ddf00d99d000fb7bbf0a20b302a00f55f00fd4fd4dd04599540cd0a90dc
+694cc49667766776b33bb33b00088000096bb690f6f66f6f00f55f00dea7aaedfd9a99df0bd99db004bbbb40a203302a00f55f00dd4dd4fd54533545dd0990dd
+d949949d00066000000bb000080880809f6ff6f96f6ff6f60f6ff6f0deeaaeedfd9ff9dfbbd33dbb54fbbf452253352260f33f06fd0df0df005335003d5995d3
+d949949d007667000b3bb3b0824884289f6ff6f9f66ff66f66f66f660dedded00fdffdf003d33d30f5f55f5f9252252963f33f36550dd05504355340dc5cc5cd
+05500550000550000b3553b08505505890d55d0905500550f6d66d6f005dd500005ff500330330330545545099022099f3f33f3f0005500054355345dc0cc0cd
 0005500000088000000ff000000770000004d000000dd00003000030000ee00004000040000ff000004dd40000022000000dd0000008800000033000000ff000
 000550000006d0000d0ab0d00076c700000d4000000dd0000b3003b000eb3e0042000024009ff9000d4994d0002b320000dabd000007e00000333300c007e00c
 000e2000000dd0000d4bb4d00bc6ccb0000e8000005bc50000be2b000023320042000024009ab9000d9a99d0028338200fbabbf0200ee00205376350cf0ee0fc
@@ -2138,11 +2135,11 @@ dcdccdcd00d00d0004055040600ff0060405504000044000000440000d0000d0000dd00000d44d00
 0000070000000000000000000000000000000000000000000000000000000000000000000033b3b33333333bb33bb33bbb3bbb33b33bb3337777777777777777
 c55c070000000000000000000000000000000000000000000000000000000000000000000033bbb33333333b3b3b333b333b3b33b33b3b337777777777777777
 5cc50a000000000000000000000000000000000000000000000000000000000000000000003333333333333b3b3bbb3b333b3b3bbb3b3b337777777777777777
-00000060000000000070b108e877007004d400000a0000b0000c0022222000022002220022222222222222288828882888288828882888227777777777777777
-00000060aa00c01410b01108e877070000d00000aaa00bbb00ccc020000200020202220200208880000000080808000808080800800808027777777777777777
-00000060a90c1c4140001a08e8e70070e0d0707aaaaabbbbbccccc20000020020202020200208080000000088008800888088800800880027777777777777777
-85580060980c1c141b001108e88e070070d007000a0000b0000c0020000200020202020202208880000000080808000800080800800808027777777777777777
-58850d6d8000c0414700b108e808070070d070700a0000b0000c0022222000022202020222222222222222282828882822282828882828227777777777777777
+00000060000000000070b008e877007004d400000a0000b0000c0022222000022002220022222222222222288828882888288828882888227777777777777777
+00000060aa00c08880b00008e877070000d00000aaa00bbb00ccc020000200020202220200208880000000080808000808080800800808027777777777777777
+00000060a90c0c8280000a08e8e70070e0d0707aaaaabbbbbccccc20000020020202020200208080000000088008800888088800800880027777777777777777
+85580060980c0c828b000008e88e070070d007000a0000b0000c0020000200020202020202208880000000080808000800080800800808027777777777777777
+58850d6d8000c0080700b008e808070070d070700a0000b0000c0022222000022202020222222222222222282828882822282828882828227777777777777777
 __sfx__
 000e00001c2200622019220062201c220062201922006225012202322523220002000020000200002000020000200002000020000200002000020000200002000020000200002000020000200002000020000200
 000c00001c220062201d220072201e220082201f2200922523220232052322523220000000c22024220242200d220252202522000200002000020000200002000020000200002000020000200002000020000000
