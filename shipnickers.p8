@@ -5,7 +5,6 @@ __lua__
 -- by ironchest games
 
 --[[
- - add bubbles also explodes enemybullets
  - fix bolt
  - unify game event code
  - mash shield and aegis?
@@ -232,8 +231,12 @@ local hangar={
 }
 
 -- helpers
+local function getblink()
+ return flr((t()*12)%3)
+end
+
 local function drawblinktext(_str,_startcolor)
- print('\^w\^t'.._str,64-#_str*4,48,_startcolor+flr((t()*12)%3))
+ print('\^w\^t'.._str,64-#_str*4,48,_startcolor+getblink())
 end
 
 local function getship(_hangaridx)
@@ -454,7 +457,7 @@ end
 
 local flakcolors=split'11,3,5'
 local function drawflakbullet(_bullet)
- pset(_bullet.x,_bullet.y,flakcolors[flr((t()*12)%3)+1])
+ pset(_bullet.x,_bullet.y,flakcolors[getblink()+1])
 end
 local function shootflak(_ship,_amount,_life)
  shipsfx(_ship,17)
@@ -609,6 +612,18 @@ function shootbolt(_from,_hits,_enemiesnothit,_enemiesalreadyhit,_maxlen)
  end
 end
 
+local function updatebubble(_bullet,_otherbullets)
+ for _other in all(_otherbullets) do
+  if isaabbscolliding(_bullet,_other) then
+   _bullet.life=0
+   _other.life=0
+   break
+  end
+ end
+end
+local function updatefriendlybubble(_bullet)
+ updatebubble(_bullet,enemybullets)
+end
 local function drawbubble(_bullet)
  circ(_bullet.x,_bullet.y,2,12)
  pset(_bullet.x-1,_bullet.y-1,7)
@@ -618,8 +633,7 @@ local function shootbubble(_ship)
  for _i=1,3 do
   local _life=10+rnd(20)
   add(ps,{
-   y=_ship.y,
-   x=_ship.x,
+   y=_ship.y,x=_ship.x,
    r=1+rnd(1),
    spdx=rnd(0.5)-0.25,
    spdy=rnd(0.5)-0.25,
@@ -630,13 +644,13 @@ local function shootbubble(_ship)
   })
  end
  add(bullets,{
-  x=_ship.x,
-  y=_ship.y,
+  x=_ship.x,y=_ship.y,
   hw=2,hh=2.5,
   spdx=rnd()-0.5,spdy=rnd()-0.5,
   accy=0,spdfactor=0.96,
   dmg=2,
   life=190,
+  update=updatefriendlybubble,
   ondeath=fizzle,
   draw=drawbubble,
  })
@@ -930,7 +944,7 @@ end
 
 local bossflakcolors=split'14,8,5'
 local function drawbossflakbullet(_bullet)
- pset(_bullet.x,_bullet.y,bossflakcolors[flr((t()*12)%3)+1])
+ pset(_bullet.x,_bullet.y,bossflakcolors[getblink()+1])
 end
 local function shootbossflak()
  sfx(17,3)
@@ -1007,6 +1021,9 @@ local function shootbossbolt()
  end
 end
 
+local function updatebossbubble(_bullet)
+ updatebubble(_bullet,bullets)
+end
 local function drawbossbubble(_bullet)
  circ(_bullet.x,_bullet.y,2,14)
  pset(_bullet.x-1,_bullet.y-1,7)
@@ -1020,6 +1037,7 @@ local function shootbossbubble()
   accy=0,spdfactor=0.96,
   dmg=1,
   life=210,
+  update=updatebossbubble,
   ondeath=fizzle,
   draw=drawbossbubble,
  })
@@ -1734,7 +1752,7 @@ function gamedraw()
 
  -- draw exit
  if exit then
-  local _frame=flr((t()*12)%3)
+  local _frame=getblink()
   print('to secret hangar',32,3,10+_frame)
   sspr(39+_frame*5,123,5,5,18,3)
   sspr(39+_frame*5,123,5,5,104,3)
@@ -1863,7 +1881,7 @@ function gamedraw()
 
  if t()-gamestartts < 1.5 and boss then
   drawblinktext('want it!',10)
-  local _frame=flr((t()*12)%3)
+  local _frame=getblink()
   sspr(39+_frame*5,123,5,5,boss.x-2,boss.y+8)
  end
 
@@ -1983,7 +2001,7 @@ function pickerdraw()
    if isunlocked(_s) then
     spr(_s,_x,_y)
     if _s == newship then
-     print('new',_x-1,_y+5,10+flr((t()*12)%3))
+     print('new',_x-1,_y+5,10+getblink())
     end
    else
     spr(120,_x,_y)
