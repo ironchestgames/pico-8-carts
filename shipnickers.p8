@@ -5,6 +5,7 @@ __lua__
 -- by ironchest games
 
 --[[
+ - add bubbles also explodes enemybullets
  - fix bolt
  - unify game event code
  - mash shield and aegis?
@@ -116,7 +117,7 @@ end
 local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemybullets,boss,issuperboss,cargos,lockedpercentage
 
 local hangar={
- [0]=s2t's=0,bulletcolor=9,primary="missile",secondary="missile",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;1;5;1",exhaustcolors="7;14;8",exhausts="-1;3;0;3",flyduration=1',
+ [0]=s2t's=0,bulletcolor=11,primary="missile",secondary="missile",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;1;5;1",exhaustcolors="7;9;5",exhausts="-1;4;0;4",flyduration=1',
  s2t's=1,bulletcolor=12,primary="missile",secondary="boost",secondaryshots=3,psets="3;5;2;3;3;8",guns="2;0;5;0",exhaustcolors="7;10;9",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
  s2t's=2,bulletcolor=10,primary="missile",secondary="mines",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;1;6;1",exhaustcolors="7;10;4",exhausts="-1;4;0;4",flyduration=1',
  s2t's=3,bulletcolor=10,primary="missile",secondary="shield",secondaryshots=3,psets="3;6;11;3;4;10",guns="2;0;5;0",exhaustcolors="7;9;4",exhausts="-1;3;0;3",flyduration=1',
@@ -124,7 +125,7 @@ local hangar={
  s2t's=5,bulletcolor=14,primary="missile",secondary="blink",secondaryshots=3,psets="3;5;3;3;3;11",guns="1;0;6;0",exhaustcolors="14;8;2",exhausts="-1;3;0;3",flyduration=1',
  s2t's=6,bulletcolor=15,primary="missile",secondary="flak",secondaryshots=3,psets="3;6;14;3;4;7",guns="2;0;5;0",exhaustcolors="10;9;5",exhausts="-4;4;-3;4;-1;4;0;4;2;4;3;4",flyduration=1',
  s2t's=7,bulletcolor=12,primary="missile",secondary="beam",secondaryshots=3,psets="3;5;8;3;3;9",guns="2;1;5;1",exhaustcolors="12;12;13",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=8,bulletcolor=12,primary="missile",secondary="bubbles",secondaryshots=3,psets="3;4;2;3;3;14",guns="2;1;5;1",exhaustcolors="12;12;13",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
+ s2t's=8,bulletcolor=12,primary="missile",secondary="bubbles",secondaryshots=3,psets="3;4;3;3;3;11",guns="2;0;5;0",exhaustcolors="14;8;2",exhausts="-2;4;1;4",flyduration=1',
  s2t's=9,bulletcolor=12,primary="missile",secondary="bolt",secondaryshots=3,psets="3;5;11;3;3;7",guns="0;3;7;3",exhaustcolors="7;12;15",exhausts="-1;4;0;4",flyduration=1',
 
  s2t's=10,bulletcolor=11,primary="boost",secondary="missile",secondaryshots=3,psets="3;6;5;3;4;6",guns="2;2;5;2",exhaustcolors="7;6;13",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
@@ -139,21 +140,21 @@ local hangar={
  s2t's=19,bulletcolor=14,primary="boost",secondary="bolt",secondaryshots=3,psets="3;5;6;3;2;6",guns="1;1;6;1",exhaustcolors="7;7;15",exhausts="-3;3;2;3",flyduration=1',
  
  s2t's=20,bulletcolor=14,primary="mines",secondary="missile",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;1;6;1",exhaustcolors="10;9;4",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=21,bulletcolor=8,primary="mines",secondary="boost",secondaryshots=3,psets="3;5;6;3;3;7",guns="0;4;7;4",exhaustcolors="7;8;5",exhausts="-1;4;0;4",flyduration=1',
+ s2t's=21,bulletcolor=8,primary="mines",secondary="boost",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
  s2t's=22,bulletcolor=11,primary="mines",secondary="mines",secondaryshots=3,psets="3;4;1;3;3;12",guns="0;2;7;2",exhaustcolors="7;6;5",exhausts="-2;4;1;4",flyduration=1',
  s2t's=23,bulletcolor=15,primary="mines",secondary="shield",secondaryshots=3,psets="3;6;9;3;4;10",guns="1;1;6;1",exhaustcolors="10;14;13",exhausts="-1;3;0;3",flyduration=1',
  s2t's=24,bulletcolor=11,primary="mines",secondary="aegis",secondaryshots=3,psets="3;6;8;3;4;10",guns="2;2;5;2",exhaustcolors="10;11;5",exhausts="-1;4;0;4",flyduration=1',
  s2t's=25,bulletcolor=11,primary="mines",secondary="blink",secondaryshots=3,psets="6;5;11;6;4;10",guns="1;2;3;2",exhaustcolors="10;11;5",exhausts="-3;4;-2;4;-1;4",flyduration=1',
  s2t's=26,bulletcolor=9,primary="mines",secondary="flak",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;0;6;0",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
  s2t's=27,bulletcolor=14,primary="mines",secondary="beam",secondaryshots=3,psets="3;5;13;3;3;12",guns="1;0;6;0",exhaustcolors="7;7;13",exhausts="-1;3;0;3",flyduration=1',
- s2t's=28,bulletcolor=9,primary="mines",secondary="bubbles",secondaryshots=3,psets="3;6;15;3;4;10",guns="2;1;5;1",exhaustcolors="14;8;5",exhausts="-2;4;1;4",flyduration=1',
+ s2t's=28,bulletcolor=9,primary="mines",secondary="bubbles",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;1;5;1",exhaustcolors="7;14;8",exhausts="-1;3;0;3",flyduration=1',
  s2t's=29,bulletcolor=11,primary="mines",secondary="bolt",secondaryshots=3,psets="3;6;2;3;4;8",guns="1;2;6;2",exhaustcolors="11;11;4",exhausts="-1;3;0;3",flyduration=1',
 
  s2t's=30,bulletcolor=5,primary="shield",secondary="missile",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="7;10;15",exhausts="-1;4;0;4",flyduration=1',
  s2t's=31,bulletcolor=12,primary="shield",secondary="boost",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;1;6;1",exhaustcolors="11;12;13",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1',
  s2t's=32,bulletcolor=9,primary="shield",secondary="mines",secondaryshots=3,psets="3;6;3;3;5;11",guns="1;0;6;0",exhaustcolors="7;10;15",exhausts="-1;4;0;4",flyduration=1',
- s2t's=33,bulletcolor=10,primary="shield",secondary="shield",secondaryshots=3,psets="3;5;3;3;3;11",guns="1;0;6;0",exhaustcolors="7;10;5",exhausts="-1;4;0;4",flyduration=1',
- s2t's=34,bulletcolor=8,primary="shield",secondary="aegis",secondaryshots=3,psets="3;4;3;3;3;11",guns="2;0;5;0",exhaustcolors="14;8;2",exhausts="-2;4;1;4",flyduration=1',
+ s2t's=33,bulletcolor=10,primary="shield",secondary="shield",secondaryshots=3,psets="3;5;3;3;3;11",guns="1;0;6;0",exhaustcolors="7;10;5",exhausts="-1;4;0;4",flyduration=1', 
+ s2t's=34,bulletcolor=8,primary="shield",secondary="aegis",secondaryshots=3,psets="3;4;2;3;3;14",guns="2;1;5;1",exhaustcolors="12;12;13",exhausts="-3;3;-2;4;1;4;2;3",flyduration=1',
  s2t's=35,bulletcolor=10,primary="shield",secondary="blink",secondaryshots=3,psets="3;6;4;3;4;13",guns="1;2;6;2",exhaustcolors="10;11;15",exhausts="-1;3;0;3",flyduration=1',
  s2t's=36,bulletcolor=9,primary="shield",secondary="flak",secondaryshots=3,psets="3;6;3;3;4;7",guns="2;1;5;1",exhaustcolors="10;14;8",exhausts="-1;4;0;4",flyduration=1',
  s2t's=37,bulletcolor=6,primary="shield",secondary="beam",secondaryshots=3,psets="3;6;2;3;4;7",guns="1;1;6;1",exhaustcolors="10;14;15",exhausts="-1;4;0;4",flyduration=1',
@@ -166,9 +167,9 @@ local hangar={
  s2t's=43,bulletcolor=4,primary="aegis",secondary="shield",secondaryshots=3,psets="3;4;11;3;5;12",guns="1;0;6;0",exhaustcolors="7;9;5",exhausts="-1;2;0;2",flyduration=1',
  s2t's=44,bulletcolor=7,primary="aegis",secondary="aegis",secondaryshots=3,psets="3;6;15;3;4;10",guns="1;1;6;1",exhaustcolors="9;8;2",exhausts="-1;3;0;3",flyduration=1',
  s2t's=45,bulletcolor=7,primary="aegis",secondary="blink",secondaryshots=3,psets="3;6;15;3;4;7",guns="2;1;5;1",exhaustcolors="1",exhausts="-4;4;3;4",flyduration=1',
- s2t's=46,bulletcolor=10,primary="aegis",secondary="flak",secondaryshots=3,psets="3;5;11;3;3;12",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
+ s2t's=46,bulletcolor=10,primary="aegis",secondary="flak",secondaryshots=3,psets="3;5;14;3;3;6",guns="1;3;6;3",exhaustcolors="11;11;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
  s2t's=47,bulletcolor=6,primary="aegis",secondary="beam",secondaryshots=3,psets="3;3;7;3;5;6",guns="1;1;6;1",exhaustcolors="7;12;4",exhausts="-1;4;0;4",flyduration=1',
- s2t's=48,bulletcolor=8,primary="aegis",secondary="bubbles",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
+ s2t's=48,bulletcolor=8,primary="aegis",secondary="bubbles",secondaryshots=3,psets="3;5;9;3;3;10",guns="0;3;7;3",exhaustcolors="9;8;5",exhausts="-1;4;0;4",flyduration=10',
  s2t's=49,bulletcolor=11,primary="aegis",secondary="bolt",secondaryshots=3,psets="3;6;15;3;4;9",guns="1;1;6;1",exhaustcolors="9;9;2",exhausts="-1;4;0;4",flyduration=1',
  
  s2t's=50,bulletcolor=10,primary="blink",secondary="missile",secondaryshots=3,psets="3;6;14;3;4;7",guns="1;1;6;1",exhaustcolors="7;10;4",exhausts="-1;4;0;4",flyduration=1',
@@ -178,8 +179,8 @@ local hangar={
  s2t's=54,bulletcolor=9,primary="blink",secondary="aegis",secondaryshots=3,psets="3;5;5;3;3;10",guns="2;2;5;2",exhaustcolors="7;8;2",exhausts="-2;4;1;4",flyduration=1',
  s2t's=55,bulletcolor=6,primary="blink",secondary="blink",secondaryshots=3,psets="3;5;10;3;3;7",guns="0;2;7;2",exhaustcolors="7;10;11",exhausts="-3;3;2;3",flyduration=1',
  s2t's=56,bulletcolor=2,primary="blink",secondary="flak",secondaryshots=3,psets="3;5;15;3;3;10",guns="2;0;5;0",exhaustcolors="10;11;5",exhausts="-3;3;-2;4;1;4;2;3",flyduration=1',
- s2t's=57,bulletcolor=10,primary="blink",secondary="beam",secondaryshots=3,psets="3;5;9;3;3;10",guns="2;0;5;0",exhaustcolors="7;14;15",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1',
- s2t's=58,bulletcolor=11,primary="blink",secondary="bubbles",secondaryshots=3,psets="3;5;7;3;2;10",guns="0;4;7;4",exhaustcolors="11;11;3",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1',
+ s2t's=57,bulletcolor=11,primary="blink",secondary="beam",secondaryshots=3,psets="3;5;7;3;2;10",guns="0;4;7;4",exhaustcolors="11;11;3",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1',
+ s2t's=58,bulletcolor=10,primary="blink",secondary="bubbles",secondaryshots=3,psets="3;5;9;3;3;10",guns="2;0;5;0",exhaustcolors="7;14;15",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1',
  s2t's=59,bulletcolor=14,primary="blink",secondary="bolt",secondaryshots=3,psets="3;4;3;3;2;11",guns="0;4;7;4",exhaustcolors="12;12;3",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1',
 
  s2t's=60,bulletcolor=6,primary="flak",secondary="missile",secondaryshots=3,psets="3;5;5;3;3;10",guns="2;2;5;2",exhaustcolors="7;10;11",exhausts="-3;3;2;3",flyduration=1',
@@ -189,8 +190,8 @@ local hangar={
  s2t's=64,bulletcolor=6,primary="flak",secondary="aegis",secondaryshots=3,psets="3;5;2;3;3;14",guns="0;4;7;4",exhaustcolors="7;10;11",exhausts="-3;3;2;3",flyduration=1',
  s2t's=65,bulletcolor=12,primary="flak",secondary="blink",secondaryshots=3,psets="3;6;13;3;3;6",guns="1;3;6;3",exhaustcolors="7;6;15",exhausts="-3;3;2;3",flyduration=1',
  s2t's=66,bulletcolor=9,primary="flak",secondary="flak",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
- s2t's=67,bulletcolor=14,primary="flak",secondary="beam",secondaryshots=3,psets="3;5;6;3;3;7",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
- s2t's=68,bulletcolor=9,primary="flak",secondary="bubbles",secondaryshots=3,psets="3;5;8;3;3;14",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
+ s2t's=67,bulletcolor=9,primary="flak",secondary="beam",secondaryshots=3,psets="3;5;8;3;3;14",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
+ s2t's=68,bulletcolor=14,primary="flak",secondary="bubbles",secondaryshots=3,psets="3;5;6;3;3;7",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
  s2t's=69,bulletcolor=9,primary="flak",secondary="bolt",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;1;5;1",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
 
  s2t's=70,bulletcolor=11,primary="beam",secondary="missile",secondaryshots=3,psets="3;5;2;3;3;14",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
@@ -202,29 +203,29 @@ local hangar={
  s2t's=76,bulletcolor=8,primary="beam",secondary="flak",secondaryshots=3,psets="3;5;10;3;4;10",guns="1;3;6;3",exhaustcolors="7;7;9",exhausts="-3;3;-2;3;1;3;2;3",flyduration=1',
  s2t's=77,bulletcolor=4,primary="beam",secondary="beam",secondaryshots=3,psets="3;6;14;3;4;7",guns="1;3;6;3",exhaustcolors="10;10;15",exhausts="-1;4;0;4",flyduration=1',
  s2t's=78,bulletcolor=12,primary="beam",secondary="bubbles",secondaryshots=3,psets="3;5;7;3;4;7",guns="1;2;6;2",exhaustcolors="10;10;5",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=79,bulletcolor=12,primary="beam",secondary="bolt",secondaryshots=3,psets="3;6;14;3;4;7",guns="1;2;6;2",exhaustcolors="7;12;4",exhausts="-4;3;-3;4;2;4;3;3",flyduration=1',
+ s2t's=79,bulletcolor=10,primary="beam",secondary="bolt",secondaryshots=3,psets="3;6;14;3;4;7",guns="1;2;6;2",exhaustcolors="4;1",exhausts="-4;4;-3;3;2;3;3;4",flyduration=1',
 
- s2t's=80,bulletcolor=10,primary="bubbles",secondary="missile",secondaryshots=3,psets="3;5;14;3;3;6",guns="1;3;6;3",exhaustcolors="11;11;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
+ s2t's=80,bulletcolor=6,primary="bubbles",secondary="missile",secondaryshots=3,psets="3;5;14;3;3;6",guns="0;0;7;0",exhaustcolors="7;12;3",exhausts="-1;4;0;4",flyduration=1',
  s2t's=81,bulletcolor=14,primary="bubbles",secondary="boost",secondaryshots=3,psets="3;4;8;3;2;14",guns="1;0;6;0",exhaustcolors="12;12;2",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1',
  s2t's=82,bulletcolor=11,primary="bubbles",secondary="mines",secondaryshots=3,psets="3;5;7;3;3;6",guns="2;1;5;1",exhaustcolors="10;9;2",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=83,bulletcolor=2,primary="bubbles",secondary="shield",secondaryshots=3,psets="0;5;2;0;4;14",guns="4;0;6;0",exhaustcolors="10;9;2",exhausts="-4;4;-3;4;-1;4;0;4;2;4;3;4",flyduration=1',
+ s2t's=83,bulletcolor=2,primary="bubbles",secondary="shield",secondaryshots=3,psets="3;5;11;3;4;11",guns="1;1;6;1",exhaustcolors="7;7;5",exhausts="-3;3;-1;4;0;4;2;3",flyduration=10',
  s2t's=84,bulletcolor=10,primary="bubbles",secondary="aegis",secondaryshots=3,psets="3;5;6;3;3;7",guns="0;3;7;3",exhaustcolors="11;11;4",exhausts="-1;4;0;4",flyduration=1',
  s2t's=85,bulletcolor=12,primary="bubbles",secondary="blink",secondaryshots=3,psets="3;4;12;3;3;11",guns="1;0;6;0",exhaustcolors="7;12;2",exhausts="-4;3;-3;4;2;4;3;3",flyduration=1',
- s2t's=86,bulletcolor=9,primary="bubbles",secondary="flak",secondaryshots=3,psets="3;5;7;3;6;11",guns="1;0;6;0",exhaustcolors="9;9;4",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1',
- s2t's=87,bulletcolor=11,primary="bubbles",secondary="beam",secondaryshots=3,psets="3;5;11;3;3;10",guns="2;0;5;0",exhaustcolors="10;10;2",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1',
+ s2t's=86,bulletcolor=9,primary="bubbles",secondary="flak",secondaryshots=3,psets="3;5;7;3;6;11",guns="1;0;6;0",exhaustcolors="10;9;4",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1',
+ s2t's=87,bulletcolor=9,primary="bubbles",secondary="beam",secondaryshots=3,psets="3;5;11;3;3;10",guns="2;1;5;1",exhaustcolors="10;10;2",exhausts="-1;3;0;3",flyduration=1',
  s2t's=88,bulletcolor=10,primary="bubbles",secondary="bubbles",secondaryshots=3,psets="3;5;7;3;3;11",guns="1;3;6;3",exhaustcolors="10;10;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=89,bulletcolor=11,primary="bubbles",secondary="bolt",secondaryshots=3,psets="3;6;8;3;4;14",guns="1;3;6;3",exhaustcolors="7;9;15",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1',
+ s2t's=89,bulletcolor=11,primary="bubbles",secondary="bolt",secondaryshots=3,psets="3;5;11;3;3;12",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
 
  s2t's=90,bulletcolor=10,primary="bolt",secondary="missile",secondaryshots=3,psets="3;6;12;3;4;11",guns="0;3;7;3",exhaustcolors="7;2;5",exhausts="-1;3;0;3",flyduration=10',
- s2t's=91,bulletcolor=5,primary="bolt",secondary="boost",secondaryshots=3,psets="3;5;11;3;4;11",guns="1;1;6;1",exhaustcolors="7;7;5",exhausts="-3;3;-1;4;0;4;2;3",flyduration=10',
+ s2t's=91,bulletcolor=5,primary="bolt",secondary="boost",secondaryshots=3,psets="0;5;2;0;4;14",guns="4;0;6;0",exhaustcolors="10;9;2",exhausts="-4;4;-3;4;-1;4;0;4;2;4;3;4",flyduration=1',
  s2t's=92,bulletcolor=14,primary="bolt",secondary="mines",secondaryshots=3,psets="3;5;14;3;4;9",guns="1;0;6;0",exhaustcolors="9;15;5",exhausts="-1;4;0;4",flyduration=10',
  s2t's=93,bulletcolor=10,primary="bolt",secondary="shield",secondaryshots=3,psets="3;6;2;3;4;14",guns="1;2;6;2",exhaustcolors="7;11;5",exhausts="-1;4;0;4",flyduration=10',
  s2t's=94,bulletcolor=12,primary="bolt",secondary="aegis",secondaryshots=3,psets="0;5;9;0;4;7",guns="4;1;6;1",exhaustcolors="7;9;5",exhausts="-1;4;0;4;2;4;3;4",flyduration=10',
  s2t's=95,bulletcolor=12,primary="bolt",secondary="blink",secondaryshots=3,psets="3;5;2;3;3;14",guns="2;0;5;0",exhaustcolors="7;12;5",exhausts="-3;4;-2;4;1;4;2;4",flyduration=10',
- s2t's=96,bulletcolor=15,primary="bolt",secondary="flak",secondaryshots=3,psets="3;5;9;3;3;10",guns="0;3;7;3",exhaustcolors="9;8;5",exhausts="-1;4;0;4",flyduration=10',
+ s2t's=96,bulletcolor=15,primary="bolt",secondary="flak",secondaryshots=3,psets="3;5;9;3;3;10",guns="0;3;7;3",exhaustcolors="7;6;4",exhausts="-1;4;0;4",flyduration=10',
  s2t's=97,bulletcolor=7,primary="bolt",secondary="beam",secondaryshots=3,psets="3;5;5;3;4;6",guns="2;0;5;0",exhaustcolors="1",exhausts="-3;3;-2;4;1;4;2;3",flyduration=10',
- s2t's=98,bulletcolor=10,primary="bolt",secondary="bubbles",secondaryshots=3,psets="3;4;9;3;3;10",guns="2;0;5;0",exhaustcolors="11;15;5",exhausts="-1;4;0;4",flyduration=10',
- s2t's=99,bulletcolor=9,primary="bolt",secondary="bolt",secondaryshots=3,psets="3;4;3;3;3;11",guns="1;0;6;0",exhaustcolors="14;14;4",exhausts="-1;4;0;4",flyduration=10',
+ s2t's=98,bulletcolor=10,primary="bolt",secondary="bubbles",secondaryshots=3,psets="3;4;3;3;3;11",guns="1;0;6;0",exhaustcolors="14;14;4",exhausts="-1;4;0;4",flyduration=10',
+ s2t's=99,bulletcolor=9,primary="bolt",secondary="bolt",secondaryshots=3,psets="3;4;9;3;3;10",guns="2;0;5;0",exhaustcolors="11;15;5",exhausts="-1;4;0;4",flyduration=10',
 
  -- superboss
  s2t's=100,bulletcolor=11,primary="bolt",secondary="beam",secondaryshots=3,psets="3;4;7;3;3;11",guns="2;0;5;0",exhaustcolors="7;10;2",exhausts="-1;4;0;4"',
@@ -2024,62 +2025,62 @@ end
 -- _init=pickerinit
 
 __gfx__
-00044000000dd000000dd000000cc000000550000900009000022000000220000060060000088000000880000009900007000070000660000002200000033000
-00db3d00005dd500040ab04000dabd00004b3400090000900057e500005225000600006000088000000650000097690078000087006dd6000007600000ba9b00
-08d33d80005e2500046bb6400ddbbdd004d33d40690b3096005ee500005985006d0000d60007b00000855800086766807800008706dabd60005665000b3993b0
-2dd33dd206522560d66bb66dddcbbcdd44d33d4469033096025ee520066886606d0820d600fbbf000825528082699628780a90870d4bb4d005266250b3d99d3b
-28d44d826d5225d6d66dd66ddcdccdcd06d55d6069433496245225426ff88ff66d4224d6f0fbbf0f0028820082899828780990870d4bb4d052266225bd5dd5db
-8dd44dd86d5dd5d6004dd400cdccccdc6dd55dd696d66d6924422442f652256f6d4664d6f2f88f2f082882809289982988599588d44dd44d52288225bd5335db
-8d0550d866dddd660d6dd6d0dc0550cd6d0550d699466499224224226552255606d66d60f2f88f2f822882289289982968588586d46dd64d52288225b500005b
-82000028044004400d0550d0c000000c6600006609055090dd0dd0dd0540045000d66d0002f88f20055005509000000966088066006446005005500530000003
-000dd00000022000000ee0000042240000055000000dd00000d55d0000066000000990000f0f0000000dd0000200002000066000000660000009900000088000
-00d76d00002a9200006ee6000542245000555500000dd0000dd55dd0006a960000da8d000f0f0000040ab040e200002e000af000006826000009900000888800
-0f6766f0029a992005782750554994550d59e5d0000760000dd11dd006d99d6000d88d004f4f40ab04dbbd40e20cd02e00dffd0006f22f60000bc000028a9820
-ff6446ff2492294265282256449a99440de9eed000d66d005d1c11d5dfd99dfd0d6886d04ddd40bbdd5bb5dde20dd02e0fdffdf07f6226f7006cc600229a9922
-00d44d0024422442762ee267429a99244de44ed400c66c005d1111d5dfdffdfd6d6996d6ddddd544d55dd55de24dd42edfd66dfd76f77f67006cc60028988982
-0d5445d022422422d7eeee7d422992244d5445d430cddc035dd11dd56fdffdf66dc99cd6d545d545000dd000e242242e00d66d007ff77ff770699607d828828d
-d554455d05500550d545545d05244250dd5445dd3dcddcd30d5dd5d06f0dd0f6cdc99cdcd454d0450d5dd5d0220220220f6dd6f06f0550f679699697d828828d
-d540045d04500540d404404d0044440002200220cdcddcdc005dd50060000006c0c44c0c055500000d5445d0e200002edf6446fd600000066969969605055050
-060660600c0000c00070070000077000000330000062260000dffd0000d66d000005500000dffd0000f00f00060000600004400000066000000ff00000088000
-600b30066c0000c607000070007d470000f33f000d6226d00dffffd00fd66df0000ab00005dffd500f0000f062000026004af4006007f00600cffc0000822800
-60f33f066c0b30c67600006707c44c7000f7bf000d67c6d05dfbbfd5dfd92dfd007bb70055d66d55fd0000df620bc026041ff140655ff5560fcb9cf008276280
-f046640f6c0330c6760b3067c6c44c6c03b7bb30d6c7cc6dfdb7bbdf6d2922d6076bb670dd6766ddfd07b0df625cc526415ff514600ff0060f9b99f002466420
-404664046c4334c676d33d67c6c77c6c3fb66bf326c22c62fdb7bbdf6d2442d676655667df6766fdfd4bb4df625225264514415460066006df9cc9fd02466420
-400ff004c6d66d6c76d77d6776c77c673f3663f326222262fddbbddffdf44fdf00733700dff66ffd4d4ff4d4220220224114411465566556dcfccfcd24422442
-45466454cc4664cc07677670760cc067303663030d2222d005dffd5004f44f400763367005fddf5004dffd40f200002f41055014600660065d5dd5d524822842
-404664040c0550c000677600700000070004400000d55d000550055000d44d007665566700dddd0000fddf000f0000f040000004600000060440044000844800
-0060060000066000000bb00000088000000ff000000ff0000006600000edde000040040000d00d00000bb0000a0000a000033000050000500003300003000030
-006996000d09f0d00607e06000276200000ff00000fbcf00000660000edddde00f4004f000d33d0000b7bb00a200002a0003300005076050000a9000c300003c
-00dbcd000d7ff7d0063ee36002266220006ab6000ffccff0000a50005edaade5fddffddf00da9d000fb7bbf0a200002a000a5000df0660df00599500cd0000dc
-60dccd06677ff776b33ee33b02066020006bb60006fccf6000d55d00dea7aaedfdda9ddf00d99d000fb7bbf0a20b302a00f55f00fd4fd4dd04599540cd0a90dc
-694cc49667766776b33bb33b00088000096bb690f6f66f6f00f55f00dea7aaedfd9a99df0bd99db004bbbb40a203302a00f55f00dd4dd4fd54533545dd0990dd
-d949949d00066000000bb000080880809f6ff6f96f6ff6f60f6ff6f0deeaaeedfd9ff9dfbbd33dbb54fbbf452253352260f33f06fd0df0df005335003d5995d3
-d949949d007667000b3bb3b0824884289f6ff6f9f66ff66f66f66f660dedded00fdffdf003d33d30f5f55f5f9252252963f33f36550dd05504355340dc5cc5cd
-05500550000550000b3553b08505505890d55d0905500550f6d66d6f005dd500005ff500330330330545545099022099f3f33f3f0005500054355345dc0cc0cd
-0005500000088000000ff000000770000004d000000dd00003000030000ee00004000040000ff000004dd40000022000000dd00000088000000330000f0ff0f0
-000550000006d0000d0ab0d00076c700000d4000000dd0000b3003b000eb3e0042000024009ff9000d4994d0002b320000dabd000007e00000333300fc07e0cf
-000e2000000dd0000d4bb4d00bc6ccb0000e8000005bc50000be2b000023320042000024009ab9000d9a99d0028338200fbabbf0200ee00205376350fc5ee5cf
-00f22f00008dd800454bb454b3c77c3b00f88f00005cc500000220000e2332e0420980240fbabbf00d9a99d0282332820fbabbf02f0ee0f205676650fc0ee0cf
-00f22f000e8dd8e0545ff545b3b77b3b00f88f000f5cc5f00b3223b0e224422e42088024f9b99b9f0d9999d0828228280fbddbf02f2882f2d56dd65dfc5ff5cf
-d0f55f0d2e8ee8e2000ff00073b77b3760fd4f06fd5dd5dfb33bb33b04d22d4022188122ff9999ff5d5995d5282222824fd44df40f2882f0d53dd35dfc5ff5cf
-d5f55f5d2e8ee8e2045ff54073b77b3764f4dfd6fd5dd5dfb30bb03b5d0440d52412214200f44f005d5dd5d582055028455445540f2882f05d3dd3d5fc0ff0cf
-f5f55f5f00055000054dd45070044007fdf4df4ff0f44f0fb004400b0500005044022044000550005050050580000008400000040025520005500550f000000f
-0006600007000070000ff0000000d0d000022000070000700f0000f000d00d00000bb000000ff000000ff000005225000d0000d0000660000000060000066000
-006e86007900009700f66f0000007670000220007e0000e76707b07603d00d3000c76c000d0e80d000fbcf0005522550d500005d000c50000000d6d000d66d00
-0d8e88d0790000970f6766f0e2067676000a60007e0000e7670bb0760b3bb3b00c6766c00d0880d00f5cc5f0555bc555d509e05d002552007906d6d600de2d00
-d486684d790e8097fd6766df2207676700d66d007e0bc0e7765775673b3a93b3bc6bb6cb670880765d5cc5d525cbcc52d50ee05d042552409906d6d607d22d70
-d4d66d4d79088097fdd66ddf77476767d0d66d0d7e5cc5e776577567bb9a99bbbccbbccb764ff4675d5ff5d525c55c52d545545d442662446656d6d676d22d67
-64d66d469958859904dffd4076476767d4d22d4dee5ee5ee76066067b39bb93bbbcbbcbb764ff467fd5ff5df2545545255455455400660046d5d666d76d66d67
-64d66d46a959959a05dffd5076067776d4d22d4d6e0ee0e645000054033bb33004400440670dd076fd0550df05455450d505505d002662006d066d6677666677
-65500556aa0990aa055005505505505504d22d400600006044000044040440400d4004d055000055f000000f0045540005044050042552400006d0d604400440
-000cc00000f00f00005005000600006000400400d000000d0005500004055040055005504d4444d4044444400444444004444440044444404000000400055000
-000cc0000d0000d00d0000d07000000702000020d405504d4dd44dd4d404404d444dd4444d4444d44d4dd4d44d4dd4d44dddddd44dddddd44205502442422424
-000a9000f70d507fd009900d70077007200bb002d44dd44d4dd44dd444544544d44dd44d4d4444d44d4dd4d44d4dd4d44dd44dd44dd44dd44224422442422424
-00d99d00d705507dd09a990d600b300620bbbb02d44dd44d4dd44dd4d454454dd4bddb4d4d6766d44dd44dd44d4dd4d44d4dd4d44d4dd4d44424424440422404
-00d99d00f70ff07f0d9999d070f33f0702b7bb20d44a944d40d7ed04d40bc04d04babb400d6766d04dd44dd44d4dd4d44d4d64d44d46d4d4424a94240047e400
-60dccd06d70ff07dd449944d74677647244bb4420d4994d0000ee000d40cc04d04dabd4004d66d404d4dd4d44d4dd4d44dd446d44d644dd404299240000ee000
-6cdccdc60d0000d0004dd400f467764f0042240000d99d00000ee000d400004d00dddd0004d44d404d4dd4d44d4dd4d44dddddd44dddddd400499400000ee000
-dcdccdcd00d00d0004055040600ff0060405504000044000000440000d0000d0000dd00000d44d00044444400444444004444440044444400004400000022000
+00066000000dd000000dd000000cc000000550000900009000022000000220000070070000088000000880000009900007000070000660000002200000033000
+000af000005dd500040ab04000dabd00004b3400090000900057e500005225000700007000088000000650000097690078000087006dd6000007600000ba9b00
+00dffd00005e2500046bb6400ddbbdd004d33d40690b3096005ee50000598500760000670007b00000855800086766807800008706dabd60005665000b3993b0
+06dffd6006522560d66bb66dddcbbcdd44d33d4469033096025ee52006688660760b306700fbbf000825528082699628780a90870d4bb4d005266250b3d99d3b
+66d66d666d5225d6d66dd66ddcdccdcd06d55d6069433496245225426ff88ff676d33d67f0fbbf0f0028820082899828780990870d4bb4d052266225bd5dd5db
+00d66d006d5dd5d6004dd400cdccccdc6dd55dd696d66d6924422442f652256f76d77d67f2f88f2f082882809289982988599588d44dd44d52288225bd5335db
+06d66d6066dddd660d6dd6d0dc0550cd6d0550d699466499224224226552255607677670f2f88f2f822882289289982968588586d46dd64d52288225b500005b
+66d55d66044004400d0550d0c000000c6600006609055090dd0dd0dd054004500067760002f88f20055005509000000966088066006446005005500530000003
+000dd00000022000000ee00000422400000550000060060000d55d0000066000000990000f0f0000000dd0000200002000044000000660000009900000088000
+00d76d00002a9200006ee6000542245000555500006996000dd55dd0006a960000da8d000f0f0000040ab040e200002e00db3d00006826000009900000888800
+0f6766f0029a992005782750554994550d59e5d000dbcd000dd11dd006d99d6000d88d004f4f40ab04dbbd40e20cd02e08d33d8006f22f60000bc000028a9820
+ff6446ff2492294265282256449a99440de9eed060dccd065d1c11d5dfd99dfd0d6886d04ddd40bbdd5bb5dde20dd02e2dd33dd27f6226f7006cc600229a9922
+00d44d0024422442762ee267429a99244de44ed4694cc4965d1111d5dfdffdfd6d6996d6ddddd544d55dd55de24dd42e28d44d8276f77f67006cc60028988982
+0d5445d022422422d7eeee7d422992244d5445d4d949949d5dd11dd56fdffdf66dc99cd6d545d545000dd000e242242e8dd44dd87ff77ff770699607d828828d
+d554455d05500550d545545d05244250dd5445ddd949949d0d5dd5d06f0dd0f6cdc99cdcd454d0450d5dd5d0220220228d0550d86f0550f679699697d828828d
+d540045d04500540d404404d004444000220022005500550005dd50060000006c0c44c0c055500000d5445d0e200002e82000028600000066969969605055050
+060660600c0000c00060060000077000000330000062260000dffd0000d66d000005500000dffd0000f00f000600006000044000000660000006600000088000
+600b30066c0000c606000060007d470000f33f000d6226d00dffffd00fd66df0000ab00005dffd500f0000f062000026004af4006007f006006e860000822800
+60f33f066c0b30c66d0000d607c44c7000f7bf000d67c6d05dfbbfd5dfd92dfd007bb70055d66d55fd0000df620bc026041ff140655ff5560d8e88d008276280
+f046640f6c0330c66d0820d6c6c44c6c03b7bb30d6c7cc6dfdb7bbdf6d2922d6076bb670dd6766ddfd07b0df625cc526415ff514600ff006d486684d02466420
+404664046c4334c66d4224d6c6c77c6c3fb66bf326c22c62fdb7bbdf6d2442d676655667df6766fdfd4bb4df625225264514415460066006d4d66d4d02466420
+400ff004c6d66d6c6d4664d676c77c673f3663f326222262fddbbddffdf44fdf00733700dff66ffd4d4ff4d422022022411441146556655664d66d4624422442
+45466454cc4664cc06d66d60760cc067303663030d2222d005dffd5004f44f400763367005fddf5004dffd40f200002f410550146006600664d66d4624822842
+404664040c0550c000d66d00700000070004400000d55d000550055000d44d007665566700dddd0000fddf000f0000f040000004600000066550055600844800
+000cc00000066000000bb00000088000000ff000000ff0000006600000edde0000400400000bb00000d00d000a0000a000033000050000500003300003000030
+000cc0000d09f0d00607e06000276200000ff00000fbcf00000660000edddde00f4004f000b7bb0000d33d00a200002a0003300005076050000a9000c300003c
+000a90000d7ff7d0063ee36002266220006ab6000ffccff0000a50005edaade5fddffddf0fb7bbf000da9d00a200002a000a5000df0660df00599500cd0000dc
+00d99d00677ff776b33ee33b02066020006bb60006fccf6000d55d00dea7aaedfdda9ddf0fb7bbf000d99d00a20b302a00f55f00fd4fd4dd04599540cd0a90dc
+00d99d0067766776b33bb33b00088000096bb690f6f66f6f00f55f00dea7aaedfd9a99df04bbbb400bd99db0a203302a00f55f00dd4dd4fd54533545dd0990dd
+60dccd0600066000000bb000080880809f6ff6f96f6ff6f60f6ff6f0deeaaeedfd9ff9df54fbbf45bbd33dbb2253352260f33f06fd0df0df005335003d5995d3
+6cdccdc6007667000b3bb3b0824884289f6ff6f9f66ff66f66f66f660dedded00fdffdf0f5f55f5f03d33d309252252963f33f36550dd05504355340dc5cc5cd
+dcdccdcd000550000b3553b08505505890d55d0905500550f6d66d6f005dd500005ff500054554503303303399022099f3f33f3f0005500054355345dc0cc0cd
+0005500000088000000ff0000004d00000077000000dd00003000030000ee00004000040000ff000004dd40000022000000dd00000088000000330000f0ff0f0
+000550000006d0000d0ab0d0000d40000076c700000dd0000b3003b000eb3e0042000024009ff9000d4994d0002b320000dabd000007e00000333300ff0760ff
+000e2000000dd0000d4bb4d0000e80000bc6ccb0005bc50000be2b000023320042000024009ab9000d9a99d0028338200fbabbf0200ee0020537635067566576
+00f22f00008dd800454bb45400f88f00b3c77c3b005cc500000220000e2332e0420980240fbabbf00d9a99d0282332820fbabbf02f0ee0f205676650f606606f
+00f22f000e8dd8e0545ff54500f88f00b3b77b3b0f5cc5f00b3223b0e224422e42088024f9b99b9f0d9999d0828228280fbddbf02f2882f2d56dd65d675ff576
+d0f55f0d2e8ee8e2000ff00060fd4f0673b77b37fd5dd5dfb33bb33b04d22d4022188122ff9999ff5d5995d5282222824fddddf40f2882f0d53dd35df65ff56f
+d5f55f5d2e8ee8e2045ff54064f4dfd673b77b37fd5dd5dfb30bb03b5d0440d52412214200f44f005d5dd5d58205502845d44d540f2882f05d3dd3d5670ff076
+f5f55f5f00055000054dd450fdf4df4f70044007f0f44f0fb004400b0500005044022044000550005050050580000008400000040025520005500550f000000f
+d00dd00d07000070000ff0000052250000028000070000700f0000f000077000000bb000000ff000000ff0000000d0d00d0000d0000660000000060000066000
+0d2dd2d07900009700f66f0005522550000820007e0000e70f0000f00039830000c76c0000cffc0000fbcf0000007670d500005d000c50000000d6d000d66d00
+002ab200790000970f6766f0555bc555000760007e0000e77607b067033883300c6766c00fcb9cf00f5cc5f0e2067676d509e05d002552007906d6d600de2d00
+0dbabbd0790e8097fd6766df25cbcc5200d66d007e0bc0e7760bb06700688600bc6bb6cb0f9b99f05d5cc5d522076767d50ee05d042552409906d6d607d22d70
+d2b22b2d79088097fdd66ddf25c55c52d0d66d0d7e5cc5e76657756606377360bccbbccbdf9cc9fd5d5ff5d577476767d545545d442662446656d6d676d22d67
+d2d22d2d9958859904dffd4025455452d4d28d4dee5ee5ee7606606763377336bbcbbcbbdcfccfcdfd5ff5df7647676755455455400660046d5d666d76d66d67
+d0d44d0da959959a05dffd5002455420c4d82d4c6e0ee0e6f500005f63055036044004405d5dd5d5fd0550df76067776d505505d002662006d066d6677666677
+000ff000aa0990aa055005500045540004c28c4006000060ff0000ff600000060d4004d004400440f000000f5505505505044050042552400006d0d604400440
+000dd00000f00f00060000600050050000400400d000000d0005500004055040055005504d4444d4044444400444444004444440044444404000000400055000
+000dd0000d0000d0700000070d0000d002000020d405504d4dd44dd4d404404d444dd4444d4444d44d4dd4d44d4dd4d44dddddd44dddddd44205502442422424
+00076000f70d507f70077007d009900d200bb002d44dd44d4dd44dd444544544d44dd44d4d4444d44d4dd4d44d4dd4d44dd44dd44dd44dd44224422442422424
+00d66d00d705507d600b3006d09a990d20bbbb02d44dd44d4dd44dd4d454454dd4bddb4d4d6766d44dd44dd44d4dd4d44d4dd4d44d4dd4d44424424440422404
+00c66c00f70ff07f70f33f070d9999d002b7bb20d44a944d40d7ed04d40bc04d04babb400d6766d04dd44dd44d4dd4d44d4d64d44d46d4d4424a94240047e400
+30cddc03d70ff07d74677647d449944d244bb4420d4994d0000ee000d40cc04d04dabd4004d66d404d4dd4d44d4dd4d44dd446d44d644dd404299240000ee000
+3dcddcd30d0000d0f467764f004dd4000042240000d99d00000ee000d400004d00dddd0004d44d404d4dd4d44d4dd4d44dddddd44dddddd400499400000ee000
+cdcddcdc00d00d00600ff006040550400405504000044000000440000d0000d0000dd00000d44d00044444400444444004444440044444400004400000022000
 24055042055005504242242404444440044444400442244004422440000000000000000000000000000000000000000000000000000000000000000000000000
 24022042424224244242242442222424424224244244442442444424000000000011110000000000000000000000000000000000000000000000000000000000
 44522544224224220242242044444424042442400442244004422440005ff5000110011000000000000000000000000000000000000000000000000000000000
