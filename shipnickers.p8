@@ -6,7 +6,6 @@ __lua__
 
 --[[
  - unify game event code
- - mash boost and burner
  - add bubbles (instead of burner)
  - mash shield and aegis?
  - replace bolt w slicer?
@@ -24,7 +23,7 @@ sfx channels:
 --]]
 
 -- dev4, dev6 = all unlocked
-cartdata'ironchestgames_shipnickers_v1-dev8'
+cartdata'ironchestgames_shipnickers_v1-dev4'
 
 printh('debug started','debug',true)
 function debug(s)
@@ -227,6 +226,7 @@ local hangar={
  s2t's=98,bulletcolor=10,primary="bolt",secondary="burner",secondaryshots=3,psets="3;4;9;3;3;10",guns="2;0;5;0",exhaustcolors="11;15;5",exhausts="-1;4;0;4",flyduration=10',
  s2t's=99,bulletcolor=9,primary="bolt",secondary="bolt",secondaryshots=3,psets="3;4;3;3;3;11",guns="1;0;6;0",exhaustcolors="14;14;4",exhausts="-1;4;0;4",flyduration=10',
 
+ -- superboss
  s2t's=100,bulletcolor=11,primary="bolt",secondary="beam",secondaryshots=3,psets="3;4;7;3;3;11",guns="2;0;5;0",exhaustcolors="7;10;2",exhausts="-1;4;0;4"',
 }
 
@@ -332,14 +332,14 @@ local function explosionsmoke(_x,_y)
  })
 end
 
-local function newexhaustp(_xoff,_yoff,_ship,_colors,_life,_spdyfactor)
+local function newexhaustp(_xoff,_yoff,_ship,_colors,_life)
  add(psfollow,{
   x=0,y=0,
   follow=_ship,
   xoff=_xoff,
   yoff=_yoff,
   r=0,
-  spdx=0,spdy=_spdyfactor+rnd(),spdr=0,
+  spdx=0,spdy=0.1+rnd(),spdr=0,
   colors=_colors,
   life=_life,
   lifec=_life,
@@ -400,6 +400,9 @@ local function fizzle(_obj)
 end
 
 -- weapons
+local function emptydraw()
+end
+
 local function drawbullet(_bullet)
  sspr(5,119,1,4,_bullet.x,_bullet.y)
 end
@@ -416,24 +419,6 @@ local function drawshield(_x,_y)
  fillp(rnd(32767))
  circ(_x+rnd(2)-1,_y+rnd(2)-1,6,12)
  fillp()
-end
-
-local beampcolors={7,7,14}
-local dirs={1,-1}
-local function drawbeam(_x,_topy,_bottomy)
- rectfill(_x-3,_topy+2,_x+2,_bottomy-2,8)
- rectfill(_x-2,_topy+1,_x+1,_bottomy-1,14)
- rectfill(_x-1,_topy,_x,_bottomy,7)
- add(ps,{
-  x=_x,y=_topy+rnd(_bottomy),
-  r=0.9,
-  spdx=rnd(dirs)*(rnd(0.125)+0.125),
-  spdy=0,
-  spdr=0,
-  colors=beampcolors,
-  life=20,
-  lifec=20,
- })
 end
 
 local function drawmine(_bullet)
@@ -460,7 +445,7 @@ end
 
 local missilepcolors=split'7,10,9'
 local function drawmissile(_bullet)
- sspr(4,123,3,5,_bullet.x,_bullet.y)
+ sspr(4,123,3,5,_bullet.x-_bullet.hw,_bullet.y)
 end
 local function shootmissile(_ship,_life)
  shipsfx(_ship,12)
@@ -533,24 +518,43 @@ local function blinkaway(_ship,_dx,_dy,_h)
  _ship.y=mid(4,_newy,119)
 end
 
+local beampcolors={7,7,14}
+local dirs={1,-1}
+local function drawbeam(_bullet)
+ local _x,_topy,_bottomy=_bullet.x,_bullet.y-_bullet.hh,_bullet.y+_bullet.hh
+ rectfill(_x-3,_topy+2,_x+2,_bottomy-2,8)
+ rectfill(_x-2,_topy+1,_x+1,_bottomy-1,14)
+ rectfill(_x-1,_topy,_x,_bottomy,7)
+ add(ps,{
+  x=_x,y=_topy+rnd(_bottomy),
+  r=0.9,
+  spdx=rnd(dirs)*(rnd(0.125)+0.125),
+  spdy=0,
+  spdr=0,
+  colors=beampcolors,
+  life=20,
+  lifec=20,
+ })
+end
 local function shootbeam(_ship)
+ local _hh=_ship.y/2
  add(bullets,{
-  x=_ship.x,y=0,
-  hw=3,hh=_ship.y,
+  x=_ship.x,y=_hh-6,
+  hw=3,hh=_hh,
   spdx=0,
   spdy=0,
   accy=0,
   spdfactor=0,
   dmg=0.25,
   life=1,
-  draw=emptydraw,
+  draw=drawbeam,
  })
 end
 
-local function shootburner(_ship)
+local function shootboost(_ship) -- todo: rename
  add(bullets,{
-  x=_ship.x,y=_ship.y+10,
-  hw=3,hh=20,
+  x=_ship.x,y=_ship.y+8,
+  hw=3,hh=5,
   spdx=0,
   spdy=0,
   accy=0,
@@ -614,9 +618,6 @@ function shootbolt(_from,_hits,_enemiesnothit,_enemiesalreadyhit,_maxlen)
  end
 end
 
-local function emptydraw()
-end
-
 local primary={
  missile=function(_btn4,_ship)
   if _btn4 and _ship.primaryc > 1 and not _ship.lastbtn4 then
@@ -627,6 +628,9 @@ local primary={
  end,
  boost=function(_btn4,_ship)
   _ship.isboosting=_ship.primaryc > 0 and not _btn4
+  if _ship.isboosting then
+   shootboost(_ship)
+  end
  end,
  mines=function(_btn4,_ship)
   if _btn4 and _ship.primaryc > 1 and not _ship.lastbtn4 then
@@ -662,10 +666,7 @@ local primary={
   end
  end,
  burner=function(_btn4,_ship)
-  _ship.isburnering=_ship.primaryc > 0 and not _btn4
-  if _ship.isburnering then
-   shootburner(_ship)
-  end
+  -- todo: add weapon
  end,
  bolt=function(_btn4,_ship)
   if _btn4 and _ship.primaryc > 1 and not _ship.lastbtn4 then
@@ -692,10 +693,11 @@ local secondary={
   _ship.secondaryc-=1
   if btnp(5,_ship.plidx) and _ship.secondaryshots > 0 then
    _ship.secondaryshots-=1
-   _ship.secondaryc=60
+   _ship.secondaryc=100
   end
   if _ship.secondaryc > 0 then
    _ship.isboosting=true
+   shootboost(_ship)
   end
  end,
  mines=function(_ship)
@@ -753,15 +755,7 @@ local secondary={
   end
  end,
  burner=function(_ship)
-  _ship.secondaryc-=1
-  if btnp(5,_ship.plidx) and _ship.secondaryshots > 0 then
-   _ship.secondaryshots-=1
-   _ship.secondaryc=110
-  end
-  if _ship.secondaryc > 0 then
-   _ship.isburnering=true
-   shootburner(_ship)
-  end
+  -- todo: add weapon
  end,
  bolt=function(_ship)
   if btnp(5,_ship.plidx) and _ship.secondaryshots > 0 then
@@ -775,10 +769,10 @@ local secondary={
  end,
 }
 
+-- todo: replace burner
 local weaponcolors=s2t'missile=15,boost=9,mines=5,shield=12,aegis=2,blink=3,flak=11,beam=8,burner=14,bolt=6'
 
 local boostcolors=split'7,10,9,8'
-local burnercolors=split'7,7,7,14,14,12,4'
 
 local secondarysprites={
  missile=split'5,123',
@@ -789,7 +783,7 @@ local secondarysprites={
  blink=split'17,123',
  flak=split'20,123',
  beam=split'23,123',
- burner=split'26,123',
+ burner=split'26,123', -- todo: replace
  bolt=split'29,123'
 }
 
@@ -805,7 +799,7 @@ end
 -- enemies
 
 -- todo: meld with newexhaustp?
-local function newbossexhaustp(_xoff,_yoff,_ship,_colors,_life,_spdyfactor)
+local function newbossexhaustp(_xoff,_yoff,_ship,_colors,_life)
  add(psfollow,{
   x=0,y=0,
   follow=_ship,
@@ -813,7 +807,7 @@ local function newbossexhaustp(_xoff,_yoff,_ship,_colors,_life,_spdyfactor)
   yoff=_yoff,
   r=0,
   spdx=0,
-  spdy=-(_spdyfactor+rnd()),
+  spdy=-(0.1+rnd()),
   spdr=0,
   colors=_colors,
   life=_life,
@@ -1036,8 +1030,7 @@ local bossweapons={
   sfx(16,2)
  end,
  burner=function()
-  boss.burnerts=t()
-  sfx(15,2)
+  -- todo: replace
  end,
  bolt=function()
   shootbossbolt()
@@ -1202,6 +1195,58 @@ function gameupdate()
   hasescaped=escapeelapsed > escapeduration
  end
 
+ -- update bullets (friendly)
+ for _b in all(bullets) do
+  _b.x+=_b.spdx
+  _b.y+=_b.spdy
+
+  _b.spdy+=_b.accy
+  
+  _b.life-=1
+
+  _b.spdx*=_b.spdfactor
+  _b.spdy*=_b.spdfactor
+
+  if _b.update then
+   _b.update(_b)
+  end
+
+  if _b.p then
+   add(bottomps,mr(clone(_b.p),{
+    x=_b.x+_b.p.xoff,
+    y=_b.y+_b.p.yoff,
+    life=rnd(_b.p.life)+_b.p.life,
+    lifec=rnd(_b.p.life)+_b.p.life,
+   }))
+  end
+
+  if boss and isaabbscolliding(_b,boss) then
+   if not boss.shieldts then
+    boss.hp-=_b.dmg
+   end
+   _b.life=0
+   newhit(boss.x,boss.y)
+  end
+
+  for _enemy in all(enemies) do
+   if isaabbscolliding(_b,_enemy) then
+    _enemy.hp-=_b.dmg
+    _b.life=0
+    newhit(_enemy.x,_enemy.y)
+   end
+  end
+
+  if _b.life <= 0 then
+   if _b.ondeath then
+    _b.ondeath(_b)
+   else
+    del(bullets,_b)
+   end
+  elseif _b.x<0 or _b.x>128 or _b.y<0 or _b.y>128 then
+   del(bullets,_b)
+  end
+ end
+
  -- update ships
  for _ship in all(ships) do
   local _plidx,_newx,_newy=_ship.plidx,_ship.x,_ship.y
@@ -1237,7 +1282,7 @@ function gameupdate()
   _ship.isfiring=nil
 
   if _ship.secondaryc <= 0 then
-   _ship.isshielding,_ship.isaegising,_ship.isboosting,_ship.isbeaming,_ship.isburnering=nil
+   _ship.isshielding,_ship.isaegising,_ship.isboosting,_ship.isbeaming=nil
   end
 
   if _ship.hp < 3 then
@@ -1293,21 +1338,20 @@ function gameupdate()
    _ship.secondaryc=0
   end
 
-  local _exhaustcolors,_exhaustlife,_exhaustspdyfactor=_ship.exhaustcolors,4,0.1
-  if _ship.isburnering then
-   _exhaustcolors,_exhaustlife,_exhaustspdyfactor=burnercolors,24,0.75
-  elseif _ship.isboosting then
-   _exhaustcolors,_exhaustlife=boostcolors,8
-  end
   for _i=1,#_ship.exhausts,2 do
-   newexhaustp(_ship.exhausts[_i],_ship.exhausts[_i+1],_ship,_exhaustcolors,_exhaustlife,_exhaustspdyfactor)
+   newexhaustp(
+    _ship.exhausts[_i],
+    _ship.exhausts[_i+1],
+    _ship,
+    _ship.isboosting and boostcolors or _ship.exhaustcolors,
+    _ship.isboosting and 5 or 4)
   end
 
-  if _ship.loopingsfx and not (_ship.isboosting or _ship.isburnering or _ship.isbeaming or _ship.isshielding or _ship.isaegising) then
+  if _ship.loopingsfx and not (_ship.isboosting or _ship.isbeaming or _ship.isshielding or _ship.isaegising) then
    _ship.loopingsfx=nil
    sfx(-2,_plidx)
   elseif not _ship.loopingsfx then
-   if (_ship.isboosting or _ship.isburnering) then
+   if _ship.isboosting then
     _ship.loopingsfx=true
     sfx(15,_plidx)
    elseif _ship.isbeaming then
@@ -1353,58 +1397,6 @@ function gameupdate()
    explode(_ship)
    sfx(-2,_ship.plidx)
    del(ships,_ship)
-  end
- end
-
- -- update bullets (friendly)
- for _b in all(bullets) do
-  _b.x+=_b.spdx
-  _b.y+=_b.spdy
-
-  _b.spdy+=_b.accy
-  
-  _b.life-=1
-
-  _b.spdx*=_b.spdfactor
-  _b.spdy*=_b.spdfactor
-
-  if _b.update then
-   _b.update(_b)
-  end
-
-  if _b.p then
-   add(bottomps,mr(clone(_b.p),{
-    x=_b.x+_b.p.xoff,
-    y=_b.y+_b.p.yoff,
-    life=rnd(_b.p.life)+_b.p.life,
-    lifec=rnd(_b.p.life)+_b.p.life,
-   }))
-  end
-
-  if boss and isaabbscolliding(_b,boss) then
-   if not boss.shieldts then
-    boss.hp-=_b.dmg
-   end
-   _b.life=0
-   newhit(boss.x,boss.y)
-  end
-
-  for _enemy in all(enemies) do
-   if isaabbscolliding(_b,_enemy) then
-    _enemy.hp-=_b.dmg
-    _b.life=0
-    newhit(_enemy.x,_enemy.y)
-   end
-  end
-
-  if _b.life <= 0 then
-   if _b.ondeath then
-    _b.ondeath(_b)
-   else
-    del(bullets,_b)
-   end
-  elseif _b.x<0 or _b.x>128 or _b.y<0 or _b.y>128 then
-   del(bullets,_b)
   end
  end
 
@@ -1460,19 +1452,19 @@ function gameupdate()
  -- update boss
  if boss then
   if boss.hp > 0 then
-   local _exhaustcolors,_exhaustlife,_exhaustspdyfactor=boss.exhaustcolors,4,0.1
-   if boss.burnerts then
-    _exhaustcolors,_exhaustlife,_exhaustspdyfactor=burnercolors,24,0.75
-   elseif boss.boostts then
-    _exhaustcolors,_exhaustlife=boostcolors,8
-   end
    for _i=1,#boss.exhausts,2 do
-    newbossexhaustp(boss.exhausts[_i],-(boss.exhausts[_i+1]+0.5),boss,_exhaustcolors,_exhaustlife,_exhaustspdyfactor)
+    newbossexhaustp(
+     boss.exhausts[_i],
+     -(boss.exhausts[_i+1]+0.5),
+     boss,
+     boss.boostts and boostcolors or boss.exhaustcolors,
+     boss.boostts and 5 or 4)
    end
   else
-   for _i=1,#boss.exhausts,2 do
-    newexhaustp(boss.exhausts[_i],boss.exhausts[_i+1],boss,boss.exhaustcolors,4,0.1)
-   end
+   -- todo: remove?
+   -- for _i=1,#boss.exhausts,2 do
+   --  newexhaustp(boss.exhausts[_i],boss.exhausts[_i+1],boss,boss.exhaustcolors,4,0.1)
+   -- end
   end
 
   local _bossdt=curt-boss.ts
@@ -1495,7 +1487,7 @@ function gameupdate()
   else
    if _bossdt > boss.flydurationc then
     if _bossdt > boss.flydurationc+boss.waitdurationc then
-     bossweapons[rnd{boss.primary,boss.primary,boss.secondary}](boss)
+     -- bossweapons[rnd{boss.primary,boss.primary,boss.secondary}](boss) -- todo: add back
      boss.waitdurationc,boss.flydurationc,boss.ts=0.875+rnd(1.75),boss.flyduration+rnd(5),curt
      if issuperboss then
       boss.primary=rnd(superbossweaponnames)
@@ -1507,12 +1499,27 @@ function gameupdate()
      if boss.aegists then
       _targety+=42
      end
-     boss.targetx,boss.targety=4+rnd(120),_targety
+     -- boss.targetx,boss.targety=4+rnd(120),_targety -- todo: add back
+     boss.targetx,boss.targety=boss.x,boss.y -- todo: remove
     end
 
-    if boss.boostts and t()-boss.boostts > 2.25 then
-     boss.boost,boss.boostts=0
-     sfx(-2,2)
+    if boss.boostts then
+     add(enemybullets,{
+      x=boss.x,y=boss.y-8,
+      hw=3,hh=5,
+      spdx=0,
+      spdy=0,
+      accy=0,
+      spdfactor=0,
+      dmg=1,
+      life=1,
+      draw=emptydraw,
+     })
+
+     if t()-boss.boostts > 2 then
+      boss.boost,boss.boostts=0
+      sfx(-2,2)
+     end
     end
 
     if boss.shieldts and t()-boss.shieldts > 2.25 then
@@ -1527,8 +1534,8 @@ function gameupdate()
 
     if boss.beamts then
      add(enemybullets,{
-      x=boss.x,y=boss.y,
-      hw=3,hh=128,
+      x=boss.x,y=boss.y+64,
+      hw=3,hh=64,
       spdx=0,
       spdy=0,
       accy=0,
@@ -1539,24 +1546,6 @@ function gameupdate()
      })
      if t()-boss.beamts > 2 then
       boss.boost,boss.beamts=0
-      sfx(-2,2)
-     end
-    end
-
-    if boss.burnerts then
-     add(enemybullets,{
-      x=boss.x,y=boss.y-20,
-      hw=3,hh=20,
-      spdx=0,
-      spdy=0,
-      accy=0,
-      spdfactor=0,
-      dmg=1,
-      life=1,
-      draw=emptydraw,
-     })
-     if t()-boss.burnerts > 2 then
-      boss.burnerts=nil
       sfx(-2,2)
      end
     end
@@ -1588,7 +1577,7 @@ function gameupdate()
  end
  if nickitts == nil and (not (hasescaped or issuperbossdead)) and (t()-enemyts > _spawninterval and #enemies < min(15,10+dget(63))  or #enemies < _spawnmin) then
   enemyts=t()
-  rnd{newkamikaze,newkamikaze,newbomber,newminelayer,newfighter,newcargoship}()
+  -- rnd{newkamikaze,newkamikaze,newbomber,newminelayer,newfighter,newcargoship}()
  end
 
  for _enemy in all(enemies) do
@@ -1711,13 +1700,6 @@ function gamedraw()
   spr(_enemy.s+(issuperboss and 9 or 0),_enemy.x-4,_enemy.y-4)
  end
 
- -- draw beams
- for _ship in all(ships) do
-  if _ship.isbeaming then
-   drawbeam(_ship.x,-4,_ship.y-6)
-  end
- end
-
  -- draw ships
  for _ship in all(ships) do
   local _urx,_ury=_ship.x-4,_ship.y-4
@@ -1797,6 +1779,14 @@ function gamedraw()
    drawaegis(_ship.x,_ship.y)
   end
  end
+
+ -- draw debug bullet mids
+ -- for _b in all(enemybullets) do
+ --  pset(_b.x,_b.y,11)
+ -- end
+ -- for _b in all(bullets) do
+ --  pset(_b.x,_b.y,12)
+ -- end
 
  -- draw gui
  if boss then
@@ -1928,7 +1918,7 @@ function pickerupdate()
       local _locked=getlocked()
      if #_locked == 0 then
       issuperboss=true
-      boss=mr(getship(100),s2t'x=64,y=0,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2')
+      boss=mr(getship(100),s2t'x=64,y=40,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2')
      else
       issuperboss=nil
       boss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2')
