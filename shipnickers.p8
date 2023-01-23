@@ -7,7 +7,6 @@ __lua__
 --[[
  - fix psets
  - unify game event code
- - mash shield and aegis?
 
 dget:
 63 - boss kills
@@ -74,10 +73,6 @@ local function mr(_t1,_t2)
   _t1[_k]=_v
  end
  return _t1
-end
-
-local function dist(x1,y1,x2,y2)
- return sqrt(((x2-x1)^2)+((y2-y1)^2))
 end
 
 local function s2t(_t)
@@ -339,19 +334,6 @@ local function newexhaustp(_xoff,_yoff,_ship,_colors,_life,_vdir)
  })
 end
 
-local function getclosest(_x,_y,_list)
- local _closest=_list[1]
- local _closestlen=300
- for _obj in all(_list) do
-  local _dist=dist(_x,_y,_obj.x,_obj.y)
-  if _dist < _closestlen then
-   _closestlen=_dist
-   _closest=_obj
-  end
- end
- return _closest,_closestlen
-end
-
 local explosioncolors=split'7,7,10,9,8'
 local function explode(_obj)
  del(bullets,_obj)
@@ -400,17 +382,10 @@ local function drawbullet(_bullet)
  sspr(5,119,1,4,_bullet.x,_bullet.y)
 end
 
-local function drawaegis(_x,_y)
+local function drawshield(_x,_y,_color)
  circ(_x,_y,6,1)
  fillp(rnd(32767))
- circ(_x+rnd(2)-1,_y+rnd(2)-1,6,8)
- fillp()
-end
-
-local function drawshield(_x,_y)
- circ(_x,_y,6,1)
- fillp(rnd(32767))
- circ(_x+rnd(2)-1,_y+rnd(2)-1,6,12)
+ circ(_x+rnd(2)-1,_y+rnd(2)-1,6,_color)
  fillp()
 end
 
@@ -660,9 +635,12 @@ local primary={
  end,
  shield=function(_btn4,_ship)
   _ship.isshielding=_ship.primaryc > 0 and not _btn4
+  if _ship.isshielding then
+   _ship.primaryc-=0.25
+  end
  end,
  aegis=function(_btn4,_ship)
-  _ship.isaegising=_ship.primaryc > 0 and not _btn4
+  -- _ship.isaegising=_ship.primaryc > 0 and not _btn4
  end,
  blink=function(_btn4,_ship)
   if _btn4 and not _ship.lastbtn4 then
@@ -737,11 +715,11 @@ local secondary={
   end
  end,
  aegis=function(_ship)
-  _ship.secondaryc-=1
-  firesecondary(_ship,170)
-  if _ship.secondaryc > 0 then
-   _ship.isaegising=true
-  end
+  -- _ship.secondaryc-=1
+  -- firesecondary(_ship,170)
+  -- if _ship.secondaryc > 0 then
+  --  _ship.isaegising=true
+  -- end
  end,
  blink=function(_ship)
   local _dx,_dy=getdirs(_ship.plidx)
@@ -1006,8 +984,8 @@ local bossweapons={
   sfx(19,2)
  end,
  aegis=function()
-  boss.aegists=t()
-  sfx(20,2)
+  -- boss.aegists=t()
+  -- sfx(20,2)
  end,
  blink=function()
   blinkaway(boss,rnd(blinkdirs),rnd(blinkdirs),38)
@@ -1067,7 +1045,7 @@ local function newkamikaze()
    newenemyexhaustp(_x-1,_y,kamikazeexhaustcolors)
    newenemyexhaustp(_x,_y,kamikazeexhaustcolors)
    if _enemy.target == nil then
-    _enemy.target=getclosest(_enemy.x,_enemy.y,ships)
+    _enemy.target=rnd(ships)
     _enemy.ifactor=rnd()
    end
    if _enemy.target then
@@ -1272,7 +1250,7 @@ function gameupdate()
   _ship.isfiring=nil
 
   if _ship.secondaryc <= 0 then
-   _ship.isshielding,_ship.isaegising,_ship.isboosting,_ship.isbeaming=nil
+   _ship.isshielding,_ship.isboosting,_ship.isbeaming=nil
   end
 
   if _ship.hp < 3 then
@@ -1338,7 +1316,7 @@ function gameupdate()
    1)
   end
 
-  if _ship.loopingsfx and not (_ship.isboosting or _ship.isbeaming or _ship.isshielding or _ship.isaegising) then
+  if _ship.loopingsfx and not (_ship.isboosting or _ship.isbeaming or _ship.isshielding) then
    _ship.loopingsfx=nil
    sfx(-2,_plidx)
   elseif not _ship.loopingsfx then
@@ -1351,9 +1329,6 @@ function gameupdate()
    elseif _ship.isshielding then
     _ship.loopingsfx=true
     sfx(19,_plidx)
-   elseif _ship.isaegising then
-    _ship.loopingsfx=true
-    sfx(20,_plidx)
    end
   end
 
@@ -1373,7 +1348,7 @@ function gameupdate()
     nickedts=curt
     escapeelapsed,nickitts,boss=0
     sfx(1,2)
-   elseif _ship.isaegising then
+   elseif _ship.isshielding and not boss.shieldts then
     boss.hp-=0.5
     newhit(boss.x,boss.y)
    else
@@ -1475,7 +1450,7 @@ function gameupdate()
   else
    if _bossdt > boss.flydurationc then
     if _bossdt > boss.flydurationc+boss.waitdurationc then
-     boss.boost,boss.boostts,boss.shieldts,boss.aegists,boss.beamts=0
+     boss.boost,boss.boostts,boss.shieldts,boss.beamts=0
      sfx(-2,2)
      bossweapons[rnd{boss.primary,boss.primary,boss.secondary}](boss)
      boss.waitdurationc,boss.flydurationc,boss.ts=0.875+rnd(1.75),boss.flyduration+rnd(5),curt
@@ -1486,7 +1461,7 @@ function gameupdate()
    else
     if boss.targetx == nil or ispointinsideaabb(boss.targetx,boss.targety,boss.x,boss.y,boss.hw,boss.hh) then
      local _targety=8+rnd(36)
-     if boss.aegists then
+     if boss.shieldts then
       _targety+=42
      end
      boss.targetx,boss.targety=4+rnd(120),_targety
@@ -1513,11 +1488,6 @@ function gameupdate()
 
     if boss.shieldts and t()-boss.shieldts > 2.25 then
      boss.shieldts=nil
-     sfx(-2,2)
-    end
-
-    if boss.aegists and t()-boss.aegists > 2.25 then
-     boss.aegists=nil
      sfx(-2,2)
     end
 
@@ -1595,7 +1565,7 @@ function gameupdate()
     if isaabbscolliding(_enemy,_ship) then
      explode(_enemy)
      del(enemies,_enemy)
-     if not _ship.isaegising then
+     if not _ship.isshielding then
       _ship.hp-=1
       _ship.primaryc=0
       if _ship.hp > 0 then
@@ -1717,9 +1687,7 @@ function gamedraw()
    end
 
    if boss.shieldts then
-    drawshield(boss.x,boss.y)
-   elseif boss.aegists then
-    drawaegis(boss.x,boss.y)
+    drawshield(boss.x,boss.y,8)
    end
   else
    spr(boss.s,_urx,_ury)
@@ -1757,11 +1725,7 @@ function gamedraw()
  -- draw top fx
  for _ship in all(ships) do
   if _ship.isshielding then
-   drawshield(_ship.x,_ship.y)
-  end
-
-  if _ship.isaegising then
-   drawaegis(_ship.x,_ship.y)
+   drawshield(_ship.x,_ship.y,12)
   end
  end
 
