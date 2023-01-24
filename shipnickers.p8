@@ -612,6 +612,55 @@ local function shootbubble(_ship)
  shipsfx(_ship,29)
 end
 
+local function drawfizzfrag(_bullet)
+ pset(_bullet.x,_bullet.y,_bullet.color)
+end
+local function drawfizz(_bullet)
+ rectfill(_bullet.x,_bullet.y,_bullet.x+1,_bullet.y+1,7)
+end
+local function updatefizz(_bullet)
+ _bullet.angle+=0.0075
+ if rnd() > 0.75 then
+  local _h=3
+  add(bullets,{
+   x=_bullet.x,y=_bullet.y,
+   hw=1,hh=1,
+   spdx=cos(_bullet.angle)*_h,spdy=sin(_bullet.angle)*_h+rnd(0.25),
+   accy=0,spdfactor=0.92,
+   dmg=1,
+   life=45,
+   ondeath=fizzle,
+   draw=drawfizzfrag,
+   color=rnd{6,7},
+  })
+  add(bullets,{
+   x=_bullet.x,y=_bullet.y,
+   hw=1,hh=1,
+   spdx=cos(0.5+_bullet.angle)*_h,spdy=sin(0.5+_bullet.angle)*_h+rnd(0.25),
+   accy=0,spdfactor=0.92,
+   dmg=1,
+   life=45,
+   ondeath=fizzle,
+   draw=drawfizzfrag,
+   color=rnd{6,7},
+  })
+end
+end
+local function shootfizz(_ship,_life)
+ add(bullets,{
+  x=_ship.x,y=_ship.y,
+  hw=2,hh=2,
+  spdx=0,spdy=_ship.firedir*0.5,
+  accy=0,spdfactor=1,
+  dmg=1,
+  angle=0,
+  life=_life,
+  update=updatefizz,
+  ondeath=explode,
+  draw=drawfizz,
+ })
+end
+
 local primary={
  missile=function(_btn4,_ship)
   if _btn4 and _ship.primaryc > 1 and not _ship.lastbtn4 then
@@ -640,7 +689,10 @@ local primary={
   end
  end,
  aegis=function(_btn4,_ship)
-  -- _ship.isaegising=_ship.primaryc > 0 and not _btn4
+  if _btn4 and _ship.primaryc > 1 and not _ship.lastbtn4 then
+   shootfizz(_ship,_ship.primaryc*4)
+   _ship.primaryc=0
+  end
  end,
  blink=function(_btn4,_ship)
   if _btn4 and not _ship.lastbtn4 then
@@ -1858,7 +1910,7 @@ function pickerupdate()
     picks[_i]=nil
     sfx(27)
   elseif btnp(4,_i) and isunlocked(picks[_i]) then
-    local _ship=mr(getship(picks[_i]),{plidx=_i,x=32+_i*64})
+    local _ship=mr(getship(picks[_i]),{plidx=_i,x=32+_i*64,firedir=-1}) -- todo: move firedir into hangar data
     ships[_i+1]=_ship
     sfx(28,3)
 
@@ -1867,10 +1919,10 @@ function pickerupdate()
       local _locked=getlocked()
      if #_locked == 0 then
       issuperboss=true
-      boss=mr(getship(100),s2t'x=64,y=40,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2')
+      boss=mr(getship(100),s2t'x=64,y=40,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1')
      else
       issuperboss=nil
-      boss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2')
+      boss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2,firedir=1')
      end
      boss.ts=t()
      gameinit()
