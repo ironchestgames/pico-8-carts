@@ -110,115 +110,115 @@ end
 local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemybullets,boss,issuperboss,cargos,lockedpercentage
 
 local hangar={
- [0]=s2t's=0,bulletcolor=11,primary="missile",secondary="missile",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;1;5;1",exhaustcolors="7;9;5",exhausts="-1;4;0;4",flyduration=1',
- s2t's=1,bulletcolor=12,primary="missile",secondary="boost",secondaryshots=3,psets="3;5;2;3;3;8",guns="2;0;5;0",exhaustcolors="7;10;9",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=2,bulletcolor=10,primary="missile",secondary="mines",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;1;6;1",exhaustcolors="7;10;4",exhausts="-1;4;0;4",flyduration=1',
- s2t's=3,bulletcolor=10,primary="missile",secondary="shield",secondaryshots=3,psets="3;6;11;3;4;10",guns="2;0;5;0",exhaustcolors="7;9;4",exhausts="-1;3;0;3",flyduration=1',
- s2t's=4,bulletcolor=15,primary="missile",secondary="aegis",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;0;5;0",exhaustcolors="10;11;15",exhausts="-1;3;0;3",flyduration=1',
- s2t's=5,bulletcolor=14,primary="missile",secondary="blink",secondaryshots=3,psets="3;5;3;3;3;11",guns="1;0;6;0",exhaustcolors="14;8;2",exhausts="-1;3;0;3",flyduration=1',
- s2t's=6,bulletcolor=15,primary="missile",secondary="flak",secondaryshots=3,psets="3;6;14;3;4;7",guns="2;0;5;0",exhaustcolors="10;9;5",exhausts="-4;4;-3;4;-1;4;0;4;2;4;3;4",flyduration=1',
- s2t's=7,bulletcolor=12,primary="missile",secondary="beam",secondaryshots=3,psets="3;5;8;3;3;9",guns="2;1;5;1",exhaustcolors="12;12;13",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=8,bulletcolor=12,primary="missile",secondary="bubbles",secondaryshots=3,psets="3;4;3;3;3;11",guns="2;0;5;0",exhaustcolors="14;8;2",exhausts="-2;4;1;4",flyduration=1',
- s2t's=9,bulletcolor=12,primary="missile",secondary="slicer",secondaryshots=3,psets="3;5;11;3;3;7",guns="0;3;7;3",exhaustcolors="7;12;15",exhausts="-1;4;0;4",flyduration=1',
+ [0]=s2t's=0,bulletcolor=11,primary="missile",secondary="missile",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;1;5;1",exhaustcolors="7;9;5",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=1,bulletcolor=12,primary="missile",secondary="boost",secondaryshots=3,psets="3;5;2;3;3;8",guns="2;0;5;0",exhaustcolors="7;10;9",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1,firedir=-1',
+ s2t's=2,bulletcolor=10,primary="missile",secondary="mines",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;1;6;1",exhaustcolors="7;10;4",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=3,bulletcolor=10,primary="missile",secondary="shield",secondaryshots=3,psets="3;6;11;3;4;10",guns="2;0;5;0",exhaustcolors="7;9;4",exhausts="-1;3;0;3",flyduration=1,firedir=-1',
+ s2t's=4,bulletcolor=15,primary="missile",secondary="ice",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;0;5;0",exhaustcolors="10;11;15",exhausts="-1;3;0;3",flyduration=1,firedir=-1',
+ s2t's=5,bulletcolor=14,primary="missile",secondary="blink",secondaryshots=3,psets="3;5;3;3;3;11",guns="1;0;6;0",exhaustcolors="14;8;2",exhausts="-1;3;0;3",flyduration=1,firedir=-1',
+ s2t's=6,bulletcolor=15,primary="missile",secondary="flak",secondaryshots=3,psets="3;6;14;3;4;7",guns="2;0;5;0",exhaustcolors="10;9;5",exhausts="-4;4;-3;4;-1;4;0;4;2;4;3;4",flyduration=1,firedir=-1',
+ s2t's=7,bulletcolor=12,primary="missile",secondary="beam",secondaryshots=3,psets="3;5;8;3;3;9",guns="2;1;5;1",exhaustcolors="12;12;13",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1,firedir=-1',
+ s2t's=8,bulletcolor=12,primary="missile",secondary="bubbles",secondaryshots=3,psets="3;4;3;3;3;11",guns="2;0;5;0",exhaustcolors="14;8;2",exhausts="-2;4;1;4",flyduration=1,firedir=-1',
+ s2t's=9,bulletcolor=12,primary="missile",secondary="slicer",secondaryshots=3,psets="3;5;11;3;3;7",guns="0;3;7;3",exhaustcolors="7;12;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
 
- s2t's=10,bulletcolor=11,primary="boost",secondary="missile",secondaryshots=3,psets="3;6;5;3;4;6",guns="2;2;5;2",exhaustcolors="7;6;13",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=11,bulletcolor=3,primary="boost",secondary="boost",secondaryshots=3,psets="0;0;9;0;0;9",guns="1;0;6;0",exhaustcolors="11;12;5",exhausts="-2;3;-1;3;0;3;1;3",flyduration=1',
- s2t's=12,bulletcolor=9,primary="boost",secondary="mines",secondaryshots=3,psets="3;4;9;3;2;10",guns="1;0;6;0",exhaustcolors="11;3;4",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1',
- s2t's=13,bulletcolor=15,primary="boost",secondary="shield",secondaryshots=3,psets="3;5;11;3;3;10",guns="0;4;7;4",exhaustcolors="10;15;5",exhausts="-3;3;-1;4;0;4;2;3",flyduration=1',
- s2t's=14,bulletcolor=11,primary="boost",secondary="aegis",secondaryshots=3,psets="3;6;6;3;3;7",guns="2;2;5;2",exhaustcolors="11;3;5",exhausts="-1;4;0;4",flyduration=1',
- s2t's=15,bulletcolor=12,primary="boost",secondary="blink",secondaryshots=3,psets="3;6;9;3;4;10",guns="1;2;6;2",exhaustcolors="7;14;8",exhausts="-4;4;-3;3;-2;2;1;2;2;3;3;4",flyduration=1',
- s2t's=16,bulletcolor=11,primary="boost",secondary="flak",secondaryshots=3,psets="3;6;7;3;5;7",guns="1;2;6;2",exhaustcolors="14;8;2",exhausts="-4;4;-3;4;-2;4;1;4;2;4;3;4",flyduration=1',
- s2t's=17,bulletcolor=11,primary="boost",secondary="beam",secondaryshots=3,psets="3;6;10;3;5;10",guns="1;2;6;2",exhaustcolors="11;11;5",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=18,bulletcolor=11,primary="boost",secondary="bubbles",secondaryshots=3,psets="3;5;8;3;4;8",guns="1;2;6;2",exhaustcolors="10;11;5",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1',
- s2t's=19,bulletcolor=14,primary="boost",secondary="slicer",secondaryshots=3,psets="3;5;6;3;2;6",guns="1;1;6;1",exhaustcolors="7;7;15",exhausts="-3;3;2;3",flyduration=1',
+ s2t's=10,bulletcolor=11,primary="boost",secondary="missile",secondaryshots=3,psets="3;6;5;3;4;6",guns="2;2;5;2",exhaustcolors="7;6;13",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1,firedir=-1',
+ s2t's=11,bulletcolor=3,primary="boost",secondary="boost",secondaryshots=3,psets="0;0;9;0;0;9",guns="1;0;6;0",exhaustcolors="11;12;5",exhausts="-2;3;-1;3;0;3;1;3",flyduration=1,firedir=-1',
+ s2t's=12,bulletcolor=9,primary="boost",secondary="mines",secondaryshots=3,psets="3;4;9;3;2;10",guns="1;0;6;0",exhaustcolors="11;3;4",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1,firedir=-1',
+ s2t's=13,bulletcolor=15,primary="boost",secondary="shield",secondaryshots=3,psets="3;5;11;3;3;10",guns="0;4;7;4",exhaustcolors="10;15;5",exhausts="-3;3;-1;4;0;4;2;3",flyduration=1,firedir=-1',
+ s2t's=14,bulletcolor=11,primary="boost",secondary="ice",secondaryshots=3,psets="3;6;6;3;3;7",guns="2;2;5;2",exhaustcolors="11;3;5",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=15,bulletcolor=12,primary="boost",secondary="blink",secondaryshots=3,psets="3;6;9;3;4;10",guns="1;2;6;2",exhaustcolors="7;14;8",exhausts="-4;4;-3;3;-2;2;1;2;2;3;3;4",flyduration=1,firedir=-1',
+ s2t's=16,bulletcolor=11,primary="boost",secondary="flak",secondaryshots=3,psets="3;6;7;3;5;7",guns="1;2;6;2",exhaustcolors="14;8;2",exhausts="-4;4;-3;4;-2;4;1;4;2;4;3;4",flyduration=1,firedir=-1',
+ s2t's=17,bulletcolor=11,primary="boost",secondary="beam",secondaryshots=3,psets="3;6;10;3;5;10",guns="1;2;6;2",exhaustcolors="11;11;5",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1,firedir=-1',
+ s2t's=18,bulletcolor=11,primary="boost",secondary="bubbles",secondaryshots=3,psets="3;5;8;3;4;8",guns="1;2;6;2",exhaustcolors="10;11;5",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1,firedir=-1',
+ s2t's=19,bulletcolor=14,primary="boost",secondary="slicer",secondaryshots=3,psets="3;5;6;3;2;6",guns="1;1;6;1",exhaustcolors="7;7;15",exhausts="-3;3;2;3",flyduration=1,firedir=-1',
  
- s2t's=20,bulletcolor=14,primary="mines",secondary="missile",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;1;6;1",exhaustcolors="10;9;4",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=21,bulletcolor=8,primary="mines",secondary="boost",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=22,bulletcolor=11,primary="mines",secondary="mines",secondaryshots=3,psets="3;4;1;3;3;12",guns="0;2;7;2",exhaustcolors="7;6;5",exhausts="-2;4;1;4",flyduration=1',
- s2t's=23,bulletcolor=15,primary="mines",secondary="shield",secondaryshots=3,psets="3;6;9;3;4;10",guns="1;1;6;1",exhaustcolors="10;14;13",exhausts="-1;3;0;3",flyduration=1',
- s2t's=24,bulletcolor=11,primary="mines",secondary="aegis",secondaryshots=3,psets="3;6;8;3;4;10",guns="2;2;5;2",exhaustcolors="10;11;5",exhausts="-1;4;0;4",flyduration=1',
- s2t's=25,bulletcolor=11,primary="mines",secondary="blink",secondaryshots=3,psets="6;5;11;6;4;10",guns="1;2;3;2",exhaustcolors="10;11;5",exhausts="-3;4;-2;4;-1;4",flyduration=1',
- s2t's=26,bulletcolor=9,primary="mines",secondary="flak",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;0;6;0",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
- s2t's=27,bulletcolor=14,primary="mines",secondary="beam",secondaryshots=3,psets="3;5;13;3;3;12",guns="1;0;6;0",exhaustcolors="7;7;13",exhausts="-1;3;0;3",flyduration=1',
- s2t's=28,bulletcolor=9,primary="mines",secondary="bubbles",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;1;5;1",exhaustcolors="7;14;8",exhausts="-1;3;0;3",flyduration=1',
- s2t's=29,bulletcolor=11,primary="mines",secondary="slicer",secondaryshots=3,psets="3;6;2;3;4;8",guns="1;2;6;2",exhaustcolors="11;11;4",exhausts="-1;3;0;3",flyduration=1',
+ s2t's=20,bulletcolor=14,primary="mines",secondary="missile",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;1;6;1",exhaustcolors="10;9;4",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1,firedir=-1',
+ s2t's=21,bulletcolor=8,primary="mines",secondary="boost",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1,firedir=-1',
+ s2t's=22,bulletcolor=11,primary="mines",secondary="mines",secondaryshots=3,psets="3;4;1;3;3;12",guns="0;2;7;2",exhaustcolors="7;6;5",exhausts="-2;4;1;4",flyduration=1,firedir=-1',
+ s2t's=23,bulletcolor=15,primary="mines",secondary="shield",secondaryshots=3,psets="3;6;9;3;4;10",guns="1;1;6;1",exhaustcolors="10;14;13",exhausts="-1;3;0;3",flyduration=1,firedir=-1',
+ s2t's=24,bulletcolor=11,primary="mines",secondary="ice",secondaryshots=3,psets="3;6;8;3;4;10",guns="2;2;5;2",exhaustcolors="10;11;5",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=25,bulletcolor=11,primary="mines",secondary="blink",secondaryshots=3,psets="6;5;11;6;4;10",guns="1;2;3;2",exhaustcolors="10;11;5",exhausts="-3;4;-2;4;-1;4",flyduration=1,firedir=-1',
+ s2t's=26,bulletcolor=9,primary="mines",secondary="flak",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;0;6;0",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=27,bulletcolor=14,primary="mines",secondary="beam",secondaryshots=3,psets="3;5;13;3;3;12",guns="1;0;6;0",exhaustcolors="7;7;13",exhausts="-1;3;0;3",flyduration=1,firedir=-1',
+ s2t's=28,bulletcolor=9,primary="mines",secondary="bubbles",secondaryshots=3,psets="3;6;3;3;4;11",guns="2;1;5;1",exhaustcolors="7;14;8",exhausts="-1;3;0;3",flyduration=1,firedir=-1',
+ s2t's=29,bulletcolor=11,primary="mines",secondary="slicer",secondaryshots=3,psets="3;6;2;3;4;8",guns="1;2;6;2",exhaustcolors="11;11;4",exhausts="-1;3;0;3",flyduration=1,firedir=-1',
 
- s2t's=30,bulletcolor=5,primary="shield",secondary="missile",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="7;10;15",exhausts="-1;4;0;4",flyduration=1',
- s2t's=31,bulletcolor=12,primary="shield",secondary="boost",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;1;6;1",exhaustcolors="11;12;13",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1',
- s2t's=32,bulletcolor=9,primary="shield",secondary="mines",secondaryshots=3,psets="3;6;3;3;5;11",guns="1;0;6;0",exhaustcolors="7;10;15",exhausts="-1;4;0;4",flyduration=1',
- s2t's=33,bulletcolor=10,primary="shield",secondary="shield",secondaryshots=3,psets="3;5;3;3;3;11",guns="1;0;6;0",exhaustcolors="7;10;5",exhausts="-1;4;0;4",flyduration=1', 
- s2t's=34,bulletcolor=8,primary="shield",secondary="aegis",secondaryshots=3,psets="3;4;2;3;3;14",guns="2;1;5;1",exhaustcolors="12;12;13",exhausts="-3;3;-2;4;1;4;2;3",flyduration=1',
- s2t's=35,bulletcolor=10,primary="shield",secondary="blink",secondaryshots=3,psets="3;6;4;3;4;13",guns="1;2;6;2",exhaustcolors="10;11;15",exhausts="-1;3;0;3",flyduration=1',
- s2t's=36,bulletcolor=9,primary="shield",secondary="flak",secondaryshots=3,psets="3;6;3;3;4;7",guns="2;1;5;1",exhaustcolors="10;14;8",exhausts="-1;4;0;4",flyduration=1',
- s2t's=37,bulletcolor=6,primary="shield",secondary="beam",secondaryshots=3,psets="3;6;2;3;4;7",guns="1;1;6;1",exhaustcolors="10;14;15",exhausts="-1;4;0;4",flyduration=1',
- s2t's=38,bulletcolor=11,primary="shield",secondary="bubbles",secondaryshots=3,psets="3;5;11;3;4;7",guns="0;3;7;3",exhaustcolors="3;3;5",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=39,bulletcolor=3,primary="shield",secondary="slicer",secondaryshots=3,psets="3;5;9;3;4;9",guns="1;2;6;2",exhaustcolors="10;10;3",exhausts="-3;3;-1;4;0;4;2;3",flyduration=1',
+ s2t's=30,bulletcolor=5,primary="shield",secondary="missile",secondaryshots=3,psets="3;5;12;3;3;11",guns="0;4;7;4",exhaustcolors="7;10;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=31,bulletcolor=12,primary="shield",secondary="boost",secondaryshots=3,psets="0;1;13;0;1;13",guns="1;1;6;1",exhaustcolors="11;12;13",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1,firedir=-1',
+ s2t's=32,bulletcolor=9,primary="shield",secondary="mines",secondaryshots=3,psets="3;6;3;3;5;11",guns="1;0;6;0",exhaustcolors="7;10;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=33,bulletcolor=10,primary="shield",secondary="shield",secondaryshots=3,psets="3;5;3;3;3;11",guns="1;0;6;0",exhaustcolors="7;10;5",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=34,bulletcolor=8,primary="shield",secondary="ice",secondaryshots=3,psets="3;4;2;3;3;14",guns="2;1;5;1",exhaustcolors="12;12;13",exhausts="-3;3;-2;4;1;4;2;3",flyduration=1,firedir=-1',
+ s2t's=35,bulletcolor=10,primary="shield",secondary="blink",secondaryshots=3,psets="3;6;4;3;4;13",guns="1;2;6;2",exhaustcolors="10;11;15",exhausts="-1;3;0;3",flyduration=1,firedir=-1',
+ s2t's=36,bulletcolor=9,primary="shield",secondary="flak",secondaryshots=3,psets="3;6;3;3;4;7",guns="2;1;5;1",exhaustcolors="10;14;8",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=37,bulletcolor=6,primary="shield",secondary="beam",secondaryshots=3,psets="3;6;2;3;4;7",guns="1;1;6;1",exhaustcolors="10;14;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=38,bulletcolor=11,primary="shield",secondary="bubbles",secondaryshots=3,psets="3;5;11;3;4;7",guns="0;3;7;3",exhaustcolors="3;3;5",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1,firedir=-1',
+ s2t's=39,bulletcolor=3,primary="shield",secondary="slicer",secondaryshots=3,psets="3;5;9;3;4;9",guns="1;2;6;2",exhaustcolors="10;10;3",exhausts="-3;3;-1;4;0;4;2;3",flyduration=1,firedir=-1',
  
- s2t's=40,bulletcolor=14,primary="aegis",secondary="missile",secondaryshots=3,psets="3;6;5;3;4;6",guns="1;2;6;2",exhaustcolors="10;14;4",exhausts="-2;4;1;4",flyduration=1',
- s2t's=41,bulletcolor=15,primary="aegis",secondary="boost",secondaryshots=3,psets="3;6;15;3;4;7",guns="0;4;7;4",exhaustcolors="10;9;4",exhausts="-3;3;2;3",flyduration=1',
- s2t's=42,bulletcolor=5,primary="aegis",secondary="mines",secondaryshots=3,psets="3;4;11;3;3;7",guns="1;1;6;1",exhaustcolors="7;10;15",exhausts="-1;4;0;4",flyduration=1',
- s2t's=43,bulletcolor=4,primary="aegis",secondary="shield",secondaryshots=3,psets="3;4;11;3;5;12",guns="1;0;6;0",exhaustcolors="7;9;5",exhausts="-1;2;0;2",flyduration=1',
- s2t's=44,bulletcolor=7,primary="aegis",secondary="aegis",secondaryshots=3,psets="3;6;15;3;4;10",guns="1;1;6;1",exhaustcolors="9;8;2",exhausts="-1;3;0;3",flyduration=1',
- s2t's=45,bulletcolor=7,primary="aegis",secondary="blink",secondaryshots=3,psets="3;6;15;3;4;7",guns="2;1;5;1",exhaustcolors="1",exhausts="-4;4;3;4",flyduration=1',
- s2t's=46,bulletcolor=10,primary="aegis",secondary="flak",secondaryshots=3,psets="3;5;14;3;3;6",guns="1;3;6;3",exhaustcolors="11;11;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=47,bulletcolor=6,primary="aegis",secondary="beam",secondaryshots=3,psets="3;3;7;3;5;6",guns="1;1;6;1",exhaustcolors="7;12;4",exhausts="-1;4;0;4",flyduration=1',
- s2t's=48,bulletcolor=8,primary="aegis",secondary="bubbles",secondaryshots=3,psets="3;5;9;3;3;10",guns="0;3;7;3",exhaustcolors="9;8;5",exhausts="-1;4;0;4",flyduration=10',
- s2t's=49,bulletcolor=11,primary="aegis",secondary="slicer",secondaryshots=3,psets="3;6;15;3;4;9",guns="1;1;6;1",exhaustcolors="9;9;2",exhausts="-1;4;0;4",flyduration=1',
+ s2t's=40,bulletcolor=14,primary="ice",secondary="missile",secondaryshots=3,psets="3;6;5;3;4;6",guns="1;2;6;2",exhaustcolors="10;14;4",exhausts="-2;4;1;4",flyduration=1,firedir=-1',
+ s2t's=41,bulletcolor=15,primary="ice",secondary="boost",secondaryshots=3,psets="3;6;15;3;4;7",guns="0;4;7;4",exhaustcolors="10;9;4",exhausts="-3;3;2;3",flyduration=1,firedir=-1',
+ s2t's=42,bulletcolor=5,primary="ice",secondary="mines",secondaryshots=3,psets="3;4;11;3;3;7",guns="1;1;6;1",exhaustcolors="7;10;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=43,bulletcolor=4,primary="ice",secondary="shield",secondaryshots=3,psets="3;4;11;3;5;12",guns="1;0;6;0",exhaustcolors="7;9;5",exhausts="-1;2;0;2",flyduration=1,firedir=-1',
+ s2t's=44,bulletcolor=7,primary="ice",secondary="ice",secondaryshots=3,psets="3;5;5;3;3;10",guns="2;2;5;2",exhaustcolors="7;8;2",exhausts="-2;4;1;4",flyduration=1,firedir=-1',
+ s2t's=45,bulletcolor=7,primary="ice",secondary="blink",secondaryshots=3,psets="3;6;15;3;4;7",guns="2;1;5;1",exhaustcolors="1",exhausts="-4;4;3;4",flyduration=1,firedir=-1',
+ s2t's=46,bulletcolor=10,primary="ice",secondary="flak",secondaryshots=3,psets="3;5;14;3;3;6",guns="1;3;6;3",exhaustcolors="11;11;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1,firedir=-1',
+ s2t's=47,bulletcolor=6,primary="ice",secondary="beam",secondaryshots=3,psets="3;3;7;3;5;6",guns="1;1;6;1",exhaustcolors="7;12;4",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=48,bulletcolor=8,primary="ice",secondary="bubbles",secondaryshots=3,psets="3;5;9;3;3;10",guns="0;3;7;3",exhaustcolors="9;8;5",exhausts="-1;4;0;4",flyduration=10,firedir=-1',
+ s2t's=49,bulletcolor=11,primary="ice",secondary="slicer",secondaryshots=3,psets="3;6;15;3;4;9",guns="1;1;6;1",exhaustcolors="9;9;2",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
  
- s2t's=50,bulletcolor=10,primary="blink",secondary="missile",secondaryshots=3,psets="3;6;14;3;4;7",guns="1;1;6;1",exhaustcolors="7;10;4",exhausts="-1;4;0;4",flyduration=1',
- s2t's=51,bulletcolor=9,primary="blink",secondary="boost",secondaryshots=3,psets="3;6;6;3;4;7",guns="1;1;6;1",exhaustcolors="7;6;13",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1',
- s2t's=52,bulletcolor=11,primary="blink",secondary="mines",secondaryshots=3,psets="3;5;11;3;3;10",guns="2;1;5;1",exhaustcolors="7;10;15",exhausts="-1;4;0;4",flyduration=1',
- s2t's=53,bulletcolor=14,primary="blink",secondary="shield",secondaryshots=3,psets="3;6;12;3;4;11",guns="1;2;6;2",exhaustcolors="7;9;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=54,bulletcolor=9,primary="blink",secondary="aegis",secondaryshots=3,psets="3;5;5;3;3;10",guns="2;2;5;2",exhaustcolors="7;8;2",exhausts="-2;4;1;4",flyduration=1',
- s2t's=55,bulletcolor=6,primary="blink",secondary="blink",secondaryshots=3,psets="3;5;10;3;3;7",guns="0;2;7;2",exhaustcolors="7;10;11",exhausts="-3;3;2;3",flyduration=1',
- s2t's=56,bulletcolor=2,primary="blink",secondary="flak",secondaryshots=3,psets="3;5;15;3;3;10",guns="2;0;5;0",exhaustcolors="10;11;5",exhausts="-3;3;-2;4;1;4;2;3",flyduration=1',
- s2t's=57,bulletcolor=11,primary="blink",secondary="beam",secondaryshots=3,psets="3;5;7;3;2;10",guns="0;4;7;4",exhaustcolors="11;11;3",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1',
- s2t's=58,bulletcolor=10,primary="blink",secondary="bubbles",secondaryshots=3,psets="3;5;9;3;3;10",guns="2;0;5;0",exhaustcolors="7;14;15",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1',
- s2t's=59,bulletcolor=14,primary="blink",secondary="slicer",secondaryshots=3,psets="3;4;3;3;2;11",guns="0;4;7;4",exhaustcolors="12;12;3",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1',
+ s2t's=50,bulletcolor=10,primary="blink",secondary="missile",secondaryshots=3,psets="3;6;14;3;4;7",guns="1;1;6;1",exhaustcolors="7;10;4",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=51,bulletcolor=9,primary="blink",secondary="boost",secondaryshots=3,psets="3;6;6;3;4;7",guns="1;1;6;1",exhaustcolors="7;6;13",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1,firedir=-1',
+ s2t's=52,bulletcolor=11,primary="blink",secondary="mines",secondaryshots=3,psets="3;5;11;3;3;10",guns="2;1;5;1",exhaustcolors="7;10;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=53,bulletcolor=14,primary="blink",secondary="shield",secondaryshots=3,psets="3;6;12;3;4;11",guns="1;2;6;2",exhaustcolors="7;9;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1,firedir=-1',
+ s2t's=54,bulletcolor=9,primary="blink",secondary="ice",secondaryshots=3,psets="3;6;15;3;4;10",guns="1;1;6;1",exhaustcolors="9;8;2",exhausts="-1;3;0;3",flyduration=1,firedir=-1',
+ s2t's=55,bulletcolor=6,primary="blink",secondary="blink",secondaryshots=3,psets="3;5;10;3;3;7",guns="0;2;7;2",exhaustcolors="7;10;11",exhausts="-3;3;2;3",flyduration=1,firedir=-1',
+ s2t's=56,bulletcolor=2,primary="blink",secondary="flak",secondaryshots=3,psets="3;5;15;3;3;10",guns="2;0;5;0",exhaustcolors="10;11;5",exhausts="-3;3;-2;4;1;4;2;3",flyduration=1,firedir=-1',
+ s2t's=57,bulletcolor=11,primary="blink",secondary="beam",secondaryshots=3,psets="3;5;7;3;2;10",guns="0;4;7;4",exhaustcolors="11;11;3",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1,firedir=-1',
+ s2t's=58,bulletcolor=10,primary="blink",secondary="bubbles",secondaryshots=3,psets="3;5;9;3;3;10",guns="2;0;5;0",exhaustcolors="7;14;15",exhausts="-3;4;-1;4;0;4;2;4",flyduration=1,firedir=-1',
+ s2t's=59,bulletcolor=14,primary="blink",secondary="slicer",secondaryshots=3,psets="3;4;3;3;2;11",guns="0;4;7;4",exhaustcolors="12;12;3",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1,firedir=-1',
 
- s2t's=60,bulletcolor=6,primary="flak",secondary="missile",secondaryshots=3,psets="3;5;5;3;3;10",guns="2;2;5;2",exhaustcolors="7;10;11",exhausts="-3;3;2;3",flyduration=1',
- s2t's=61,bulletcolor=8,primary="flak",secondary="boost",secondaryshots=3,psets="3;5;7;3;6;6",guns="1;2;6;2",exhaustcolors="7;15;5",exhausts="-4;3;-3;3;-1;4;0;4;2;3;3;3",flyduration=1',
- s2t's=62,bulletcolor=2,primary="flak",secondary="mines",secondaryshots=3,psets="3;6;9;3;4;10",guns="1;1;6;1",exhaustcolors="10;9;14",exhausts="-1;4;0;4",flyduration=1',
- s2t's=63,bulletcolor=15,primary="flak",secondary="shield",secondaryshots=3,psets="3;2;10;3;4;9",guns="1;1;6;1",exhaustcolors="7;11;3",exhausts="-1;4;0;4",flyduration=1',
- s2t's=64,bulletcolor=6,primary="flak",secondary="aegis",secondaryshots=3,psets="3;5;2;3;3;14",guns="0;4;7;4",exhaustcolors="7;10;11",exhausts="-3;3;2;3",flyduration=1',
- s2t's=65,bulletcolor=12,primary="flak",secondary="blink",secondaryshots=3,psets="3;6;13;3;3;6",guns="1;3;6;3",exhaustcolors="7;6;15",exhausts="-3;3;2;3",flyduration=1',
- s2t's=66,bulletcolor=9,primary="flak",secondary="flak",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
- s2t's=67,bulletcolor=9,primary="flak",secondary="beam",secondaryshots=3,psets="3;5;8;3;3;14",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
- s2t's=68,bulletcolor=14,primary="flak",secondary="bubbles",secondaryshots=3,psets="3;5;6;3;3;7",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
- s2t's=69,bulletcolor=9,primary="flak",secondary="slicer",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;1;5;1",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
+ s2t's=60,bulletcolor=6,primary="flak",secondary="missile",secondaryshots=3,psets="3;5;5;3;3;10",guns="2;2;5;2",exhaustcolors="7;10;11",exhausts="-3;3;2;3",flyduration=1,firedir=-1',
+ s2t's=61,bulletcolor=8,primary="flak",secondary="boost",secondaryshots=3,psets="3;5;7;3;6;6",guns="1;2;6;2",exhaustcolors="7;15;5",exhausts="-4;3;-3;3;-1;4;0;4;2;3;3;3",flyduration=1,firedir=-1',
+ s2t's=62,bulletcolor=2,primary="flak",secondary="mines",secondaryshots=3,psets="3;6;9;3;4;10",guns="1;1;6;1",exhaustcolors="10;9;14",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=63,bulletcolor=15,primary="flak",secondary="shield",secondaryshots=3,psets="3;2;10;3;4;9",guns="1;1;6;1",exhaustcolors="7;11;3",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=64,bulletcolor=6,primary="flak",secondary="ice",secondaryshots=3,psets="3;5;2;3;3;14",guns="0;4;7;4",exhaustcolors="7;10;11",exhausts="-3;3;2;3",flyduration=1,firedir=-1',
+ s2t's=65,bulletcolor=12,primary="flak",secondary="blink",secondaryshots=3,psets="3;6;13;3;3;6",guns="1;3;6;3",exhaustcolors="7;6;15",exhausts="-3;3;2;3",flyduration=1,firedir=-1',
+ s2t's=66,bulletcolor=9,primary="flak",secondary="flak",secondaryshots=3,psets="3;6;11;3;4;10",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=67,bulletcolor=9,primary="flak",secondary="beam",secondaryshots=3,psets="3;5;8;3;3;14",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=68,bulletcolor=14,primary="flak",secondary="bubbles",secondaryshots=3,psets="3;5;6;3;3;7",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=69,bulletcolor=9,primary="flak",secondary="slicer",secondaryshots=3,psets="3;5;12;3;3;11",guns="2;1;5;1",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
 
- s2t's=70,bulletcolor=11,primary="beam",secondary="missile",secondaryshots=3,psets="3;5;2;3;3;14",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1',
- s2t's=71,bulletcolor=3,primary="beam",secondary="boost",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;3;6;3",exhaustcolors="10;14;15",exhausts="-4;3;-3;4;2;4;3;3",flyduration=1',
- s2t's=72,bulletcolor=6,primary="beam",secondary="mines",secondaryshots=3,psets="3;4;8;3;2;9",guns="1;3;6;3",exhaustcolors="7;6;5",exhausts="-1;4;0;4",flyduration=1',
- s2t's=73,bulletcolor=6,primary="beam",secondary="shield",secondaryshots=3,psets="3;5;10;3;3;9",guns="2;1;5;1",exhaustcolors="10;11;12",exhausts="-1;4;0;4",flyduration=1',
- s2t's=74,bulletcolor=11,primary="beam",secondary="aegis",secondaryshots=3,psets="3;5;9;3;3;10",guns="2;0;5;0",exhaustcolors="10;9;15",exhausts="-1;3;0;3",flyduration=1',
- s2t's=75,bulletcolor=12,primary="beam",secondary="blink",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;3;6;3",exhaustcolors="7;7;14",exhausts="-1;3;0;3",flyduration=1',
- s2t's=76,bulletcolor=8,primary="beam",secondary="flak",secondaryshots=3,psets="3;5;10;3;4;10",guns="1;3;6;3",exhaustcolors="7;7;9",exhausts="-3;3;-2;3;1;3;2;3",flyduration=1',
- s2t's=77,bulletcolor=4,primary="beam",secondary="beam",secondaryshots=3,psets="3;6;14;3;4;7",guns="1;3;6;3",exhaustcolors="10;10;15",exhausts="-1;4;0;4",flyduration=1',
- s2t's=78,bulletcolor=12,primary="beam",secondary="bubbles",secondaryshots=3,psets="3;5;7;3;4;7",guns="1;2;6;2",exhaustcolors="10;10;5",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=79,bulletcolor=10,primary="beam",secondary="slicer",secondaryshots=3,psets="3;6;14;3;4;7",guns="1;2;6;2",exhaustcolors="4;1",exhausts="-4;4;-3;3;2;3;3;4",flyduration=1',
+ s2t's=70,bulletcolor=11,primary="beam",secondary="missile",secondaryshots=3,psets="3;5;2;3;3;14",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=71,bulletcolor=3,primary="beam",secondary="boost",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;3;6;3",exhaustcolors="10;14;15",exhausts="-4;3;-3;4;2;4;3;3",flyduration=1,firedir=-1',
+ s2t's=72,bulletcolor=6,primary="beam",secondary="mines",secondaryshots=3,psets="3;4;8;3;2;9",guns="1;3;6;3",exhaustcolors="7;6;5",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=73,bulletcolor=6,primary="beam",secondary="shield",secondaryshots=3,psets="3;5;10;3;3;9",guns="2;1;5;1",exhaustcolors="10;11;12",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=74,bulletcolor=11,primary="beam",secondary="ice",secondaryshots=3,psets="3;5;9;3;3;10",guns="2;0;5;0",exhaustcolors="10;9;15",exhausts="-1;3;0;3",flyduration=1,firedir=-1',
+ s2t's=75,bulletcolor=12,primary="beam",secondary="blink",secondaryshots=3,psets="3;6;3;3;4;11",guns="1;3;6;3",exhaustcolors="7;7;14",exhausts="-1;3;0;3",flyduration=1,firedir=-1',
+ s2t's=76,bulletcolor=8,primary="beam",secondary="flak",secondaryshots=3,psets="3;5;10;3;4;10",guns="1;3;6;3",exhaustcolors="7;7;9",exhausts="-3;3;-2;3;1;3;2;3",flyduration=1,firedir=-1',
+ s2t's=77,bulletcolor=4,primary="beam",secondary="beam",secondaryshots=3,psets="3;6;14;3;4;7",guns="1;3;6;3",exhaustcolors="10;10;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=78,bulletcolor=12,primary="beam",secondary="bubbles",secondaryshots=3,psets="3;5;7;3;4;7",guns="1;2;6;2",exhaustcolors="10;10;5",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1,firedir=-1',
+ s2t's=79,bulletcolor=10,primary="beam",secondary="slicer",secondaryshots=3,psets="3;6;14;3;4;7",guns="1;2;6;2",exhaustcolors="4;1",exhausts="-4;4;-3;3;2;3;3;4",flyduration=1,firedir=-1',
 
- s2t's=80,bulletcolor=6,primary="bubbles",secondary="missile",secondaryshots=3,psets="3;5;10;3;4;10",guns="0;0;7;0",exhaustcolors="7;12;3",exhausts="-1;4;0;4",flyduration=1',
- s2t's=81,bulletcolor=14,primary="bubbles",secondary="boost",secondaryshots=3,psets="3;4;8;3;2;14",guns="1;0;6;0",exhaustcolors="12;12;2",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1',
- s2t's=82,bulletcolor=11,primary="bubbles",secondary="mines",secondaryshots=3,psets="3;5;7;3;3;6",guns="2;1;5;1",exhaustcolors="10;9;2",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=83,bulletcolor=2,primary="bubbles",secondary="shield",secondaryshots=3,psets="3;5;11;3;4;11",guns="1;1;6;1",exhaustcolors="7;7;5",exhausts="-3;3;-1;4;0;4;2;3",flyduration=10',
- s2t's=84,bulletcolor=10,primary="bubbles",secondary="aegis",secondaryshots=3,psets="3;5;6;3;3;7",guns="0;3;7;3",exhaustcolors="11;11;4",exhausts="-1;4;0;4",flyduration=1',
- s2t's=85,bulletcolor=12,primary="bubbles",secondary="blink",secondaryshots=3,psets="3;4;12;3;3;11",guns="1;0;6;0",exhaustcolors="7;12;2",exhausts="-4;3;-3;4;2;4;3;3",flyduration=1',
- s2t's=86,bulletcolor=9,primary="bubbles",secondary="flak",secondaryshots=3,psets="3;5;7;3;6;11",guns="1;0;6;0",exhaustcolors="10;9;4",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1',
- s2t's=87,bulletcolor=9,primary="bubbles",secondary="beam",secondaryshots=3,psets="3;5;11;3;3;10",guns="2;1;5;1",exhaustcolors="10;10;2",exhausts="-1;3;0;3",flyduration=1',
- s2t's=88,bulletcolor=10,primary="bubbles",secondary="bubbles",secondaryshots=3,psets="3;5;7;3;3;11",guns="1;3;6;3",exhaustcolors="10;10;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
- s2t's=89,bulletcolor=11,primary="bubbles",secondary="slicer",secondaryshots=3,psets="3;5;11;3;3;12",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1',
+ s2t's=80,bulletcolor=6,primary="bubbles",secondary="missile",secondaryshots=3,psets="3;5;10;3;4;10",guns="0;0;7;0",exhaustcolors="7;12;3",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=81,bulletcolor=14,primary="bubbles",secondary="boost",secondaryshots=3,psets="3;4;8;3;2;14",guns="1;0;6;0",exhaustcolors="12;12;2",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1,firedir=-1',
+ s2t's=82,bulletcolor=11,primary="bubbles",secondary="mines",secondaryshots=3,psets="3;5;7;3;3;6",guns="2;1;5;1",exhaustcolors="10;9;2",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1,firedir=-1',
+ s2t's=83,bulletcolor=2,primary="bubbles",secondary="shield",secondaryshots=3,psets="3;5;11;3;4;11",guns="1;1;6;1",exhaustcolors="7;7;5",exhausts="-3;3;-1;4;0;4;2;3",flyduration=10,firedir=-1',
+ s2t's=84,bulletcolor=10,primary="bubbles",secondary="ice",secondaryshots=3,psets="3;5;6;3;3;7",guns="0;3;7;3",exhaustcolors="11;11;4",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
+ s2t's=85,bulletcolor=12,primary="bubbles",secondary="blink",secondaryshots=3,psets="3;4;12;3;3;11",guns="1;0;6;0",exhaustcolors="7;12;2",exhausts="-4;3;-3;4;2;4;3;3",flyduration=1,firedir=-1',
+ s2t's=86,bulletcolor=9,primary="bubbles",secondary="flak",secondaryshots=3,psets="3;5;7;3;6;11",guns="1;0;6;0",exhaustcolors="10;9;4",exhausts="-4;4;-3;4;2;4;3;4",flyduration=1,firedir=-1',
+ s2t's=87,bulletcolor=9,primary="bubbles",secondary="beam",secondaryshots=3,psets="3;5;11;3;3;10",guns="2;1;5;1",exhaustcolors="10;10;2",exhausts="-1;3;0;3",flyduration=1,firedir=-1',
+ s2t's=88,bulletcolor=10,primary="bubbles",secondary="bubbles",secondaryshots=3,psets="3;5;7;3;3;11",guns="1;3;6;3",exhaustcolors="10;10;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1,firedir=-1',
+ s2t's=89,bulletcolor=11,primary="bubbles",secondary="slicer",secondaryshots=3,psets="3;5;11;3;3;12",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-3;4;-2;4;1;4;2;4",flyduration=1,firedir=-1',
 
- s2t's=90,bulletcolor=10,primary="slicer",secondary="missile",secondaryshots=3,psets="3;6;12;3;4;11",guns="0;3;7;3",exhaustcolors="7;2;5",exhausts="-1;3;0;3",flyduration=10',
- s2t's=91,bulletcolor=5,primary="slicer",secondary="boost",secondaryshots=3,psets="0;5;2;0;4;14",guns="4;0;6;0",exhaustcolors="10;9;2",exhausts="-4;4;-3;4;-1;4;0;4;2;4;3;4",flyduration=1',
- s2t's=92,bulletcolor=14,primary="slicer",secondary="mines",secondaryshots=3,psets="3;5;14;3;4;9",guns="1;0;6;0",exhaustcolors="9;15;5",exhausts="-1;4;0;4",flyduration=10',
- s2t's=93,bulletcolor=10,primary="slicer",secondary="shield",secondaryshots=3,psets="3;6;2;3;4;14",guns="1;2;6;2",exhaustcolors="7;11;5",exhausts="-1;4;0;4",flyduration=10',
- s2t's=94,bulletcolor=12,primary="slicer",secondary="aegis",secondaryshots=3,psets="0;5;9;0;4;7",guns="4;1;6;1",exhaustcolors="7;9;5",exhausts="-1;4;0;4;2;4;3;4",flyduration=10',
- s2t's=95,bulletcolor=12,primary="slicer",secondary="blink",secondaryshots=3,psets="3;5;2;3;3;14",guns="2;0;5;0",exhaustcolors="7;12;5",exhausts="-3;4;-2;4;1;4;2;4",flyduration=10',
- s2t's=96,bulletcolor=15,primary="slicer",secondary="flak",secondaryshots=3,psets="3;5;9;3;3;10",guns="0;3;7;3",exhaustcolors="7;6;4",exhausts="-1;4;0;4",flyduration=10',
- s2t's=97,bulletcolor=7,primary="slicer",secondary="beam",secondaryshots=3,psets="3;5;5;3;4;6",guns="2;0;5;0",exhaustcolors="1",exhausts="-3;3;-2;4;1;4;2;3",flyduration=10',
- s2t's=98,bulletcolor=10,primary="slicer",secondary="bubbles",secondaryshots=3,psets="3;4;3;3;3;11",guns="1;0;6;0",exhaustcolors="14;14;4",exhausts="-1;4;0;4",flyduration=10',
- s2t's=99,bulletcolor=9,primary="slicer",secondary="slicer",secondaryshots=3,psets="3;4;9;3;3;10",guns="2;0;5;0",exhaustcolors="11;15;5",exhausts="-1;4;0;4",flyduration=10',
+ s2t's=90,bulletcolor=10,primary="slicer",secondary="missile",secondaryshots=3,psets="3;6;12;3;4;11",guns="0;3;7;3",exhaustcolors="7;2;5",exhausts="-1;3;0;3",flyduration=10,firedir=-1',
+ s2t's=91,bulletcolor=5,primary="slicer",secondary="boost",secondaryshots=3,psets="0;5;2;0;4;14",guns="4;0;6;0",exhaustcolors="10;9;2",exhausts="-4;4;-3;4;-1;4;0;4;2;4;3;4",flyduration=1,firedir=-1',
+ s2t's=92,bulletcolor=14,primary="slicer",secondary="mines",secondaryshots=3,psets="3;5;14;3;4;9",guns="1;0;6;0",exhaustcolors="9;15;5",exhausts="-1;4;0;4",flyduration=10,firedir=-1',
+ s2t's=93,bulletcolor=10,primary="slicer",secondary="shield",secondaryshots=3,psets="3;6;2;3;4;14",guns="1;2;6;2",exhaustcolors="7;11;5",exhausts="-1;4;0;4",flyduration=10,firedir=-1',
+ s2t's=94,bulletcolor=12,primary="slicer",secondary="ice",secondaryshots=3,psets="0;5;9;0;4;7",guns="4;1;6;1",exhaustcolors="7;9;5",exhausts="-1;4;0;4;2;4;3;4",flyduration=10,firedir=-1',
+ s2t's=95,bulletcolor=12,primary="slicer",secondary="blink",secondaryshots=3,psets="3;5;2;3;3;14",guns="2;0;5;0",exhaustcolors="7;12;5",exhausts="-3;4;-2;4;1;4;2;4",flyduration=10,firedir=-1',
+ s2t's=96,bulletcolor=15,primary="slicer",secondary="flak",secondaryshots=3,psets="3;5;9;3;3;10",guns="0;3;7;3",exhaustcolors="7;6;4",exhausts="-1;4;0;4",flyduration=10,firedir=-1',
+ s2t's=97,bulletcolor=7,primary="slicer",secondary="beam",secondaryshots=3,psets="3;5;5;3;4;6",guns="2;0;5;0",exhaustcolors="1",exhausts="-3;3;-2;4;1;4;2;3",flyduration=10,firedir=-1',
+ s2t's=98,bulletcolor=10,primary="slicer",secondary="bubbles",secondaryshots=3,psets="3;4;3;3;3;11",guns="1;0;6;0",exhaustcolors="14;14;4",exhausts="-1;4;0;4",flyduration=10,firedir=-1',
+ s2t's=99,bulletcolor=9,primary="slicer",secondary="slicer",secondaryshots=3,psets="3;4;9;3;3;10",guns="2;0;5;0",exhaustcolors="11;15;5",exhausts="-1;4;0;4",flyduration=10,firedir=-1',
 
  -- superboss
  s2t's=100,bulletcolor=11,primary="slicer",secondary="beam",secondaryshots=3,psets="3;4;7;3;3;11",guns="2;0;5;0",exhaustcolors="7;10;2",exhausts="-1;4;0;4"',
@@ -354,9 +354,9 @@ local function explode(_obj)
  end
 end
 
-local fizzlecolors=split'7,9,10,5,9,15,5'
-local function fizzle(_obj)
+local function fizzlebase(_obj,_colors)
  del(bullets,_obj)
+ del(enemybullets,_obj)
  sfx(18,3)
  for _i=1,5 do
   local _life=4+rnd(10)
@@ -367,11 +367,19 @@ local function fizzle(_obj)
    spdx=0,
    spdy=-rnd(0.375),
    spdr=0,
-   colors=fizzlecolors,
+   colors=_colors,
    life=_life,
    lifec=_life,
   })
  end
+end
+local fizzlecolors=split'7,9,10,5,9,15,5'
+local function fizzle(_obj)
+ fizzlebase(_obj,fizzlecolors)
+end
+local icefizzlecolors=split'7,7,6,12,3,5'
+local function icefizzle(_obj)
+ fizzlebase(_obj,icefizzlecolors)
 end
 
 -- weapons
@@ -612,53 +620,50 @@ local function shootbubble(_ship)
  shipsfx(_ship,29)
 end
 
-local function drawfizzfrag(_bullet)
- pset(_bullet.x,_bullet.y,_bullet.color)
+local function addicep(_x,_y,_spdy,_life)
+ add(ps,{
+  x=_x,y=_y,
+  r=0.05,
+  spdx=rnd(0.25)-0.125,
+  spdy=_spdy,
+  spdr=0,
+  colors=icefizzlecolors,
+  life=_life,
+  lifec=_life,
+ })
 end
-local function drawfizz(_bullet)
- rectfill(_bullet.x,_bullet.y,_bullet.x+1,_bullet.y+1,7)
+local function updateicec(_ship)
+ addicep(_ship.x+rnd(8)-4,_ship.y+rnd(8)-4,0,10)
+ _ship.icec-=1
+ if _ship.icec <= 0 then
+  _ship.icec=nil
+ end
 end
-local function updatefizz(_bullet)
- _bullet.angle+=0.0075
- if rnd() > 0.75 then
-  local _h=3
-  add(bullets,{
-   x=_bullet.x,y=_bullet.y,
-   hw=1,hh=1,
-   spdx=cos(_bullet.angle)*_h,spdy=sin(_bullet.angle)*_h+rnd(0.25),
-   accy=0,spdfactor=0.92,
-   dmg=1,
-   life=45,
-   ondeath=fizzle,
-   draw=drawfizzfrag,
-   color=rnd{6,7},
-  })
-  add(bullets,{
-   x=_bullet.x,y=_bullet.y,
-   hw=1,hh=1,
-   spdx=cos(0.5+_bullet.angle)*_h,spdy=sin(0.5+_bullet.angle)*_h+rnd(0.25),
-   accy=0,spdfactor=0.92,
-   dmg=1,
-   life=45,
-   ondeath=fizzle,
-   draw=drawfizzfrag,
-   color=rnd{6,7},
-  })
+local function drawice(_bullet)
+ pset(_bullet.x,_bullet.y,7)
 end
+local function iceondeath(_bullet)
+ if _bullet.enemyhit then
+  _bullet.enemyhit.icec=110
+  _bullet.enemyhit=nil
+ end
+ icefizzle(_bullet)
 end
-local function shootfizz(_ship,_life)
- add(bullets,{
+local function shootice(_ship,_life,_bullets)
+ add(_bullets,{
   x=_ship.x,y=_ship.y,
   hw=2,hh=2,
-  spdx=0,spdy=_ship.firedir*0.5,
+  spdx=_ship.firedir*rnd(0.1),spdy=_ship.firedir+_ship.firedir*rnd(0.1),
   accy=0,spdfactor=1,
-  dmg=1,
-  angle=0,
+  dmg=0,
+  isice=true,
   life=_life,
-  update=updatefizz,
-  ondeath=explode,
-  draw=drawfizz,
+  ondeath=iceondeath,
+  draw=drawice,
  })
+ if rnd() > 0.5 then
+  addicep(_ship.x,_ship.y,_ship.firedir+rnd(0.25)-0.125,_life)
+ end
 end
 
 local primary={
@@ -688,10 +693,9 @@ local primary={
    _ship.primaryc-=0.25
   end
  end,
- aegis=function(_btn4,_ship)
-  if _btn4 and _ship.primaryc > 1 and not _ship.lastbtn4 then
-   shootfizz(_ship,_ship.primaryc*4)
-   _ship.primaryc=0
+ ice=function(_btn4,_ship)
+  if (not _btn4 and _ship.primaryc > 1 and flr(_ship.primaryc*10) % 5 == 0) then
+   shootice(_ship,_ship.primaryc*2,bullets)
   end
  end,
  blink=function(_btn4,_ship)
@@ -766,12 +770,12 @@ local secondary={
    _ship.isshielding=true
   end
  end,
- aegis=function(_ship)
-  -- _ship.secondaryc-=1
-  -- firesecondary(_ship,170)
-  -- if _ship.secondaryc > 0 then
-  --  _ship.isaegising=true
-  -- end
+ ice=function(_ship)
+  _ship.secondaryc-=1
+  firesecondary(_ship,40)
+  if _ship.secondaryc > 0 and _ship.secondaryc % 2 == 0 then
+   shootice(_ship,40,bullets)
+  end
  end,
  blink=function(_ship)
   local _dx,_dy=getdirs(_ship.plidx)
@@ -813,7 +817,7 @@ local secondary={
  end,
 }
 
-local weaponcolors=s2t'missile=13,boost=9,mines=5,shield=12,aegis=2,blink=3,flak=15,beam=8,bubbles=14,slicer=11'
+local weaponcolors=s2t'missile=13,boost=9,mines=5,shield=12,ice=6,blink=3,flak=15,beam=8,bubbles=14,slicer=11'
 
 local boostcolors=split'7,10,9,8'
 
@@ -822,7 +826,7 @@ local secondarysprites={
  boost=split'8,123',
  mines=split'2,124',
  shield=split'11,123',
- aegis=split'14,123',
+ ice=split'14,123',
  blink=split'17,123',
  flak=split'20,123',
  beam=split'23,123',
@@ -1022,7 +1026,7 @@ local function shootbossbubble()
 end
 
 local blinkdirs=split'-1,0,1'
-local superbossweaponnames=split'missile,mines,boost,shield,blink,flak,beam,bubbles,slicer,bullet'
+local superbossweaponnames=split'missile,mines,boost,shield,ice,blink,flak,beam,bubbles,slicer,bullet'
 local bossweapons={
  missile=enemyshootmissile,
  mines=enemyshootmine,
@@ -1035,9 +1039,8 @@ local bossweapons={
   boss.shieldts=t()
   sfx(19,2)
  end,
- aegis=function()
-  -- boss.aegists=t()
-  -- sfx(20,2)
+ ice=function()
+  boss.icets=t()
  end,
  blink=function()
   blinkaway(boss,rnd(blinkdirs),rnd(blinkdirs),38)
@@ -1243,6 +1246,7 @@ function gameupdate()
   if boss and isaabbscolliding(_b,boss) then
    if not boss.shieldts then
     boss.hp-=_b.dmg
+    _b.enemyhit=boss
    end
    _b.life=0
    newhit(boss.x,boss.y)
@@ -1251,6 +1255,7 @@ function gameupdate()
   for _enemy in all(enemies) do
    if isaabbscolliding(_b,_enemy) then
     _enemy.hp-=_b.dmg
+    _b.enemyhit=_enemy
     _b.life=0
     newhit(_enemy.x,_enemy.y)
    end
@@ -1269,30 +1274,33 @@ function gameupdate()
 
  -- update ships
  for _ship in all(ships) do
-  local _plidx,_newx,_newy=_ship.plidx,_ship.x,_ship.y
+  local _plidx,_newx,_newy,_spd=_ship.plidx,_ship.x,_ship.y,1
 
-  -- set speed
-  _ship.spd=1
   if _ship.isboosting then
-   _ship.spd=2
+   _spd=2
   end
 
   if _ship.isbeaming then
-   _ship.spd*=0.25
+   _spd*=0.25
+  end
+
+  if _ship.icec then
+   _spd*=0.5
+   updateicec(_ship)
   end
   
   -- move
   if btn(0,_plidx) then
-   _newx+=-_ship.spd
+   _newx+=-_spd
   end
   if btn(1,_plidx) then
-   _newx+=_ship.spd
+   _newx+=_spd
   end
   if btn(2,_plidx) then
-   _newy+=-_ship.spd
+   _newy+=-_spd
   end
   if btn(3,_plidx) then
-   _newy+=_ship.spd
+   _newy+=_spd
   end
   
   _ship.x,_ship.y=mid(4,_newx,124),mid(4,_newy,119)
@@ -1446,10 +1454,14 @@ function gameupdate()
   for _ship in all(ships) do
    if isaabbscolliding(_b,_ship) then
     if not _ship.isshielding then
-     _ship.hp-=1
-     _ship.primaryc=0
-     if _ship.hp > 0 then
-      sfx(21+_ship.hp,_ship.plidx)
+     if _b.isice then
+      _b.enemyhit=_ship
+     else
+      _ship.hp-=1
+      _ship.primaryc=0
+      if _ship.hp > 0 then
+       sfx(21+_ship.hp,_ship.plidx)
+      end
      end
     end
     _b.life=0
@@ -1500,6 +1512,10 @@ function gameupdate()
     end
    end
   else
+   if boss.icec then
+    updateicec(boss)
+   end
+   local _icefactor=boss.icec and 0.5 or 1
    if _bossdt > boss.flydurationc then
     if _bossdt > boss.flydurationc+boss.waitdurationc then
      boss.boost,boss.boostts,boss.shieldts,boss.beamts=0
@@ -1543,6 +1559,13 @@ function gameupdate()
      sfx(-2,2)
     end
 
+    if boss.icets then
+     shootice(boss,60,enemybullets)
+     if t()-boss.icets > 1 then
+      boss.icets=nil
+     end
+    end
+
     if boss.beamts then
      add(enemybullets,{
       x=boss.x,y=boss.y+64+6,
@@ -1563,9 +1586,9 @@ function gameupdate()
 
     local _absx,_spd=abs(boss.targetx-boss.x),0.5+boss.boost
     if _absx > 1 and boss.targetx-boss.x < 0 then
-     boss.x-=_spd
+     boss.x-=_spd*_icefactor
     elseif _absx > 1 and boss.targetx-boss.x > 0 then
-     boss.x+=_spd
+     boss.x+=_spd*_icefactor
     end
 
     local _absy=abs(boss.targety-boss.y)
@@ -1599,8 +1622,12 @@ function gameupdate()
    end
    del(enemies,_enemy)
   else
-   _enemy.x+=_enemy.spdx*(issuperboss and 1.5 or 1)
-   _enemy.y+=_enemy.spdy*(issuperboss and 1.25 or 1)
+   if _enemy.icec then
+    updateicec(_enemy)
+   end
+   local _icefactor=_enemy.icec and 0.5 or 1
+   _enemy.x+=_enemy.spdx*(issuperboss and 1.5 or 1)*_icefactor
+   _enemy.y+=_enemy.spdy*(issuperboss and 1.25 or 1)*_icefactor
    _enemy.update(_enemy)
 
    local _isoutside=_enemy.y > 140 or _enemy.x < -20 or _enemy.x > 148
@@ -1636,7 +1663,7 @@ function gameupdate()
   end
   if ships[1] then
    madeitts,exit=t(),s2t'x=64,y=0,hw=64,hh=8'
-   sfx(3)
+   sfx(3,2)
   end
  end
 
@@ -2024,22 +2051,22 @@ ff6446ff2492294265282256449a99440de9eed060dccd065d1c11d5dfd99dfd0d6886d04ddd40bb
 0d5445d022422422d7eeee7d422992244d5445d4d949949d5dd11dd56fdffdf66dc99cd6d545d545000dd000e242242e8dd44dd87ff77ff770699607d828828d
 d554455d05500550d545545d05244250dd5445ddd949949d0d5dd5d06f0dd0f6cdc99cdcd454d0450d5dd5d0220220228d0550d86f0550f679699697d828828d
 d540045d04500540d404404d004444000220022005500550005dd50060000006c0c44c0c055500000d5445d0e200002e82000028600000066969969605055050
-060660600c0000c00060060000077000000330000062260000dffd0000d66d000005500000dffd0000f00f000600006000044000000660000006600000088000
-600b30066c0000c606000060007d470000f33f000d6226d00dffffd00fd66df0000ab00005dffd500f0000f062000026004af4006007f006006e860000822800
-60f33f066c0b30c66d0000d607c44c7000f7bf000d67c6d05dfbbfd5dfd92dfd007bb70055d66d55fd0000df620bc026041ff140655ff5560d8e88d008276280
-f046640f6c0330c66d0820d6c6c44c6c03b7bb30d6c7cc6dfdb7bbdf6d2922d6076bb670dd6766ddfd07b0df625cc526415ff514600ff006d486684d02466420
-404664046c4334c66d4224d6c6c77c6c3fb66bf326c22c62fdb7bbdf6d2442d676655667df6766fdfd4bb4df625225264514415460066006d4d66d4d02466420
-400ff004c6d66d6c6d4664d676c77c673f3663f326222262fddbbddffdf44fdf00733700dff66ffd4d4ff4d422022022411441146556655664d66d4624422442
-45466454cc4664cc06d66d60760cc067303663030d2222d005dffd5004f44f400763367005fddf5004dffd40f200002f410550146006600664d66d4624822842
-404664040c0550c000d66d00700000070004400000d55d000550055000d44d007665566700dddd0000fddf000f0000f040000004600000066550055600844800
-000cc00000066000000bb00000088000000ff000000ff0000006600000edde0000400400000bb00000d00d000a0000a000033000050000500003300003000030
-000cc0000d09f0d00607e06000276200000ff00000fbcf00000660000edddde00f4004f000b7bb0000d33d00a200002a0003300005076050000a9000c300003c
-000a90000d7ff7d0063ee36002266220006ab6000ffccff0000a50005edaade5fddffddf0fb7bbf000da9d00a200002a000a5000df0660df00599500cd0000dc
-00d99d00677ff776b33ee33b02066020006bb60006fccf6000d55d00dea7aaedfdda9ddf0fb7bbf000d99d00a20b302a00f55f00fd4fd4dd04599540cd0a90dc
-00d99d0067766776b33bb33b00088000096bb690f6f66f6f00f55f00dea7aaedfd9a99df04bbbb400bd99db0a203302a00f55f00dd4dd4fd54533545dd0990dd
-60dccd0600066000000bb000080880809f6ff6f96f6ff6f60f6ff6f0deeaaeedfd9ff9df54fbbf45bbd33dbb2253352260f33f06fd0df0df005335003d5995d3
-6cdccdc6007667000b3bb3b0824884289f6ff6f9f66ff66f66f66f660dedded00fdffdf0f5f55f5f03d33d309252252963f33f36550dd05504355340dc5cc5cd
-dcdccdcd000550000b3553b08505505890d55d0905500550f6d66d6f005dd500005ff500054554503303303399022099f3f33f3f0005500054355345dc0cc0cd
+060660600c0000c00060060000077000000330000062260000dffd0000d66d000005500000dffd0000f00f000600006000066000000660000006600000088000
+600b30066c0000c606000060007d470000f33f000d6226d00dffffd00fd66df0000ab00005dffd500f0000f062000026000660006007f006006e860000822800
+60f33f066c0b30c66d0000d607c44c7000f7bf000d67c6d05dfbbfd5dfd92dfd007bb70055d66d55fd0000df620bc026000a5000655ff5560d8e88d008276280
+f046640f6c0330c66d0820d6c6c44c6c03b7bb30d6c7cc6dfdb7bbdf6d2922d6076bb670dd6766ddfd07b0df625cc52600d55d00600ff006d486684d02466420
+404664046c4334c66d4224d6c6c77c6c3fb66bf326c22c62fdb7bbdf6d2442d676655667df6766fdfd4bb4df6252252600f55f0060066006d4d66d4d02466420
+400ff004c6d66d6c6d4664d676c77c673f3663f326222262fddbbddffdf44fdf00733700dff66ffd4d4ff4d4220220220f6ff6f06556655664d66d4624422442
+45466454cc4664cc06d66d60760cc067303663030d2222d005dffd5004f44f400763367005fddf5004dffd40f200002f66f66f666006600664d66d4624822842
+404664040c0550c000d66d00700000070004400000d55d000550055000d44d007665566700dddd0000fddf000f0000f0f6d66d6f600000066550055600844800
+000cc00000066000000bb00000088000000ff000000ff0000004400000edde0000400400000bb00000d00d000a0000a000033000050000500003300003000030
+000cc0000d09f0d00607e06000276200000ff00000fbcf00004af4000edddde00f4004f000b7bb0000d33d00a200002a0003300005076050000a9000c300003c
+000a90000d7ff7d0063ee36002266220006ab6000ffccff0041ff1405edaade5fddffddf0fb7bbf000da9d00a200002a000a5000df0660df00599500cd0000dc
+00d99d00677ff776b33ee33b02066020006bb60006fccf60415ff514dea7aaedfdda9ddf0fb7bbf000d99d00a20b302a00f55f00fd4fd4dd04599540cd0a90dc
+00d99d0067766776b33bb33b00088000096bb690f6f66f6f45144154dea7aaedfd9a99df04bbbb400bd99db0a203302a00f55f00dd4dd4fd54533545dd0990dd
+60dccd0600066000000bb000080880809f6ff6f96f6ff6f641144114deeaaeedfd9ff9df54fbbf45bbd33dbb2253352260f33f06fd0df0df005335003d5995d3
+6cdccdc6007667000b3bb3b0824884289f6ff6f9f66ff66f410550140dedded00fdffdf0f5f55f5f03d33d309252252963f33f36550dd05504355340dc5cc5cd
+dcdccdcd000550000b3553b08505505890d55d090550055040000004005dd500005ff500054554503303303399022099f3f33f3f0005500054355345dc0cc0cd
 0005500000088000000ff0000004d00000077000000dd00003000030000ee00004000040000ff000004dd40000022000000dd00000088000000330000f0ff0f0
 000550000006d0000d0ab0d0000d40000076c700000dd0000b3003b000eb3e0042000024009ff9000d4994d0002b320000dabd000007e00000333300ff0760ff
 000e2000000dd0000d4bb4d0000e80000bc6ccb0005bc50000be2b000023320042000024009ab9000d9a99d0028338200fbabbf0200ee0020537635067566576
@@ -2131,11 +2158,11 @@ cdcddcdc00d00d00600ff006040550400405504000044000000440000d0000d0000dd00000d44d00
 0000070000000000000000000000000000000000000000000000000000000000000000000033b3b33333333bb33bb33bbb3bbb33b33bb3337777777777777777
 c55c070000000000000000000000000000000000000000000000000000000000000000000033bbb33333333b3b3b333b333b3b33b33b3b337777777777777777
 5cc50a000000000000000000000000000000000000000000000000000000000000000000003333333333333b3b3bbb3b333b3b3bbb3b3b337777777777777777
-00000060aa0000000070a008e87c0a0004d400000a0000b0000c0022222000022002220022222222222222288828882888288828882888227777777777777777
-00000060aa00c08880b00008e8cc007000d00000aaa00bbb00ccc020000200020202220200208880000000080808000808080800800808027777777777777777
-00000060a90c0c8280000708e8000070e0d0707aaaaabbbbbccccc20000020020202020200208080000000088008800888088800800880027777777777777777
-85580060980c0c828b000008e80c007070d007000a0000b0000c0020000200020202020202208880000000080808000800080800800808027777777777777777
-58850d6d8000c0080700a008e8000a0070d070700a0000b0000c0022222000022202020222222222222222282828882822282828882828227777777777777777
+00000060aa0000606070a008e87c0a0004d400000a0000b0000c0022222000022002220022222222222222288828882888288828882888227777777777777777
+00000060aa00c00700b00008e8cc007000d00000aaa00bbb00ccc020000200020202220200208880000000080808000808080800800808027777777777777777
+00000060a90c0c7670000708e8000070e0d0707aaaaabbbbbccccc20000020020202020200208080000000088008800888088800800880027777777777777777
+85580060980c0c070b000008e80c007070d007000a0000b0000c0020000200020202020202208880000000080808000800080800800808027777777777777777
+58850d6d8000c0606700a008e8000a0070d070700a0000b0000c0022222000022202020222222222222222282828882822282828882828227777777777777777
 __sfx__
 000e00001c2200622019220062201c220062201922006225012202322523220002000020000200002000020000200002000020000200002000020000200002000020000200002000020000200002000020000200
 000c00001c220062201d220072201e220082201f2200922523220232052322523220000000c22024220242200d220252202522000200002000020000200002000020000200002000020000200002000020000000
