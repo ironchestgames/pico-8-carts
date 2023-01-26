@@ -233,6 +233,16 @@ local function drawblinktext(_str,_startcolor)
  print('\^w\^t'.._str,64-#_str*4,48,_startcolor+getblink())
 end
 
+local function addps(_x,_y,_r,_spdx,_spdy,_spdr,_colors,_life,_ondeath)
+ add(ps,{
+  x=_x,y=_y,r=_r,
+  spdx=_spdx,spdy=_spdy,spdr=_spdr,
+  colors=_colors,
+  life=_life,lifec=_life,
+  ondeath=_ondeath,
+ })
+end
+
 local function getship(_hangaridx)
  local _ship=mr(clone(hangar[_hangaridx]),s2t'y=110,hw=3,hh=3,spd=1,hp=3,repairc=0,firingc=0,primaryc=12,secondaryc=0')
  local _guns=split(_ship.guns,';')
@@ -283,44 +293,40 @@ end
 
 local burningcolors=split'10,9,5'
 local function newburning(_x,_y)
- local _life=8+rnd()*4
- add(ps,{
-  x=_x,y=_y,
-  r=0.5,
-  spdx=(rnd()-0.5)*0.125,
-  spdy=rnd()*0.25+1,
-  spdr=0.25*rnd(),
-  colors=burningcolors,
-  life=_life,lifec=_life,
- })
+ addps(
+  _x,_y,0.5,
+  (rnd()-0.5)*0.125,
+  rnd()*0.25+1,
+  0.25*rnd(),
+  burningcolors,
+  8+rnd()*4)
 end
 
 local hitcolors=split'7,7,10'
 local function newhit(_x,_y)
  sfx(11,3)
  for _i=1,7 do
-  add(ps,{
-   x=_x+(rnd()-0.5)*5,
-   y=_y+(rnd()-0.5)*5,
-   r=rnd()*5,
-   spdx=(rnd()-0.5)*2,
-   spdy=rnd()-0.5,
-   spdr=-0.2,
-   colors=hitcolors,
-   life=4,lifec=4,
-  })
+  addps(
+   _x+(rnd()-0.5)*5,
+   _y+(rnd()-0.5)*5,
+   rnd()*5,
+   (rnd()-0.5)*2,
+   rnd()-0.5,
+   -0.2,
+   hitcolors,
+   4)
  end
 end
 
 local smokecolors={5}
 local function explosionsmoke(_x,_y)
- local _life=rnd()*10+25
- add(ps,{
-  x=_x,y=_y,r=8,
-  spdx=(rnd()-0.5),spdy=rnd()-1.22,spdr=-0.28,
-  colors=smokecolors,
-  life=_life,lifec=_life,
- })
+ addps(
+  _x,_y,8,
+  rnd()-0.5,
+  rnd()-1.22,
+  -0.28,
+  smokecolors,
+  rnd()*10+25)
 end
 
 local function newexhaustp(_xoff,_yoff,_ship,_colors,_life,_vdir)
@@ -339,18 +345,16 @@ local function explode(_obj)
  del(bullets,_obj)
  sfx(10,3)
  for _i=1,7 do
-  add(ps,{
-   x=_obj.x,
-   y=_obj.y,
-   r=rnd()*5,
-   spdx=(rnd()-0.5),
-   spdy=rnd()-1,
-   spdr=rnd()*0.2+0.5,
-   colors=explosioncolors,
-   life=11,
-   lifec=11,
-   ondeath=explosionsmoke,
-  })
+  addps(
+   _obj.x,
+   _obj.y,
+   rnd()*5,
+   rnd()-0.5,
+   rnd()-1,
+   rnd()*0.2+0.5,
+   explosioncolors,
+   11,
+   explosionsmoke)
  end
 end
 
@@ -359,18 +363,15 @@ local function fizzlebase(_obj,_colors)
  del(enemybullets,_obj)
  sfx(18,3)
  for _i=1,5 do
-  local _life=4+rnd(10)
-  add(ps,{
-   x=_obj.x+(rnd(8)-4),
-   y=_obj.y+(rnd(8)-4),
-   r=0.9,
-   spdx=0,
-   spdy=-rnd(0.375),
-   spdr=0,
-   colors=_colors,
-   life=_life,
-   lifec=_life,
-  })
+  addps(
+   _obj.x+rnd(8)-4,
+   _obj.y+rnd(8)-4,
+   0.9,
+   0,
+   -rnd(0.375),
+   0,
+   _colors,
+   4+rnd(10))
  end
 end
 local fizzlecolors=split'7,9,10,5,9,15,5'
@@ -469,18 +470,15 @@ local function blinkaway(_ship,_dx,_dy,_h)
  shipsfx(_ship,21)
  local _newx,_newy=_ship.x+_dx*_h,_ship.y+_dy*_h
  for _i=1,6 do
-  local _life=10+rnd(5)
-  add(ps,{
-   x=_ship.x+(rnd(8)-4),
-   y=_ship.y+(rnd(8)-4),
-   r=1+rnd(0.25),
-   spdx=0,
-   spdy=0,
-   spdr=-0.05,
-   colors=blinkpcolors,
-   life=_life,
-   lifec=_life,
-  })
+  addps(
+   _ship.x+rnd(8)-4,
+   _ship.y+rnd(8)-4,
+   1+rnd(0.25),
+   0,
+   0,
+   -0.05,
+   blinkpcolors,
+   10+rnd(5))
  end
  _ship.x=mid(4,_newx,124)
  _ship.y=mid(4,_newy,119)
@@ -493,16 +491,15 @@ local function drawbeam(_bullet)
  rectfill(_x-3,_topy+2,_x+2,_bottomy-2,8)
  rectfill(_x-2,_topy+1,_x+1,_bottomy-1,14)
  rectfill(_x-1,_topy,_x,_bottomy,7)
- add(ps,{
-  x=_x,y=_topy+rnd(_bottomy),
-  r=0.9,
-  spdx=rnd(dirs)*(rnd(0.125)+0.125),
-  spdy=0,
-  spdr=0,
-  colors=beampcolors,
-  life=20,
-  lifec=20,
- })
+ addps(
+  _x,
+  _topy+rnd(_bottomy),
+  0.9,
+  rnd(dirs)*(rnd(0.125)+0.125),
+  0,
+  0,
+  beampcolors,
+  20)
 end
 local function shootbeam(_ship)
  local _hh=_ship.y/2
@@ -594,17 +591,15 @@ end
 local bubblepcolors=split'14,12,4'
 local function shootbubble(_ship)
  for _i=1,3 do
-  local _life=10+rnd(20)
-  add(ps,{
-   y=_ship.y,x=_ship.x,
-   r=1+rnd(1),
-   spdx=rnd(0.5)-0.25,
-   spdy=rnd(0.5)-0.25,
-   spdr=-0.05,
-   colors=bubblepcolors,
-   life=_life,
-   lifec=_life,
-  })
+  addps(
+   _ship.x,
+   _ship.y,
+   1+rnd(1),
+   rnd(0.5)-0.25,
+   rnd(0.5)-0.25,
+   -0.05,
+   bubblepcolors,
+   10+rnd(20))
  end
  add(bullets,{
   x=_ship.x,y=_ship.y,
@@ -621,16 +616,15 @@ local function shootbubble(_ship)
 end
 
 local function addicep(_x,_y,_spdy,_life)
- add(ps,{
-  x=_x,y=_y,
-  r=0.05,
-  spdx=rnd(0.25)-0.125,
-  spdy=_spdy,
-  spdr=0,
-  colors=icefizzlecolors,
-  life=_life,
-  lifec=_life,
- })
+ addps(
+  _x,
+  _y,
+  0.05,
+  rnd(0.25)-0.125,
+  _spdy,
+  0,
+  icefizzlecolors,
+  _life)
 end
 local function updateicec(_ship)
  addicep(_ship.x+rnd(8)-4,_ship.y+rnd(8)-4,0,10)
@@ -667,8 +661,8 @@ local function shootice(_ship,_life,_bullets)
 end
 
 local primary={
- missile=function(_btn4,_ship)
-  if _btn4 and _ship.primaryc > 1 and not _ship.lastbtn4 then
+ missile=function(_btn4,_ship,_justpressedwithcharge)
+  if _justpressedwithcharge then
    shootmissile(_ship,_ship.primaryc*2)
    shootmissile(_ship,_ship.primaryc*2)
    _ship.primaryc=0
@@ -680,8 +674,8 @@ local primary={
    shootboost(_ship)
   end
  end,
- mines=function(_btn4,_ship)
-  if _btn4 and _ship.primaryc > 1 and not _ship.lastbtn4 then
+ mines=function(_btn4,_ship,_justpressedwithcharge)
+  if _justpressedwithcharge then
    shootmine(_ship,_ship.primaryc*4+30,0.375+rnd(0.1))
    shootmine(_ship,_ship.primaryc*4+30,0.125-rnd(0.1))
    _ship.primaryc=0
@@ -705,8 +699,8 @@ local primary={
    _ship.primaryc=0
   end
  end,
- flak=function(_btn4,_ship)
-  if _btn4 and _ship.primaryc > 1 and not _ship.lastbtn4 then
+ flak=function(_btn4,_ship,_justpressedwithcharge)
+  if _justpressedwithcharge then
    shootflak(_ship,max(2,flr(_ship.primaryc/3)),_ship.primaryc*6)
    _ship.primaryc=0
   end
@@ -723,8 +717,8 @@ local primary={
    shootbubble(_ship)
   end
  end,
- slicer=function(_btn4,_ship)
-  if _btn4 and _ship.primaryc > 1 and not _ship.lastbtn4 then
+ slicer=function(_btn4,_ship,_justpressedwithcharge)
+  if _justpressedwithcharge then
    shipsfx(_ship,30)
    shootslicer(_ship.x,_ship.y,0,-2,flr(_ship.primaryc/6),true)
    _ship.primaryc=0
@@ -910,6 +904,16 @@ local function drawenemybullet(_bullet)
  sspr(32,125,1,3,_bullet.x,_bullet.y)
 end
 local enemybulletpcolors=split'2,2,4'
+local enemybulletp={
+ xoff=0,
+ yoff=0,
+ r=0.1,
+ spdx=0,
+ spdy=0,
+ spdr=0,
+ colors=enemybulletpcolors,
+ life=3,
+}
 local function enemyshootbullet(_enemy)
  sfx(8,3)
  add(enemybullets,{
@@ -919,16 +923,7 @@ local function enemyshootbullet(_enemy)
   life=1000,
   draw=drawenemybullet,
   ondeath=explode,
-  p={
-   xoff=0,
-   yoff=0,
-   r=0.1,
-   spdx=0,
-   spdy=0,
-   spdr=0,
-   colors=enemybulletpcolors,
-   life=3,
-  },
+  p=enemybulletp,
  })
  add(enemybullets,{
   x=_enemy.x-4,y=_enemy.y,
@@ -937,16 +932,7 @@ local function enemyshootbullet(_enemy)
   life=1000,
   draw=drawenemybullet,
   ondeath=explode,
-  p={
-   xoff=0,
-   yoff=0,
-   r=0.1,
-   spdx=0,
-   spdy=0,
-   spdr=0,
-   colors=enemybulletpcolors,
-   life=3,
-  },
+  p=enemybulletp,
  })
 end
 
@@ -1356,7 +1342,7 @@ function gameupdate()
    end
 
    _ship.primaryc=mid(0,_ship.primaryc,38)
-   primary[_ship.primary](_btn4,_ship)
+   primary[_ship.primary](_btn4,_ship,_btn4 and _ship.primaryc > 1 and not _ship.lastbtn4)
    _ship.lastbtn4=_btn4
   end
 
