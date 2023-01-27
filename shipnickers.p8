@@ -5,8 +5,9 @@ __lua__
 -- by ironchest games
 
 --[[
+ - fix boss beam sfx
  - fix psets
- - unify game event code
+ - unify game event code?
 
 dget:
 63 - boss kills
@@ -398,6 +399,30 @@ local function drawshield(_x,_y,_color)
  fillp()
 end
 
+local function mineexplodedraw(_bullet)
+ circfill(_bullet.x,_bullet.y,_bullet.hw,7)
+end
+local mineexplodepos=split'-16,0,0,0,16,0,0,-16,0,16'
+local function onminedeathbase(_bullet,_bullets)
+ for _i=1,#mineexplodepos,2 do
+  if _bullet.charge > rnd(170) then
+   add(_bullets,{
+    x=_bullet.x+mineexplodepos[_i],y=_bullet.y+mineexplodepos[_i+1],
+    hw=8,hh=8,
+    spdfactor=0,
+    spdx=0,spdy=0,accy=0,
+    dmg=3,
+    life=2,
+    draw=mineexplodedraw,
+    ondeath=explode,
+   })
+  end
+ end
+ explode(_bullet)
+end
+local function onminedeath(_bullet)
+ onminedeathbase(_bullet,bullets)
+end
 local function drawmine(_bullet)
  _bullet.frame+=(t()*0.375)/_bullet.life
  if _bullet.frame > 2 then
@@ -413,10 +438,11 @@ local function shootmine(_ship,_life,_angle)
   frame=0,
   spdfactor=0.96+rnd(0.01),
   spdx=cos(_angle+rnd(0.02)),spdy=sin(_angle+rnd(0.02)),accy=0,
-  dmg=8,
+  dmg=5,
   life=_life,
+  charge=_life,
   draw=drawmine,
-  ondeath=explode,
+  ondeath=onminedeath,
  })
 end
 
@@ -879,6 +905,10 @@ local function enemyshootmissile(_enemy)
  })
 end
 
+local function onenemyminedeath(_bullet)
+ _bullet.charge=100
+ onminedeathbase(_bullet,enemybullets)
+end
 local function drawenemymine(_bullet)
  _bullet.frame+=(t()*0.375)/_bullet.life
  if _bullet.frame > 2 then
@@ -896,7 +926,7 @@ local function enemyshootmine(_enemy)
   spdx=rnd(0.5)-0.25,spdy=1.5,accy=0,
   life=110,
   draw=drawenemymine,
-  ondeath=explode,
+  ondeath=onenemyminedeath,
  })
 end
 
