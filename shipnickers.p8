@@ -5,7 +5,6 @@ __lua__
 -- by ironchest games
 
 --[[
- - fix boss beam sfx
  - fix psets
  - unify game event code?
 
@@ -1043,6 +1042,8 @@ end
 
 local blinkdirs=split'-1,0,1'
 local superbossweaponnames=split'missile,mines,boost,shield,ice,blink,flak,beam,bubbles,slicer,bullet'
+local bosstses=split'boostts,shieldts,beamts,ice'
+local bosststs=s2t'boostts=2,shieldts=2.5,beamts=2,ice=1.125'
 local bossweapons={
  missile=enemyshootmissile,
  mines=enemyshootmine,
@@ -1531,6 +1532,13 @@ function gameupdate()
    if boss.icec then
     updateicec(boss)
    end
+   for _ts in all(bosstses) do
+    local _t=boss[_ts]
+    if _t and curt-_t > bosststs[_ts] then
+     boss.boost,boss[_ts]=0
+     sfx(-2,2)
+    end
+   end
    local _icefactor=boss.icec and 0.5 or 1
    if _bossdt > boss.flydurationc then
     if _bossdt > boss.flydurationc+boss.waitdurationc then
@@ -1563,23 +1571,10 @@ function gameupdate()
       life=1,
       draw=emptydraw,
      })
-
-     if t()-boss.boostts > 2 then
-      boss.boost,boss.boostts=0
-      sfx(-2,2)
-     end
-    end
-
-    if boss.shieldts and t()-boss.shieldts > 2.25 then
-     boss.shieldts=nil
-     sfx(-2,2)
     end
 
     if boss.icets then
      shootice(boss,60,enemybullets)
-     if t()-boss.icets > 1 then
-      boss.icets=nil
-     end
     end
 
     if boss.beamts then
@@ -1594,10 +1589,6 @@ function gameupdate()
       life=1,
       draw=drawbeam,
      })
-     if t()-boss.beamts > 2 then
-      boss.boost,boss.beamts=0
-      sfx(-2,2)
-     end
     end
 
     local _absx,_spd=abs(boss.targetx-boss.x),0.5+boss.boost
@@ -1625,8 +1616,8 @@ function gameupdate()
   _spawninterval=max(0.75,5*lockedpercentage)
   _spawnmin=6
  end
- if nickitts == nil and (not (hasescaped or issuperbossdead)) and (t()-enemyts > _spawninterval and #enemies < min(15,10+dget(63))  or #enemies < _spawnmin) then
-  enemyts=t()
+ if nickitts == nil and (not (hasescaped or issuperbossdead)) and (curt-enemyts > _spawninterval and #enemies < min(15,10+dget(63))  or #enemies < _spawnmin) then
+  enemyts=curt
   rnd{newkamikaze,newkamikaze,newbomber,newminelayer,newfighter,newcargoship}()
  end
 
