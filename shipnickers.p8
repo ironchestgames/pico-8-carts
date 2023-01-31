@@ -1879,7 +1879,11 @@ function gamedraw()
  end
 
  if t()-gamestartts < 1.5 and boss then
-  drawblinktext('want it!',10)
+  local _s='want it!'
+  if issuperboss then
+   _s='kill!'
+  end
+  drawblinktext(_s,10)
   local _frame=getblink()
   sspr(39+_frame*5,123,5,5,boss.x-2,boss.y+8)
  end
@@ -1981,7 +1985,7 @@ function pickerdraw()
  for _i=0,1 do
   local _pick=picks[_i]
   if _pick then
-   local _x,_y=9+(_pick%10)*11,7+flr(_pick/10)*11
+   local _x,_y=9+(_pick%10)*11,9+flr(_pick/10)*11
    rect(_x,_y,_x+9,_y+9,11+_i)
    local _s='(no ship)'
    if isunlocked(_pick) then
@@ -1996,7 +2000,7 @@ function pickerdraw()
  end
  for _x=0,9 do
   for _y=0,9 do
-   local _s,_x,_y=_y*10+_x,10+_x*11,8+_y*11
+   local _s,_x,_y=_y*10+_x,10+_x*11,10+_y*11
    if isunlocked(_s) then
     spr(_s,_x,_y)
     if _s == newship then
