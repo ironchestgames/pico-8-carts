@@ -43,6 +43,10 @@ function flrrnd(_n)
  return flr(rnd(_n))
 end
 
+function rndsplit(_s)
+ return rnd(split(_s))
+end
+
 function contains(_t,_value)
  for _v in all(_t) do
   if _v == _value then
@@ -147,7 +151,7 @@ function getbloodobj(_x,_y,_bloodtype)
 end
 
 function getscorepercentage()
- return dget(62)/640 -- 640 is top threshold
+ return dget(62)/400 -- 400 is top threshold
 end
 
 function disttoguy(_other)
@@ -506,7 +510,7 @@ function sighthunting(_behaviouree)
  elseif _disttoguy < _behaviouree.sightradius then
   _behaviouree.targetx,_behaviouree.targety=guy.x,guy.y
   if _behaviouree.isscary and guy.scared == nil and not _prevhunting then
-   guytalk(rnd(split'yikes,eek,uh-oh'))
+   guytalk(rndsplit'yikes,eek,uh-oh')
    guy.scared=true
   end
   _behaviouree.hunting=true
@@ -579,23 +583,7 @@ objtypes={
   sh='4;5',
   ground=true
  ]],
- -- 5, rounded stones
- s2t[[
-  sx='69;69;85;93',
-  sy='73;82;75;74',
-  sw='8;8;7;6',
-  sh='7;6;3;4',
-  solid='1;1;0;0'
- ]],
- -- 6, lakes
- s2tmr([[
-  sx='53;53',
-  sy='9;15',
-  sw='8;11',
-  sh='6;7',
-  ground=true,samplecolor=13,sunken=true,walksfx=7
-  ]],{action=takesampleaction}),
- -- 7, skulls and ribs
+ -- 5, skulls and ribs
  s2tmr([[
   sx='61;72;24;16',
   sy='60;60;0;0',
@@ -604,7 +592,31 @@ objtypes={
   samplecolor='6;15',
   solid='1;0;0;0'
   ]],{action=takesampleaction}),
- -- 8, canyon stones
+ -- 6, leafshadow marsh
+ s2t[[
+  sx='48',
+  sy='46',
+  sw='5',
+  sh='4',
+  ground=true
+ ]],
+ -- 7, rounded stones
+ s2t[[
+  sx='69;69;85;93',
+  sy='73;82;75;74',
+  sw='8;8;7;6',
+  sh='7;6;3;4',
+  solid='1;1;0;0'
+ ]],
+ -- 8, lakes
+ s2tmr([[
+  sx='53;53',
+  sy='9;15',
+  sw='8;11',
+  sh='6;7',
+  ground=true,samplecolor=13,sunken=true,walksfx=7
+  ]],{action=takesampleaction}),
+ -- 9, canyon stones
  s2t[[
   sx='61;61;85',
   sy='72;81;75',
@@ -612,15 +624,15 @@ objtypes={
   sh='8;7;3',
   solid='1;1;0'
  ]],
- -- 9, flowerbush
+ -- 10, flowerbush
  s2tmr([[
   sx='16;23',
   sy='20;20',
   sw='7;6',
   sh='8;8',
-  samplecolor='15;9'
+  samplecolor='15;9;11;7'
   ]],{action=takesampleaction}),
- -- 10, dead trees
+ -- 11, dead trees
  s2t[[
   sx='39;47',
   sy='30;30',
@@ -628,7 +640,7 @@ objtypes={
   sh='8;8',
   solid='1;1'
  ]],
- -- 11, red caps
+ -- 12, red caps
  s2tmr([[
   sx='39',
   sy='0',
@@ -636,18 +648,10 @@ objtypes={
   sh='5',
   samplecolor='6;15;9;10;11;7'
   ]],{action=takesampleaction}),
- -- 12, water marsh
+ -- 13, water marsh
  s2t[[
   sx='48',
   sy='42',
-  sw='5',
-  sh='4',
-  ground=true
- ]],
- -- 13, leafshadow marsh
- s2t[[
-  sx='48',
-  sy='46',
   sw='5',
   sh='4',
   ground=true
@@ -730,7 +734,7 @@ planettypes={
      sh='3;3;3;3',
      ground=true
     ]],
-    objtypes[7], -- skulls, ribs
+    objtypes[5], -- skulls, ribs
       -- martian pillars
     s2t[[
      sx='80;24;35;24',
@@ -752,8 +756,8 @@ planettypes={
    wpal=split'133,132,131,141,3',
    objtypes={
     objtypes[4], -- cracks
-    objtypes[7], -- skulls, ribs
-    objtypes[8], -- canyon rocks
+    objtypes[5], -- skulls, ribs
+    objtypes[9], -- canyon rocks
     -- taurien industry
     s2t[[
      sx='106;106;16;29;117',
@@ -904,31 +908,29 @@ function createplanettype()
 
  -- flora types
  local _objtypes={s2t'sx="48",sy="38",sw="5",sh="4",ground=true'} -- always add shadow marsh
- local _objtypeslen=rnd(split'3,4,4,5,5,5,6,7,8,9')
-
+ local _objtypeslen=rndsplit'3,4,4,5,5,5,6,7,8,9'
  while #_objtypes < _objtypeslen do
   local _objtypelen=#objtypes-(_scorepercentage < 0.35 and 2 or _scorepercentage < 0.75 and 1 or 0) -- never have flowers and or berrybushes if not enough points
   local _index=mid(
-   (_wpal[2] == 7 or rnd(_scorepercentage) > 0.0875) and 3 or 1, -- if white/snow then never have lava
-    flr((rnd(2)-1+_scorepercentage)*_objtypelen),
-    _objtypelen)
+   (_wpal[2] == 7 and 3) or -- ice planets never have lava or lava cracks
+   (_surfacecolor == 3 and 7) or -- green planets always start at rounded stones
+   flr(_scorepercentage*6)+1, -- other planets build up to start at rounded stones
+   flr((rnd(2)-1+_scorepercentage)*_objtypelen)+(_surfacecolor == 3 and 5 or 0),
+   _objtypelen)
   add(_objtypes,objtypes[_index])
  end
 
  -- fauna types
- local _allanimaltypes=split'bear,bat,spider,bull,snake,gnawer,firegnawer,slime'
- local _animaltypes={}
- local _animaltypeslen=rnd(split'1,1,1,1,2,2,2,3,3,4')
+ local _animaltypes,_allanimaltypes,_animaltypeslen=
+  {},split'bear,bat,spider,bull,snake,gnawer,firegnawer,slime',rndsplit'1,1,1,1,2,2,2,3,3,4'
  for _i=1,_animaltypeslen do
   add(_animaltypes,rnd(_allanimaltypes))
  end
 
  return {
   wpal=fixpal(_wpal),
-  groundcolor=_groundcolor,
-  surfacecolor=_surfacecolor,
-  objtypes=_objtypes,
-  animaltypes=_animaltypes,
+  groundcolor=_groundcolor,surfacecolor=_surfacecolor,
+  objtypes=_objtypes,animaltypes=_animaltypes,
   objdist=mid(12,36-flrrnd(6)-flr(_scorepercentage*20),52),
  }
 end
@@ -979,16 +981,16 @@ function createplanet(_planettype)
   end
 
   if _wrecktype == 'martianwreck' then
-   addwreckobj(_x,_y,'sx=58,sy=48,sw=14,sh=8,solid=true') -- ship wreck
-   addwreckobj(_x+1,_y-2,'sx=56,sy=50,sw=21,sh=9,ground=true') -- debris
-   addwreckobj(_x-14,_y+2,'sx=48,sy=54,sw=8,sh=4') -- corpse
+   addwreckobj(_x,_y,'sx=58,sy=48,sw=14,sh=8,solid=true')
+   addwreckobj(_x+1,_y-2,'sx=56,sy=50,sw=21,sh=9,ground=true')
+   addwreckobj(_x-14,_y+2,'sx=48,sy=54,sw=8,sh=4')
    add(_mapobjs,getbloodobj(_x-23,_y+3,'martian'))
 
   else -- taurienwreck
-   addwreckobj(_x,_y,'sx=49,sy=78,sw=10,sh=9,solid=true') -- ship wreck
-   addwreckobj(_x-8,_y-5,'sx=44,sy=78,sw=5,sh=4,solid=true') -- small wing
-   addwreckobj(_x-8,_y-1,'sx=42,sy=83,sw=9,sh=6,ground=true') -- debris
-   addwreckobj(_x-17,_y,'sx=33,sy=85,sw=9,sh=3') -- corpse
+   addwreckobj(_x,_y,'sx=49,sy=78,sw=10,sh=9,solid=true')
+   addwreckobj(_x-8,_y-5,'sx=44,sy=78,sw=5,sh=4,solid=true')
+   addwreckobj(_x-8,_y-1,'sx=42,sy=83,sw=9,sh=6,ground=true')
+   addwreckobj(_x-17,_y,'sx=33,sy=85,sw=9,sh=3')
    add(_mapobjs,getbloodobj(_x-26,_y+1,'taurien'))
   end
  end
@@ -998,13 +1000,13 @@ function createplanet(_planettype)
  if rnd() < 0.0875 then
   _hasartifact=true
   local _x,_y=flrrnd(mapsize-32),flrrnd(mapsize-32)
-  local _ruincount,_sy=flrrnd(7)+4,rnd(split'96,104,112,120')
+  local _ruincount,_sy=flrrnd(7)+4,rndsplit'96,104,112,120'
   add(_mapobjs,rnd({getnewtrap,getnewdeterrer,getnewdrill,getnewsparepart,getnewtalisman})(_x,_y))
   for _i=0,_ruincount-1 do
    local _a=_i/_ruincount+0.05
    add(_mapobjs,s2tmr('sw=8,sh=8,solid=true',{
     x=_x+cos(_a)*_ruincount*5,y=_y+sin(_a)*_ruincount*5,
-    sx=rnd(split'15,23,31'),sy=_sy,
+    sx=rndsplit'15,23,31',sy=_sy,
    }))
   end
  end
@@ -1076,7 +1078,7 @@ function createplanet(_planettype)
 
  -- add fauna
  local _animals={}
- local _loops=(_planettype.animalcount and flrrnd(_planettype.animalcount)) or mid(0,flrrnd(getscorepercentage()*20),50)
+ local _loops=(_planettype.animalcount and flrrnd(_planettype.animalcount)) or mid(0,flrrnd(getscorepercentage()*10),30)
  for _i=1,_loops do
    local _typ=rnd(_planettype.animaltypes)
    local _animal=clone(animaltypes[_typ])
@@ -1195,7 +1197,7 @@ function nextsector()
  local _scorepercentage,_lastsectordroids,_ispopulatedsector=getscorepercentage(),sector and sector.wasdroids
  sector={}
 
- for _i=1,rnd(split'1,1,2,2,2,2,3,3') do
+ for _i=1,rndsplit'1,1,2,2,2,2,3,3' do
   if _lastsectordroids == nil and _ispopulatedsector == nil and _scorepercentage > 0.1 and rnd() < _scorepercentage*0.125 then
    add(sector,createplanet(planettypes.droidworld))
    _ispopulatedsector,sector.wasdroids=true,true
@@ -1311,7 +1313,7 @@ function planetupdate()
   lookinginsamplecase=nil
 
   if guy.runningc > 30 and not guy.panting then
-   guytalk(rnd(split'*pant pant,*huff puff,*wheeeeze'))
+   guytalk(rndsplit'*pant pant,*huff puff,*wheeeeze')
    guy.panting=true
    sfx(2)
   end
@@ -1321,7 +1323,7 @@ function planetupdate()
     _movex*=-3
     _movey*=-3
     guy.panting,guy.runningc=true,24
-    guytalk(rnd(split'ouch,oof,argh,ow,owie,oww'))
+    guytalk(rndsplit'ouch,oof,argh,ow,owie,oww')
     sfx(rnd{16,17})
    end
   end
@@ -1554,7 +1556,7 @@ function storagedraw(_obj)
 
   if dget(_datapos) != 0 and #samples < 5 then
    actiontitle='\014\x8e\015 take sample'
-   sspr(99,85,5,6,_x+3,113)
+   sspr(100,85,5,6,_x+3,113)
   elseif dget(_datapos) == 0 and #samples > 0 then
    actiontitle='\014\x8e\015 store sample'
    _showsamplecasearrow=true
@@ -2387,7 +2389,7 @@ function deaddraw()
  print(_highscorestr,126-#_highscorestr*4,2)
  print('\fascore: '..tostr(dget(62)),2,2)
  if t()-ts > 2 then
-  print('\f9\014\x8e\015 new universe',34,118)
+  print('\f9\014\x8e\015 next universe',32,119)
  end
 end
 
