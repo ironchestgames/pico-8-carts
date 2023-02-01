@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 38
 __lua__
--- the panspermia guy 1.1
+-- the panspermia guy 1.2
 -- by ironchest games
 
 cartdata'ironchestgames_thepanspermiaguy_v1'
@@ -630,7 +630,7 @@ objtypes={
   sy='20;20',
   sw='7;6',
   sh='8;8',
-  samplecolor='15;9;11;7'
+  samplecolor='15;9'
   ]],{action=takesampleaction}),
  -- 11, dead trees
  s2t[[
@@ -966,13 +966,13 @@ function createplanet(_planettype)
 
  -- add wreck
  local _haswreck=nil
- if rnd() < 0.0875 then
+ if rnd() < 0.1 then
   _haswreck=true
   local _wrecktype=rnd{'martianwreck','taurienwreck'}
   local _x,_y=flrrnd(mapsize-_tooclosedist),flrrnd(mapsize-_tooclosedist)
 
   -- add tool
-  if rnd() < 0.385 then
+  if rnd() < 0.675 then
    add(_mapobjs,getnewsparepart(_x-34,_y-2))
   end
 
@@ -997,7 +997,7 @@ function createplanet(_planettype)
 
  -- add artifact
  local _hasartifact=nil
- if rnd() < 0.0875 then
+ if rnd() < 0.1 then
   _hasartifact=true
   local _x,_y=flrrnd(mapsize-32),flrrnd(mapsize-32)
   local _ruincount,_sy=flrrnd(7)+4,rndsplit'96,104,112,120'
@@ -1101,7 +1101,7 @@ function createplanet(_planettype)
  -- add aliens
  local _alientype=nil
  local _rndalientype=_planettype.alientype or rnd{'martian','taurien'}
- if (alienhostile == nil and rnd() < 0.065 and (_rndalientype == 'taurien' and #_animals > 0 or _rndalientype == 'martian')) or _planettype.alientype then
+ if (alienhostile == nil and rnd() < 0.1 and (_rndalientype == 'taurien' and #_animals > 0 or _rndalientype == 'martian')) or _planettype.alientype then
   _alientype=_rndalientype
   local _x,_y=flrrnd(mapsize-_tooclosedist),flrrnd(mapsize-_tooclosedist)
   add(_mapobjs,s2tmr('sx=42,sw=19,sh=10,solid=true',{
@@ -1198,10 +1198,10 @@ function nextsector()
  sector={}
 
  for _i=1,rndsplit'1,1,2,2,2,2,3,3' do
-  if _lastsectordroids == nil and _ispopulatedsector == nil and _scorepercentage > 0.1 and rnd() < _scorepercentage*0.125 then
+  if _lastsectordroids == nil and _ispopulatedsector == nil and _scorepercentage > 0.25 and rnd() < _scorepercentage*0.125 then
    add(sector,createplanet(planettypes.droidworld))
    _ispopulatedsector,sector.wasdroids=true,true
-  elseif _ispopulatedsector == nil and rnd() < 0.0675 then
+  elseif _ispopulatedsector == nil and rnd() < 0.1 then
    add(sector,createplanet(rnd{planettypes.martianworld,planettypes.taurienworld}))
    _ispopulatedsector=true
   else
