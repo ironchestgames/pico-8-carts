@@ -447,16 +447,7 @@ function laiddrillbehaviour(_behaviouree)
  if _behaviouree.drillc <= 0 then
   del(sector[1].animals,_behaviouree)
   add(sector[1].mapobjs,getnewdrill(_behaviouree.x,_behaviouree.y))
-  add(sector[1].mapobjs,s2tmr([[
-   sx=53,
-   sy=9,
-   sw=8,
-   sh=6,
-   ground=true,
-   samplecolor=13,
-   sunken=true,
-   walksfx=7
-   ]],{
+  add(sector[1].mapobjs,s2tmr('sx=53,sy=9,sw=8,sh=6,ground=true,samplecolor=13,sunken=true,walksfx=7',{
     x=_behaviouree.x,
     y=_behaviouree.y,
     action=takesampleaction,
