@@ -959,8 +959,7 @@ function createplanet(_planettype)
  local _haswreck=nil
  if rnd() < 0.1 then
   _haswreck=true
-  local _wrecktype=rnd{'martianwreck','taurienwreck'}
-  local _x,_y=flrrnd(mapsize-_tooclosedist),flrrnd(mapsize-_tooclosedist)
+  local _x,_y,_wrecktype=flrrnd(mapsize-_tooclosedist),flrrnd(mapsize-_tooclosedist),rnd{'martianwreck','taurienwreck'}
 
   -- add tool
   if rnd() < 0.675 then
@@ -1010,8 +1009,7 @@ function createplanet(_planettype)
     title='place talisman',
     func=function(_obj)
      if dget(45) == 5 then
-      _obj.sy,_obj.sh=29,11
-      droidalertc=nil
+      _obj.sy,_obj.sh,droidalertc=29,11
       dset(48,1)
       dset(45,0)
       sfx(-1,2)
@@ -1068,8 +1066,8 @@ function createplanet(_planettype)
  end
 
  -- add fauna
- local _animals={}
- local _loops=(_planettype.animalcount and flrrnd(_planettype.animalcount)) or mid(0,flrrnd(getscorepercentage()*10),30)
+ local _animals,_scorepercentage={},getscorepercentage()
+ local _loops=(_planettype.animalcount and flrrnd(_planettype.animalcount)) or mid(0,flr(rnd(_scorepercentage*10)+_scorepercentage*2),30)
  for _i=1,_loops do
    local _typ=rnd(_planettype.animaltypes)
    local _animal=clone(animaltypes[_typ])
@@ -1090,8 +1088,7 @@ function createplanet(_planettype)
  end
 
  -- add aliens
- local _alientype=nil
- local _rndalientype=_planettype.alientype or rnd{'martian','taurien'}
+ local _rndalientype,_alientype=_planettype.alientype or rnd{'martian','taurien'}
  if (alienhostile == nil and rnd() < 0.1 and (_rndalientype == 'taurien' and #_animals > 0 or _rndalientype == 'martian')) or _planettype.alientype then
   _alientype=_rndalientype
   local _x,_y=flrrnd(mapsize-_tooclosedist),flrrnd(mapsize-_tooclosedist)
