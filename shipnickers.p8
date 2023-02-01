@@ -1985,6 +1985,7 @@ local newship
 function pickerdraw()
  cls()
  if dget(63) > 0 then
+  sspr(6,120,3,3,70,1)
   print('\fdsecret hangar     \f8boss kills:'..dget(63),2,1)
  else
   print('\fdsecret hangar',38,1)
