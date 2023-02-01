@@ -730,7 +730,7 @@ local primary={
  end,
  flak=function(_btn4,_ship,_justpressedwithcharge)
   if _justpressedwithcharge then
-   shootflak(_ship,max(2,flr(_ship.primaryc/3)),_ship.primaryc*6)
+   shootflak(_ship,max(2,flr(_ship.primaryc/2)),_ship.primaryc*6)
    _ship.primaryc=0
   end
  end,
@@ -812,7 +812,7 @@ local secondary={
  end,
  flak=function(_ship)
   if btnp(5,_ship.plidx) and _ship.secondaryshots > 0 then
-   shootflak(_ship,8,160)
+   shootflak(_ship,12,160)
    _ship.secondaryshots-=1
   end
  end,
@@ -1046,8 +1046,8 @@ end
 
 local blinkdirs=split'-1,0,1'
 local superbossweaponnames=split'missile,mines,boost,shield,ice,blink,flak,beam,bubbles,slicer,bullet'
-local bosstses=split'boostts,shieldts,beamts,ice'
-local bosststs=s2t'boostts=2,shieldts=2.5,beamts=2,ice=1.125'
+local bosstses=split'boostts,shieldts,beamts,icets'
+local bosststs=s2t'boostts=2,shieldts=2.5,beamts=2,icets=1.125'
 local bossweapons={
  missile=enemyshootmissile,
  mines=enemyshootmine,
@@ -1544,7 +1544,7 @@ function gameupdate()
     end
    end
    local _icefactor=boss.icec and 0.5 or 1
-   if _bossdt > boss.flydurationc then
+   if _bossdt > boss.flydurationc and not (boss.beamts or boss.icets or boss.boostts or boss.shieldts) then
     if _bossdt > boss.flydurationc+boss.waitdurationc then
      boss.boost,boss.boostts,boss.shieldts,boss.beamts=0
      sfx(-2,2)
