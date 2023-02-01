@@ -97,10 +97,6 @@ local function s2t(_t)
  return _result
 end
 
-local function mrs2t(_s,_t)
- return mr(s2t(_s),_t)
-end
-
 local function ispointinsideaabb(_x,_y,_ax,_ay,_ahw,_ahh)
  return _x > _ax-_ahw and _x < _ax+_ahw and _y > _ay-_ahh and _y < _ay+_ahh
 end
@@ -407,18 +403,20 @@ local function mineexplodedraw(_bullet)
 end
 local mineexplodepos=split'-16,0,0,0,16,0,0,-16,0,16'
 local function onminedeathbase(_bullet,_bullets)
- for _i=1,#mineexplodepos,2 do
-  if _bullet.charge > rnd(170) then
-   add(_bullets,{
-    x=_bullet.x+mineexplodepos[_i],y=_bullet.y+mineexplodepos[_i+1],
-    hw=8,hh=8,
-    spdfactor=0,
-    spdx=0,spdy=0,accy=0,
-    dmg=3,
-    life=2,
-    draw=mineexplodedraw,
-    ondeath=explode,
-   })
+ if not _bullet.disarmed then
+  for _i=1,#mineexplodepos,2 do
+   if _bullet.charge > rnd(170) then
+    add(_bullets,{
+     x=_bullet.x+mineexplodepos[_i],y=_bullet.y+mineexplodepos[_i+1],
+     hw=8,hh=8,
+     spdfactor=0,
+     spdx=0,spdy=0,accy=0,
+     dmg=3,
+     life=2,
+     draw=mineexplodedraw,
+     ondeath=explode,
+    })
+   end
   end
  end
  explode(_bullet)
@@ -495,6 +493,7 @@ local function shootflak(_ship,_amount,_life)
 end
 
 local blinkpcolors=split'7,11,11,3,5'
+local blinkaab=s2t'hw=16,hh=16'
 local function blinkaway(_ship,_dx,_dy,_h)
  shipsfx(_ship,21)
  local _newx,_newy=_ship.x+_dx*_h,_ship.y+_dy*_h
@@ -509,8 +508,21 @@ local function blinkaway(_ship,_dx,_dy,_h)
    blinkpcolors,
    10+rnd(5))
  end
- _ship.x=mid(4,_newx,124)
- _ship.y=mid(4,_newy,119)
+ _newx,_newy=mid(4,_newx,124),mid(4,_newy,119)
+ _ship.x,_ship.y,blinkaab.x,blinkaab.y=_newx,_newy,_newx,_newy
+ for _enemybullet in all(enemybullets) do
+  if isaabbscolliding(blinkaab,_enemybullet) then
+   _enemybullet.life,_enemybullet.disarmed=0,true
+  end
+ end
+ for _enemy in all(enemies) do
+  if isaabbscolliding(blinkaab,_enemy) then
+   _enemy.hp=0
+  end
+ end
+ if boss and _ship != boss and isaabbscolliding(blinkaab,boss) then
+  boss.hp-=55
+ end
 end
 
 local beampcolors=split'7,7,14'
@@ -553,7 +565,7 @@ local function shootboost(_ship)
   spdy=0,
   accy=0,
   spdfactor=0,
-  dmg=1,
+  dmg=4,
   life=1,
   draw=emptydraw,
  })
@@ -593,7 +605,7 @@ function shootslicer(_x,_y,_spdx,_spdy,_slicecount,_isstraight)
   sy=56,
   sw=_isstraight and 8 or 7,
   sh=_isstraight and 5 or 7,
-  dmg=4,
+  dmg=5,
   life=999,
   slicecount=_slicecount,
   ondeath=slicerdeath,
@@ -604,8 +616,7 @@ end
 local function updatebubble(_bullet,_otherbullets)
  for _other in all(_otherbullets) do
   if isaabbscolliding(_bullet,_other) then
-   _bullet.life=0
-   _other.life=0
+   _bullet.life,_other.life=0,0
    break
   end
  end
@@ -667,8 +678,7 @@ local function drawice(_bullet)
 end
 local function iceondeath(_bullet)
  if _bullet.enemyhit then
-  _bullet.enemyhit.icec=110
-  _bullet.enemyhit=nil
+  _bullet.enemyhit.icec,_bullet.enemyhit=110
  end
  icefizzle(_bullet)
 end
@@ -705,8 +715,9 @@ local primary={
  end,
  mines=function(_btn4,_ship,_justpressedwithcharge)
   if _justpressedwithcharge then
-   shootmine(_ship,_ship.primaryc*4+30,0.375+rnd(0.1))
-   shootmine(_ship,_ship.primaryc*4+30,0.125-rnd(0.1))
+   local _life=_ship.primaryc*4+30
+   shootmine(_ship,_life,0.375+rnd(0.1))
+   shootmine(_ship,_life,0.125-rnd(0.1))
    _ship.primaryc=0
   end
  end,
@@ -722,7 +733,7 @@ local primary={
   end
  end,
  blink=function(_btn4,_ship)
-  if _btn4 and not _ship.lastbtn4 then
+  if _btn4 and _ship.primaryc > 1 and not _ship.lastbtn4 then
    local _dx,_dy=getdirs(_ship.plidx)
    blinkaway(_ship,_dx,_dy,_ship.primaryc*1.25)
    _ship.primaryc=0
@@ -749,7 +760,7 @@ local primary={
  slicer=function(_btn4,_ship,_justpressedwithcharge)
   if _justpressedwithcharge then
    shipsfx(_ship,30)
-   shootslicer(_ship.x,_ship.y,0,-2,flr(_ship.primaryc/6),true)
+   shootslicer(_ship.x,_ship.y,0,-2,flr(_ship.primaryc/5),true)
    _ship.primaryc=0
   end
  end,
@@ -861,7 +872,7 @@ local function newcargodrop(_x,_y)
  add(cargos,{
   x=_x,y=_y,
   hw=2,hh=2,
-  spdx=rnd(0.025)-0.0125,
+  spdx=rnd(0.05)-0.025,
   spdy=0.0125+rnd(0.05),
  })
 end
@@ -885,7 +896,7 @@ end
 local function drawenemymissile(_bullet)
  sspr(33,123,3,5,_bullet.x,_bullet.y)
 end
-local enemymissilepcolors=split'7,10,11'
+local enemymissilep=mr(s2t'xoff=1,yoff=0,r=0.1,spdx=0,spdy=0.1,spdr=0,life=4',{colors=split'7,10,11'})
 local function enemyshootmissile(_enemy)
  sfx(12,3)
  add(enemybullets,{
@@ -895,16 +906,7 @@ local function enemyshootmissile(_enemy)
   life=1000,
   draw=drawenemymissile,
   ondeath=explode,
-  p={
-   xoff=1,
-   yoff=0,
-   r=0.1,
-   spdx=0,
-   spdy=0.1,
-   spdr=0,
-   colors=enemymissilepcolors,
-   life=4,
-  },
+  p=enemymissilep,
  })
 end
 
@@ -936,17 +938,7 @@ end
 local function drawenemybullet(_bullet)
  sspr(32,125,1,3,_bullet.x,_bullet.y)
 end
-local enemybulletpcolors=split'2,2,4'
-local enemybulletp={
- xoff=0,
- yoff=0,
- r=0.1,
- spdx=0,
- spdy=0,
- spdr=0,
- colors=enemybulletpcolors,
- life=3,
-}
+local enemybulletp=mr(s2t'xoff=0,yoff=0,r=0.1,spdx=0,spdy=0,spdr=0,life=3',{colors=split'2,2,4'})
 local function enemyshootbullet(_enemy)
  sfx(8,3)
  add(enemybullets,{
@@ -1087,7 +1079,7 @@ local bossweapons={
 
 local minelayerexhaustcolors={12}
 local function newminelayer()
- add(enemies,mrs2t('y=-12,hw=4,hh=4,spdx=0,spdy=0,s=103,hp=5',{
+ add(enemies,mr(s2t'y=-12,hw=4,hh=4,spdx=0,spdy=0,s=103,hp=5',{
   x=rnd(128),
   ts=t(),
   update=function(_enemy)
@@ -1113,7 +1105,7 @@ end
 
 local kamikazeexhaustcolors=split'10,9'
 local function newkamikaze()
- add(enemies,mrs2t('y=-12,hw=4,hh=4,spdx=0,spdy=0,s=101,hp=4',{
+ add(enemies,mr(s2t'y=-12,hw=4,hh=4,spdx=0,spdy=0,s=101,hp=4',{
   x=rnd(128),
   update=function(_enemy)
    local _x=flr(_enemy.x)
@@ -1136,7 +1128,7 @@ end
 local bomberexhaustcolors=split'11,3'
 local function newbomber()
  local _spdy=rnd(0.25)+0.325
- add(enemies,mrs2t('x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,s=104,hp=9',{
+ add(enemies,mr(s2t'x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,s=104,hp=9',{
   spdy=_spdy,ogspdy=_spdy,
   ts=t(),
   update=function(_enemy)
@@ -1165,7 +1157,7 @@ end
 
 local fighterexhaustcolors=split'14,2,4'
 local function newfighter()
- add(enemies,mrs2t('x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,s=102,hp=5',{
+ add(enemies,mr(s2t'x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,s=102,hp=5',{
   ts=t(),
   update=function(_enemy)
    local _x,_y=flr(_enemy.x),flr(_enemy.y)-4
@@ -1189,12 +1181,12 @@ local function drawenemycargobullet(_bullet)
  rectfill(_bullet.x,_bullet.y,_bullet.x+1,_bullet.y+1,7)
 end
 local function enemyshootcargobullet(_enemy)
- add(enemybullets,mrs2t('hw=1,hh=1,life=1000,spdy=1,accy=0,spdfactor=1',{
+ add(enemybullets,mr(s2t'hw=1,hh=1,life=1000,spdy=1,accy=0,spdfactor=1',{
   x=_enemy.x,y=_enemy.y,
   spdx=_enemy.s == 109 and -1 or 1,
   draw=drawenemycargobullet,
   ondeath=explode,
-  p=mrs2t('xoff=0,yoff=0,r=0.1,spdx=0,spdy=0,spdr=0,life=3',{ colors=enemycargobulletpcolors }),
+  p=mr(s2t'xoff=0,yoff=0,r=0.1,spdx=0,spdy=0,spdr=0,life=3',{ colors=enemycargobulletpcolors }),
  }))
 end
 
@@ -1204,7 +1196,7 @@ local function newcargoship()
  local _allparts,_x={},flr(16+rnd(100))
  for _i=1,flr(2+rnd(4)) do
   local _s=_i == 1 and 105 or rnd(cargoshipsprites)
-  local _part=mrs2t('hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=14',{
+  local _part=mr(s2t'hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=14',{
    x=_x,y=-(12+_i*8),
    s=_s,
    ts=t(),
