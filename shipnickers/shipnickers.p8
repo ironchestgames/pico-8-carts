@@ -1953,7 +1953,7 @@ function pickerupdate()
       boss,issuperboss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2,firedir=1')
      end
      boss.ts=t()
-     gameinit()
+     return gameinit()
     end
    end
   else
@@ -2029,7 +2029,7 @@ end
 _update60=emptydraw
 _draw=function ()
  if btnp(4) then
-  pickerinit()
+  return pickerinit()
  end
 
  cls()
