@@ -5,8 +5,6 @@ __lua__
 -- by ironchest games
 
 --[[
- - fix mine bug
- - fix primary weapon spam exploits (slicer, mines, etc)
  - fix psets
  - unify game event code?
 
@@ -412,7 +410,7 @@ local function onminedeathbase(_bullet,_bullets)
      hw=8,hh=8,
      spdfactor=0,
      spdx=0,spdy=0,accy=0,
-     dmg=3,
+     dmg=6,
      life=2,
      draw=mineexplodedraw,
      ondeath=explode,
@@ -716,7 +714,7 @@ local primary={
  end,
  mines=function(_btn4,_ship,_justpressedwithcharge)
   if _justpressedwithcharge then
-   local _life=_ship.primaryc*4+30
+   local _life=_ship.primaryc*4
    shootmine(_ship,_life,0.375+rnd(0.1))
    shootmine(_ship,_life,0.125-rnd(0.1))
    _ship.primaryc=0
