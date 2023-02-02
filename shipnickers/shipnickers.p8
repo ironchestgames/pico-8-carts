@@ -5,6 +5,7 @@ __lua__
 -- by ironchest games
 
 --[[
+ - fix boost exploit
  - fix psets
  - unify game event code?
 
@@ -383,6 +384,18 @@ local function icefizzle(_obj)
 end
 
 -- weapons
+local function bulletclearbullets(_bullet,_otherbullets)
+ for _other in all(_otherbullets) do
+  if isaabbscolliding(_bullet,_other) then
+   _bullet.life,_other.life=0,0
+  end
+ end
+end
+
+local function clearenemybullets(_bullet)
+ bulletclearbullets(_bullet,enemybullets)
+end
+
 local function emptydraw()
 end
 
@@ -491,8 +504,7 @@ local function shootflak(_ship,_amount,_life)
  end
 end
 
-local blinkpcolors=split'7,11,11,3,5'
-local blinkaab=s2t'hw=16,hh=16'
+local blinkpcolors,blinkaab=split'7,11,11,3,5',s2t'hw=16,hh=16'
 local function blinkaway(_ship,_dx,_dy,_h)
  shipsfx(_ship,21)
  local _newx,_newy=_ship.x+_dx*_h,_ship.y+_dy*_h
@@ -553,6 +565,7 @@ local function shootbeam(_ship)
   dmg=0.25,
   life=1,
   draw=drawbeam,
+  update=clearenemybullets,
  })
 end
 
@@ -608,21 +621,11 @@ function shootslicer(_x,_y,_spdx,_spdy,_slicecount,_isstraight)
   life=999,
   slicecount=_slicecount,
   ondeath=slicerdeath,
+  update=clearenemybullets,
   draw=drawslicer,
  })
 end
 
-local function updatebubble(_bullet,_otherbullets)
- for _other in all(_otherbullets) do
-  if isaabbscolliding(_bullet,_other) then
-   _bullet.life,_other.life=0,0
-   break
-  end
- end
-end
-local function updatefriendlybubble(_bullet)
- updatebubble(_bullet,enemybullets)
-end
 local function drawbubble(_bullet)
  circ(_bullet.x,_bullet.y,2,12)
  pset(_bullet.x-1,_bullet.y-1,7)
@@ -647,7 +650,7 @@ local function shootbubble(_ship)
   accy=0,spdfactor=0.96,
   dmg=2,
   life=190,
-  update=updatefriendlybubble,
+  update=clearenemybullets,
   ondeath=fizzle,
   draw=drawbubble,
  })
@@ -1013,7 +1016,7 @@ local function shootbossslicer()
 end
 
 local function updatebossbubble(_bullet)
- updatebubble(_bullet,bullets)
+ bulletclearbullets(_bullet,bullets)
 end
 local function drawbossbubble(_bullet)
  circ(_bullet.x,_bullet.y,2,14)
@@ -1442,7 +1445,7 @@ function gameupdate()
 
   _b.spdx*=_b.spdfactor
   _b.spdy*=_b.spdfactor
-  
+
   _b.life-=1
 
   if _b.update then
@@ -1579,6 +1582,7 @@ function gameupdate()
       dmg=1,
       life=1,
       draw=drawbeam,
+      -- todo: add clear bullets?
      })
     end
 
