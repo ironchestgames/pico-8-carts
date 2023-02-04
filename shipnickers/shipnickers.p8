@@ -147,7 +147,6 @@ local hangar={
  s2t's=32,bulletcolor=9,primary="shield",secondary="mines",secondaryshots=3,psets="3;6;3_3;5;11",guns="1;0;6;0",exhaustcolors="7;10;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
  s2t's=33,bulletcolor=10,primary="shield",secondary="shield",secondaryshots=3,psets="3;5;3_3;3;11",guns="1;0;6;0",exhaustcolors="7;10;5",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
  s2t's=34,bulletcolor=3,primary="shield",secondary="ice",secondaryshots=3,psets="3;5;9_3;4;9",guns="1;2;6;2",exhaustcolors="10;10;3",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
-
  s2t's=35,bulletcolor=10,primary="shield",secondary="blink",secondaryshots=3,psets="3;6;4_3;4;13",guns="1;2;6;2",exhaustcolors="10;11;15",exhausts="-1;3;0;3",flyduration=1,firedir=-1',
  s2t's=36,bulletcolor=9,primary="shield",secondary="flak",secondaryshots=3,psets="3;6;3_3;4;7",guns="0;3;7;3",exhaustcolors="10;9;5",exhausts="-2;4;1;4",flyduration=1,firedir=-1',
  s2t's=37,bulletcolor=6,primary="shield",secondary="beam",secondaryshots=3,psets="3;6;2_3;4;7",guns="1;1;6;1",exhaustcolors="10;14;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
@@ -181,7 +180,7 @@ local hangar={
  s2t's=62,bulletcolor=2,primary="flak",secondary="mines",secondaryshots=3,psets="3;6;9_3;4;10",guns="1;1;6;1",exhaustcolors="10;9;14",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
  s2t's=63,bulletcolor=15,primary="flak",secondary="shield",secondaryshots=3,psets="3;2;10_3;4;9",guns="1;1;6;1",exhaustcolors="7;11;3",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
  s2t's=64,bulletcolor=6,primary="flak",secondary="ice",secondaryshots=3,psets="3;5;2_3;3;14",guns="0;4;7;4",exhaustcolors="7;10;11",exhausts="-3;3;2;3",flyduration=1,firedir=-1',
- s2t's=65,bulletcolor=12,primary="flak",secondary="blink",secondaryshots=3,psets="3;6;13_3;3;6",guns="1;3;6;3",exhaustcolors="7;6;15",exhausts="-3;3;2;3",flyduration=1,firedir=-1',
+ s2t's=65,bulletcolor=9,primary="flak",secondary="blink",secondaryshots=3,psets="3;6;13_3;3;6",guns="1;3;6;3",exhaustcolors="7;6;15",exhausts="-1;3;0;3",flyduration=1,firedir=-1',
  s2t's=66,bulletcolor=9,primary="flak",secondary="flak",secondaryshots=3,psets="3;6;11_3;4;10",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
  s2t's=67,bulletcolor=9,primary="flak",secondary="beam",secondaryshots=3,psets="3;5;8_3;3;14",guns="0;4;7;4",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
  s2t's=68,bulletcolor=14,primary="flak",secondary="bubbles",secondaryshots=3,psets="3;5;6_3;3;7",guns="1;3;6;3",exhaustcolors="10;9;15",exhausts="-1;4;0;4",flyduration=1,firedir=-1',
@@ -536,12 +535,15 @@ local function blinkaway(_ship,_dx,_dy,_h)
  end
 end
 
+local beamcolors=split'8,14'
+local enemybeamcolors=split'11,10'
 local beampcolors=split'7,7,14'
+local enemybeampcolors=split'7,10,11'
 local dirs={1,-1}
 local function drawbeam(_bullet)
  local _x,_topy,_bottomy=_bullet.x,_bullet.y-_bullet.hh,_bullet.y+_bullet.hh
- rectfill(_x-3,_topy+2,_x+2,_bottomy-2,8)
- rectfill(_x-2,_topy+1,_x+1,_bottomy-1,14)
+ rectfill(_x-3,_topy+2,_x+2,_bottomy-2,_bullet.colors[1])
+ rectfill(_x-2,_topy+1,_x+1,_bottomy-1,_bullet.colors[2])
  rectfill(_x-1,_topy,_x,_bottomy,7)
  addps(
   _x,
@@ -550,7 +552,7 @@ local function drawbeam(_bullet)
   rnd(dirs)*(rnd(0.125)+0.125),
   0,
   0,
-  beampcolors,
+  _bullet.pcolors,
   20)
 end
 local function shootbeam(_ship)
@@ -564,6 +566,8 @@ local function shootbeam(_ship)
   spdfactor=0,
   dmg=0.25,
   life=1,
+  colors=beamcolors,
+  pcolors=beampcolors,
   draw=drawbeam,
   update=clearenemybullets,
  })
@@ -1582,6 +1586,8 @@ function gameupdate()
       spdfactor=0,
       dmg=1,
       life=1,
+      colors=enemybeamcolors,
+      pcolors=enemybeampcolors,
       draw=drawbeam,
       -- todo: add clear bullets?
      })
@@ -2076,14 +2082,14 @@ f046640f6c0330c6034e4430c6c44c6c600c5006d6c7cc6dfdb7bbdf0a9009a0076bb670dd6766dd
 60dccd0600066000000bb000080880809f6ff6f96f6ff6f641144114f665566f5404404554fbbf45bbd33dbb22533522096ff690fd0df0df005225003d5995d3
 6cdccdc6007667000b3bb3b0824884289f6ff6f9f66ff66f410550140f6ff6f002400420f5f55f5f03d33d3092522529696ff696550dd05504255240dc5cc5cd
 dcdccdcd000550000b3553b08505505890d55d09055005504000000400ffff0000200200054554503303303399022099695ff5960005500054255245dc0cc0cd
-0005500000088000000ff0000004d00000077000000dd00003000030000ee00004000040000ff000004dd40000600600000dd00000088000000330000f0ff0f0
-000550000006d0000d0ab0d0000d40000076c700000dd0000b3003b000eb3e0042000024009ff9000d4994d00060060000dabd000007e00000333300ff0760ff
-000e2000000dd0000d4bb4d0000e80000bc6ccb0005bc50000be2b000023320042000024009ab9000d9a99d006f00f600fbabbf0200ee0020537635067566576
-00f22f00008dd800454bb45400f88f00b3c77c3b005cc500000220000e2332e0420980240fbabbf00d9a99d06f0000f60fbabbf02f0ee0f205676650f606606f
-00f22f000e8dd8e0545ff54500f88f00b3b77b3b0f5cc5f00b3223b0e224422e42088024f9b99b9f0d9999d06f0000f60fbddbf02f2882f2d56dd65d675ff576
-d0f55f0d2e8ee8e2000ff00060fd4f0673b77b37fd5dd5dfb33bb33b04d22d4022188122ff9999ff5d5995d56f07b0f64fddddf40f2882f0d53dd35df65ff56f
-d5f55f5d2e8ee8e2045ff54064f4dfd673b77b37fd5dd5dfb30bb03b5d0440d52412214200f44f005d5dd5d506cbbc6045d44d540f2882f05d3dd3d5670ff076
-f5f55f5f00055000054dd450fdf4df4f70044007f0f44f0fb004400b05000050440220440005500050500505000ff000400000040025520005500550f000000f
+00055000000dd000000ff0000004d00000077000000dd00003000030000ee00004000040000ff000004dd40000600600000dd00000088000000330000f0ff0f0
+0005500000de4d000d0ab0d0000d40000076c700000dd0000b3003b000eb3e0042000024009ff9000d4994d00060060000dabd000007e00000333300ff0760ff
+000e20000f4e44f00d4bb4d0000e80000bc6ccb0005bc50000be2b000023320042000024009ab9000d9a99d006f00f600fbabbf0200ee0020537635067566576
+00f22f00f54fd45f454bb45400f88f00b3c77c3b005cc500000220000e2332e0420980240fbabbf00d9a99d06f0000f60fbabbf02f0ee0f205676650f606606f
+00f22f0000ddfd00545ff54500f88f00b3b77b3b0f5cc5f00b3223b0e224422e42088024f9b99b9f0d9999d06f0000f60fbddbf02f2882f2d56dd65d675ff576
+d0f55f0d0f5fd5f0000ff00060fd4f0673b77b37fd5dd5dfb33bb33b04d22d4022188122ff9999ff5d5995d56f07b0f64fddddf40f2882f0d53dd35df65ff56f
+d5f55f5dfd5df5df045ff54064f4dfd673b77b37fd5dd5dfb30bb03b5d0440d52412214200f44f005d5dd5d506cbbc6045d44d540f2882f05d3dd3d5670ff076
+f5f55f5ff050050f054dd450fdf4df4f70044007f0f44f0fb004400b05000050440220440005500050500505000ff000400000040025520005500550f000000f
 d00dd00d07000070005ff5000052250000028000070000700f0000f000077000000bb000000ff000000ff0000000d0d00d0000d0000660000000060000700700
 0d2dd2d0790000970f5b35f005522550000820007e0000e70f0000f00039830000c76c0000cffc0000fbcf0000007670d500005d000c50000000d6d000800800
 002ab20079000097f53b335f555bc555000760007e0000e77607b067033883300c6766c00fcb9cf00f5cc5f0e2067676d50e405d002552007906d6d60086d800
