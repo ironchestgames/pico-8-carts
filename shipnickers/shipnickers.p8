@@ -1225,6 +1225,14 @@ local function newcargoship()
  end
 end
 
+local function explodeenemy(_enemy)
+ explode(_enemy)
+ if _enemy.s == 106 or _enemy.s == 107 then
+  newcargodrop(_enemy.x,_enemy.y)
+ end
+ del(enemies,_enemy)
+end
+
 
 local lastframe,curt
 function gameupdate()
@@ -1625,11 +1633,7 @@ function gameupdate()
 
  for _enemy in all(enemies) do
   if _enemy.hp <= 0 then
-   explode(_enemy)
-   if _enemy.s == 106 or _enemy.s == 107 then
-    newcargodrop(_enemy.x,_enemy.y)
-   end
-   del(enemies,_enemy)
+   explodeenemy(_enemy)
   else
    if _enemy.icec then
     updateicec(_enemy)
@@ -1651,8 +1655,7 @@ function gameupdate()
    end
    for _ship in all(ships) do
     if isaabbscolliding(_enemy,_ship) then
-     explode(_enemy)
-     del(enemies,_enemy)
+     explodeenemy(_enemy)
      if not _ship.isshielding then
       _ship.hp-=1
       _ship.primaryc=0
