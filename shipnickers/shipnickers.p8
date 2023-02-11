@@ -5,7 +5,6 @@ __lua__
 -- by ironchest games
 
 --[[
- - ice should disable weapons
  - final boss big
  - laser colors
  - fix psets
@@ -743,7 +742,7 @@ local primary={
  end,
  ice=function(_btn4,_ship)
   if (not _btn4 and _ship.primaryc > 1 and flr(_ship.primaryc*10) % 5 == 0) then
-   shootice(_ship,_ship.primaryc*2,bullets)
+   shootice(_ship,_ship.primaryc*2.25,bullets)
   end
  end,
  blink=function(_btn4,_ship)
@@ -1104,7 +1103,7 @@ local function newminelayer()
     end
    else
     _enemy.spdx,_enemy.spdy=0,0
-    if t()-_enemy.ts > 1.5 then
+    if t()-_enemy.ts > 1.5 and not _enemy.icec then
      enemyshootmine(_enemy)
      _enemy.ts,_enemy.duration,_enemy.target=t(),1+rnd(2),{x=4+rnd(120),y=rnd(92)}
      local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
@@ -1154,7 +1153,7 @@ local function newbomber()
    end
    if t()-_enemy.ts > 0.875 then
     _enemy.accx=rnd{0.0125,-0.0125}
-    if rnd() > 0.375 then
+    if rnd() > 0.375 and not _enemy.icec then
      enemyshootmissile(_enemy)
     end
     _enemy.ts=t()
@@ -1178,7 +1177,7 @@ local function newfighter()
     _enemy.target=true
     _enemy.spdy=rnd(0.5)+0.5
    end
-   if t()-_enemy.ts > 0.875 then
+   if t()-_enemy.ts > 0.875 and not _enemy.icec then
      enemyshootbullet(_enemy)
      _enemy.ts=t()
    end
@@ -1221,7 +1220,7 @@ local function newcargoship()
      del(enemies,_enemy)
     end
     _enemy.spdy=0.25
-    if _enemy.s >= 108 and t()-_enemy.ts > 2+rnd(2) then
+    if _enemy.s >= 108 and t()-_enemy.ts > 2+rnd(2) and not _enemy.icec then
      enemyshootcargobullet(_enemy)
      _enemy.ts=t()
     end
@@ -1353,6 +1352,9 @@ function gameupdate()
    end
   else
    local _btn4=btn(4,_plidx)
+   if _ship.icec then
+    _btn4=nil
+   end
    if _btn4 then
     _ship.primaryc+=0.25
     _ship.firingc-=1
