@@ -5,8 +5,8 @@ __lua__
 -- by ironchest games
 
 --[[
- - final boss big
  - ice should disable weapons
+ - final boss big
  - laser colors
  - fix psets
  - unify game event code?
@@ -245,6 +245,17 @@ local function addps(_x,_y,_r,_spdx,_spdy,_spdr,_colors,_life,_ondeath)
  })
 end
 
+local function addbullet(_bullet)
+ add(bullets,mr({
+  spdx=0,spdy=0,accy=0,spdfactor=1,
+  ondeath=function (_b) del(bullets,_b) end,
+ },_bullet))
+end
+
+local function addenemybullet(_bullet)
+ add(enemybullets,mr({spdx=0,spdy=0,accy=0,spdfactor=1,life=1},_bullet))
+end
+
 local function getship(_hangaridx)
  local _ship=mr(clone(hangar[_hangaridx]),s2t'y=110,hw=3,hh=3,spd=1,hp=3,repairc=0,firingc=0,primaryc=12,secondaryc=0')
  local _guns=split(_ship.guns,';')
@@ -447,7 +458,7 @@ local function drawmine(_bullet)
 end
 local function shootmine(_ship,_life,_angle)
  shipsfx(_ship,13)
- add(bullets,{
+ addbullet{
   x=_ship.x,y=_ship.y,
   hw=2,hh=2,
   frame=0,
@@ -458,7 +469,7 @@ local function shootmine(_ship,_life,_angle)
   charge=_life,
   draw=drawmine,
   ondeath=onminedeath,
- })
+ }
 end
 
 local missilepcolors=split'7,10,9'
@@ -467,7 +478,7 @@ local function drawmissile(_bullet)
 end
 local function shootmissile(_ship,_life)
  shipsfx(_ship,12)
- add(bullets,{
+ addbullet{
   x=_ship.x,y=_ship.y,
   hw=2,hh=3,
   spdx=rnd(0.5)-0.25,spdy=-rnd(0.175),accy=-0.05,spdfactor=1,
@@ -476,7 +487,7 @@ local function shootmissile(_ship,_life)
   ondeath=explode,
   draw=drawmissile,
   p=mr(s2t'xoff=1,yoff=5,r=0.1,spdx=0,spdy=-0.1,spdr=0,life=3',{colors=missilepcolors}),
- })
+ }
 end
 
 local flakcolors=split'7,10,5'
@@ -560,12 +571,9 @@ local function drawbeam(_bullet)
 end
 local function shootbeam(_ship)
  local _hh=_ship.y/2
- add(bullets,{
+ addbullet{
   x=_ship.x,y=_hh-6,
   hw=3,hh=_hh,
-  spdx=0,
-  spdy=0,
-  accy=0,
   spdfactor=0,
   dmg=0.25,
   life=1,
@@ -573,22 +581,18 @@ local function shootbeam(_ship)
   pcolors=beampcolors,
   draw=drawbeam,
   update=clearenemybullets,
- })
+ }
 end
 
 local function shootboost(_ship)
- add(bullets,{
+ addbullet{
   x=_ship.x,y=_ship.y+8,
   hw=3,hh=5,
-  spdx=0,
-  spdy=0,
-  accy=0,
   spdfactor=0,
-  dmg=4,
-  bossdmg=0.5,
+  dmg=4,bossdmg=0.5,
   life=1,
   draw=emptydraw,
- })
+ }
 end
 
 local function drawslicer(_bullet)
@@ -616,10 +620,10 @@ local function slicerdeath(_bullet)
  end
 end
 function shootslicer(_x,_y,_spdx,_spdy,_slicecount,_isstraight)
- add(bullets,{
+ addbullet{
   x=_x,y=_y,
   hw=3,hh=3,
-  spdx=_spdx,spdy=_spdy,accy=0,spdfactor=1,
+  spdx=_spdx,spdy=_spdy,
   isstraight=_isstraight,
   sx=_isstraight and 81 or 89,
   sy=56,
@@ -631,7 +635,7 @@ function shootslicer(_x,_y,_spdx,_spdy,_slicecount,_isstraight)
   ondeath=slicerdeath,
   update=clearenemybullets,
   draw=drawslicer,
- })
+ }
 end
 
 local function drawbubble(_bullet)
@@ -651,17 +655,17 @@ local function shootbubble(_ship)
    bubblepcolors,
    10+rnd(20))
  end
- add(bullets,{
+ addbullet{
   x=_ship.x,y=_ship.y,
   hw=2,hh=2.5,
   spdx=rnd()-0.5,spdy=rnd()-0.5,
-  accy=0,spdfactor=0.96,
+  spdfactor=0.96,
   dmg=2,
   life=190,
   update=clearenemybullets,
   ondeath=fizzle,
   draw=drawbubble,
- })
+ }
  shipsfx(_ship,29)
 end
 
@@ -909,7 +913,7 @@ end
 local enemymissilep=mr(s2t'xoff=1,yoff=0,r=0.1,spdx=0,spdy=0.1,spdr=0,life=4',{colors=split'7,10,11'})
 local function enemyshootmissile(_enemy)
  sfx(12,3)
- add(enemybullets,{
+ addenemybullet{
   x=_enemy.x,y=_enemy.y,
   hw=2,hh=3,
   spdx=rnd(0.5)-0.25,spdy=0.1,accy=0.05,spdfactor=1,
@@ -917,7 +921,7 @@ local function enemyshootmissile(_enemy)
   draw=drawenemymissile,
   ondeath=explode,
   p=enemymissilep,
- })
+ }
 end
 
 local function onenemyminedeath(_bullet)
@@ -933,7 +937,7 @@ local function drawenemymine(_bullet)
 end
 local function enemyshootmine(_enemy)
  sfx(13,3)
- add(enemybullets,{
+ addenemybullet{
   x=_enemy.x,y=_enemy.y,
   hw=2,hh=2,
   frame=0,
@@ -942,7 +946,7 @@ local function enemyshootmine(_enemy)
   life=110,
   draw=drawenemymine,
   ondeath=onenemyminedeath,
- })
+ }
 end
 
 local function drawenemybullet(_bullet)
@@ -951,24 +955,24 @@ end
 local enemybulletp=mr(s2t'xoff=0,yoff=0,r=0.1,spdx=0,spdy=0,spdr=0,life=3',{colors=split'2,2,4'})
 local function enemyshootbullet(_enemy)
  sfx(8,3)
- add(enemybullets,{
+ addenemybullet{
   x=_enemy.x+3,y=_enemy.y,
   hw=1,hh=2,
-  spdx=0,spdy=2,accy=0,spdfactor=1,
+  spdy=2,
   life=1000,
   draw=drawenemybullet,
   ondeath=explode,
   p=enemybulletp,
- })
- add(enemybullets,{
+ }
+ addenemybullet{
   x=_enemy.x-4,y=_enemy.y,
   hw=1,hh=2,
-  spdx=0,spdy=2,accy=0,spdfactor=1,
+  spdy=2,
   life=1000,
   draw=drawenemybullet,
   ondeath=explode,
   p=enemybulletp,
- })
+ }
 end
 
 local bossflakcolors=split'14,8,5'
@@ -979,7 +983,7 @@ local function shootbossflak()
  sfx(17,3)
  for _i=1,8 do
   local _spdx,_spdy=1+rnd(2),rnd(1)-0.5
-  add(enemybullets,{
+  addenemybullet{
    x=boss.x,y=boss.y,
    hw=1,hh=1,
    spdx=_spdx,
@@ -990,8 +994,8 @@ local function shootbossflak()
    life=rnd(90)+60,
    draw=drawbossflakbullet,
    ondeath=fizzle,
-  })
-  add(enemybullets,{
+  }
+  addenemybullet{
    x=boss.x,y=boss.y,
    hw=1,hh=1,
    spdx=-_spdx,
@@ -1002,7 +1006,7 @@ local function shootbossflak()
    life=rnd(90)+60,
    draw=drawbossflakbullet,
    ondeath=fizzle,
-  })
+  }
  end
 end
 
@@ -1010,16 +1014,15 @@ local function drawbossslicer(_bullet)
  sspr(73,56,8,5,_bullet.x-3,_bullet.y-2)
 end
 local function shootbossslicer()
- add(enemybullets,{
+ addenemybullet{
   x=boss.x,y=boss.y,
   hw=3,hh=3,
-  spdx=0,spdy=2,
-  accy=0,spdfactor=1,
+  spdy=2,
   dmg=1,
   life=999,
   ondeath=explode,
   draw=drawbossslicer,
- })
+ }
  sfx(30,2)
 end
 
@@ -1031,17 +1034,17 @@ local function drawbossbubble(_bullet)
  pset(_bullet.x-1,_bullet.y-1,7)
 end
 local function shootbossbubble()
- add(enemybullets,{
+ addenemybullet{
   x=boss.x,y=boss.y,
   hw=2,hh=2.5,
   spdx=rnd()-0.5,spdy=rnd()-0.5,
-  accy=0,spdfactor=0.96,
+  spdfactor=0.96,
   dmg=1,
   life=210,
   update=updatebossbubble,
   ondeath=fizzle,
   draw=drawbossbubble,
- })
+ }
  sfx(29,2)
 end
 
@@ -1188,13 +1191,14 @@ local function drawenemycargobullet(_bullet)
  rectfill(_bullet.x,_bullet.y,_bullet.x+1,_bullet.y+1,7)
 end
 local function enemyshootcargobullet(_enemy)
- add(enemybullets,mr(s2t'hw=1,hh=1,life=1000,spdy=1,accy=0,spdfactor=1',{
+ addenemybullet{
+  hw=1,hh=1,life=1000,spdy=1,
   x=_enemy.x,y=_enemy.y,
   spdx=_enemy.s == 109 and -1 or 1,
   draw=drawenemycargobullet,
   ondeath=explode,
   p=mr(s2t'xoff=0,yoff=0,r=0.1,spdx=0,spdy=0,spdr=0,life=3',{ colors=enemycargobulletpcolors }),
- }))
+ }
 end
 
 local cargoshipexhaustcolors,cargoshipsprites=split'7,6,13',split'106,107,108,109'
@@ -1290,11 +1294,7 @@ function gameupdate()
   end
 
   if _b.life <= 0 then
-   if _b.ondeath then
-    _b.ondeath(_b)
-   else
-    del(bullets,_b)
-   end
+   _b.ondeath(_b)
   elseif _b.x<0 or _b.x>128 or _b.y<0 or _b.y>128 then
    del(bullets,_b)
   end
@@ -1360,10 +1360,10 @@ function gameupdate()
      _ship.firingc,_ship.isfiring=10,true
      for _gun in all(_ship.guns) do
       shipsfx(_ship,8+_ship.plidx)
-      add(bullets,{
+      addbullet{
        x=_urx+_gun.x,y=_ury+_gun.y,
        hw=1,hh=2,
-       spdx=0,spdy=-3,accy=0,spdfactor=1,
+       spdy=-3,
        dmg=1,
        life=1000,
        draw=drawbullet,
@@ -1373,7 +1373,7 @@ function gameupdate()
         colors={_ship.bulletcolor},
         life=2,
        },
-      })
+      }
      end
     end
    else
@@ -1541,6 +1541,7 @@ function gameupdate()
   else
    if boss.icec then
     updateicec(boss)
+    boss.waitdurationc=0
    end
    for _ts in all(bosstses) do
     local _t=boss[_ts]
@@ -1552,12 +1553,14 @@ function gameupdate()
    local _icefactor=boss.icec and 0.5 or 1
    if _bossdt > boss.flydurationc and not (boss.beamts or boss.icets or boss.boostts or boss.shieldts) then
     if _bossdt > boss.flydurationc+boss.waitdurationc then
-     boss.boost,boss.boostts,boss.shieldts,boss.beamts=0
      sfx(-2,2)
-     bossweapons[rnd{boss.primary,boss.primary,boss.secondary}](boss)
+     boss.boost,boss.boostts,boss.shieldts,boss.beamts=0
      boss.waitdurationc,boss.flydurationc,boss.ts=0.875+rnd(1.75),boss.flyduration+rnd(5),curt
-     if issuperboss then
-      boss.primary=rnd(superbossweaponnames)
+     if not boss.icec then
+      bossweapons[rnd{boss.primary,boss.primary,boss.secondary}](boss)
+      if issuperboss then
+       boss.primary=rnd(superbossweaponnames)
+      end
      end
     end
    else
@@ -1570,17 +1573,13 @@ function gameupdate()
     end
 
     if boss.boostts then
-     add(enemybullets,{
+     addenemybullet{
       x=boss.x,y=boss.y-8,
       hw=3,hh=5,
-      spdx=0,
-      spdy=0,
-      accy=0,
       spdfactor=0,
       dmg=1,
-      life=1,
       draw=emptydraw,
-     })
+     }
     end
 
     if boss.icets then
@@ -1588,20 +1587,16 @@ function gameupdate()
     end
 
     if boss.beamts then
-     add(enemybullets,{
+     addenemybullet{
       x=boss.x,y=boss.y+64+6,
       hw=3,hh=64,
-      spdx=0,
-      spdy=0,
-      accy=0,
       spdfactor=0,
       dmg=1,
-      life=1,
       colors=enemybeamcolors,
       pcolors=enemybeampcolors,
       draw=drawbeam,
       -- todo: add clear bullets?
-     })
+     }
     end
 
     local _absx,_spd=abs(boss.targetx-boss.x),0.5+boss.boost
@@ -1623,8 +1618,7 @@ function gameupdate()
  local issuperbossdead=issuperboss and (boss == nil or boss.hp <= 0)
 
  -- update enemies
- local _spawninterval=max(0.75,10*lockedpercentage)
- local _spawnmin=3
+ local _spawninterval,_spawnmin=max(0.75,10*lockedpercentage),3
  if escapeelapsed then
   _spawninterval=max(0.75,5*lockedpercentage)
   _spawnmin=6
