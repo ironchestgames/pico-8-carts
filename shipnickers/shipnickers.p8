@@ -5,7 +5,6 @@ __lua__
 -- by ironchest games
 
 --[[
- - difficulty tracker
  - final boss big
  - ice should disable weapons
  - laser colors
@@ -31,6 +30,7 @@ sfx channels:
 -- cartdata'ironchestgames_shipnickers_v1-qa' -- ottos
 -- cartdata'ironchestgames_shipnickers_v1-dev9' -- all unlocked
 cartdata'ironchestgames_shipnickers_v1-dev10'
+-- cartdata'ironchestgames_shipnickers_v1-dev11'
 
 printh('debug started','debug',true)
 function debug(s)
@@ -1984,11 +1984,16 @@ end
 local newship
 function pickerdraw()
  cls()
- if dget(63) > 0 then
-  sspr(6,120,3,3,70,1)
+ local _locked=getlocked()
+ if #_locked == 0 then
+  sspr(unpack(split'6,120,3,3,70,1'))
   print('\fdsecret hangar     \f8boss kills:'..dget(63),2,1)
  else
-  print('\fdsecret hangar',38,1)
+  print('\fdsecret hangar   \f3convoy security',2,1)
+  clip(66,1,(98-#_locked)/100*59,5)
+  rectfill(66,1,124,5,2)
+  print('\fdsecret hangar   \f8convoy security',2,1)
+  clip()
  end
  for _i=0,1 do
   local _pick=picks[_i]
@@ -2046,7 +2051,7 @@ end
 
 -- splash
 pal(split'1,2,3,4,5,6,7,8,9,10,138,0,13,14,129',1)
-sfx(3)
+sfx(3,3)
 _update60=emptydraw
 local splashshipsd=0
 _draw=function ()
