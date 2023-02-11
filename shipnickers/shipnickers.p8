@@ -908,7 +908,7 @@ end
 local function drawenemymissile(_bullet)
  sspr(33,123,3,5,_bullet.x,_bullet.y)
 end
-local enemymissilep=mr(s2t'xoff=1,yoff=0,r=0.1,spdx=0,spdy=0.1,spdr=0,life=4',{colors=split'7,10,11'})
+local enemymissilep=mr(s2t'xoff=1,yoff=0,r=0.1,spdx=0,spdy=0.1,spdr=0,life=4',{colors=split'7,14,8'})
 local function enemyshootmissile(_enemy)
  sfx(12,3)
  addenemybullet{
@@ -1962,8 +1962,7 @@ function pickerupdate()
      if #_locked == 0 then
       boss,issuperboss=mr(getship(100),s2t'x=64,y=40,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1'),true
      else
-      boss,issuperboss=mr(getship(77),s2t'x=64,y=0,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2,firedir=1')
-      -- boss,issuperboss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2,firedir=1')
+      boss,issuperboss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2,firedir=1')
      end
      boss.ts=t()
      return gameinit()
