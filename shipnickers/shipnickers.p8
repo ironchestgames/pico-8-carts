@@ -5,6 +5,7 @@ __lua__
 -- by ironchest games
 
 --[[
+ - fix drawing of bullets (sometimes above sometimes below)
  - fix psets
  - unify game event code?
 
@@ -250,7 +251,10 @@ local function addbullet(_bullet)
 end
 
 local function addenemybullet(_bullet)
- add(enemybullets,mr({spdx=0,spdy=0,accy=0,spdfactor=1,life=1},_bullet))
+ add(enemybullets,mr({
+  spdx=0,spdy=0,accy=0,spdfactor=1,life=1,isenemy=true,
+  ondeath=function (_b) del(enemybullets,_b) end,
+ },_bullet))
 end
 
 local function getship(_hangaridx)
@@ -353,11 +357,11 @@ end
 local explosioncolors=split'7,7,10,9,8'
 local function explode(_obj)
  del(bullets,_obj)
+ del(enemybullets,_obj)
  sfx(10,3)
  for _i=1,7 do
   addps(
-   _obj.x,
-   _obj.y,
+   _obj.x,_obj.y,
    rnd()*5,
    rnd()-0.5,
    rnd()-1,
@@ -374,8 +378,7 @@ local function fizzlebase(_obj,_colors)
  sfx(18,3)
  for _i=1,5 do
   addps(
-   _obj.x+rnd(8)-4,
-   _obj.y+rnd(8)-4,
+   _obj.x+rnd(8)-4,_obj.y+rnd(8)-4,
    0.9,
    0,
    -rnd(0.375),
@@ -391,6 +394,85 @@ end
 local icefizzlecolors=split'7,7,6,12,3,5'
 local function icefizzle(_obj)
  fizzlebase(_obj,icefizzlecolors)
+end
+
+
+local function updatebullets(_bullets)
+ for _b in all(_bullets) do
+  _b.x+=_b.spdx
+  _b.y+=_b.spdy
+
+  _b.spdy+=_b.accy
+
+  _b.life-=1
+
+  _b.spdx*=_b.spdfactor
+  _b.spdy*=_b.spdfactor
+
+  if _b.update then
+   _b.update(_b)
+  end
+
+  if _b.p then
+   local _bp=_b.p
+   add(bottomps,mr(clone(_bp),{
+    x=_b.x+_bp.xoff,
+    y=_b.y+_bp.yoff,
+    life=rnd(_bp.life)+_bp.life,
+    lifec=rnd(_bp.life)+_bp.life,
+   }))
+  end
+
+  if _b.isenemy then
+   for _ship in all(ships) do
+    if isaabbscolliding(_b,_ship) then
+     if not _ship.isshielding then
+      if _b.isice then
+       _b.enemyhit=_ship
+      else
+       _ship.hp-=1
+       _ship.primaryc=0
+       if _ship.hp > 0 then
+        sfx(21+_ship.hp,_ship.plidx)
+       end
+      end
+     end
+     _b.life=0
+     newhit(_ship.x,_ship.y)
+    end
+   end
+
+  else
+
+   if boss and isaabbscolliding(_b,boss) then
+    if not boss.shieldts then
+     local _dmg=_b.bossdmg or _b.dmg
+     if issuperboss then
+      _dmg*=0.5
+     end
+     boss.hp-=_dmg
+     _b.enemyhit=boss
+    end
+    _b.life=0
+    newhit(boss.x,boss.y)
+   end
+
+   for _enemy in all(enemies) do
+    if isaabbscolliding(_b,_enemy) then
+     _enemy.hp-=_b.dmg
+     _b.enemyhit=_enemy
+     _b.life=0
+     newhit(_enemy.x,_enemy.y)
+    end
+   end
+  end
+
+  if _b.life <= 0 then
+   _b.ondeath(_b)
+  elseif _b.x<0 or _b.x>128 or _b.y<0 or _b.y>128 then
+   del(_bullets,_b)
+  end
+ end
 end
 
 -- weapons
@@ -436,6 +518,7 @@ local function onminedeathbase(_bullet,_bullets)
      spdx=0,spdy=0,accy=0,
      dmg=6,
      life=2,
+     isenemy=_bullets == enemybullets,
      draw=mineexplodedraw,
      ondeath=explode,
     })
@@ -703,6 +786,7 @@ local function shootice(_ship,_life,_bullets)
   dmg=0,
   isice=true,
   life=_life,
+  isenemy=_bullets == enemybullets,
   ondeath=iceondeath,
   draw=drawice,
  })
@@ -1247,60 +1331,9 @@ function gameupdate()
   hasescaped=escapeelapsed > escapeduration
  end
 
- -- update bullets (friendly)
- for _b in all(bullets) do
-  _b.x+=_b.spdx
-  _b.y+=_b.spdy
-
-  _b.spdy+=_b.accy
-  
-  _b.life-=1
-
-  _b.spdx*=_b.spdfactor
-  _b.spdy*=_b.spdfactor
-
-  if _b.update then
-   _b.update(_b)
-  end
-
-  if _b.p then
-   local _bp=_b.p
-   add(bottomps,mr(clone(_bp),{
-    x=_b.x+_bp.xoff,
-    y=_b.y+_bp.yoff,
-    life=rnd(_bp.life)+_bp.life,
-    lifec=rnd(_bp.life)+_bp.life,
-   }))
-  end
-
-  if boss and isaabbscolliding(_b,boss) then
-   if not boss.shieldts then
-    local _dmg=_b.bossdmg or _b.dmg
-    if issuperboss then
-     _dmg*=0.5
-    end
-    boss.hp-=_dmg
-    _b.enemyhit=boss
-   end
-   _b.life=0
-   newhit(boss.x,boss.y)
-  end
-
-  for _enemy in all(enemies) do
-   if isaabbscolliding(_b,_enemy) then
-    _enemy.hp-=_b.dmg
-    _b.enemyhit=_enemy
-    _b.life=0
-    newhit(_enemy.x,_enemy.y)
-   end
-  end
-
-  if _b.life <= 0 then
-   _b.ondeath(_b)
-  elseif _b.x<0 or _b.x>128 or _b.y<0 or _b.y>128 then
-   del(bullets,_b)
-  end
- end
+ -- update bullets
+ updatebullets(bullets)
+ updatebullets(enemybullets)
 
  -- update ships
  for _ship in all(ships) do
@@ -1453,60 +1486,6 @@ function gameupdate()
    explode(_ship)
    sfx(-2,_ship.plidx)
    del(ships,_ship)
-  end
- end
-
- -- update enemy bullets
- for _b in all(enemybullets) do
-  _b.x+=_b.spdx
-  _b.y+=_b.spdy
-
-  _b.spdy+=_b.accy
-
-  _b.spdx*=_b.spdfactor
-  _b.spdy*=_b.spdfactor
-
-  _b.life-=1
-
-  if _b.update then
-   _b.update(_b)
-  end
-
-  if _b.p then
-   local _bp=_b.p
-   add(bottomps,mr(clone(_bp),{
-    x=_b.x+_bp.xoff,
-    y=_b.y+_bp.yoff,
-    life=rnd(_bp.life)+_bp.life,
-    lifec=rnd(_bp.life)+_bp.life,
-   }))
-  end
-
-  for _ship in all(ships) do
-   if isaabbscolliding(_b,_ship) then
-    if not _ship.isshielding then
-     if _b.isice then
-      _b.enemyhit=_ship
-     else
-      _ship.hp-=1
-      _ship.primaryc=0
-      if _ship.hp > 0 then
-       sfx(21+_ship.hp,_ship.plidx)
-      end
-     end
-    end
-    _b.life=0
-    newhit(_ship.x,_ship.y)
-   end
-  end
-
-  if _b.life <= 0 then
-   if _b.ondeath then
-    _b.ondeath(_b)
-   end
-   del(enemybullets,_b)
-  elseif _b.x<0 or _b.x>128 or _b.y<0 or _b.y>128 then
-   del(enemybullets,_b)
   end
  end
 
