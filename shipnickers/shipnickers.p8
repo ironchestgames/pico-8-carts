@@ -2030,11 +2030,12 @@ end
 
 -- splash
 pal(split'1,2,3,4,5,6,7,8,9,10,138,0,13,14,129',1)
-sfx(3)
+music(1)
 _update60=emptydraw
 local splashshipsd=0
 _draw=function ()
  if btnp(4) then
+  music(-1)
   return pickerinit()
  end
 
