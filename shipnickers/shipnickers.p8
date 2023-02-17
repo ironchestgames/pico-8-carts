@@ -8,6 +8,7 @@ __lua__
  - fix drawing of bullets (sometimes above sometimes below)
  - fix beam + boost bug (beam stops after btn up for boost)
  - no sound if enemy shooting off screen
+ - should escape have enemies come the other way??
  - fix psets
  - unify game event code?
 
@@ -471,7 +472,7 @@ local function updatebullets(_bullets)
 
   if _b.life <= 0 then
    _b.ondeath(_b)
-  elseif _b.x<0 or _b.x>128 or _b.y<0 or _b.y>128 then
+  elseif not ispointinsideaabb(_b.x,_b.y,64,64,64,64) then
    del(_bullets,_b)
   end
  end
@@ -490,7 +491,7 @@ local function clearenemybullets(_bullet)
  bulletclearbullets(_bullet,enemybullets)
 end
 
-local function emptydraw()
+local function emptyfn()
 end
 
 local function drawbullet(_bullet)
@@ -674,7 +675,7 @@ local function shootboost(_ship)
   spdfactor=0,
   dmg=4,bossdmg=0.5,
   life=1,
-  draw=emptydraw,
+  draw=emptyfn,
  }
 end
 
@@ -1563,7 +1564,7 @@ function gameupdate()
       hw=3,hh=5,
       spdfactor=0,
       dmg=1,
-      draw=emptydraw,
+      draw=emptyfn,
      }
     end
 
@@ -1698,7 +1699,7 @@ local function drawps(_ps)
   _p.lifec-=1
   _p.col=getpcolor(_p)
   circfill(_p.x,_p.y,_p.r,_p.col)
-  if _p.x<0 or _p.x>128 or _p.y<0 or _p.y>128 or _p.lifec<0 then
+  if _p.lifec < 0 or not ispointinsideaabb(_p.x,_p.y,64,64,64,64) then
    del(_ps,_p)
    if _p.ondeath then
     _p.ondeath(_p.x,_p.y)
@@ -1796,7 +1797,7 @@ function gamedraw()
   _p.lifec-=1
   _p.col=getpcolor(_p)
   circfill(_p.x+_p.follow.x+_p.xoff,_p.follow.y+_p.yoff+_p.y,_p.r,_p.col)
-  if _p.lifec<0 then
+  if _p.lifec < 0 then
    del(psfollow,_p)
   end
  end
@@ -1897,7 +1898,7 @@ function gamedraw()
  end
 
  if nickedts and t()-nickedts < 1.5 then
-  drawblinktext('escape!',9)
+  drawblinktext('get away!',9)
  end
 
  if madeitts then
@@ -1909,9 +1910,9 @@ function gamedraw()
 end
 
 function gameinit()
- gamestartts,enemyts,gameoverts,nickitts,nickedts,escapeelapsed,madeitts,hasescaped,exit=t(),t()
+ gamestartts,gameoverts,nickitts,nickedts,escapeelapsed,madeitts,hasescaped,exit=t()
  ps,psfollow,bottomps,bullets,enemies,enemybullets,cargos,stars={},{},{},{},{},{},{},{}
- escapeduration,lockedpercentage=40,#getlocked()/100
+ enemyts,escapeduration,lockedpercentage=gamestartts,40,#getlocked()/100
 
  for i=1,24 do
   add(stars,{x=flr(rnd()*128),y=flr(rnd()*128),spd=0.5+rnd(0.5)})
@@ -2042,7 +2043,7 @@ end
 -- splash
 pal(split'1,2,3,4,5,6,7,8,9,10,138,0,13,14,129',1)
 music(1)
-_update60=emptydraw
+_update60=emptyfn
 local splashshipsd=0
 _draw=function ()
  if btnp(4) then
