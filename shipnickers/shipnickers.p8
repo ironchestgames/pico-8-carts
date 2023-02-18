@@ -8,7 +8,6 @@ __lua__
  - fix drawing of bullets (sometimes above sometimes below)
  - fix beam + boost bug (beam stops after btn up for boost)
  - no sound if enemy shooting off screen
- - should escape have enemies come the other way??
  - fix psets
  - unify game event code?
 
@@ -31,7 +30,8 @@ sfx channels:
 -- cartdata'ironchestgames_shipnickers_v1-qa' -- ottos
 -- cartdata'ironchestgames_shipnickers_v1-dev9' -- all unlocked
 -- cartdata'ironchestgames_shipnickers_v1-dev10'
-cartdata'ironchestgames_shipnickers_v1-dev11'
+-- cartdata'ironchestgames_shipnickers_v1-dev11'
+cartdata'ironchestgames_shipnickers_v1-dev12'
 
 printh('debug started','debug',true)
 function debug(s)
@@ -709,8 +709,8 @@ function shootslicer(_x,_y,_spdx,_spdy,_slicecount,_isstraight)
   hw=3,hh=3,
   spdx=_spdx,spdy=_spdy,
   isstraight=_isstraight,
-  sx=_isstraight and 81 or 89,
-  sy=56,
+  sx=_isstraight and 50 or 58,
+  sy=118,
   sw=_isstraight and 8 or 7,
   sh=_isstraight and 5 or 7,
   dmg=5,
@@ -977,34 +977,26 @@ local function newcargodrop(_x,_y)
 end
 
 -- enemies
-
-local function newenemyexhaustp(_x,_y,_colors)
- add(bottomps,{
-  x=_x,
-  y=_y,
-  r=0.1,
-  spdx=0,
-  spdy=-rnd(),
-  spdr=0,
-  colors=_colors,
-  life=2,
-  lifec=3,
- })
+local enemyexhaustpyoffset={[-1]=4,-5}
+local function newenemyexhaustp(_enemy,_xoff,_colors)
+ newexhaustp(_xoff,enemyexhaustpyoffset[_enemy.vdir],_enemy,_colors,3,-_enemy.vdir)
 end
 
 local function drawenemymissile(_bullet)
- sspr(33,123,3,5,_bullet.x,_bullet.y)
+ sspr(33,123,3,5,_bullet.x,_bullet.y,3,5,false,_bullet.flipy)
 end
 local enemymissilep=mr(s2t'xoff=1,yoff=0,r=0.1,spdx=0,spdy=0.1,spdr=0,life=4',{colors=split'7,14,8'})
 local function enemyshootmissile(_enemy)
+ local _vdir=_enemy.vdir
  sfx(12,3)
  addenemybullet{
   x=_enemy.x,y=_enemy.y,
   hw=2,hh=3,
-  spdx=rnd(0.5)-0.25,spdy=0.1,accy=0.05,spdfactor=1,
+  spdx=rnd(0.5)-0.25,spdy=0.1*_vdir,accy=0.05*_vdir,spdfactor=1,
   life=1000,
   draw=drawenemymissile,
   ondeath=explode,
+  flipy=_vdir == -1,
   p=enemymissilep,
  }
 end
@@ -1027,7 +1019,7 @@ local function enemyshootmine(_enemy)
   hw=2,hh=2,
   frame=0,
   spdfactor=0.96+rnd(0.01),
-  spdx=rnd(0.5)-0.25,spdy=1.5,accy=0,
+  spdx=rnd(0.5)-0.25,spdy=1.5*_enemy.vdir,accy=0,
   life=110,
   draw=drawenemymine,
   ondeath=onenemyminedeath,
@@ -1035,29 +1027,25 @@ local function enemyshootmine(_enemy)
 end
 
 local function drawenemybullet(_bullet)
- sspr(32,125,1,3,_bullet.x,_bullet.y)
+ sspr(32,125,1,3,_bullet.x,_bullet.y,1,3,false,_bullet.flipy)
 end
 local enemybulletp=mr(s2t'xoff=0,yoff=0,r=0.1,spdx=0,spdy=0,spdr=0,life=3',{colors=split'2,2,4'})
+local enemybulletxoffs={-4,3}
 local function enemyshootbullet(_enemy)
+ local _vdir=_enemy.vdir
  sfx(8,3)
- addenemybullet{
-  x=_enemy.x+3,y=_enemy.y,
-  hw=1,hh=2,
-  spdy=2,
-  life=1000,
-  draw=drawenemybullet,
-  ondeath=explode,
-  p=enemybulletp,
- }
- addenemybullet{
-  x=_enemy.x-4,y=_enemy.y,
-  hw=1,hh=2,
-  spdy=2,
-  life=1000,
-  draw=drawenemybullet,
-  ondeath=explode,
-  p=enemybulletp,
- }
+ for _i=1,2 do
+  addenemybullet{
+   x=_enemy.x+enemybulletxoffs[_i],y=_enemy.y,
+   hw=1,hh=2,
+   spdy=2*_vdir,
+   life=1000,
+   flipy=_vdir == -1,
+   draw=drawenemybullet,
+   ondeath=explode,
+   p=enemybulletp,
+  }
+ end
 end
 
 local bossflakcolors=split'14,8,5'
@@ -1075,7 +1063,6 @@ local function shootbossflak()
    spdy=_spdy,
    accy=0.01,
    spdfactor=0.9,
-   dmg=1,
    life=rnd(90)+60,
    draw=drawbossflakbullet,
    ondeath=fizzle,
@@ -1087,7 +1074,6 @@ local function shootbossflak()
    spdy=_spdy,
    accy=0.01,
    spdfactor=0.95,
-   dmg=1,
    life=rnd(90)+60,
    draw=drawbossflakbullet,
    ondeath=fizzle,
@@ -1096,14 +1082,13 @@ local function shootbossflak()
 end
 
 local function drawbossslicer(_bullet)
- sspr(73,56,8,5,_bullet.x-3,_bullet.y-2)
+ sspr(42,118,8,5,_bullet.x-3,_bullet.y-2)
 end
 local function shootbossslicer()
  addenemybullet{
   x=boss.x,y=boss.y,
   hw=3,hh=3,
   spdy=2,
-  dmg=1,
   life=999,
   ondeath=explode,
   draw=drawbossslicer,
@@ -1124,7 +1109,6 @@ local function shootbossbubble()
   hw=2,hh=2.5,
   spdx=rnd()-0.5,spdy=rnd()-0.5,
   spdfactor=0.96,
-  dmg=1,
   life=210,
   update=updatebossbubble,
   ondeath=fizzle,
@@ -1175,14 +1159,16 @@ local bossweapons={
 }
 
 local minelayerexhaustcolors={12}
-local function newminelayer()
- add(enemies,mr(s2t'y=-12,hw=4,hh=4,spdx=0,spdy=0,s=103,hp=5',{
+local function newminelayer(_vdir)
+ add(enemies,mr(s2t'hw=4,hh=4,spdx=0,spdy=0,s=102,hp=5',{
   x=rnd(128),
+  y=boss and -12 or 140,
+  vdir=_vdir,
   ts=t(),
   update=function(_enemy)
-   local _x,_y=flr(_enemy.x),flr(_enemy.y)-3
-   newenemyexhaustp(_x-1,_y,minelayerexhaustcolors)
-   newenemyexhaustp(_x,_y,minelayerexhaustcolors)
+   local _x=flr(_enemy.x)
+   newenemyexhaustp(_enemy,-1,minelayerexhaustcolors)
+   newenemyexhaustp(_enemy,0,minelayerexhaustcolors)
    if _enemy.target then
     if t()-_enemy.ts > _enemy.duration or ispointinsideaabb(_enemy.target.x,_enemy.target.y,_enemy.x,_enemy.y,_enemy.hw,_enemy.hh) then
      _enemy.target=nil
@@ -1201,13 +1187,14 @@ local function newminelayer()
 end
 
 local kamikazeexhaustcolors=split'10,9'
-local function newkamikaze()
- add(enemies,mr(s2t'y=-12,hw=4,hh=4,spdx=0,spdy=0,s=101,hp=4',{
+local function newkamikaze(_vdir)
+ add(enemies,mr(s2t'y=-12,hw=4,hh=4,spdx=0,spdy=0,s=100,hp=4',{
   x=rnd(128),
+  vdir=_vdir,
   update=function(_enemy)
-   local _x,_y=flr(_enemy.x),flr(_enemy.y)-3
-   newenemyexhaustp(_x-1,_y,kamikazeexhaustcolors)
-   newenemyexhaustp(_x,_y,kamikazeexhaustcolors)
+   local _x=flr(_enemy.x)
+   newenemyexhaustp(_enemy,-1,kamikazeexhaustcolors)
+   newenemyexhaustp(_enemy,0,kamikazeexhaustcolors)
    if _enemy.target == nil then
     _enemy.target=rnd(ships)
     _enemy.ifactor=rnd()
@@ -1215,24 +1202,25 @@ local function newkamikaze()
    if _enemy.target then
     local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
     _enemy.spdx=cos(_a)*0.5
-    _enemy.spdy+=0.011+(_enemy.ifactor*0.003)
+    _enemy.spdy+=(0.011+_enemy.ifactor*0.003)*_enemy.vdir
    end
   end,
  }))
 end
 
 local bomberexhaustcolors=split'11,3'
-local function newbomber()
+local function newbomber(_vdir)
  local _spdy=rnd(0.25)+0.325
- add(enemies,mr(s2t'x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,s=104,hp=9',{
+ add(enemies,mr(s2t'x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,s=103,hp=9',{
+  vdir=_vdir,
   spdy=_spdy,ogspdy=_spdy,
   ts=t(),
   update=function(_enemy)
-   local _x,_y=flr(_enemy.x),flr(_enemy.y)-4
-   newenemyexhaustp(_x-3,_y,bomberexhaustcolors)
-   newenemyexhaustp(_x-2,_y,bomberexhaustcolors)
-   newenemyexhaustp(_x+1,_y,bomberexhaustcolors)
-   newenemyexhaustp(_x+2,_y,bomberexhaustcolors)
+   local _x=flr(_enemy.x)
+   newenemyexhaustp(_enemy,-3,bomberexhaustcolors)
+   newenemyexhaustp(_enemy,-2,bomberexhaustcolors)
+   newenemyexhaustp(_enemy,1,bomberexhaustcolors)
+   newenemyexhaustp(_enemy,2,bomberexhaustcolors)
    if not _enemy.target then
     _enemy.x=rnd(128)
     _enemy.target=true
@@ -1245,23 +1233,24 @@ local function newbomber()
     _enemy.ts=t()
    end
    _enemy.spdx=mid(-0.5,_enemy.spdx+_enemy.accx,0.5)
-   _enemy.spdy=_enemy.ogspdy
+   _enemy.spdy=_enemy.ogspdy*_enemy.vdir
   end,
  }))
 end
 
 local fighterexhaustcolors=split'14,2,4'
-local function newfighter()
- add(enemies,mr(s2t'x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,s=102,hp=5',{
+local function newfighter(_vdir)
+ add(enemies,mr(s2t'x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,s=101,hp=5',{
+  vdir=_vdir,
   ts=t(),
   update=function(_enemy)
-   local _x,_y=flr(_enemy.x),flr(_enemy.y)-4
-   newenemyexhaustp(_x-1,_y,fighterexhaustcolors)
-   newenemyexhaustp(_x,_y,fighterexhaustcolors)
+   local _x=flr(_enemy.x)
+   newenemyexhaustp(_enemy,-1,fighterexhaustcolors)
+   newenemyexhaustp(_enemy,0,fighterexhaustcolors)
    if not _enemy.target then
     _enemy.x=flr(8+rnd(120))
     _enemy.target=true
-    _enemy.spdy=rnd(0.5)+0.5
+    _enemy.spdy=(rnd(0.5)+0.5)*_enemy.vdir
    end
    if t()-_enemy.ts > 0.875 and not _enemy.icec then
      enemyshootbullet(_enemy)
@@ -1277,7 +1266,7 @@ local function drawenemycargobullet(_bullet)
 end
 local function enemyshootcargobullet(_enemy)
  addenemybullet{
-  hw=1,hh=1,life=1000,spdy=1,
+  hw=1,hh=1,life=1000,spdy=_enemy.vdir,
   x=_enemy.x,y=_enemy.y,
   spdx=_enemy.s == 109 and -1 or 1,
   draw=drawenemycargobullet,
@@ -1286,27 +1275,27 @@ local function enemyshootcargobullet(_enemy)
  }
 end
 
-local cargoshipexhaustcolors,cargoshipsprites=split'7,6,13',split'106,107,108,109'
-local function newcargoship()
+local cargoshipexhaustcolors,cargoshipsprites=split'7,6,13',split'105,106,107,108'
+local function newcargoship(_vdir)
  local _allparts,_x={},flr(16+rnd(100))
  for _i=1,flr(2+rnd(4)) do
-  local _s=_i == 1 and 105 or rnd(cargoshipsprites)
+  local _s=_i == 1 and 104 or rnd(cargoshipsprites)
   local _part=mr(s2t'hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=14',{
    x=_x,y=-(12+_i*8),
+   vdir=_vdir,
    s=_s,
    ts=t(),
    update=function(_enemy)
     local _x=flr(_enemy.x)
-    local _y=flr(_enemy.y)-4
     if _enemy == _allparts[#_allparts] then
-     newenemyexhaustp(_x-1,_y,cargoshipexhaustcolors)
-     newenemyexhaustp(_x,_y,cargoshipexhaustcolors)
+     newenemyexhaustp(_enemy,-1,cargoshipexhaustcolors)
+     newenemyexhaustp(_enemy,0,cargoshipexhaustcolors)
     end
-    if _y > 130 then
+    if flr(_enemy.y)-4 > 130 then
      del(enemies,_enemy)
     end
-    _enemy.spdy=0.25
-    if _enemy.s >= 108 and t()-_enemy.ts > 2+rnd(2) and not _enemy.icec then
+    _enemy.spdy=0.25*_enemy.vdir
+    if _enemy.s >= 107 and t()-_enemy.ts > 2+rnd(2) and not _enemy.icec then
      enemyshootcargobullet(_enemy)
      _enemy.ts=t()
     end
@@ -1319,7 +1308,7 @@ end
 
 local function explodeenemy(_enemy)
  explode(_enemy)
- if _enemy.s == 106 or _enemy.s == 107 then
+ if _enemy.s == 105 or _enemy.s == 106 then
   newcargodrop(_enemy.x,_enemy.y)
  end
  del(enemies,_enemy)
@@ -1472,9 +1461,13 @@ function gameupdate()
     del(ships,_ship)
     add(ships,mr(getship(boss.s),{plidx=_plidx,x=_ship.x,y=_ship.y,hp=1}))
     createshipflashes()
-    nickedts=curt
-    escapeelapsed,nickitts,boss=0
+    nickedts,escapeelapsed,nickitts,boss=curt,0
     sfx(1,2)
+    for _enemy in all(enemies) do
+     if _enemy.s < 104 then
+      _enemy.vdir=-1
+     end
+    end
    elseif _ship.isshielding and not boss.shieldts then
     boss.hp-=0.5
     newhit(boss.x,boss.y)
@@ -1502,7 +1495,7 @@ function gameupdate()
      boss,
      boss.boostts and boostcolors or boss.exhaustcolors,
      boss.boostts and 5 or 4,
-    -1)
+     -1)
    end
   end
 
@@ -1517,12 +1510,9 @@ function gameupdate()
      _bullet.life=0
     end
     explode(boss)
-    explode(boss)
    else
     newburning(boss.x,boss.y)
-    if not nickitts then
-     nickitts=curt
-    end
+    nickitts=nickitts or curt
    end
   else
    if boss.icec then
@@ -1540,8 +1530,17 @@ function gameupdate()
    if _bossdt > boss.flydurationc and not (boss.beamts or boss.icets or boss.boostts or boss.shieldts) then
     if _bossdt > boss.flydurationc+boss.waitdurationc then
      sfx(-2,2)
-     boss.boost,boss.boostts,boss.shieldts,boss.beamts=0
-     boss.waitdurationc,boss.flydurationc,boss.ts=0.875+rnd(1.75),boss.flyduration+rnd(5),curt
+
+     boss.waitdurationc,
+     boss.flydurationc,
+     boss.ts,
+     boss.boost,
+     boss.boostts,boss.shieldts,boss.beamts=
+     0.875+rnd(1.75),
+     boss.flyduration+rnd(5),
+     curt,
+     0
+
      if not boss.icec then
       bossweapons[rnd{boss.primary,boss.primary,boss.secondary}](boss)
       if issuperboss then
@@ -1563,7 +1562,6 @@ function gameupdate()
       x=boss.x,y=boss.y-8,
       hw=3,hh=5,
       spdfactor=0,
-      dmg=1,
       draw=emptyfn,
      }
     end
@@ -1577,7 +1575,6 @@ function gameupdate()
       x=boss.x,y=boss.y+64+6,
       hw=3,hh=64,
       spdfactor=0,
-      dmg=1,
       colors=enemybeamcolors,
       pcolors=enemybeampcolors,
       draw=drawbeam,
@@ -1606,13 +1603,15 @@ function gameupdate()
  -- update enemies
  local _spawninterval,_spawnmin=max(0.75,10*lockedpercentage),3
  if escapeelapsed then
-  _spawninterval=max(0.75,5*lockedpercentage)
-  _spawnmin=6
+  _spawninterval,_spawnmin=max(0.75,5*lockedpercentage),6
  end
  local gamestartdone=issuperboss or (boss and t()-gamestartts > 1.5) or true
- if gamestartdone and nickitts == nil and (not (hasescaped or issuperbossdead)) and (curt-enemyts > _spawninterval and #enemies < min(15,10+dget(63)) or #enemies < _spawnmin) then
+ if gamestartdone and
+    (not (hasescaped or issuperbossdead)) and
+    (curt-enemyts > _spawninterval and #enemies < min(15,10+dget(63)) or #enemies < _spawnmin) and
+    not nickitts then
   enemyts=curt
-  rnd{newkamikaze,newkamikaze,newbomber,newminelayer,newfighter,newcargoship}()
+  rnd{newkamikaze,newkamikaze,newbomber,newminelayer,newfighter,newcargoship}(boss and 1 or -1)
  end
 
  for _enemy in all(enemies) do
@@ -1627,14 +1626,15 @@ function gameupdate()
    _enemy.y+=_enemy.spdy*(issuperboss and 1.25 or 1)*_icefactor
    _enemy.update(_enemy)
 
-   local _isoutside=_enemy.y > 140 or _enemy.x < -20 or _enemy.x > 148
-
-   if _isoutside then
-    if hasescaped then
+   if not ispointinsideaabb(_enemy.x,_enemy.y,64,64,75,77) then -- 150 (11), 154 (13)
+    if _enemy.s >= 104 then
+     if not ispointinsideaabb(_enemy.x,_enemy.y,64,64,64,112) then -- 128 (0), 224 ()
+      del(enemies,_enemy)
+     end
+    elseif hasescaped then
      del(enemies,_enemy)
     else
-     _enemy.spdx,_enemy.spdy,_enemy.target=0,0
-     _enemy.y=-12
+     _enemy.spdx,_enemy.spdy,_enemy.vdir,_enemy.y,_enemy.target=0,0,boss and 1 or -1,boss and -12 or 140
     end
    end
    for _ship in all(ships) do
@@ -1652,6 +1652,7 @@ function gameupdate()
   end
  end
 
+ -- events
  if ((hasescaped and #enemies == 0) or issuperbossdead) and not madeitts then
   if issuperbossdead and boss then
    boss=nil
@@ -1728,7 +1729,7 @@ function gamedraw()
  for _c in all(cargos) do
   _c.x+=_c.spdx
   _c.y+=_c.spdy
-  spr(119,_c.x-4,_c.y-4)
+  spr(137,_c.x-4,_c.y-4)
  end
 
  -- draw enemybullets
@@ -1743,7 +1744,7 @@ function gamedraw()
 
  -- draw enemies
  for _enemy in all(enemies) do
-  spr(_enemy.s+(issuperboss and 9 or 0),_enemy.x-4,_enemy.y-4)
+  spr(_enemy.s+(issuperboss and 28 or 0)+(_enemy.vdir == 1 and 0 or 9),_enemy.x-4,_enemy.y-4)
  end
 
  -- draw ships
@@ -1771,7 +1772,7 @@ function gamedraw()
   if boss.hp > 0 then
    if issuperboss then
     spr(126,flr(boss.x)-8,flr(boss.y)-6,2,2)
-    spr(124+flr((t()*8)%2),_urx,_ury)
+    spr(140+flr((t()*8)%2),_urx,_ury)
     if boss.shieldts then
      drawshield(boss.x,boss.y,8,11)
     end
@@ -1856,7 +1857,7 @@ function gamedraw()
 
   -- secondary
   if _ship.hp < 2 then
-   sspr(54,123,20,5,_xoff+41,121)
+   sspr(9,118,20,5,_xoff+41,121)
   else
    color(weaponcolors[_ship.secondary])
    rectfill(_xoff+41,121,_xoff+45,125)
@@ -1955,9 +1956,9 @@ function pickerupdate()
     if _pickcount > 0 and _pickcount == mycount(ships) then
      local _locked=getlocked()
      if #_locked == 0 then
-      boss,issuperboss=mr(getship(100),s2t'x=64,y=40,hw=7,hh=7,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1'),true
+      boss,issuperboss=mr(getship(100),s2t'x=64,y=40,vdir=1,hw=7,hh=7,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1'),true
      else
-      boss,issuperboss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2,firedir=1')
+      boss,issuperboss=mr(getship(rnd(_locked)),s2t'x=64,y=0,vdir=1,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2,firedir=1')
      end
      boss.ts=t()
      return gameinit()
@@ -2013,7 +2014,7 @@ function pickerdraw()
      sspr(6,120,3,3,_x-1,_y-1)
     end
    else
-    spr(120,_x,_y)
+    spr(248,_x,_y)
    end
   end
  end
@@ -2059,7 +2060,7 @@ _draw=function ()
  end
  for _x=0,12 do
   for _y=0,12 do
-   spr(128+(8-_x+_y)%8,4+_x*16-splashshipsd,4+_y*16-splashshipsd)
+   spr(118+(8-_x+_y)%8,4+_x*16-splashshipsd,4+_y*16-splashshipsd)
   end
  end
  sspr(unpack(split'0,72,128,46,0,26'))
@@ -2115,30 +2116,30 @@ d00dd00d07000070005ff5000052250000028000070000700f0000f000077000000bb000000ff000
 d2d22d2d995885990500005025455452d4d28d4dee5ee5ee7606606763377336bbcbbcbbdcfccfcdfd5ff5df7647676755155155400660046d5d666df666666f
 d0d44d0da959959a0500005002455420c4d82d4c6e0ee0e6f500005f63055036044004405d5dd5d5fd0550df76067776d505505d002662006d066d666d5dd5d6
 00055000aa0990aa005005000045540004c28c4006000060ff0000ff600000060d4004d004400440f000000f5505505505011050042552400006d0d601155110
-000dd00000f00f00060000600050050000400400f000000f0004400005044050044004405f5555f505555550055555500555555005555550d000000d00055000
-000dd0000d0000d0700000070d0000d002000020f505505f5ff55ff5f505505f555ff5555f5555f55f5ff5f55f5ff5f55ffffff55ffffff5d605506dd6d66d6d
-00076000f70d507f70077007d009900d200bb002f55ff55f5ff55ff555155155f55ff55f5f5555f55f5ff5f55f5ff5f55ff55ff55ff55ff5d66dd66dd6d66d6d
-00d66d00d705507d600b3006d09a990d20bbbb02f55ff55f5ff55ff5f515515ff5bffb5f5f6766f55ff55ff55f5ff5f55f5ff5f55f5ff5f5dd6dd6ddd0d66d0d
-00c66c00f70ff07f70f33f070d9999d002b7bb20f55a955f50f7ef05f50bc05f05babb500f6766f05ff55ff55f5ff5f55f5f65f55f56f5f5d6d95d6d00de4d00
-30cddc03d70ff07d74677647d449944d244bb4420f5995f0000ee000f50cc05f05fabf5005f66f505f5ff5f55f5ff5f55ff556f55f655ff50d6556d000044000
-3dcddcd30d0000d0f467764f004dd4000042240000f99f00000ee000f500005f00ffff0005f55f505f5ff5f55f5ff5f55ffffff55ffffff500d55d0000044000
-cdcddcdc00d00d00600ff006040550400405504000055000000550000f0000f0000ff00000f55f0005555550055555500555555005555550000dd00000066000
-6d0550d605500550d6d66d6d0dddddd00dddddd00dd66dd00dd66dd000000000000000000e000000e00777700007777000000000000000000000055005500000
-6d0660d6d6d66d6dd6d66d6dd6666d6dd6d66d6dd6dddd6dd6dddd6d000000000011110007e0000e707777770077aaa7000000000000000000006d6666d60000
-dd5665dd66d66d6606d66d60dddddd6d0d6dd6d00dd66dd00dd66dd0004dd40001100110077eeee7777aaaa7777aa00000000000000000000006d6d66d6d6000
-6d5665d66d5665d6d616616dd6d66d6dd6d66d6ddd6666dddd6666dd00d4dd00000001100077777707a0000a77aa00000000000000000000006d6d6dd6d6d600
-dd0c40dd0d5355d0061f1160d6d66d6dd6d66d6d0d6616d00d6166d000dd4d0000011100000777700a000000a7a0000008c668c00c866c800066dd6dd6dd6600
-6d0440d60d6356d0dd6f16ddd6dddddd0d6dd6d0ddd661dddd166ddd004dd40000000000000000000000000007a0000000000000000000006dd6dd6666dd6dd6
-6d0000d6006666000dd66dd0d6d6666dd6d66d6dd6dddd6dd6dddd6d0000000000011000000000000000000000700000000000000000000006d6d8c668cd6d60
-060000600006600000d66d00dddddddd0dddddd00dd66dd00dd66dd00000000000000000000000000000000000000000000000000000000006d6d666666d6d60
-000ff0000f0000f0000ff000000ff000000ff000000ff000000ff000000ff00000000000000000000000000000000000000000000000000000d6116666116d00
-000ff000ff0000ff00ff0f0000ffff000f0f00f0000ff00000ff0f00000f00000000000000000000000000000000000000000000000000006006d1f1111d6006
-000f0000ff0000ff0ff00ff000ff0f000ff00ff0000ff0000f0f00f000f00f000000000000000000000000000000000000000000000000006dd6ddf111dd6dd6
-00f00f00ff0f00fffff00fff0f0f00f0fff00ffff00f000f0f0ff0f00ff00ff0000000000000000000000000000000000000000000000000066d6dd11dd6d660
-00f00f00ff0000ffffffffffff0ff0fffffffffff0f00f0f0ffffff0ffffffff000000000000000000000000000000000000000000000000006dd6dddd6dd600
-f0ffff0ffff00fffffffffffffffffff000ff000ffffffffffffffff00ffff00000000000000000000000000000000000000000000000000006dd6d00d6dd600
-ffffffffffffffffff0ff0ff00ffff000ffffff0ffffffffff0ff0ff0ffffff00000000000000000000000000000000000000000000000000006d600006d6000
-ffffffffff0ff0fff000000f000ff0000ffffff0f0f00f0ff000000fffffffff0000000000000000000000000000000000000000000000000000660000660000
+000dd00000f00f000600006000500500f004400f0004400005044050044004405f5555f50555555005555550055555500555555000055000000550000f0000f0
+000dd0000d0000d0700000070d0000d0f50ff05f5ff55ff5f505505f555ff5555f5555f55f5ff5f55f5ff5f55ffffff55ffffff500fa9f000007e000f500005f
+00076000f70d507f70077007d009900df55ff55f5ff55ff555155155f55ff55f5f5555f55f5ff5f55f5ff5f55ff55ff55ff55ff50f5995f0000ee000f50bc05f
+00d66d00d705507d600b3006d09a990df55ff55f5ff55ff5f515515ff5bffb5f5f6766f55ff55ff55f5ff5f55f5ff5f55f5ff5f5f559955f50feef05f50cc05f
+00c66c00f70ff07f70f33f070d9999d0f55a955f50f7ef05f50bc05f05babb500f6766f05ff55ff55f5ff5f55f5f65f55f56f5f5f55ff55f5ff55ff5f515515f
+30cddc03d70ff07d74677647d449944d0f5995f0000ee000f50cc05f05fabf5005f66f505f5ff5f55f5ff5f55ff556f55f655ff5f55ff55f5ff55ff555155155
+3dcddcd30d0000d0f467764f004dd40000f99f00000ee000f500005f00ffff0005f55f505f5ff5f55f5ff5f55ffffff55ffffff5f50ff05f5ff55ff5f505505f
+cdcddcdc00d00d00600ff0060405504000055000000550000f0000f0000ff00000f55f0005555550055555500555555005555550f004400f0004400005044050
+000ff00000f55f0005555550055555500555555005555550000ff0000f0000f0000ff000000ff000000ff000000ff000000ff000000ff0000000055005500000
+00ffff0005f55f505f5ff5f55f5ff5f55ffffff55ffffff5000ff000ff0000ff00ff0f0000ffff000f0f00f0000ff00000ff0f00000f000000006d6666d60000
+05fabf5005f76f505f5ff5f55f5ff5f55ff556f55f655ff5000f0000ff0000ff0ff00ff000ff0f000ff00ff0000ff0000f0f00f000f00f000006d6d66d6d6000
+05babb500f6766f05ff55ff55f5ff5f55f5f65f55f56f5f500f00f00ff0f00fffff00fff0f0f00f0fff00ffff00f000f0f0ff0f00ff00ff0006d6d6dd6d6d600
+f5bffb5f5f6766f55ff55ff55f5ff5f55f5ff5f55f5ff5f500f00f00ff0000ffffffffffff0ff0fffffffffff0f00f0f0ffffff0ffffffff0066dd6dd6dd6600
+f55ff55f5f5555f55f5ff5f55f5ff5f55ff55ff55ff55ff5f0ffff0ffff00fffffffffffffffffff000ff000ffffffffffffffff00ffff006dd6dd6666dd6dd6
+555ff5555f5555f55f5ff5f55f5ff5f55ffffff55ffffff5ffffffffffffffffff0ff0ff00ffff000ffffff0ffffffffff0ff0ff0ffffff006d6d8c668cd6d60
+044004405f5555f505555550055555500555555005555550ffffffffff0ff0fff000000f000ff0000ffffff0f0f00f0ff000000fffffffff06d6d666666d6d60
+d000000d000550006d0550d605500550d6d66d6d0dddddd00dddddd00dd66dd00dd66dd0000000000000000000000000000000000000000000d6116666116d00
+d605506dd6d66d6d6d0660d6d6d66d6dd6d66d6dd6666d6dd6d66d6dd6dddd6dd6dddd6d00000000000000000000000000000000000000006006d1f1111d6006
+d66dd66dd6d66d6ddd5665dd66d66d6606d66d60dddddd6d0d6dd6d00dd66dd00dd66dd0004dd400000000000000000000000000000000006dd6ddf111dd6dd6
+dd6dd6ddd0d66d0d6d5665d66d5665d6d616616dd6d66d6dd6d66d6ddd6666dddd6666dd00d4dd0000000000000000000000000000000000066d6dd11dd6d660
+d6d95d6d00de4d00dd0c40dd0d5355d0061f1160d6d66d6dd6d66d6d0d6616d00d6166d000dd4d00000000000000000008c668c00c866c80006dd6dddd6dd600
+0d6556d0000440006d0440d60d6356d0dd6f16ddd6dddddd0d6dd6d0ddd661dddd166ddd004dd40000000000000000000000000000000000006dd6d00d6dd600
+00d55d00000440006d0000d6006666000dd66dd0d6d6666dd6d66d6dd6dddd6dd6dddd6d00000000000000000000000000000000000000000006d600006d6000
+000dd00000066000060000600006600000d66d00dddddddd0dddddd00dd66dd00dd66dd000000000000000000000000000000000000000000000660000660000
 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
 11111111111111111111111171111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
 11111111111111111111111717111111111111111111111711111111111111111111111111111111111111111111111111111111171111111111111111111111
@@ -2185,16 +2186,16 @@ ffffffffff0ff0fff000000f000ff0000ffffff0f0f00f0ff000000fffffffff0000000000000000
 11111777777777717771117777177777777771777711111177771117771777777777717777777777177771177771777777777717777177711777777777711111
 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-000000000000000000000000000000000000000000000000000000000000000000000000003333333333333bbb3bbb3bbb3bbb3bbb3bbb330000000000000000
-0000070000000000000000000000000000000000000000000000000000000000000000000033bbb33333333b3b3b333b3b3b3b33b33b3b330000000000000000
-0000070a00000000000000000000000000000000000000000000000000000000000000000033b3b33333333bb33bb33bbb3bbb33b33bb3337777777777777777
-855807aa90000000000000000000000000000000000000000000000000000000000000000033bbb33333333b3b3b333b333b3b33b33b3b337777777777777777
-58850a090000000000000000000000000000000000000000000000000000000000000000003333333333333b3b3bbb3b333b3b3bbb3b3b337777777777777777
-00000060aa0000606070a009a97c0a0004d400000a0000b0000c0022222000022002220022222222222222288828882888288828882888227777777777777777
-00000060aa00c00700b00009a9cc007000d00000aaa00bbb00ccc020000200020202220200208880000000080808000808080800800808027777777777777777
-00000060a90c0c7670000709a9000070e0d0707aaaaabbbbbccccc20000020020202020200208080000000088008800888088800800880027777777777777777
-c55c0060980c0c070b000009a90c007070d007000a0000b0000c0020000200020202020202208880000000080808000800080800800808027777777777777777
-5cc50d6d8000c0606700a009a9000a0070d070700a0000b0000c0022222000022202020222222222222222282828882822282828882828227777777777777777
+000000000222220000220022200220000000000000e000000e0077770000777700000000003333333333333bbb3bbb3bbb3bbb3bbb3bbb330000000000000000
+0000070002000020002020222020000000000000007e0000e707777770077aaa700000000033bbb33333333b3b3b333b3b3b3b33b33b3b330000000000000000
+0000070a020000020020202020200000000000000077eeee7777aaaa7777aa00000000000033b3b33333333bb33bb33bbb3bbb33b33bb3337777777777777777
+855807aa9200002000202020202020000000000000077777707a0000a77aa000001111000033bbb33333333b3b3b333b333b3b33b33b3b337777777777777777
+58850a09022222000022202020222000000000000000777700a000000a7a000001100110003333333333333b3b3bbb3b333b3b3bbb3b3b337777777777777777
+00000060aa0000606070a009a97c0a0004d400000a0000b0000c0000007a00000000011000222222222222288828882888288828882888227777777777777777
+00000060aa00c00700b00009a9cc007000d00000aaa00bbb00ccc000000700000001110000208880000000080808000808080800800808027777777777777777
+00000060a90c0c7670000709a9000070e0d0707aaaaabbbbbccccc00000000000000000000208080000000088008800888088800800880027777777777777777
+c55c0060980c0c070b000009a90c007070d007000a0000b0000c0000000000000001100000208880000000080808000800080800800808027777777777777777
+5cc50d6d8000c0606700a009a9000a0070d070700a0000b0000c0000000000000000000000222222222222282828882822282828882828227777777777777777
 __label__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
