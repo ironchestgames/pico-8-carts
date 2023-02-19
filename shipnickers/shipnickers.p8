@@ -5,6 +5,7 @@ __lua__
 -- by ironchest games
 
 --[[
+ - use getship for enemies
  - fix drawing of bullets (sometimes above sometimes below)
  - fix beam + boost bug (beam stops after btn up for boost)
  - no sound if enemy shooting off screen
@@ -1177,7 +1178,7 @@ local function newminelayer(_vdir)
     _enemy.spdx,_enemy.spdy=0,0
     if t()-_enemy.ts > 1.5 and not _enemy.icec then
      enemyshootmine(_enemy)
-     _enemy.ts,_enemy.duration,_enemy.target=t(),1+rnd(2),{x=4+rnd(120),y=rnd(92)}
+     _enemy.ts,_enemy.duration,_enemy.target=t(),1+rnd(2),{x=4+rnd(120),y=rnd(116)}
      local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
      _enemy.spdx,_enemy.spdy=cos(_a)*0.75,sin(_a)*0.75
     end
@@ -1188,7 +1189,7 @@ end
 
 local kamikazeexhaustcolors=split'10,9'
 local function newkamikaze(_vdir)
- add(enemies,mr(s2t'y=-12,hw=4,hh=4,spdx=0,spdy=0,s=100,hp=4',{
+ add(enemies,mr(s2t'y=139,hw=4,hh=4,spdx=0,spdy=0,s=100,hp=4',{
   x=rnd(128),
   vdir=_vdir,
   update=function(_enemy)
@@ -1202,7 +1203,7 @@ local function newkamikaze(_vdir)
    if _enemy.target then
     local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
     _enemy.spdx=cos(_a)*0.5
-    _enemy.spdy+=(0.011+_enemy.ifactor*0.003)*_enemy.vdir
+    _enemy.spdy+=(0.011+_enemy.ifactor*0.003)*_vdir
    end
   end,
  }))
@@ -1233,7 +1234,7 @@ local function newbomber(_vdir)
     _enemy.ts=t()
    end
    _enemy.spdx=mid(-0.5,_enemy.spdx+_enemy.accx,0.5)
-   _enemy.spdy=_enemy.ogspdy*_enemy.vdir
+   _enemy.spdy=_enemy.ogspdy
   end,
  }))
 end
@@ -1250,7 +1251,7 @@ local function newfighter(_vdir)
    if not _enemy.target then
     _enemy.x=flr(8+rnd(120))
     _enemy.target=true
-    _enemy.spdy=(rnd(0.5)+0.5)*_enemy.vdir
+    _enemy.spdy=(rnd(0.5)+0.5)
    end
    if t()-_enemy.ts > 0.875 and not _enemy.icec then
      enemyshootbullet(_enemy)
@@ -1291,7 +1292,7 @@ local function newcargoship(_vdir)
      newenemyexhaustp(_enemy,-1,cargoshipexhaustcolors)
      newenemyexhaustp(_enemy,0,cargoshipexhaustcolors)
     end
-    _enemy.spdy=0.25*_enemy.vdir
+    _enemy.spdy=0.25
     if _enemy.s >= 107 and t()-_enemy.ts > 2+rnd(2) and not _enemy.icec then
      enemyshootcargobullet(_enemy)
      _enemy.ts=t()
@@ -1618,9 +1619,8 @@ function gameupdate()
    if _enemy.icec then
     updateicec(_enemy)
    end
-   local _icefactor=_enemy.icec and 0.5 or 1
-   _enemy.x+=_enemy.spdx*(issuperboss and 1.5 or 1)*_icefactor
-   _enemy.y+=_enemy.spdy*(issuperboss and 1.25 or 1)*_icefactor
+   _enemy.x+=_enemy.spdx*(issuperboss and 1.5 or 1)*(_enemy.icec and 0.5 or 1)
+   _enemy.y+=_enemy.spdy*(issuperboss and 1.25 or 1)*((boss and _enemy.icec and 0.5) or 1)
    _enemy.update(_enemy)
 
    if not ispointinsideaabb(_enemy.x,_enemy.y,64,64,75,77) then -- 150 (11), 154 (13)
@@ -1631,7 +1631,17 @@ function gameupdate()
     elseif hasescaped then
      del(enemies,_enemy)
     else
-     _enemy.spdx,_enemy.spdy,_enemy.vdir,_enemy.y,_enemy.target=0,0,boss and 1 or -1,boss and -12 or 140
+     _enemy.spdx,
+     _enemy.spdy,
+     _enemy.vdir,
+     _enemy.y,
+     _enemy.icec,
+     _enemy.target=
+      0,
+      0,
+      boss and 1 or -1,
+      -12,
+      boss and _enemy.icec or 0
     end
    end
    for _ship in all(ships) do
@@ -1711,7 +1721,7 @@ function gamedraw()
 
  -- draw stars
  for _s in all(stars) do
-  _s.y+=_s.spd
+  _s.y+=_s.spd*(boss and 1 or 2)
   if _s.y>130 then
    _s.y=-3
    _s.x=flr(rnd()*128)
