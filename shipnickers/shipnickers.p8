@@ -1268,7 +1268,7 @@ local function enemyshootcargobullet(_enemy)
  addenemybullet{
   hw=1,hh=1,life=1000,spdy=_enemy.vdir,
   x=_enemy.x,y=_enemy.y,
-  spdx=_enemy.s == 109 and -1 or 1,
+  spdx=_enemy.s == 108 and -1 or 1,
   draw=drawenemycargobullet,
   ondeath=explode,
   p=mr(s2t'xoff=0,yoff=0,r=0.1,spdx=0,spdy=0,spdr=0,life=3',{ colors=enemycargobulletpcolors }),
@@ -1281,7 +1281,7 @@ local function newcargoship(_vdir)
  for _i=1,flr(2+rnd(4)) do
   local _s=_i == 1 and 104 or rnd(cargoshipsprites)
   local _part=mr(s2t'hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=14',{
-   x=_x,y=-(12+_i*8),
+   x=_x,y=(_vdir == 1 and -12 or 140)+_i*8*-_vdir,
    vdir=_vdir,
    s=_s,
    ts=t(),
@@ -1290,9 +1290,6 @@ local function newcargoship(_vdir)
     if _enemy == _allparts[#_allparts] then
      newenemyexhaustp(_enemy,-1,cargoshipexhaustcolors)
      newenemyexhaustp(_enemy,0,cargoshipexhaustcolors)
-    end
-    if flr(_enemy.y)-4 > 130 then
-     del(enemies,_enemy)
     end
     _enemy.spdy=0.25*_enemy.vdir
     if _enemy.s >= 107 and t()-_enemy.ts > 2+rnd(2) and not _enemy.icec then
