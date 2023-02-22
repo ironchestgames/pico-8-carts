@@ -226,11 +226,11 @@ local hangar={
  s2t's=99,bulletcolor=9,primary="slicer",secondary="slicer",psets="3;4;9_3;3;10",guns="2;0;5;0",exhaustcolors="11;15;5",exhausts="-1;4;0;4",flyduration=10',
 
  -- enemies
- s2t's=100,bulletcolor=0,primary="none",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=139,hw=4,hh=4,spdx=0,spdy=0,hp=4',
- s2t's=101,bulletcolor=0,primary="none",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="14;2;4",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5',
- s2t's=102,bulletcolor=0,primary="none",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="12",exhausts="-1;0",hw=4,hh=4,spdx=0,spdy=0,hp=5',
- s2t's=103,bulletcolor=0,primary="none",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="11;3",exhausts="-3;-2;1;2",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=9',
- s2t's=104,bulletcolor=0,primary="none",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=14',
+ s2t's=100,bulletcolor=0,primary="kamikaze",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=139,hw=4,hh=4,spdx=0,spdy=0,hp=4',
+ s2t's=101,bulletcolor=0,primary="fighter",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="14;2;4",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5',
+ s2t's=102,bulletcolor=0,primary="minelayer",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="12",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,hp=5',
+ s2t's=103,bulletcolor=0,primary="bomber",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="11;3",exhausts="-3;-2;1;2",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=9',
+ s2t's=104,bulletcolor=0,primary="cargo",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=14',
 
  -- superboss
  s2t's=105,bulletcolor=14,primary="slicer",secondary="beam",psets="3;4;7_3;3;11",guns="2;0;5;0",exhaustcolors="7;9;5",exhausts="-3;6;-2;6;1;6;2;6",x=64,y=40,vdir=1,hw=7,hh=7,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1',
@@ -1171,7 +1171,6 @@ local bossweapons={
 local function newminelayer(_vdir)
  add(enemies,mr(getship(102),{
   x=rnd(128),
-  y=boss and -12 or 140,
   vdir=_vdir,
   ts=t(),
   update=function(_enemy)
@@ -1185,7 +1184,7 @@ local function newminelayer(_vdir)
      enemyshootmine(_enemy)
      _enemy.ts,_enemy.duration,_enemy.target=t(),1+rnd(2),{x=4+rnd(120),y=rnd(116)}
      local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
-     _enemy.spdx,_enemy.spdy=cos(_a)*0.75,sin(_a)*0.75
+     _enemy.spdx,_enemy.spdy=cos(_a)*0.75,sin(_a)*0.75+(_enemy.vdir == -1 and 0.5 or 0)
     end
    end
   end,
