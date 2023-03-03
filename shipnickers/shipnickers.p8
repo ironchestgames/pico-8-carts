@@ -5,8 +5,9 @@ __lua__
 -- by ironchest games
 
 --[[
- - don't cycle enemies, make new ones at the edges
- - fix escape phase difficulty slide
+ - fix spritesheet, enemy sprites up/down next to each other
+ - fix police raids don't show up if failed to embarass
+ - remove extra cargo sprite
  - are all enemies working?
  - fix drawing of bullets (sometimes above sometimes below)
  - fix beam + boost bug (beam stops after btn up for boost)
@@ -115,7 +116,7 @@ local function isaabbscolliding(a,b)
 end
 
 -- globals
-local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemybullets,boss,issuperboss,cargos,lockedpercentage
+local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemiestoadd,enemybullets,boss,issuperboss,cargos,lockedpercentage
 
 local hangar={
  [0]=s2t's=0,bulletcolor=11,primary="missile",secondary="missile",psets="3;6;3_3;4;11",guns="2;1;5;1",exhaustcolors="7;9;5",exhausts="-1;4;0;4",flyduration=1',
@@ -233,7 +234,7 @@ local hangar={
  s2t's=101,bulletcolor=0,primary="fighter",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="14;2;4",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5',
  s2t's=102,bulletcolor=0,primary="minelayer",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="12",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,hp=5',
  s2t's=103,bulletcolor=0,primary="bomber",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="11;3",exhausts="-3;-2;1;2",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=9',
- s2t's=104,bulletcolor=0,primary="cargo",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=14',
+ s2t's=104,bulletcolor=0,primary="cargo",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",hw=4,hh=4,spdx=0,spdy=0.25,accx=0,hp=14',
 
  -- superboss
  s2t's=105,bulletcolor=14,primary="slicer",secondary="beam",psets="3;4;7_3;3;11",guns="2;0;5;0",exhaustcolors="7;9;5",exhausts="-3;6;-2;6;1;6;2;6",x=64,y=40,vdir=1,hw=7,hh=7,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1',
@@ -1172,7 +1173,7 @@ local bossweapons={
 }
 
 local function newminelayer(_vdir)
- add(enemies,mr(getship(102),{
+ return mr(getship(102),{
   x=rnd(128),
   vdir=_vdir,
   ts=t(),
@@ -1191,11 +1192,11 @@ local function newminelayer(_vdir)
     end
    end
   end,
- }))
+ })
 end
 
 local function newkamikaze(_vdir)
- add(enemies,mr(getship(100),{
+ return mr(getship(100),{
   x=rnd(128),
   vdir=_vdir,
   update=function(_enemy)
@@ -1209,12 +1210,12 @@ local function newkamikaze(_vdir)
     _enemy.spdy+=(0.011+_enemy.ifactor*0.003)*_vdir
    end
   end,
- }))
+ })
 end
 
 local function newbomber(_vdir)
  local _spdy=rnd(0.25)+0.325
- add(enemies,mr(getship(103),{
+ return mr(getship(103),{
   vdir=_vdir,
   spdy=_spdy,ogspdy=_spdy,
   ts=t(),
@@ -1233,25 +1234,25 @@ local function newbomber(_vdir)
    _enemy.spdx=mid(-0.5,_enemy.spdx+_enemy.accx,0.5)
    _enemy.spdy=_enemy.ogspdy
   end,
- }))
+ })
 end
 
 local function newfighter(_vdir)
- add(enemies,mr(getship(101),{
+ return mr(getship(101),{
   vdir=_vdir,
   ts=t(),
   update=function(_enemy)
    if not _enemy.target then
     _enemy.x=flr(8+rnd(120))
-    _enemy.target=true
     _enemy.spdy=(rnd(0.5)+0.5)
+    _enemy.target=true
    end
    if t()-_enemy.ts > 0.875 and not _enemy.icec then
      enemyshootbullet(_enemy)
      _enemy.ts=t()
    end
   end,
- }))
+ })
 end
 
 local enemycargobulletpcolors=split'7,14,2'
@@ -1279,7 +1280,6 @@ local function newcargoship(_vdir)
    s=_i == 1 and 104 or rnd(cargoshipsprites),
    ts=t(),
    update=function(_enemy)
-    _enemy.spdy=0.25
     if _enemy.s >= 107 and t()-_enemy.ts > 2+rnd(2) and not _enemy.icec then
      enemyshootcargobullet(_enemy)
      _enemy.ts=t()
@@ -1292,6 +1292,13 @@ local function newcargoship(_vdir)
   add(enemies,_part)
  end
 end
+
+local enemiesstof={
+ [100]=newkamikaze,
+ [101]=newfighter,
+ [102]=newminelayer,
+ [103]=newbomber,
+}
 
 local function explodeenemy(_enemy)
  explode(_enemy)
@@ -1588,17 +1595,29 @@ function gameupdate()
  local issuperbossdead=issuperboss and (boss == nil or boss.hp <= 0)
 
  -- update enemies
- local _spawninterval,_spawnmin=max(0.75,10*lockedpercentage),3
- if escapeelapsed then
-  _spawninterval,_spawnmin=max(0.75,5*lockedpercentage),6
+ for _enemy in all(enemiestoadd) do
+  add(enemies,_enemy)
  end
- local gamestartdone=issuperboss or (boss and t()-gamestartts > 1.5) or true
+ enemiestoadd={}
+ local _spawninterval=max(0.75,6*lockedpercentage)
+ if escapeelapsed then
+  _spawninterval=max(0.25,2*lockedpercentage)
+ end
+ local gamestartdone=issuperboss or (boss and t()-gamestartts > 1.25) or true
+ local _vdir=boss and 1 or -1
  if gamestartdone and
     (not (hasescaped or issuperbossdead)) and
-    (curt-enemyts > _spawninterval and #enemies < min(15,10+dget(63)) or #enemies < _spawnmin) and
+    curt-enemyts > _spawninterval and
+    #enemies < 25 and
     not nickitts then
   enemyts=curt
-  rnd{newkamikaze,newkamikaze,newbomber,newminelayer,newfighter,newcargoship}(boss and 1 or -1)
+  local _count=1
+  if #enemies == 0 then
+   _count=4
+  end
+  for _i=0,_count do
+   add(enemies,rnd{newkamikaze,newkamikaze,newbomber,newminelayer,newfighter,newcargoship}(_vdir))
+  end
  end
 
  for _enemy in all(enemies) do
@@ -1616,27 +1635,19 @@ function gameupdate()
    _enemy.y+=_enemy.spdy*(issuperboss and 1.25 or 1)*((boss and _enemy.icec and 0.5) or 1)
    _enemy.update(_enemy)
 
-   if not ispointinsideaabb(_enemy.x,_enemy.y,64,64,75,77) then -- 150 (11), 154 (13)
-    if _enemy.s >= 104 then
-     if not ispointinsideaabb(_enemy.x,_enemy.y,64,64,64,112) then -- 128 (0), 224 ()
-      del(enemies,_enemy)
-     end
-    elseif hasescaped then
+   if _enemy.s >= 104 then
+    if not ispointinsideaabb(_enemy.x,_enemy.y,64,64,64,112) then -- 128 (0), 224 ()
      del(enemies,_enemy)
-    else
-     _enemy.spdx,
-     _enemy.spdy,
-     _enemy.vdir,
-     _enemy.y,
-     _enemy.icec,
-     _enemy.target=
-      0,
-      0,
-      boss and 1 or -1,
-      -12,
-      boss and _enemy.icec or 0
+    end
+   elseif not ispointinsideaabb(_enemy.x,_enemy.y,64,64,75,77) then -- 150 (11), 154 (13)
+    del(enemies,_enemy)
+    if boss then
+     local _newenemy=enemiesstof[_enemy.s](_vdir)
+     _newenemy.x=_enemy.x
+     add(enemiestoadd,_newenemy)
     end
    end
+
    for _ship in all(ships) do
     if isaabbscolliding(_enemy,_ship) then
      explodeenemy(_enemy)
@@ -1912,8 +1923,8 @@ end
 
 function gameinit()
  gamestartts,gameoverts,nickitts,nickedts,escapeelapsed,madeitts,hasescaped,exit=t()
- ps,psfollow,bottomps,bullets,enemies,enemybullets,cargos,stars={},{},{},{},{},{},{},{}
- enemyts,escapeduration,lockedpercentage=gamestartts,40,#getlocked()/100
+ ps,psfollow,bottomps,bullets,enemies,enemiestoadd,enemybullets,cargos,stars={},{},{},{},{},{},{},{},{}
+ enemyts,escapeduration,lockedpercentage=gamestartts,29,#getlocked()/100
 
  for i=1,24 do
   add(stars,{x=flr(rnd()*128),y=flr(rnd()*128),spd=0.5+rnd(0.5)})
