@@ -5,6 +5,8 @@ __lua__
 -- by ironchest games
 
 --[[
+ - don't cycle enemies, make new ones at the edges
+ - fix escape phase difficulty slide
  - are all enemies working?
  - fix drawing of bullets (sometimes above sometimes below)
  - fix beam + boost bug (beam stops after btn up for boost)
@@ -18,6 +20,7 @@ __lua__
 100-199 - killed boss
 
 dget:
+62 - nicks since police
 63 - boss kill count
 
 sfx channels:
@@ -1952,8 +1955,8 @@ function pickerupdate()
     local _pickcount=mycount(picks)
     if _pickcount > 0 and _pickcount == mycount(ships) then
      local _locked=getlocked()
-     if #_locked == 0 then
-      boss,issuperboss=getship(104),true
+     if #_locked == 0 or dget(62) >= 5 then
+      boss,issuperboss=getship(105),true
      else
       boss,issuperboss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hw=3,hh=3,vdir=1,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2,firedir=1')
      end
@@ -1973,9 +1976,12 @@ local newship
 function pickerdraw()
  cls()
  local _locked=getlocked()
+
  if #_locked == 0 then
   sspr(unpack(split'6,120,3,3,15,1'))
   print('\f8police embarrasments:'..dget(63),19,1)
+ elseif dget(62) >= 5 then
+  print('\fdsecret hangar     \f8police raid!',2,1)
  else
   rectfill(unpack(split'65,1,125,5,3'))
   print('\fdsecret hangar   \fbconvoy defense',2,1)
@@ -2033,6 +2039,13 @@ function pickerinit()
    newship=_ship.s
   end
   unlock(_ship.s)
+ end
+ if madeitts then
+  local _d62=dget(62)+1
+  if issuperboss then
+   _d62=0
+  end
+  dset(62,_d62)
  end
  ships={}
  _update60,_draw=pickerupdate,pickerdraw
