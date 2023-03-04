@@ -230,11 +230,11 @@ local hangar={
  s2t's=99,bulletcolor=9,primary="slicer",secondary="slicer",psets="3;4;9_3;3;10",guns="2;0;5;0",exhaustcolors="11;15;5",exhausts="-1;4;0;4",flyduration=10',
 
  -- enemies
- s2t's=100,bulletcolor=0,primary="kamikaze",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=139,hw=4,hh=4,spdx=0,spdy=0,hp=4',
- s2t's=102,bulletcolor=0,primary="fighter",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="14;2;4",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5',
- s2t's=104,bulletcolor=0,primary="minelayer",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="12",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,hp=5',
- s2t's=106,bulletcolor=0,primary="bomber",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="11;3",exhausts="-3;-2;1;2",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=9',
- s2t's=108,bulletcolor=0,primary="cargo",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",hw=4,hh=4,spdx=0,spdy=0.25,accx=0,hp=14',
+ s2t's=100,s2=128,bulletcolor=0,primary="kamikaze",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=139,hw=4,hh=4,spdx=0,spdy=0,hp=4',
+ s2t's=102,s2=129,bulletcolor=0,primary="fighter",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="14;2;4",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5',
+ s2t's=104,s2=130,bulletcolor=0,primary="minelayer",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="12",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,hp=5',
+ s2t's=106,s2=131,bulletcolor=0,primary="bomber",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="11;3",exhausts="-3;-2;1;2",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=9',
+ s2t's=108,s2=132,bulletcolor=0,primary="cargo",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",hw=4,hh=4,spdx=0,spdy=0.25,accx=0,hp=14',
 
  -- superboss
  s2t's=105,bulletcolor=14,primary="slicer",secondary="beam",psets="3;4;7_3;3;11",guns="2;0;5;0",exhaustcolors="7;9;5",exhausts="-3;6;-2;6;1;6;2;6",x=64,y=40,vdir=1,hw=7,hh=7,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1',
@@ -1270,14 +1270,16 @@ local function enemyshootcargobullet(_enemy)
  }
 end
 
-local cargoshipsprites=split'110,112,114,116'
+local cargoshipsprites,cargoshipsprites2=split'108,110,112,114,116',split'132,133,134,135,136'
 local function newcargoship(_vdir)
  local _x,_len=flr(16+rnd(100)),flr(2+rnd(4))
  for _i=1,_len do
+  local _si=_i == 1 and 1 or rnd(split'2,3,4,5')
   local _part=mr(getship(104),{
    x=_x,y=(_vdir == 1 and -12 or 140)+_i*8*-_vdir,
    vdir=_vdir,
-   s=_i == 1 and 108 or rnd(cargoshipsprites),
+   s=cargoshipsprites[_si],
+   s2=cargoshipsprites2[_si],
    ts=t(),
    update=function(_enemy)
     if _enemy.s >= 114 and t()-_enemy.ts > 2+rnd(2) and not _enemy.icec then
@@ -1755,7 +1757,7 @@ function gamedraw()
 
  -- draw enemies
  for _enemy in all(enemies) do
-  spr(_enemy.s+(issuperboss and 28 or 0)+(_enemy.vdir == 1 and 0 or 1),_enemy.x-4,_enemy.y-4)
+  spr((issuperboss and _enemy.s2 or _enemy.s)+(_enemy.vdir == 1 and 0 or 1),_enemy.x-4,_enemy.y-4)
  end
 
  -- draw ships
