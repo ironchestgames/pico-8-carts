@@ -5,8 +5,7 @@ __lua__
 -- by ironchest games
 
 --[[
- - add acceleration based on v-position?s
- - fix police raids don't show up if failed to embarass
+ - add acceleration based on v-position?
  - remove extra cargo sprite
  - should bullets move down when escaping?
  - are all enemies working?
@@ -2052,13 +2051,14 @@ function pickerinit()
   end
   unlock(_ship.s)
  end
+ local _d62=dget(62)
  if madeitts then
-  local _d62=dget(62)+1
-  if issuperboss then
-   _d62=0
-  end
-  dset(62,_d62)
+  _d62+=1
  end
+ if issuperboss then
+  _d62=0
+ end
+ dset(62,_d62)
  ships={}
  _update60,_draw=pickerupdate,pickerdraw
 end
