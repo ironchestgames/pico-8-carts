@@ -1297,9 +1297,9 @@ end
 
 local enemiesstof={
  [100]=newkamikaze,
- [101]=newfighter,
- [102]=newminelayer,
- [103]=newbomber,
+ [102]=newfighter,
+ [104]=newminelayer,
+ [106]=newbomber,
 }
 
 local function explodeenemy(_enemy)
