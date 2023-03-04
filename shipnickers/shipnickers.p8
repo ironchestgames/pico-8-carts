@@ -5,6 +5,8 @@ __lua__
 -- by ironchest games
 
 --[[
+ - map of enemy factories, remove enemystof etc
+ - lower repair time
  - add acceleration based on v-position?
  - remove extra cargo sprite
  - should bullets move down when escaping?
@@ -259,6 +261,17 @@ local function addps(_x,_y,_r,_spdx,_spdy,_spdr,_colors,_life,_ondeath)
  })
 end
 
+local function addbulletps(_ship,_gun)
+ add(psfollow,{
+  x=0,y=0,r=3,
+  follow=_ship,
+  xoff=_gun.x-4,yoff=_gun.y-4,
+  spdx=0,spdy=0,spdr=-0.5,
+  colors={7,9},
+  life=5,lifec=5,
+ })
+end
+
 local function addbullet(_bullet)
  add(bullets,mr({
   spdx=0,spdy=0,accy=0,spdfactor=1,
@@ -286,21 +299,6 @@ end
 
 local function getplayership(_hangaridx)
  return mr(s2t'y=110,firedir=-1,hw=3,hh=3,spd=1,hp=3,repairc=0,firingc=0,primaryc=12,secondaryc=0,secondaryshots=3',clone(getship(_hangaridx)))
-end
-
-local function createshipflashes()
- for _ship in all(ships) do
-  local _shipsx,_shipsy=(_ship.s%16)*8,flr(_ship.s/16)*8
-  for _x=0,7 do
-   for _y=0,7 do
-    local _col=0
-    if sget(_shipsx+_x,_shipsy+_y) != 0 then
-     _col=7
-    end
-    sset(112+8*_ship.plidx+_x,120+_y,_col)
-   end
-  end
- end
 end
 
 local function getdirs(_plidx)
@@ -1358,8 +1356,6 @@ function gameupdate()
   local _urx,_ury=_ship.x-4,_ship.y-4
 
   -- repairing/firing
-  _ship.isfiring=nil
-
   if _ship.secondaryc <= 0 then
    _ship.isshielding,_ship.isboosting,_ship.isbeaming=nil
   end
@@ -1383,9 +1379,10 @@ function gameupdate()
     _ship.primaryc+=0.25
     _ship.firingc-=1
     if _ship.firingc <= 0 then
-     _ship.firingc,_ship.isfiring=10,true
+     _ship.firingc=10
      for _gun in all(_ship.guns) do
       shipsfx(_ship,8+_ship.plidx)
+      addbulletps(_ship,_gun)
       addbullet{
        x=_urx+_gun.x,y=_ury+_gun.y,
        hw=1,hh=2,
@@ -1456,7 +1453,6 @@ function gameupdate()
    if nickitts then
     del(ships,_ship)
     add(ships,mr(getplayership(boss.s),{plidx=_plidx,x=_ship.x,y=_ship.y,hp=1}))
-    createshipflashes()
     nickedts,escapeelapsed,nickitts,boss=curt,0
     sfx(1,2)
     for _enemy in all(enemies) do
@@ -1762,12 +1758,7 @@ function gamedraw()
 
  -- draw ships
  for _ship in all(ships) do
-  local _urx,_ury=_ship.x-4,_ship.y-4
-  spr(_ship.s,_urx,_ury)
-
-  if _ship.isfiring then
-   spr(254+_ship.plidx,_urx,_ury)
-  end
+  spr(_ship.s,_ship.x-4,_ship.y-4)
  end
 
  -- draw exit
@@ -1931,8 +1922,6 @@ function gameinit()
  for i=1,24 do
   add(stars,{x=flr(rnd()*128),y=flr(rnd()*128),spd=0.5+rnd(0.5)})
  end
-
- createshipflashes()
 
  sfx(0,3)
 
