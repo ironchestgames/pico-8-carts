@@ -5,7 +5,6 @@ __lua__
 -- by ironchest games
 
 --[[
- - map of enemy factories, remove enemystof etc
  - lower repair time
  - add acceleration based on v-position?
  - remove extra cargo sprite
@@ -232,11 +231,11 @@ local hangar={
  s2t's=99,bulletcolor=9,primary="slicer",secondary="slicer",psets="3;4;9_3;3;10",guns="2;0;5;0",exhaustcolors="11;15;5",exhausts="-1;4;0;4",flyduration=10',
 
  -- enemies
- s2t's=100,s2=128,bulletcolor=0,primary="kamikaze",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=139,hw=4,hh=4,spdx=0,spdy=0,hp=4',
- s2t's=102,s2=129,bulletcolor=0,primary="fighter",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="14;2;4",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5',
- s2t's=104,s2=130,bulletcolor=0,primary="minelayer",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="12",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,hp=5',
- s2t's=106,s2=131,bulletcolor=0,primary="bomber",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="11;3",exhausts="-3;-2;1;2",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=9',
- s2t's=108,s2=132,bulletcolor=0,primary="cargo",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",hw=4,hh=4,spdx=0,spdy=0.25,accx=0,hp=14',
+ s2t's=100,s2=128,bulletcolor=0,factory=1,primary="kamikaze",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=139,hw=4,hh=4,spdx=0,spdy=0,hp=4',
+ s2t's=102,s2=129,bulletcolor=0,factory=2,primary="fighter",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="14;2;4",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5',
+ s2t's=104,s2=130,bulletcolor=0,factory=3,primary="minelayer",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="12",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,hp=5',
+ s2t's=106,s2=131,bulletcolor=0,factory=4,primary="bomber",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="11;3",exhausts="-3;-2;1;2",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=9',
+ s2t's=108,s2=132,bulletcolor=0,factory=5,primary="cargoship",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",hw=4,hh=4,spdx=0,spdy=0.25,accx=0,hp=14',
 
  -- superboss
  s2t's=105,bulletcolor=14,primary="slicer",secondary="beam",psets="3;4;7_3;3;11",guns="2;0;5;0",exhaustcolors="7;9;5",exhausts="-3;6;-2;6;1;6;2;6",x=64,y=40,vdir=1,hw=7,hh=7,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1',
@@ -1170,88 +1169,6 @@ local bossweapons={
  end,
 }
 
-local function newminelayer(_vdir)
- return mr(getship(102),{
-  x=rnd(128),
-  vdir=_vdir,
-  ts=t(),
-  update=function(_enemy)
-   if _enemy.target then
-    if t()-_enemy.ts > _enemy.duration or ispointinsideaabb(_enemy.target.x,_enemy.target.y,_enemy.x,_enemy.y,_enemy.hw,_enemy.hh) then
-     _enemy.target=nil
-    end
-   else
-    _enemy.spdx,_enemy.spdy=0,0
-    if t()-_enemy.ts > 1.5 and not _enemy.icec then
-     enemyshootmine(_enemy)
-     _enemy.ts,_enemy.duration,_enemy.target=t(),1+rnd(2),{x=4+rnd(120),y=rnd(116)}
-     local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
-     _enemy.spdx,_enemy.spdy=cos(_a)*0.75,sin(_a)*0.75+(_enemy.vdir == -1 and 0.5 or 0)
-    end
-   end
-  end,
- })
-end
-
-local function newkamikaze(_vdir)
- return mr(getship(100),{
-  x=rnd(128),
-  vdir=_vdir,
-  update=function(_enemy)
-   if _enemy.target == nil then
-    _enemy.target=rnd(ships)
-    _enemy.ifactor=rnd()
-   end
-   if _enemy.target then
-    local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
-    _enemy.spdx=cos(_a)*0.5
-    _enemy.spdy+=(0.011+_enemy.ifactor*0.003)*_vdir
-   end
-  end,
- })
-end
-
-local function newbomber(_vdir)
- local _spdy=rnd(0.25)+0.325
- return mr(getship(103),{
-  vdir=_vdir,
-  spdy=_spdy,ogspdy=_spdy,
-  ts=t(),
-  update=function(_enemy)
-   if not _enemy.target then
-    _enemy.x=rnd(128)
-    _enemy.target=true
-   end
-   if t()-_enemy.ts > 0.875 then
-    _enemy.accx=rnd{0.0125,-0.0125}
-    if rnd() > 0.375 and not _enemy.icec then
-     enemyshootmissile(_enemy)
-    end
-    _enemy.ts=t()
-   end
-   _enemy.spdx=mid(-0.5,_enemy.spdx+_enemy.accx,0.5)
-   _enemy.spdy=_enemy.ogspdy
-  end,
- })
-end
-
-local function newfighter(_vdir)
- return mr(getship(101),{
-  vdir=_vdir,
-  ts=t(),
-  update=function(_enemy)
-   if not _enemy.target then
-    _enemy.x=flr(8+rnd(120))
-    _enemy.spdy=(rnd(0.5)+0.5)
-    _enemy.target=true
-   end
-   if t()-_enemy.ts > 0.875 and not _enemy.icec then
-     enemyshootbullet(_enemy)
-     _enemy.ts=t()
-   end
-  end,
- })
-end
 
 local enemycargobulletpcolors=split'7,14,2'
 local function drawenemycargobullet(_bullet)
@@ -1269,35 +1186,119 @@ local function enemyshootcargobullet(_enemy)
 end
 
 local cargoshipsprites,cargoshipsprites2=split'108,110,112,114,116',split'132,133,134,135,136'
-local function newcargoship(_vdir)
- local _x,_len=flr(16+rnd(100)),flr(2+rnd(4))
- for _i=1,_len do
-  local _si=_i == 1 and 1 or rnd(split'2,3,4,5')
-  local _part=mr(getship(104),{
-   x=_x,y=(_vdir == 1 and -12 or 140)+_i*8*-_vdir,
+
+local enemyfactories={
+ -- kamikaze
+ function(_vdir)
+  return mr(getship(100),{
+   x=rnd(128),
    vdir=_vdir,
-   s=cargoshipsprites[_si],
-   s2=cargoshipsprites2[_si],
-   ts=t(),
    update=function(_enemy)
-    if _enemy.s >= 114 and t()-_enemy.ts > 2+rnd(2) and not _enemy.icec then
-     enemyshootcargobullet(_enemy)
-     _enemy.ts=t()
+    if _enemy.target == nil then
+     _enemy.target=rnd(ships)
+     _enemy.ifactor=rnd()
+    end
+    if _enemy.target then
+     local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
+     _enemy.spdx=cos(_a)*0.5
+     _enemy.spdy+=(0.011+_enemy.ifactor*0.003)*_vdir
     end
    end,
   })
-  if _i < _len then
-   _part.exhausts=nil
-  end
-  add(enemies,_part)
- end
-end
+ end,
 
-local enemiesstof={
- [100]=newkamikaze,
- [102]=newfighter,
- [104]=newminelayer,
- [106]=newbomber,
+ -- fighter
+ function(_vdir)
+  return mr(getship(101),{
+   vdir=_vdir,
+   ts=t(),
+   update=function(_enemy)
+    if not _enemy.target then
+     _enemy.x=flr(8+rnd(120))
+     _enemy.spdy=(rnd(0.5)+0.5)
+     _enemy.target=true
+    end
+    if t()-_enemy.ts > 0.875 and not _enemy.icec then
+      enemyshootbullet(_enemy)
+      _enemy.ts=t()
+    end
+   end,
+  })
+ end,
+
+ -- minelayer
+ function(_vdir)
+  return mr(getship(102),{
+   x=rnd(128),
+   vdir=_vdir,
+   ts=t(),
+   update=function(_enemy)
+    if _enemy.target then
+     if t()-_enemy.ts > _enemy.duration or ispointinsideaabb(_enemy.target.x,_enemy.target.y,_enemy.x,_enemy.y,_enemy.hw,_enemy.hh) then
+      _enemy.target=nil
+     end
+    else
+     _enemy.spdx,_enemy.spdy=0,0
+     if t()-_enemy.ts > 1.5 and not _enemy.icec then
+      enemyshootmine(_enemy)
+      _enemy.ts,_enemy.duration,_enemy.target=t(),1+rnd(2),{x=4+rnd(120),y=rnd(116)}
+      local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
+      _enemy.spdx,_enemy.spdy=cos(_a)*0.75,sin(_a)*0.75+(_enemy.vdir == -1 and 0.5 or 0)
+     end
+    end
+   end,
+  })
+ end,
+
+ -- bomber
+ function(_vdir)
+  local _spdy=rnd(0.25)+0.325
+  return mr(getship(103),{
+   vdir=_vdir,
+   spdy=_spdy,ogspdy=_spdy,
+   ts=t(),
+   update=function(_enemy)
+    if not _enemy.target then
+     _enemy.x=rnd(128)
+     _enemy.target=true
+    end
+    if t()-_enemy.ts > 0.875 then
+     _enemy.accx=rnd{0.0125,-0.0125}
+     if rnd() > 0.375 and not _enemy.icec then
+      enemyshootmissile(_enemy)
+     end
+     _enemy.ts=t()
+    end
+    _enemy.spdx=mid(-0.5,_enemy.spdx+_enemy.accx,0.5)
+    _enemy.spdy=_enemy.ogspdy
+   end,
+  })
+ end,
+
+ -- cargoship
+ function(_vdir)
+  local _x,_len=flr(16+rnd(100)),flr(2+rnd(4))
+  for _i=1,_len do
+   local _si=_i == 1 and 1 or rnd(split'2,3,4,5')
+   local _part=mr(getship(104),{
+    x=_x,y=(_vdir == 1 and -12 or 140)+_i*8*-_vdir,
+    vdir=_vdir,
+    s=cargoshipsprites[_si],
+    s2=cargoshipsprites2[_si],
+    ts=t(),
+    update=function(_enemy)
+     if _enemy.s >= 114 and t()-_enemy.ts > 2+rnd(2) and not _enemy.icec then
+      enemyshootcargobullet(_enemy)
+      _enemy.ts=t()
+     end
+    end,
+   })
+   if _i < _len then
+    _part.exhausts=nil
+   end
+   add(enemies,_part)
+  end
+ end,
 }
 
 local function explodeenemy(_enemy)
@@ -1613,8 +1614,11 @@ function gameupdate()
   if #enemies == 0 then
    _count=4
   end
+
+  local _enemytypes=clone(enemyfactories)
+  add(_enemytypes,enemyfactories[1]) -- note: add kamikaze again to have more of those enemies
   for _i=0,_count do
-   add(enemies,rnd{newkamikaze,newkamikaze,newbomber,newminelayer,newfighter,newcargoship}(_vdir))
+   add(enemies,rnd(_enemytypes)(_vdir))
   end
  end
 
@@ -1640,7 +1644,7 @@ function gameupdate()
    elseif not ispointinsideaabb(_enemy.x,_enemy.y,64,64,75,77) then -- 150 (11), 154 (13)
     del(enemies,_enemy)
     if boss then
-     local _newenemy=enemiesstof[_enemy.s](_vdir)
+     local _newenemy=enemyfactories[_enemy.factory](_vdir)
      _newenemy.x=_enemy.x
      add(enemiestoadd,_newenemy)
     end
