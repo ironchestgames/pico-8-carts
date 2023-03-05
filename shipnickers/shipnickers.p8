@@ -6,7 +6,11 @@ __lua__
 
 --[[
  - add bigger mines (graphics)
- - add acceleration based on v-position?
+ - add some time after nick to be able to see what weapons you got in the new ship
+ - redesign bg color in hangar
+ - move cargo sprite and police lights to old ship flashes
+ - data loading from like excel sheet or smt
+ - does 2p work?
  - should bullets move down when escaping?
  - are all enemies working?
  - fix drawing of bullets (sometimes above sometimes below)
@@ -73,7 +77,7 @@ local function clone(_t)
  return _result
 end
 
-local function mycount(_t)
+local function mycount(_t) -- todo: needed??
  local _c=0
  for _ in pairs(_t) do
   _c+=1
@@ -116,7 +120,7 @@ local function isaabbscolliding(a,b)
 end
 
 -- globals
-local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemiestoadd,enemybullets,boss,issuperboss,cargos,lockedpercentage
+local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemiestoadd,enemybullets,boss,issuperboss,cargos,lockedpercentage,escapefactor
 
 local hangar={
  [0]=s2t's=0,bulletcolor=11,primary="missile",secondary="missile",psets="3;6;3_3;4;11",guns="2;1;5;1",exhaustcolors="7;9;5",exhausts="-1;4;0;4",flyduration=1',
@@ -240,6 +244,10 @@ local hangar={
  s2t's=105,bulletcolor=14,primary="slicer",secondary="beam",psets="3;4;7_3;3;11",guns="2;0;5;0",exhaustcolors="7;9;5",exhausts="-3;6;-2;6;1;6;2;6",x=64,y=40,vdir=1,hw=7,hh=7,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1',
 }
 
+-- for _i=0,105 do
+--  hangar[_i]=s2t(hangar[_i])
+-- end
+
 -- helpers
 local function getblink()
  return flr((t()*12)%3)
@@ -272,14 +280,14 @@ end
 
 local function addbullet(_bullet)
  add(bullets,mr({
-  spdx=0,spdy=0,accy=0,spdfactor=1,
+  spdx=0,spdy=0,accy=0,spdfactor=1,escapefactor=0,
   ondeath=function (_b) del(bullets,_b) end,
  },_bullet))
 end
 
 local function addenemybullet(_bullet)
  add(enemybullets,mr({
-  spdx=0,spdy=0,accy=0,spdfactor=1,life=1,isenemy=true,
+  spdx=0,spdy=0,accy=0,spdfactor=1,life=1,isenemy=true,escapefactor=0,
   ondeath=function (_b) del(enemybullets,_b) end,
  },_bullet))
 end
@@ -416,7 +424,7 @@ end
 local function updatebullets(_bullets)
  for _b in all(_bullets) do
   _b.x+=_b.spdx
-  _b.y+=_b.spdy
+  _b.y+=_b.spdy+_b.escapefactor*(escapefactor-1)
 
   _b.spdy+=_b.accy
 
@@ -531,6 +539,7 @@ local function onminedeathbase(_bullet,_bullets)
      x=_bullet.x+mineexplodepos[_i],y=_bullet.y+mineexplodepos[_i+1],
      hw=8,hh=8,
      spdfactor=0,
+     escapefactor=0,
      spdx=0,spdy=0,accy=0,
      dmg=6,
      life=2,
@@ -560,6 +569,7 @@ local function shootmine(_ship,_life,_angle)
   hw=2,hh=2,
   frame=0,
   spdfactor=0.96+rnd(0.01),
+  escapefactor=1,
   spdx=cos(_angle+rnd(0.02)),spdy=sin(_angle+rnd(0.02)),accy=0,
   dmg=5,
   life=_life,
@@ -599,6 +609,7 @@ local function getflakbullet(_x,_y,_spdx,_spdy,_life)
   spdy=_spdy,
   accy=0.01,
   spdfactor=0.95,
+  escapefactor=1,
   dmg=2,
   life=_life,
   draw=drawflakbullet,
@@ -757,6 +768,7 @@ local function shootbubble(_ship)
   hw=2,hh=2.5,
   spdx=rnd()-0.5,spdy=rnd()-0.5,
   spdfactor=0.96,
+  escapefactor=1,
   dmg=2,
   life=190,
   update=clearenemybullets,
@@ -799,6 +811,7 @@ local function shootice(_ship,_life,_bullets)
   hw=2,hh=2,
   spdx=_ship.firedir*rnd(0.1),spdy=_ship.firedir+_ship.firedir*rnd(0.1),
   accy=0,spdfactor=1,
+  escapefactor=1,
   dmg=0,
   isice=true,
   life=_life,
@@ -1003,6 +1016,7 @@ local function enemyshootmissile(_enemy)
   x=_enemy.x,y=_enemy.y,
   hw=2,hh=3,
   spdx=rnd(0.5)-0.25,spdy=0.1*_vdir,accy=0.05*_vdir,spdfactor=1,
+  escapefactor=1,
   life=1000,
   draw=drawenemymissile,
   ondeath=explode,
@@ -1029,6 +1043,7 @@ local function enemyshootmine(_enemy)
   hw=2,hh=2,
   frame=0,
   spdfactor=0.96+rnd(0.01),
+  escapefactor=1,
   spdx=rnd(0.5)-0.25,spdy=1.5*_enemy.vdir,accy=0,
   life=110,
   draw=drawenemymine,
@@ -1049,6 +1064,7 @@ local function enemyshootbullet(_enemy)
    x=_enemy.x+enemybulletxoffs[_i],y=_enemy.y,
    hw=1,hh=2,
    spdy=2*_vdir,
+   escapefactor=0,
    life=1000,
    flipy=_vdir == -1,
    draw=drawenemybullet,
@@ -1176,6 +1192,7 @@ end
 local function enemyshootcargobullet(_enemy)
  addenemybullet{
   hw=1,hh=1,life=1000,spdy=_enemy.vdir,
+  escapefactor=0,
   x=_enemy.x,y=_enemy.y,
   spdx=_enemy.s == 116 and -1 or 1,
   draw=drawenemycargobullet,
@@ -1313,6 +1330,16 @@ local lastframe,curt
 function gameupdate()
 
  curt=t()
+ 
+ escapefactor=1
+ if #ships > 0 and not boss then
+  local _fastestship=ships[1]
+  if ships[2] and ships[2].y < _fastestship.y then
+   _fastestship=ships[2]
+  end
+  escapefactor=max(1,(128-_fastestship.y)/32)
+ end
+
  if escapeelapsed then
   hasescaped=escapeelapsed > escapeduration
  end
@@ -1454,6 +1481,7 @@ function gameupdate()
     del(ships,_ship)
     add(ships,mr(getplayership(boss.s),{plidx=_plidx,x=_ship.x,y=_ship.y,hp=1}))
     nickedts,escapeelapsed,nickitts,boss=curt,0
+    pal(0,0,1)
     sfx(1,2)
     for _enemy in all(enemies) do
      if _enemy.s < 108 then
@@ -1725,13 +1753,14 @@ function gamedraw()
  cls()
 
  -- draw stars
+ local _starcol=nickedts and 5 or 1
  for _s in all(stars) do
-  _s.y+=_s.spd*(boss and 1 or 2)
+  _s.y+=_s.spd*escapefactor
   if _s.y>130 then
    _s.y=-3
    _s.x=flr(rnd()*128)
   end
-  pset(_s.x,_s.y,1)
+  pset(_s.x,_s.y,_starcol)
  end
 
  -- draw particles below
@@ -1834,7 +1863,7 @@ function gamedraw()
  
  if escapeelapsed then
   if #ships > 0 then
-   escapeelapsed+=t()-lastframe
+   escapeelapsed+=(t()-lastframe)*escapefactor
   end
   rectfill(0,127,min(127*(escapeelapsed/escapeduration),128),127,13)
  end
@@ -1920,7 +1949,7 @@ end
 function gameinit()
  gamestartts,gameoverts,nickitts,nickedts,escapeelapsed,madeitts,hasescaped,exit=t()
  ps,psfollow,bottomps,bullets,enemies,enemiestoadd,enemybullets,cargos,stars={},{},{},{},{},{},{},{},{}
- enemyts,escapeduration,lockedpercentage=gamestartts,29,#getlocked()/100
+ enemyts,escapeduration,lockedpercentage,escapefactor=gamestartts,55,#getlocked()/100,1
 
  for i=1,24 do
   add(stars,{x=flr(rnd()*128),y=flr(rnd()*128),spd=0.5+rnd(0.5)})
