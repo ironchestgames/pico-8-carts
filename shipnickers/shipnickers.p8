@@ -5,7 +5,6 @@ __lua__
 -- by ironchest games
 
 --[[
- - lower repair time
  - add acceleration based on v-position?
  - remove extra cargo sprite
  - should bullets move down when escaping?
@@ -297,7 +296,7 @@ local function getship(_hangaridx)
 end
 
 local function getplayership(_hangaridx)
- return mr(s2t'y=110,firedir=-1,hw=3,hh=3,spd=1,hp=3,repairc=0,firingc=0,primaryc=12,secondaryc=0,secondaryshots=3',clone(getship(_hangaridx)))
+ return mr(s2t'y=110,firedir=-1,hw=3,hh=3,spd=1,hp=3,firingc=0,primaryc=12,secondaryc=0,secondaryshots=3',clone(getship(_hangaridx)))
 end
 
 local function getdirs(_plidx)
@@ -1365,7 +1364,7 @@ function gameupdate()
    newburning(_ship.x,_ship.y)
    _ship.primaryc=max(0,_ship.primaryc-0.0875)
    if btnp(4,_plidx) then
-    _ship.primaryc+=2.5
+    _ship.primaryc+=4
     if _ship.primaryc >= 37 then
      sfx(24,_ship.plidx)
      _ship.hp,_ship.primaryc=3,0
