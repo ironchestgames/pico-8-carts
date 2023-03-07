@@ -249,7 +249,7 @@ end
 
 -- helpers
 local function getblink()
- return flr((t()*12)%3)
+ return flr(t()*12)%3
 end
 
 local function drawblinktext(_str,_startcolor)
@@ -1808,7 +1808,7 @@ function gamedraw()
   if boss.hp > 0 then
    if issuperboss then
     spr(126,flr(boss.x)-8,flr(boss.y)-6,2,2)
-    spr(254+flr((t()*8)%2),_urx,_ury)
+    spr(254+flr(t()*8)%2,_urx,_ury)
     if boss.shieldts then
      drawshield(boss.x,boss.y,8,11)
     end
