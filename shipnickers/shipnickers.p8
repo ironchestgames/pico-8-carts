@@ -5,13 +5,13 @@ __lua__
 -- by ironchest games
 
 --[[
+ - fix mem leak
  - add bigger mines (graphics)
- - add some time after nick to be able to see what weapons you got in the new ship
  - redesign bg color in hangar
  - move cargo sprite and police lights to old ship flashes
- - data loading from like excel sheet or smt
+ - data loading from like excel sheet or smt?
  - does 2p work?
- - should bullets move down when escaping?
+ - add cargo moving down while escaping
  - are all enemies working?
  - fix drawing of bullets (sometimes above sometimes below)
  - fix beam + boost bug (beam stops after btn up for boost)
@@ -1635,7 +1635,8 @@ function gameupdate()
     (not (hasescaped or issuperbossdead)) and
     curt-enemyts > _spawninterval and
     #enemies < 25 and
-    not nickitts then
+    nickitts == nil and
+    curt-(nickedts or (curt-2)) > 1.5 then
   enemyts=curt
   local _count=1
   if #enemies == 0 then
