@@ -5,9 +5,8 @@ __lua__
 -- by ironchest games
 
 --[[
- - fix mem leak
  - add bigger mines (graphics)
- - redesign bg color in hangar
+ - redesign bg color in hangar?
  - data loading from like excel sheet or smt?
  - does 2p work?
  - add cargo moving down while escaping
@@ -107,6 +106,10 @@ local function s2t(_t)
   _result[_kvpair[1]]=_value
  end
  return _result
+end
+
+local function unpacksplit(_s)
+ return unpack(split(_s))
 end
 
 local function ispointinsideaabb(_x,_y,_ax,_ay,_ahw,_ahh)
@@ -237,7 +240,7 @@ local hangar={
  's=102,s2=129,bulletcolor=0,factory=2,primary="fighter",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="14;2;4",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5',
  's=104,s2=130,bulletcolor=0,factory=3,primary="minelayer",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="12",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,hp=5',
  's=106,s2=131,bulletcolor=0,factory=4,primary="bomber",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="11;3",exhausts="-3;-2;1;2",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=9',
- 's=108,s2=132,bulletcolor=0,factory=5,primary="cargoship",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",hw=4,hh=4,spdx=0,spdy=0.25,accx=0,hp=14',
+ 's=108,s2=132,bulletcolor=0,factory=5,primary="cargoship",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0.25,accx=0,hp=14',
 
  -- superboss
  's=105,bulletcolor=14,primary="slicer",secondary="beam",psets="3;4;7_3;3;11",guns="2;0;5;0",exhaustcolors="7;9;5",exhausts="-3;6;-2;6;1;6;2;6",x=64,y=40,vdir=1,hw=7,hh=7,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1',
@@ -1202,23 +1205,76 @@ end
 
 local cargoshipsprites,cargoshipsprites2=split'110,112,114,116',split'133,134,135,136'
 
+local function kamikazeupdate(_enemy)
+ if _enemy.target == nil then
+  _enemy.target=rnd(ships)
+  _enemy.ifactor=rnd()
+ end
+ if _enemy.target then
+  local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
+  _enemy.spdx=cos(_a)*0.5
+  _enemy.spdy+=(0.011+_enemy.ifactor*0.003)*_enemy.vdir
+ end
+end
+
+local function fighterupdate(_enemy)
+ if not _enemy.target then
+  _enemy.x=flr(8+rnd(120))
+  _enemy.spdy=(rnd(0.5)+0.5)
+  _enemy.target=true
+ end
+ if t()-_enemy.ts > 0.875 and not _enemy.icec then
+   enemyshootbullet(_enemy)
+   _enemy.ts=t()
+ end
+end
+
+local function minelayerupdate(_enemy)
+ if _enemy.target then
+  if t()-_enemy.ts > _enemy.duration or ispointinsideaabb(_enemy.target.x,_enemy.target.y,_enemy.x,_enemy.y,_enemy.hw,_enemy.hh) then
+   _enemy.target=nil
+  end
+ else
+  _enemy.spdx,_enemy.spdy=0,0
+  if t()-_enemy.ts > 1.5 and not _enemy.icec then
+   enemyshootmine(_enemy)
+   _enemy.ts,_enemy.duration,_enemy.target=t(),1+rnd(2),{x=4+rnd(120),y=rnd(116)}
+   local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
+   _enemy.spdx,_enemy.spdy=cos(_a)*0.75,sin(_a)*0.75+(_enemy.vdir == -1 and 0.5 or 0)
+  end
+ end
+end
+
+local function bomberupdate(_enemy)
+ if not _enemy.target then
+  _enemy.x=rnd(128)
+  _enemy.target=true
+ end
+ if t()-_enemy.ts > 0.875 then
+  _enemy.accx=rnd{0.0125,-0.0125}
+  if rnd() > 0.375 and not _enemy.icec then
+   enemyshootmissile(_enemy)
+  end
+  _enemy.ts=t()
+ end
+ _enemy.spdx=mid(-0.5,_enemy.spdx+_enemy.accx,0.5)
+ _enemy.spdy=_enemy.ogspdy
+end
+
+local function cargoshipupdate(_enemy)
+ if _enemy.s >= 114 and t()-_enemy.ts > 2+rnd(2) and not _enemy.icec then
+  enemyshootcargobullet(_enemy)
+  _enemy.ts=t()
+ end
+end
+
 local enemyfactories={
  -- kamikaze
  function(_vdir)
   return mr(getship(100),{
    x=rnd(128),
    vdir=_vdir,
-   update=function(_enemy)
-    if _enemy.target == nil then
-     _enemy.target=rnd(ships)
-     _enemy.ifactor=rnd()
-    end
-    if _enemy.target then
-     local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
-     _enemy.spdx=cos(_a)*0.5
-     _enemy.spdy+=(0.011+_enemy.ifactor*0.003)*_vdir
-    end
-   end,
+   update=kamikazeupdate,
   })
  end,
 
@@ -1227,17 +1283,7 @@ local enemyfactories={
   return mr(getship(101),{
    vdir=_vdir,
    ts=t(),
-   update=function(_enemy)
-    if not _enemy.target then
-     _enemy.x=flr(8+rnd(120))
-     _enemy.spdy=(rnd(0.5)+0.5)
-     _enemy.target=true
-    end
-    if t()-_enemy.ts > 0.875 and not _enemy.icec then
-      enemyshootbullet(_enemy)
-      _enemy.ts=t()
-    end
-   end,
+   update=fighterupdate,
   })
  end,
 
@@ -1247,21 +1293,7 @@ local enemyfactories={
    x=rnd(128),
    vdir=_vdir,
    ts=t(),
-   update=function(_enemy)
-    if _enemy.target then
-     if t()-_enemy.ts > _enemy.duration or ispointinsideaabb(_enemy.target.x,_enemy.target.y,_enemy.x,_enemy.y,_enemy.hw,_enemy.hh) then
-      _enemy.target=nil
-     end
-    else
-     _enemy.spdx,_enemy.spdy=0,0
-     if t()-_enemy.ts > 1.5 and not _enemy.icec then
-      enemyshootmine(_enemy)
-      _enemy.ts,_enemy.duration,_enemy.target=t(),1+rnd(2),{x=4+rnd(120),y=rnd(116)}
-      local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
-      _enemy.spdx,_enemy.spdy=cos(_a)*0.75,sin(_a)*0.75+(_enemy.vdir == -1 and 0.5 or 0)
-     end
-    end
-   end,
+   update=minelayerupdate,
   })
  end,
 
@@ -1272,21 +1304,7 @@ local enemyfactories={
    vdir=_vdir,
    spdy=_spdy,ogspdy=_spdy,
    ts=t(),
-   update=function(_enemy)
-    if not _enemy.target then
-     _enemy.x=rnd(128)
-     _enemy.target=true
-    end
-    if t()-_enemy.ts > 0.875 then
-     _enemy.accx=rnd{0.0125,-0.0125}
-     if rnd() > 0.375 and not _enemy.icec then
-      enemyshootmissile(_enemy)
-     end
-     _enemy.ts=t()
-    end
-    _enemy.spdx=mid(-0.5,_enemy.spdx+_enemy.accx,0.5)
-    _enemy.spdy=_enemy.ogspdy
-   end,
+   update=bomberupdate,
   })
  end,
 
@@ -1301,12 +1319,7 @@ local enemyfactories={
     s=cargoshipsprites[_si],
     s2=cargoshipsprites2[_si],
     ts=t(),
-    update=function(_enemy)
-     if _enemy.s >= 114 and t()-_enemy.ts > 2+rnd(2) and not _enemy.icec then
-      enemyshootcargobullet(_enemy)
-      _enemy.ts=t()
-     end
-    end,
+    update=cargoshipupdate,
    })
    if _i < _len then
     _part.exhausts=nil
@@ -1483,7 +1496,7 @@ function gameupdate()
     pal(0,0,1)
     sfx(1,2)
     for _enemy in all(enemies) do
-     if _enemy.s < 108 then
+     if _enemy.factory != 5 then
       _enemy.vdir=-1
      end
     end
@@ -1638,12 +1651,12 @@ function gameupdate()
     curt-(nickedts or (curt-2)) > 1.5 then
   enemyts=curt
   local _count=1
-  if #enemies == 0 then
+  if #enemies < 2 then
    _count=4
   end
 
   local _enemytypes=clone(enemyfactories)
-  add(_enemytypes,enemyfactories[1]) -- note: add kamikaze again to have more of those enemies
+  add(_enemytypes,enemyfactories[1]) -- note: add kamikaze again to have more of those
   for _i=0,_count do
    add(enemies,rnd(_enemytypes)(_vdir))
   end
@@ -1664,17 +1677,17 @@ function gameupdate()
    _enemy.y+=_enemy.spdy*(issuperboss and 1.25 or 1)*((boss and _enemy.icec and 0.5) or 1)
    _enemy.update(_enemy)
 
-   if _enemy.s >= 104 then
+   if _enemy.factory == 5 then
     if not ispointinsideaabb(_enemy.x,_enemy.y,64,64,64,112) then -- 128 (0), 224 ()
      del(enemies,_enemy)
     end
    elseif not ispointinsideaabb(_enemy.x,_enemy.y,64,64,75,77) then -- 150 (11), 154 (13)
-    del(enemies,_enemy)
     if boss then
      local _newenemy=enemyfactories[_enemy.factory](_vdir)
-     _newenemy.x=_enemy.x
+     _newenemy.x,_newenemy.y=_enemy.x,-12
      add(enemiestoadd,_newenemy)
     end
+    del(enemies,_enemy)
    end
 
    for _ship in all(ships) do
@@ -1798,8 +1811,8 @@ function gamedraw()
   local _frame=getblink()
   local _sx=39+_frame*5
   print('to secret hangar',32,3,10+_frame)
-  sspr(_sx,123,5,5,18,3)
-  sspr(_sx,123,5,5,104,3)
+  sspr(_sx,unpacksplit'123,5,5,18,3')
+  sspr(_sx,unpacksplit'123,5,5,104,3')
  end
 
  -- draw boss
@@ -1938,7 +1951,7 @@ function gamedraw()
   drawblinktext('get away!',9)
  end
 
- if madeitts then
+ if madeitts and #ships > 0 then
   drawblinktext('made it!',10)
  end
 
@@ -2012,16 +2025,16 @@ function pickerdraw()
  local _locked=getlocked()
 
  if #_locked == 0 then
-  sspr(unpack(split'6,120,3,3,15,1'))
+  sspr(unpacksplit'6,120,3,3,15,1')
   print('\f8police embarrasments:'..dget(63),19,1)
  elseif dget(62) >= 5 then
   print('\fdsecret hangar     \f8police raid!',2,1)
  else
-  rectfill(unpack(split'65,1,125,5,3'))
-  print('\fdsecret hangar   \fbconvoy defense',2,1)
+  rectfill(unpacksplit'65,1,125,5,3')
+  print(unpacksplit'\fdsecret hangar   \fbconvoy defense,2,1')
   clip(65,1,(98-#_locked)/100*61,5)
-  rectfill(unpack(split'65,1,125,5,2'))
-  print('\fdsecret hangar   \f8convoy defense',2,1)
+  rectfill(unpacksplit'65,1,125,5,2')
+  print(unpacksplit('\fdsecret hangar   \f8convoy defense,2,1'))
   clip()
  end
  for _i=0,1 do
@@ -2058,7 +2071,7 @@ function pickerdraw()
 end
 
 function pickerinit()
- pal(0,129,1)
+ pal(unpacksplit'0,129,1')
  pal(split'1,136,139,141,5,6,7,8,9,10,138,12,13,14,134',1)
  sfx(-2,0)
  sfx(-2,1)
@@ -2108,8 +2121,8 @@ _draw=function ()
    spr(118+(8-_x+_y)%8,4+_x*16-splashshipsd,4+_y*16-splashshipsd)
   end
  end
- sspr(unpack(split'0,72,128,46,0,26'))
- print('\fbpress \x8e',48,121)
+ sspr(unpacksplit'0,72,128,46,0,26')
+ print(unpacksplit'\fbpress \x8e,48,121')
 end
 
 __gfx__
