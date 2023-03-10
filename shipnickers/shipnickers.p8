@@ -5,13 +5,14 @@ __lua__
 -- by ironchest games
 
 --[[
+ - remove vdir, enemies always go downwards
+ - replace boost
  - add generalised weapons (like hangar)
- - add bigger mines (graphics)?
+ - add bigger mines (graphics)
  - redesign bg color in hangar?
  - data loading from like excel sheet or smt?
  - does 2p work?
- - add cargo moving down while escaping
- - are all enemies working?
+ - add cargo moving down by escapefactor
  - fix drawing of bullets (sometimes above sometimes below)
  - fix beam + boost bug (beam stops after btn up for boost)
  - no sound if enemy shooting off screen
@@ -583,22 +584,28 @@ local function shootmine(_ship,_life,_angle)
  }
 end
 
-local missilepcolors=split'7,10,9'
-local function drawmissile(_bullet)
+local missilebase=s2t'hw=2,hh=3,escapefactor=1,spdfactor=1'
+function mergewmissilebase(_bullet)
+ return mr(mr(clone(missilebase),{
+  spdx=rnd(0.5)-0.25,
+  ondeath=explode,
+ }),_bullet)
+end
+
+local missilep=mr(s2t'xoff=1,yoff=5,r=0.1,spdx=0,spdy=-0.1,spdr=0,life=3',{colors=split'7,10,9'})
+function drawmissile(_bullet)
  sspr(4,123,3,5,_bullet.x-_bullet.hw,_bullet.y)
 end
-local function shootmissile(_ship,_life)
+function shootmissile(_ship,_life)
  shipsfx(_ship,12)
- addbullet{
+ addbullet(mergewmissilebase({
   x=_ship.x,y=_ship.y,
-  hw=2,hh=3,
-  spdx=rnd(0.5)-0.25,spdy=-rnd(0.175),accy=-0.05,spdfactor=1,
+  spdy=-rnd(0.175),accy=-0.05,
   dmg=12,
   life=_life,
-  ondeath=explode,
   draw=drawmissile,
-  p=mr(s2t'xoff=1,yoff=5,r=0.1,spdx=0,spdy=-0.1,spdr=0,life=3',{colors=missilepcolors}),
- }
+  p=missilep,
+ }))
 end
 
 local flakcolors,flakbulletbase=split'7,10,5',s2t'hw=1,hh=1,accy=0.01,spdfactor=0.95,escapefactor=1,dmg=2'
@@ -1004,24 +1011,21 @@ end
 -- enemies
 local enemyexhaustpyoffset={[-1]=4,-5}
 
-local function drawenemymissile(_bullet)
+function drawenemymissile(_bullet)
  sspr(33,123,3,5,_bullet.x,_bullet.y,3,5,false,_bullet.flipy)
 end
 local enemymissilep=mr(s2t'xoff=1,yoff=0,r=0.1,spdx=0,spdy=0.1,spdr=0,life=4',{colors=split'7,14,8'})
-local function enemyshootmissile(_enemy)
+function enemyshootmissile(_enemy)
  local _vdir=_enemy.vdir
  sfx(12,3)
- addenemybullet{
+ addenemybullet(mergewmissilebase({
   x=_enemy.x,y=_enemy.y,
-  hw=2,hh=3,
-  spdx=rnd(0.5)-0.25,spdy=0.1*_vdir,accy=0.05*_vdir,spdfactor=1,
-  escapefactor=1,
+  spdy=0.1*_vdir,accy=0.05*_vdir,
   life=85,
   draw=drawenemymissile,
-  ondeath=explode,
   flipy=_vdir == -1,
   p=enemymissilep,
- }
+ }))
 end
 
 local function onenemyminedeath(_bullet)
