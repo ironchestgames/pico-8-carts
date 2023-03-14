@@ -5,8 +5,10 @@ __lua__
 -- by ironchest games
 
 --[[
- - replace boost
+ - make enemies pick a random weapon
  - add generalised weapons (like hangar)
+ - replace boost?
+ - fix spritesheet
  - add bigger mines (graphics)
  - redesign bg color in hangar?
  - data loading from like excel sheet or smt?
@@ -124,7 +126,7 @@ function isaabbscolliding(a,b)
 end
 
 -- globals
-local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemiestoadd,enemybullets,boss,issuperboss,cargos,lockedpercentage,escapefactor,mimicweapon
+local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemiestoadd,enemybullets,boss,issuperboss,cargos,lockedpercentage,escapefactor
 
 local hangar={
  [0]='s=0,bulletcolor=11,primary="missile",secondary="missile",psets="3;6;3_3;4;11",guns="2;1;5;1",exhaustcolors="7;9;5",exhausts="-1;4;0;4",flyduration=1',
@@ -242,14 +244,13 @@ local hangar={
  's=102,s2=129,bulletcolor=0,factory=2,primary="fighter",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="14;2;4",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5',
  's=104,s2=130,bulletcolor=0,factory=3,primary="minelayer",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="12",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=4',
  's=106,s2=131,bulletcolor=0,factory=4,primary="bomber",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="11;3",exhausts="-3;-2;1;2",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=8',
- 's=108,s2=132,bulletcolor=0,factory=5,primary="mimic",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,hp=6',
  's=111,s2=133,bulletcolor=0,factory=5,primary="cargoship",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0.25,accx=0,hp=14',
 
  -- superboss
  's=105,bulletcolor=14,primary="slicer",secondary="beam",psets="3;4;7_3;3;11",guns="2;0;5;0",exhaustcolors="7;9;5",exhausts="-3;6;-2;6;1;6;2;6",x=64,y=40,hw=7,hh=7,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1',
 }
 
-for _i=0,106 do
+for _i=0,105 do
  hangar[_i]=s2t(hangar[_i])
 end
 
@@ -1250,7 +1251,7 @@ local function minelayerupdate(_enemy)
  else
   _enemy.spdx,_enemy.spdy=0,0
   if t()-_enemy.ts > 1.5 and not _enemy.icec then
-   mimicweapon(_enemy)
+   enemyshootmine(_enemy)
    _enemy.ts,_enemy.duration,_enemy.target=t(),1+rnd(2),{x=4+rnd(120),y=rnd(116)}
    local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
    _enemy.spdx,_enemy.spdy=cos(_a)*0.75,sin(_a)*0.75
@@ -1303,10 +1304,9 @@ local enemyfactories={
   local _spdy=rnd(0.25)+0.325
   return mr(getship(102),{
    x=rnd(128),
-   spdy=_spdy,ogspdy=_spdy,
    ts=t(),
    fireweapon=enemyshootmine,
-   update=bomberupdate,
+   update=minelayerupdate,
   })
  end,
 
@@ -1321,22 +1321,12 @@ local enemyfactories={
   })
  end,
 
- -- boss mimic
- function ()
-  return mr(getship(104),{
-   x=rnd(128),
-   ts=t(),
-   firedir=1,
-   update=minelayerupdate,
-  })
- end,
-
  -- cargoship
  function()
   local _x,_len=flr(16+rnd(100)),flr(2+rnd(4))
   for _i=1,_len do
-   local _si=_i == 1 and 1 or rnd(split'2,2,2,3,4')
-   local _part=mr(getship(105),{
+   local _si=_i == 1 and 1 or rnd(split'2,2,3,4')
+   local _part=mr(getship(104),{
     x=_x,y=-12+_i*-8,
     s=cargoshipsprites[_si],
     s2=cargoshipsprites2[_si],
@@ -1671,10 +1661,10 @@ function gameupdate()
    _enemy.y+=_enemy.spdy*(issuperboss and 1.25 or 1)*((boss and _enemy.icec and 0.5) or 1)
    _enemy.update(_enemy)
 
-   shootspecialweapons(_enemy)
+   -- shootspecialweapons(_enemy)
 
-   if not ispointinsideaabb(_enemy.x,_enemy.y,64,64,75,77) then -- 150 (11), 154 (13)
-    if boss then
+   if not ispointinsideaabb(_enemy.x,_enemy.y,64,41,75,101) then
+    if boss and not _enemy.factory == 5 then
      local _newenemy=enemyfactories[_enemy.factory]()
      _newenemy.x,_newenemy.y=_enemy.x,-12
      add(enemiestoadd,_newenemy)
@@ -1998,11 +1988,10 @@ function pickerupdate()
     if _pickcount > 0 and _pickcount == mycount(ships) then
      local _locked=getlocked()
      if #_locked == 0 or dget(62) >= 5 then
-      boss,issuperboss=getship(106),true
+      boss,issuperboss=getship(105),true
      else
       boss,issuperboss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hw=3,hh=3,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2,firedir=1')
      end
-     mimicweapon=bossweapons[boss.primary]
      boss.ts=t()
      return gameinit()
     end
