@@ -1673,11 +1673,7 @@ function gameupdate()
 
    shootspecialweapons(_enemy)
 
-   if _enemy.factory == 5 then
-    if not ispointinsideaabb(_enemy.x,_enemy.y,64,64,64,112) then -- 128 (0), 224 ()
-     del(enemies,_enemy)
-    end
-   elseif not ispointinsideaabb(_enemy.x,_enemy.y,64,64,75,77) then -- 150 (11), 154 (13)
+   if not ispointinsideaabb(_enemy.x,_enemy.y,64,64,75,77) then -- 150 (11), 154 (13)
     if boss then
      local _newenemy=enemyfactories[_enemy.factory]()
      _newenemy.x,_newenemy.y=_enemy.x,-12
@@ -2031,10 +2027,10 @@ function pickerdraw()
   print(unpacksplit'\fdsecret hangar     \f8police raid!,2,1')
  else
   rectfill(unpacksplit'65,1,125,5,3')
-  print(unpacksplit'\fdsecret hangar   \fbnick defenses,2,1')
+  print(unpacksplit'\fdsecret hangar   \fbnick difficulty,2,1')
   clip(65,1,(98-#_locked)/100*61,5)
   rectfill(unpacksplit'65,1,125,5,2')
-  print(unpacksplit('\fdsecret hangar   \f8nick defenses,2,1'))
+  print(unpacksplit('\fdsecret hangar   \f8nick difficulty,2,1'))
   clip()
  end
  for _i=0,1 do
