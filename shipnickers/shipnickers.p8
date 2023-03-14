@@ -5,7 +5,6 @@ __lua__
 -- by ironchest games
 
 --[[
- - remove vdir, enemies always go downwards
  - replace boost
  - add generalised weapons (like hangar)
  - add bigger mines (graphics)
@@ -41,7 +40,8 @@ sfx channels:
 -- cartdata'ironchestgames_shipnickers_v1-dev9' -- all unlocked
 -- cartdata'ironchestgames_shipnickers_v1-dev10'
 -- cartdata'ironchestgames_shipnickers_v1-dev11'
-cartdata'ironchestgames_shipnickers_v1-dev12'
+-- cartdata'ironchestgames_shipnickers_v1-dev12'
+cartdata'ironchestgames_shipnickers_v1-dev13'
 
 printh('debug started','debug',true)
 function debug(s)
@@ -246,10 +246,10 @@ local hangar={
  's=111,s2=133,bulletcolor=0,factory=5,primary="cargoship",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0.25,accx=0,hp=14',
 
  -- superboss
- 's=105,bulletcolor=14,primary="slicer",secondary="beam",psets="3;4;7_3;3;11",guns="2;0;5;0",exhaustcolors="7;9;5",exhausts="-3;6;-2;6;1;6;2;6",x=64,y=40,vdir=1,hw=7,hh=7,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1',
+ 's=105,bulletcolor=14,primary="slicer",secondary="beam",psets="3;4;7_3;3;11",guns="2;0;5;0",exhaustcolors="7;9;5",exhausts="-3;6;-2;6;1;6;2;6",x=64,y=40,hw=7,hh=7,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1',
 }
 
-for _i=0,105 do
+for _i=0,106 do
  hangar[_i]=s2t(hangar[_i])
 end
 
@@ -574,7 +574,7 @@ local function shootmine(_ship,_life,_angle)
   hw=2,hh=2,
   frame=0,
   spdfactor=0.96+rnd(0.01),
-  escapefactor=1,
+  escapefactor=0.5,
   spdx=cos(_angle+rnd(0.02)),spdy=sin(_angle+rnd(0.02)),accy=0,
   dmg=5,
   life=_life,
@@ -608,12 +608,12 @@ function shootmissile(_ship,_life)
  }))
 end
 
-local flakcolors,flakbulletbase=split'7,10,5',s2t'hw=1,hh=1,accy=0.01,spdfactor=0.95,escapefactor=1,dmg=2'
+local flakcolors,flakbulletbase=split'7,10,5',s2t'hw=1,hh=1,accy=0.01,spdfactor=0.95,escapefactor=0.5,dmg=2'
 local function drawflakbullet(_bullet)
  pset(_bullet.x,_bullet.y,flakcolors[getblink()+1])
 end
 local function getflakbullet(_x,_y,_spdx,_spdy,_life)
- return mr(flakbulletbase,{
+ return mr(clone(flakbulletbase),{
   x=_x,y=_y,
   spdx=_spdx,
   spdy=_spdy,
@@ -774,7 +774,7 @@ local function shootbubble(_ship)
   hw=2,hh=2.5,
   spdx=rnd()-0.5,spdy=rnd()-0.5,
   spdfactor=0.96,
-  escapefactor=1,
+  escapefactor=0.5,
   dmg=2,
   life=190,
   update=clearenemybullets,
@@ -817,7 +817,7 @@ local function shootice(_ship,_life,_bullets)
   hw=2,hh=2,
   spdx=_ship.firedir*rnd(0.1),spdy=_ship.firedir+_ship.firedir*rnd(0.1),
   accy=0,spdfactor=1,
-  escapefactor=1,
+  escapefactor=0.5,
   dmg=0,
   isice=true,
   life=_life,
@@ -1009,21 +1009,18 @@ local function newcargodrop(_x,_y)
 end
 
 -- enemies
-local enemyexhaustpyoffset={[-1]=4,-5}
 
 function drawenemymissile(_bullet)
- sspr(33,123,3,5,_bullet.x,_bullet.y,3,5,false,_bullet.flipy)
+ sspr(33,123,3,5,_bullet.x,_bullet.y,3,5)
 end
 local enemymissilep=mr(s2t'xoff=1,yoff=0,r=0.1,spdx=0,spdy=0.1,spdr=0,life=4',{colors=split'7,14,8'})
 function enemyshootmissile(_enemy)
- local _vdir=_enemy.vdir
  sfx(12,3)
  addenemybullet(mergewmissilebase({
   x=_enemy.x,y=_enemy.y,
-  spdy=0.1*_vdir,accy=0.05*_vdir,
+  spdy=0.1,accy=0.05,
   life=85,
   draw=drawenemymissile,
-  flipy=_vdir == -1,
   p=enemymissilep,
  }))
 end
@@ -1046,8 +1043,8 @@ local function enemyshootmine(_enemy)
   hw=2,hh=2,
   frame=0,
   spdfactor=0.96+rnd(0.01),
-  escapefactor=1,
-  spdx=rnd(0.5)-0.25,spdy=1.5*_enemy.vdir,accy=0,
+  escapefactor=0.5,
+  spdx=rnd(0.5)-0.25,spdy=1.5,accy=0,
   life=110,
   draw=drawenemymine,
   ondeath=onenemyminedeath,
@@ -1055,21 +1052,19 @@ local function enemyshootmine(_enemy)
 end
 
 local function drawenemybullet(_bullet)
- sspr(32,125,1,3,_bullet.x,_bullet.y,1,3,false,_bullet.flipy)
+ sspr(32,125,1,3,_bullet.x,_bullet.y,1,3)
 end
 local enemybulletp=mr(s2t'xoff=0,yoff=0,r=0.1,spdx=0,spdy=0,spdr=0,life=3',{colors=split'2,2,4'})
 local enemybulletxoffs={-4,3}
 local function enemyshootbullet(_enemy)
- local _vdir=_enemy.vdir
  sfx(8,3)
  for _i=1,2 do
   addenemybullet{
    x=_enemy.x+enemybulletxoffs[_i],y=_enemy.y,
    hw=1,hh=2,
-   spdy=2*_vdir,
+   spdy=2,
    escapefactor=0,
    life=1000,
-   flipy=_vdir == -1,
    draw=drawenemybullet,
    ondeath=explode,
    p=enemybulletp,
@@ -1211,7 +1206,7 @@ local function drawenemycargobullet(_bullet)
 end
 local function enemyshootcargobullet(_enemy)
  addenemybullet{
-  hw=1,hh=1,life=1000,spdy=_enemy.vdir,
+  hw=1,hh=1,life=1000,spdy=1,
   escapefactor=0,
   x=_enemy.x,y=_enemy.y,
   spdx=_enemy.s == 116 and -1 or 1,
@@ -1231,7 +1226,7 @@ local function kamikazeupdate(_enemy)
  if _enemy.target then
   local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
   _enemy.spdx=cos(_a)*0.5
-  _enemy.spdy+=(0.011+_enemy.ifactor*0.003)*_enemy.vdir
+  _enemy.spdy+=(0.011+_enemy.ifactor*0.003)
  end
 end
 
@@ -1258,7 +1253,7 @@ local function minelayerupdate(_enemy)
    mimicweapon(_enemy)
    _enemy.ts,_enemy.duration,_enemy.target=t(),1+rnd(2),{x=4+rnd(120),y=rnd(116)}
    local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
-   _enemy.spdx,_enemy.spdy=cos(_a)*0.75,sin(_a)*0.75+(_enemy.vdir == -1 and 0.5 or 0)
+   _enemy.spdx,_enemy.spdy=cos(_a)*0.75,sin(_a)*0.75
   end
  end
 end
@@ -1288,30 +1283,27 @@ end
 
 local enemyfactories={
  -- kamikaze
- function(_vdir)
+ function()
   return mr(getship(100),{
    x=rnd(128),
-   vdir=_vdir,
    update=kamikazeupdate,
   })
  end,
 
  -- fighter
- function(_vdir)
+ function()
   return mr(getship(101),{
-   vdir=_vdir,
    ts=t(),
    update=fighterupdate,
   })
  end,
 
  -- minelayer
- function(_vdir)
+ function()
   local _spdy=rnd(0.25)+0.325
   return mr(getship(102),{
    x=rnd(128),
    spdy=_spdy,ogspdy=_spdy,
-   vdir=_vdir,
    ts=t(),
    fireweapon=enemyshootmine,
    update=bomberupdate,
@@ -1319,10 +1311,9 @@ local enemyfactories={
  end,
 
  -- bomber
- function(_vdir)
+ function()
   local _spdy=rnd(0.25)+0.325
   return mr(getship(103),{
-   vdir=_vdir,
    spdy=_spdy,ogspdy=_spdy,
    ts=t(),
    fireweapon=enemyshootmissile,
@@ -1331,10 +1322,9 @@ local enemyfactories={
  end,
 
  -- boss mimic
- function (_vdir)
+ function ()
   return mr(getship(104),{
    x=rnd(128),
-   vdir=_vdir,
    ts=t(),
    firedir=1,
    update=minelayerupdate,
@@ -1342,13 +1332,12 @@ local enemyfactories={
  end,
 
  -- cargoship
- function(_vdir)
+ function()
   local _x,_len=flr(16+rnd(100)),flr(2+rnd(4))
   for _i=1,_len do
    local _si=_i == 1 and 1 or rnd(split'2,2,2,3,4')
    local _part=mr(getship(105),{
-    x=_x,y=(_vdir == 1 and -12 or 140)+_i*8*-_vdir,
-    vdir=_vdir,
+    x=_x,y=-12+_i*-8,
     s=cargoshipsprites[_si],
     s2=cargoshipsprites2[_si],
     ts=t(),
@@ -1424,7 +1413,7 @@ function gameupdate()
    _newy+=_spd
   end
   
-  _ship.x,_ship.y=mid(4,_newx,124),mid(4,_newy,119)
+  _ship.x,_ship.y=mid(4,_newx,124),mid(madeitts and -8 or 4,_newy,119)
   local _urx,_ury=_ship.x-4,_ship.y-4
 
   -- repairing/firing
@@ -1528,11 +1517,7 @@ function gameupdate()
     nickedts,escapeelapsed,nickitts,boss=curt,0
     pal(0,0,1)
     sfx(1,2)
-    for _enemy in all(enemies) do
-     if _enemy.factory != 5 then
-      _enemy.vdir=-1
-     end
-    end
+    -- todo: add enemy escape phase speed boost here?
    elseif _ship.isshielding and not boss.shieldts then
     boss.hp-=0.5
     newhit(boss.x,boss.y)
@@ -1652,7 +1637,6 @@ function gameupdate()
   _spawninterval=max(0.25,2*lockedpercentage)
  end
  local gamestartdone=issuperboss or (boss and t()-gamestartts > 1.25) or true
- local _vdir=boss and 1 or -1
  if gamestartdone and
     (not (hasescaped or issuperbossdead)) and
     curt-enemyts > _spawninterval and
@@ -1668,13 +1652,13 @@ function gameupdate()
   local _enemytypes=clone(enemyfactories)
   add(_enemytypes,enemyfactories[1]) -- note: add kamikaze again to have more of those
   for _i=0,_count do
-   add(enemies,rnd(_enemytypes)(_vdir))
+   add(enemies,rnd(_enemytypes)())
   end
  end
 
  for _enemy in all(enemies) do
   for _exhaust in all(_enemy.exhausts) do
-   newexhaustp(_exhaust,enemyexhaustpyoffset[_enemy.vdir],_enemy,_enemy.exhaustcolors,3,-_enemy.vdir)
+   newexhaustp(_exhaust,-5,_enemy,_enemy.exhaustcolors,3,-1)
   end
 
   if _enemy.hp <= 0 then
@@ -1695,7 +1679,7 @@ function gameupdate()
     end
    elseif not ispointinsideaabb(_enemy.x,_enemy.y,64,64,75,77) then -- 150 (11), 154 (13)
     if boss then
-     local _newenemy=enemyfactories[_enemy.factory](_vdir)
+     local _newenemy=enemyfactories[_enemy.factory]()
      _newenemy.x,_newenemy.y=_enemy.x,-12
      add(enemiestoadd,_newenemy)
     end
@@ -1727,7 +1711,7 @@ function gameupdate()
    end
   end
   if ships[1] then
-   madeitts,exit=t(),s2t'x=64,y=0,hw=64,hh=8'
+   madeitts,exit=t(),s2t'x=64,y=-8,hw=64,hh=8'
    sfx(3,2)
   end
  end
@@ -1810,7 +1794,7 @@ function gamedraw()
 
  -- draw enemies
  for _enemy in all(enemies) do
-  spr((issuperboss and _enemy.s2 or _enemy.s)+(_enemy.vdir == 1 and 0 or 1),_enemy.x-4,_enemy.y-4)
+  spr((issuperboss and _enemy.s2 or _enemy.s),_enemy.x-4,_enemy.y-4)
   if _enemy.shieldts then
    drawshield(_enemy.x,_enemy.y,8)
   end
@@ -2018,9 +2002,9 @@ function pickerupdate()
     if _pickcount > 0 and _pickcount == mycount(ships) then
      local _locked=getlocked()
      if #_locked == 0 or dget(62) >= 5 then
-      boss,issuperboss=getship(105),true
+      boss,issuperboss=getship(106),true
      else
-      boss,issuperboss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hw=3,hh=3,vdir=1,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2,firedir=1')
+      boss,issuperboss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hw=3,hh=3,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2,firedir=1')
      end
      mimicweapon=bossweapons[boss.primary]
      boss.ts=t()
