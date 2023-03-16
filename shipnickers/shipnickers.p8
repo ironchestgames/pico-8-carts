@@ -5,6 +5,7 @@ __lua__
 -- by ironchest games
 
 --[[
+ - unify enemy update and boss update
  - make enemies pick a random weapon
  - add generalised weapons (like hangar)
  - replace boost?
@@ -1057,7 +1058,7 @@ local function drawenemybullet(_bullet)
 end
 local enemybulletp=mr(s2t'xoff=0,yoff=0,r=0.1,spdx=0,spdy=0,spdr=0,life=3',{colors=split'2,2,4'})
 local enemybulletxoffs={-4,3}
-local function enemyshootbullet(_enemy)
+local function shootenemybullet(_enemy)
  sfx(8,3)
  for _i=1,2 do
   addenemybullet{
@@ -1212,10 +1213,10 @@ local enemyweapons={
 }
 
 local enemycargobulletpcolors=split'7,14,2'
-local function drawenemycargobullet(_bullet)
+function drawenemycargobullet(_bullet)
  rectfill(_bullet.x,_bullet.y,_bullet.x+1,_bullet.y+1,7)
 end
-local function enemyshootcargobullet(_enemy)
+function shootenemycargoshipbullet(_enemy)
  addenemybullet{
   hw=1,hh=1,life=1000,spdy=1,
   escapefactor=0,
@@ -1229,7 +1230,7 @@ end
 
 local cargoshipsprites,cargoshipsprites2=split'110,112,114,116',split'133,134,135,136'
 
-local function kamikazeupdate(_enemy)
+function kamikazeupdate(_enemy)
  if _enemy.target == nil then
   _enemy.target=rnd(ships)
   _enemy.ifactor=rnd()
@@ -1241,19 +1242,19 @@ local function kamikazeupdate(_enemy)
  end
 end
 
-local function fighterupdate(_enemy)
+function fighterupdate(_enemy)
  if not _enemy.target then
   _enemy.x=flr(8+rnd(120))
   _enemy.spdy=(rnd(0.5)+0.5)
   _enemy.target=true
  end
  if t()-_enemy.ts > 0.875 and not _enemy.icec then
-   enemyshootbullet(_enemy)
-   _enemy.ts=t()
+  _enemy.fireweapon(_enemy)
+  _enemy.ts=t()
  end
 end
 
-local function minelayerupdate(_enemy)
+function minelayerupdate(_enemy)
  if _enemy.target then
   if t()-_enemy.ts > _enemy.duration or ispointinsideaabb(_enemy.target.x,_enemy.target.y,_enemy.x,_enemy.y,_enemy.hw,_enemy.hh) then
    _enemy.target=nil
@@ -1261,7 +1262,7 @@ local function minelayerupdate(_enemy)
  else
   _enemy.spdx,_enemy.spdy=0,0
   if t()-_enemy.ts > 1.5 and not _enemy.icec then
-   shootenemymine(_enemy)
+   _enemy.fireweapon(_enemy)
    _enemy.ts,_enemy.duration,_enemy.target=t(),1+rnd(2),{x=4+rnd(120),y=rnd(116)}
    local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
    _enemy.spdx,_enemy.spdy=cos(_a)*0.75,sin(_a)*0.75
@@ -1269,7 +1270,7 @@ local function minelayerupdate(_enemy)
  end
 end
 
-local function bomberupdate(_enemy)
+function bomberupdate(_enemy)
  if not _enemy.target then
   _enemy.x=rnd(128)
   _enemy.target=true
@@ -1285,9 +1286,9 @@ local function bomberupdate(_enemy)
  _enemy.spdy=_enemy.ogspdy
 end
 
-local function cargoshipupdate(_enemy)
+function cargoshipupdate(_enemy)
  if _enemy.s >= 114 and t()-_enemy.ts > 2+rnd(2) and not _enemy.icec then
-  enemyshootcargobullet(_enemy)
+  shootenemycargoshipbullet(_enemy)
   _enemy.ts=t()
  end
 end
@@ -1297,6 +1298,7 @@ local enemyfactories={
  function()
   return mr(getship(100),{
    x=rnd(128),
+   fireweapon=emptyfn,
    update=kamikazeupdate,
   })
  end,
@@ -1305,6 +1307,7 @@ local enemyfactories={
  function()
   return mr(getship(101),{
    ts=t(),
+   fireweapon=shootenemybullet,
    update=fighterupdate,
   })
  end,
@@ -1351,7 +1354,7 @@ local enemyfactories={
  end,
 }
 
-local function explodeenemy(_enemy)
+function explodeenemy(_enemy)
  explode(_enemy)
  if _enemy.s == 112 then
   newcargodrop(_enemy.x,_enemy.y)
@@ -1658,7 +1661,17 @@ function gameupdate()
 
  for _enemy in all(enemies) do
   for _exhaust in all(_enemy.exhausts) do
-   newexhaustp(_exhaust,-5,_enemy,_enemy.exhaustcolors,3,-1)
+   if _enemy.boostts then
+    newexhaustp(
+     _exhaust,
+     -5,
+     _enemy,
+     _enemy.boostts and boostcolors or _enemy.exhaustcolors,
+     _enemy.boostts and 5 or 3,
+     -1)
+   else
+    newexhaustp(_exhaust,-5,_enemy,_enemy.exhaustcolors,3,-1)
+   end
   end
 
   if _enemy.hp <= 0 then
@@ -1667,11 +1680,15 @@ function gameupdate()
    if _enemy.icec then
     updateicec(_enemy)
    end
-   _enemy.x+=_enemy.spdx*(issuperboss and 1.5 or 1)*(_enemy.icec and 0.5 or 1)
-   _enemy.y+=_enemy.spdy*(issuperboss and 1.25 or 1)*((boss and _enemy.icec and 0.5) or 1)
+   if _enemy.ts and _enemy.ts > curt + 45 then
+    _enemy.boost,_enemy.boostts,_enemy.shieldts,_enemy.beamts=0
+   end
+   local _boostfactor=1+(_enemy.boost or 0)
+   _enemy.x+=_enemy.spdx*_boostfactor*(issuperboss and 1.5 or 1)*(_enemy.icec and 0.5 or 1)
+   _enemy.y+=_enemy.spdy*_boostfactor*(issuperboss and 1.25 or 1)*((boss and _enemy.icec and 0.5) or 1)
    _enemy.update(_enemy)
 
-   -- shootspecialweapons(_enemy)
+   shootspecialweapons(_enemy)
 
    if not ispointinsideaabb(_enemy.x,_enemy.y,64,41,75,101) then
     if boss and not _enemy.factory == 5 then
