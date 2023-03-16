@@ -80,6 +80,14 @@ function clone(_t)
  return _result
 end
 
+local function keys(t)
+ local _keys={}
+ for k in pairs(t) do
+  add(_keys,k)
+ end
+ return _keys
+end
+
 function mycount(_t) -- todo: needed??
  local _c=0
  for _ in pairs(_t) do
@@ -127,7 +135,7 @@ function isaabbscolliding(a,b)
 end
 
 -- globals
-local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemiestoadd,enemybullets,boss,issuperboss,cargos,lockedpercentage,escapefactor
+local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemiestoadd,enemybullets,boss,issuperboss,cargos,lockedpercentage,escapefactor,enemycurrentweapons
 
 local hangar={
  [0]='s=0,bulletcolor=11,primary="missile",secondary="missile",psets="3;6;3_3;4;11",guns="2;1;5;1",exhaustcolors="7;9;5",exhausts="-1;4;0;4",flyduration=1,sfxch=2',
@@ -241,11 +249,11 @@ local hangar={
  's=99,bulletcolor=9,primary="slicer",secondary="slicer",psets="3;4;9_3;3;10",guns="2;0;5;0",exhaustcolors="11;15;5",exhausts="-1;4;0;4",flyduration=10,sfxch=2',
 
  -- enemies
- 's=100,s2=128,bulletcolor=0,factory=1,primary="kamikaze",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=139,hw=4,hh=4,spdx=0,spdy=0,hp=4,sfxch=3',
- 's=102,s2=129,bulletcolor=0,factory=2,primary="fighter",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="14;2;4",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5,sfxch=3',
- 's=104,s2=130,bulletcolor=0,factory=3,primary="minelayer",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="12",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=4,sfxch=3',
- 's=106,s2=131,bulletcolor=0,factory=4,primary="bomber",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="11;3",exhausts="-3;-2;1;2",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=8,sfxch=3',
- 's=111,s2=133,bulletcolor=0,factory=5,primary="cargoship",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0.25,accx=0,hp=14,sfxch=3',
+ 's=100,s2=128,bulletcolor=0,factory=1,primary="kamikaze",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,hp=4,firedir=1,sfxch=3',
+ 's=102,s2=129,bulletcolor=0,factory=2,primary="fighter",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="14;2;4",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5,firedir=1,sfxch=3',
+ 's=104,s2=130,bulletcolor=0,factory=3,primary="minelayer",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="12",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=4,firedir=1,sfxch=3',
+ 's=106,s2=131,bulletcolor=0,factory=4,primary="bomber",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="11;3",exhausts="-3;-2;1;2",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=8,firedir=1,sfxch=3',
+ 's=111,s2=133,bulletcolor=0,factory=5,primary="cargoship",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0.25,accx=0,hp=14,firedir=1,sfxch=3',
 
  -- superboss
  's=105,bulletcolor=14,primary="slicer",secondary="beam",psets="3;4;7_3;3;11",guns="2;0;5;0",exhaustcolors="7;9;5",exhausts="-3;6;-2;6;1;6;2;6",x=64,y=40,hw=7,hh=7,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1,sfxch=2',
@@ -1141,7 +1149,6 @@ end
 function shootenemyblink(_enemy)
  -- todo: sfx??
  blinkaway(_enemy,rnd(blinkdirs),rnd(blinkdirs),38)
- _enemy.y=mid(4,_enemy.y,64)
 end
 
 function shootenemybeam(_enemy)
@@ -1233,12 +1240,13 @@ local cargoshipsprites,cargoshipsprites2=split'110,112,114,116',split'133,134,13
 function kamikazeupdate(_enemy)
  if _enemy.target == nil then
   _enemy.target=rnd(ships)
-  _enemy.ifactor=rnd()
+  _enemy.ifactor=rnd()*0.003
  end
  if _enemy.target then
   local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
   _enemy.spdx=cos(_a)*0.5
-  _enemy.spdy+=(0.011+_enemy.ifactor*0.003)
+  _enemy.spdy+=0.011+_enemy.ifactor
+  -- enemycurrentweapons[1](_enemy) -- todo: add where?
  end
 end
 
@@ -1249,7 +1257,7 @@ function fighterupdate(_enemy)
   _enemy.target=true
  end
  if t()-_enemy.ts > 0.875 and not _enemy.icec then
-  _enemy.fireweapon(_enemy)
+  enemycurrentweapons[2](_enemy)
   _enemy.ts=t()
  end
 end
@@ -1262,7 +1270,7 @@ function minelayerupdate(_enemy)
  else
   _enemy.spdx,_enemy.spdy=0,0
   if t()-_enemy.ts > 1.5 and not _enemy.icec then
-   _enemy.fireweapon(_enemy)
+   enemycurrentweapons[3](_enemy)
    _enemy.ts,_enemy.duration,_enemy.target=t(),1+rnd(2),{x=4+rnd(120),y=rnd(116)}
    local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
    _enemy.spdx,_enemy.spdy=cos(_a)*0.75,sin(_a)*0.75
@@ -1278,7 +1286,7 @@ function bomberupdate(_enemy)
  if t()-_enemy.ts > 0.875 then
   _enemy.accx=rnd{0.0125,-0.0125}
   if rnd() > 0.375 and not _enemy.icec then
-   _enemy.fireweapon(_enemy)
+   enemycurrentweapons[4](_enemy)
   end
   _enemy.ts=t()
  end
@@ -1298,7 +1306,6 @@ local enemyfactories={
  function()
   return mr(getship(100),{
    x=rnd(128),
-   fireweapon=emptyfn,
    update=kamikazeupdate,
   })
  end,
@@ -1307,7 +1314,6 @@ local enemyfactories={
  function()
   return mr(getship(101),{
    ts=t(),
-   fireweapon=shootenemybullet,
    update=fighterupdate,
   })
  end,
@@ -1318,7 +1324,6 @@ local enemyfactories={
   return mr(getship(102),{
    x=rnd(128),
    ts=t(),
-   fireweapon=shootenemymine,
    update=minelayerupdate,
   })
  end,
@@ -1329,7 +1334,6 @@ local enemyfactories={
   return mr(getship(103),{
    spdy=_spdy,ogspdy=_spdy,
    ts=t(),
-   fireweapon=shootenemymissile,
    update=bomberupdate,
   })
  end,
@@ -1683,12 +1687,13 @@ function gameupdate()
    if _enemy.ts and _enemy.ts > curt + 45 then
     _enemy.boost,_enemy.boostts,_enemy.shieldts,_enemy.beamts=0
    end
+
+   _enemy.update(_enemy)
+   shootspecialweapons(_enemy)
+
    local _boostfactor=1+(_enemy.boost or 0)
    _enemy.x+=_enemy.spdx*_boostfactor*(issuperboss and 1.5 or 1)*(_enemy.icec and 0.5 or 1)
    _enemy.y+=_enemy.spdy*_boostfactor*(issuperboss and 1.25 or 1)*((boss and _enemy.icec and 0.5) or 1)
-   _enemy.update(_enemy)
-
-   shootspecialweapons(_enemy)
 
    if not ispointinsideaabb(_enemy.x,_enemy.y,64,41,75,101) then
     if boss and not _enemy.factory == 5 then
@@ -2017,7 +2022,7 @@ function pickerupdate()
      if #_locked == 0 or dget(62) >= 5 then
       boss,issuperboss=getship(105),true
      else
-      boss,issuperboss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hw=3,hh=3,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2,firedir=1,,sfxch=2')
+      boss,issuperboss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hw=3,hh=3,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2,firedir=1,sfxch=2')
      end
      boss.ts=t()
      return gameinit()
@@ -2082,6 +2087,7 @@ function pickerdraw()
  end
 end
 
+
 function pickerinit()
  pal(unpacksplit'0,129,1')
  pal(split'1,136,139,141,5,6,7,8,9,10,138,12,13,14,134',1)
@@ -2108,6 +2114,13 @@ function pickerinit()
  end
  dset(62,_d62)
  ships={}
+
+ enemycurrentweapons={}
+ local _enemyweaponnames=keys(enemyweapons)
+ for _i=1,4 do
+  add(enemycurrentweapons,enemyweapons[deli(_enemyweaponnames,flr(rnd(#_enemyweaponnames)+1))])
+ end
+
  _update60,_draw=pickerupdate,pickerdraw
 end
 
