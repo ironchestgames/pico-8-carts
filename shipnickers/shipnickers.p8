@@ -5,6 +5,9 @@ __lua__
 -- by ironchest games
 
 --[[
+ - add not being able to pick already picked ship
+ - add explosion when player ship dies
+ - remove raids?
  - unify enemy update and boss update
  - make enemies pick a random weapon
  - add generalised weapons (like hangar)
@@ -86,14 +89,6 @@ local function keys(t)
   add(_keys,k)
  end
  return _keys
-end
-
-function mycount(_t) -- todo: needed??
- local _c=0
- for _ in pairs(_t) do
-  _c+=1
- end
- return _c
 end
 
 function mr(_t1,_t2)
@@ -1993,31 +1988,32 @@ end
 local picks={[0]=0}
 function pickerupdate()
  for _i=0,1 do
-  if picks[_i] then
+  local _pick=picks[_i]
+  if not _pick then
+   if btnp(4,_i) then
+    picks[_i]=0
+   end
+  elseif not ships[_i+1] then
    if btnp(0,_i) then
-    picks[_i]-=1
+    _pick-=1
     sfx(26)
-  elseif btnp(1,_i) then
-    picks[_i]+=1
+   elseif btnp(1,_i) then
+    _pick+=1
     sfx(26)
-  elseif btnp(2,_i) then
-    picks[_i]-=10
+   elseif btnp(2,_i) then
+    _pick-=10
     sfx(26)
-  elseif btnp(3,_i) then
-    picks[_i]+=10
+   elseif btnp(3,_i) then
+    _pick+=10
     sfx(26)
    end
-   picks[_i]=mid(0,picks[_i],99)
+   picks[_i]=mid(0,_pick,99)
 
-   if btnp(5,_i) and _i == 1 then
-    picks[_i]=nil
-    sfx(27)
-  elseif btnp(4,_i) and isunlocked(picks[_i]) then
-    ships[_i+1]=mr(getplayership(picks[_i]),{plidx=_i,x=32+_i*64,sfxch=_i})
+   if btnp(4,_i) and isunlocked(picks[_i]) then
     sfx(28,3)
+    ships[_i+1]=mr(getplayership(picks[_i]),{plidx=_i,x=32+_i*64,sfxch=_i})
 
-    local _pickcount=mycount(picks)
-    if _pickcount > 0 and _pickcount == mycount(ships) then
+    if #{picks[0],picks[1]} == #ships then
      local _locked=getlocked()
      if #_locked == 0 or dget(62) >= 5 then
       boss,issuperboss=getship(105),true
@@ -2027,10 +2023,6 @@ function pickerupdate()
      boss.ts=t()
      return gameinit()
     end
-   end
-  else
-   if btnp(4,_i) then
-    picks[_i]=0
    end
   end
  end
@@ -2068,6 +2060,8 @@ function pickerdraw()
     newship=nil
    end
    print(_s,1+_i*127-_i*#_s*4,122,11+_i)
+  else
+   print('\x8e to join',88,122,12)
   end
  end
  for _x=0,9 do
