@@ -1984,38 +1984,38 @@ function gameinit()
  _update60,_draw=gameupdate,gamedraw
 end
 
-local picks,oppositepicks={[0]=0},{[0]=1,0}
+local picks={0}
 function pickerupdate()
- for _i=0,1 do
-  local _pick=picks[_i]
+ for _i=1,2 do
+  local _plidx,_pick=_i-1,picks[_i]
   if not _pick then
-   if btnp(4,_i) then
+   if btnp(4,_plidx) then
     picks[_i]=0
    end
-  elseif not ships[_i+1] then
-   if btnp(0,_i) then
+  elseif not ships[_i] then
+   if btnp(0,_plidx) then
     _pick-=1
     sfx(26)
-   elseif btnp(1,_i) then
+   elseif btnp(1,_plidx) then
     _pick+=1
     sfx(26)
-   elseif btnp(2,_i) then
+   elseif btnp(2,_plidx) then
     _pick-=10
     sfx(26)
-   elseif btnp(3,_i) then
+   elseif btnp(3,_plidx) then
     _pick+=10
     sfx(26)
    end
    _pick=mid(0,_pick,99)
-   if _pick != picks[oppositepicks[_i]] then
+   if _pick != picks[split'2,1'[_i]] then
     picks[_i]=_pick
    end
 
-   if btnp(4,_i) and isunlocked(picks[_i]) then
+   if btnp(4,_plidx) and isunlocked(picks[_i]) then
     sfx(28,3)
-    ships[_i+1]=mr(getplayership(picks[_i]),{plidx=_i,x=32+_i*64,sfxch=_i})
+    ships[_i]=mr(getplayership(picks[_i]),{plidx=_plidx,x=32+_plidx*64,sfxch=_plidx})
 
-    if #{picks[0],picks[1]} == #ships then
+    if #picks == #ships then
      local _locked=getlocked()
      if #_locked == 0 or dget(62) >= 5 then
       boss,issuperboss=getship(105),true
@@ -2048,11 +2048,11 @@ function pickerdraw()
   print(unpacksplit('\fdsecret hangar   \f8nick difficulty,2,1'))
   clip()
  end
- for _i=0,1 do
-  local _pick=picks[_i]
+ for _i=1,2 do
+  local _plidx,_pick=_i-1,picks[_i]
   if _pick then
    local _x,_y=9+(_pick%10)*11,9+flr(_pick/10)*11
-   rect(_x,_y,_x+9,_y+9,11+_i)
+   rect(_x,_y,_x+9,_y+9,11+_plidx)
    local _s='(no ship)'
    if isunlocked(_pick) then
     local _ship=hangar[_pick]
@@ -2061,9 +2061,9 @@ function pickerdraw()
    if _pick == newship then
     newship=nil
    end
-   print(_s,1+_i*127-_i*#_s*4,122,11+_i)
+   print(_s,1+_plidx*127-_plidx*#_s*4,122,11+_plidx)
   else
-   print('\x8e to join',88,122,12)
+   print(unpacksplit'\x8e to join,88,122,12')
   end
  end
  for _x=0,9 do
