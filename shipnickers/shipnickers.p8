@@ -5,7 +5,6 @@ __lua__
 -- by ironchest games
 
 --[[
- - add not being able to pick already picked ship
  - add explosion when player ship dies
  - remove raids?
  - unify enemy update and boss update
@@ -83,7 +82,7 @@ function clone(_t)
  return _result
 end
 
-local function keys(t)
+function keys(t)
  local _keys={}
  for k in pairs(t) do
   add(_keys,k)
@@ -1985,7 +1984,7 @@ function gameinit()
  _update60,_draw=gameupdate,gamedraw
 end
 
-local picks={[0]=0}
+local picks,oppositepicks={[0]=0},{[0]=1,0}
 function pickerupdate()
  for _i=0,1 do
   local _pick=picks[_i]
@@ -2007,7 +2006,10 @@ function pickerupdate()
     _pick+=10
     sfx(26)
    end
-   picks[_i]=mid(0,_pick,99)
+   _pick=mid(0,_pick,99)
+   if _pick != picks[oppositepicks[_i]] then
+    picks[_i]=_pick
+   end
 
    if btnp(4,_i) and isunlocked(picks[_i]) then
     sfx(28,3)
