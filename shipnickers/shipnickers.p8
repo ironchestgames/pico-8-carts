@@ -490,8 +490,10 @@ function updatebullets(_bullets)
    end
 
    for _enemy in all(enemies) do
-    if isaabbscolliding(_b,_enemy) and not _enemy.shieldts then
-     _enemy.hp-=_b.dmg
+    if isaabbscolliding(_b,_enemy) then
+     if not _enemy.shieldts then
+      _enemy.hp-=_b.dmg
+     end
      _b.enemyhit,_b.life=_enemy,0
      newhit(_enemy.x,_enemy.y)
     end
@@ -1228,7 +1230,7 @@ function shootenemycargoshipbullet(_enemy)
 end
 
 local cargoshipsprites,cargoshipsprites2=split'104,105,106,107',split'116,117,118,119'
-dset(62,5)
+
 function kamikazeupdate(_enemy)
  if _enemy.target == nil then
   _enemy.target=rnd(ships)
@@ -1676,8 +1678,8 @@ function gameupdate()
    if _enemy.icec then
     updateicec(_enemy)
    end
-   if _enemy.ts and _enemy.ts > curt + 45 then
-    _enemy.boost,_enemy.boostts,_enemy.shieldts,_enemy.beamts=0
+   if _enemy.ts and _enemy.ts + 0.5 < curt then
+    _enemy.boost,_enemy.boostts,_enemy.shieldts,_enemy.beamts,_enemy.icets=0
    end
 
    _enemy.update(_enemy)
