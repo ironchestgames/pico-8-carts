@@ -635,7 +635,6 @@ end
 
 local blinkpcolors,blinkaab=split'7,11,11,3,5',s2t'hw=16,hh=16'
 function blinkaway(_ship,_dx,_dy,_h)
- shipsfx(_ship,21)
  local _newx,_newy=_ship.x+_dx*_h,_ship.y+_dy*_h
  for _i=1,6 do
   addps(
@@ -868,6 +867,7 @@ local primary={
  blink=function(_btn4,_ship)
   if _btn4 and _ship.primaryc > 1 and not _ship.lastbtn4 then
    local _dx,_dy=getdirs(_ship.plidx)
+   shipsfx(_ship,21)
    blinkaway(_ship,_dx,_dy,_ship.primaryc*1.25)
    _ship.primaryc=0
   end
@@ -950,6 +950,7 @@ local secondary={
     (btnp(5,_ship.plidx) and (_dx != 0 or _dy != 0)) or
     (btn(5,_ship.plidx) and (btnp(0,_ship.plidx) or btnp(1,_ship.plidx) or btnp(2,_ship.plidx) or btnp(3,_ship.plidx)))
   ) then
+   shipsfx(_ship,21)
    _ship.secondaryshots-=1
    blinkaway(_ship,_dx,_dy,20+flr(rnd(38)))
   end
@@ -985,9 +986,7 @@ local secondary={
 }
 
 local weaponcolors=s2t'missile=13,boost=8,mines=5,shield=12,ice=6,blink=3,flak=15,beam=9,bubbles=14,slicer=11'
-
 local boostcolors=split'7,10,9,8'
-
 local secondarysprites={
  missile=split'5,123',
  boost=split'8,123',
@@ -998,7 +997,7 @@ local secondarysprites={
  flak=split'20,123',
  beam=split'23,123',
  bubbles=split'26,123',
- slicer=split'29,123'
+ slicer=split'29,123',
 }
 
 function newcargodrop(_x,_y)
@@ -1016,16 +1015,6 @@ function drawenemymissile(_bullet)
  sspr(33,123,3,5,_bullet.x,_bullet.y,3,5)
 end
 local enemymissilep=mr(s2t'xoff=1,yoff=0,r=0.1,spdx=0,spdy=0.1,spdr=0,life=4',{colors=split'7,14,8'})
-function shootenemymissile(_enemy)
- sfx(12,_enemy.sfxch)
- addenemybullet(mergewmissilebase({
-  x=_enemy.x,y=_enemy.y,
-  spdy=0.1,accy=0.05,
-  life=85,
-  draw=drawenemymissile,
-  p=enemymissilep,
- }))
-end
 
 function onenemyminedeath(_bullet)
  _bullet.charge=100
@@ -1037,20 +1026,6 @@ function drawenemymine(_bullet)
   _bullet.frame=0
  end
  sspr(2*flr(_bullet.frame),121,2,2,_bullet.x,_bullet.y)
-end
-function shootenemymine(_enemy)
- sfx(13,_enemy.sfxch)
- addenemybullet{
-  x=_enemy.x,y=_enemy.y,
-  hw=2,hh=2,
-  frame=0,
-  spdfactor=0.96+rnd(0.01),
-  escapefactor=0.5,
-  spdx=rnd(0.5)-0.25,spdy=1.5,accy=0,
-  life=110,
-  draw=drawenemymine,
-  ondeath=onenemyminedeath,
- }
 end
 
 function drawenemybullet(_bullet)
@@ -1078,99 +1053,18 @@ local bossflakcolors=split'14,8,5'
 function drawbossflakbullet(_bullet)
  pset(_bullet.x,_bullet.y,bossflakcolors[getblink()+1])
 end
-function shootbossflak(_enemy)
- sfx(17,3)
- for _i=1,8 do
-  local _spdx,_spdy=1+rnd(2),rnd(1)-0.5
-  addenemybullet{
-   x=_enemy.x,y=_enemy.y,
-   hw=1,hh=1,
-   spdx=_spdx,
-   spdy=_spdy,
-   accy=0.01,
-   spdfactor=0.9,
-   life=rnd(90)+60,
-   draw=drawbossflakbullet,
-   ondeath=fizzle,
-  }
-  addenemybullet{
-   x=_enemy.x,y=_enemy.y,
-   hw=1,hh=1,
-   spdx=-_spdx,
-   spdy=_spdy,
-   accy=0.01,
-   spdfactor=0.95,
-   life=rnd(90)+60,
-   draw=drawbossflakbullet,
-   ondeath=fizzle,
-  }
- end
-end
 
 function drawbossslicer(_bullet)
  sspr(42,118,8,5,_bullet.x-3,_bullet.y-2)
-end
-function shootbossslicer(_enemy)
- addenemybullet{
-  x=_enemy.x,y=_enemy.y,
-  hw=3,hh=3,
-  spdy=2,
-  life=999,
-  ondeath=explode,
-  draw=drawbossslicer,
- }
- sfx(30,2)
-end
-
-function shootenemyboost(_enemy)
- sfx(15,_enemy.sfxch)
- _enemy.boostts=t()
- _enemy.boost=0.5
-end
-
-function shootenemyshield(_enemy)
- sfx(19,_enemy.sfxch)
- _enemy.shieldts=t()
-end
-
-function shootenemyice(_enemy)
- -- todo: sfx??
- _enemy.icets=t()
-end
-
-function shootenemyblink(_enemy)
- -- todo: sfx??
- blinkaway(_enemy,rnd(blinkdirs),rnd(blinkdirs),38)
-end
-
-function shootenemybeam(_enemy)
- sfx(16,_enemy.sfxch)
- _enemy.beamts=t()
- _enemy.boost=-0.25
 end
 
 function updateenemybubble(_bullet)
  bulletclearbullets(_bullet,bullets)
 end
+
 function drawenemybubble(_bullet)
  circ(_bullet.x,_bullet.y,2,14)
  pset(_bullet.x-1,_bullet.y-1,7)
-end
-
-function shootenemybubbles(_enemy)
- sfx(29,_enemy.sfxch)
- for _i=1,5 do
-  addenemybullet{
-   x=_enemy.x,y=_enemy.y,
-   hw=2,hh=2.5,
-   spdx=rnd()-0.5,spdy=rnd()-0.5,
-   spdfactor=0.96,
-   life=210,
-   update=updateenemybubble,
-   ondeath=fizzle,
-   draw=drawenemybubble,
-  }
- end
 end
 
 function shootspecialweapons(_enemy)
@@ -1198,17 +1092,123 @@ end
 local blinkdirs=split'-1,0,1'
 local superbossweaponnames=split'missile,mines,boost,shield,ice,blink,flak,bubbles,slicer'
 local bosstses,bosststs=split'boostts,shieldts,beamts,icets',s2t'boostts=2,shieldts=2.5,beamts=2,icets=1.125'
+
 local enemyweapons={
- missile=shootenemymissile,
- mines=shootenemymine,
- boost=shootenemyboost,
- shield=shootenemyshield,
- ice=shootenemyice,
- blink=shootenemyblink,
- flak=shootbossflak,
- beam=shootenemybeam,
- bubbles=shootenemybubbles,
- slicer=shootbossslicer,
+ missile=function (_enemy)
+  sfx(12,_enemy.sfxch)
+  addenemybullet(mergewmissilebase({
+   x=_enemy.x,y=_enemy.y,
+   spdy=0.1,accy=0.05,
+   life=85,
+   draw=drawenemymissile,
+   p=enemymissilep,
+  }))
+ end,
+
+ mines=function (_enemy)
+  sfx(13,_enemy.sfxch)
+  addenemybullet{
+   x=_enemy.x,y=_enemy.y,
+   hw=2,hh=2,
+   frame=0,
+   spdfactor=0.96+rnd(0.01),
+   escapefactor=0.5,
+   spdx=rnd(0.5)-0.25,spdy=1.5,accy=0,
+   life=110,
+   draw=drawenemymine,
+   ondeath=onenemyminedeath,
+  }
+ end,
+
+ boost=function (_enemy)
+  if _enemy.sfxch == 2 then
+   sfx(15,2)
+  end
+  _enemy.boostts=t()
+  _enemy.boost=0.5
+ end,
+
+ shield=function (_enemy)
+  if _enemy.sfxch == 2 then
+   sfx(19,2)
+  end
+  _enemy.shieldts=t()
+ end,
+
+ ice=function (_enemy)
+  -- todo: sfx??
+  _enemy.icets=t()
+ end,
+
+ blink=function (_enemy)
+  sfx(21,_enemy.sfxch)
+  blinkaway(_enemy,rnd(blinkdirs),rnd(blinkdirs),38)
+ end,
+
+ flak=function (_enemy)
+  sfx(17,3)
+  for _i=1,8 do
+   local _spdx,_spdy=1+rnd(2),rnd(1)-0.5
+   addenemybullet{
+    x=_enemy.x,y=_enemy.y,
+    hw=1,hh=1,
+    spdx=_spdx,
+    spdy=_spdy,
+    accy=0.01,
+    spdfactor=0.9,
+    life=rnd(90)+60,
+    draw=drawbossflakbullet,
+    ondeath=fizzle,
+   }
+   addenemybullet{
+    x=_enemy.x,y=_enemy.y,
+    hw=1,hh=1,
+    spdx=-_spdx,
+    spdy=_spdy,
+    accy=0.01,
+    spdfactor=0.95,
+    life=rnd(90)+60,
+    draw=drawbossflakbullet,
+    ondeath=fizzle,
+   }
+  end
+ end,
+
+ beam=function (_enemy)
+  if _enemy.sfxch == 2 then
+   sfx(16,2)
+  end
+  _enemy.beamts=t()
+  _enemy.boost=-0.25
+ end,
+
+ bubbles=function(_enemy)
+  sfx(29,_enemy.sfxch)
+  for _i=1,5 do
+   addenemybullet{
+    x=_enemy.x,y=_enemy.y,
+    hw=2,hh=2.5,
+    spdx=rnd()-0.5,spdy=rnd()-0.5,
+    spdfactor=0.96,
+    life=210,
+    update=updateenemybubble,
+    ondeath=fizzle,
+    draw=drawenemybubble,
+   }
+  end
+ end,
+
+ slicer=function (_enemy)
+  addenemybullet{
+   x=_enemy.x,y=_enemy.y,
+   hw=3,hh=3,
+   spdy=2,
+   life=999,
+   ondeath=explode,
+   draw=drawbossslicer,
+  }
+  sfx(30,2)
+ end,
 }
 
 local enemycargobulletpcolors=split'7,14,2'
