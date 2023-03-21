@@ -1242,7 +1242,10 @@ function kamikazeupdate(_enemy)
   local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
   _enemy.spdx=cos(_a)*0.5
   _enemy.spdy+=0.011+_enemy.ifactor
-  -- enemycurrentweapons[1](_enemy) -- todo: add where?
+  if t()-_enemy.ts > 1.5 and not _enemy.icec and not _enemy.hasfired then
+   enemycurrentweapons[1](_enemy)
+   _enemy.hasfired=true
+  end
  end
 end
 
@@ -1302,6 +1305,7 @@ local enemyfactories={
  function()
   return mr(getship(100),{
    x=rnd(128),
+   ts=t(),
    update=kamikazeupdate,
   })
  end,
