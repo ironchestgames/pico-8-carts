@@ -5,6 +5,7 @@ __lua__
 -- by ironchest games
 
 --[[
+ - make enemy sfxs never loop
  - remove raids?
  - add police after nick
  - unify enemy update and boss update
@@ -48,10 +49,10 @@ sfx channels:
 -- cartdata'ironchestgames_shipnickers_v1-dev12'
 cartdata'ironchestgames_shipnickers_v1-dev13'
 
--- printh('debug started','debug',true)
--- function debug(s)
---  printh(tostr(s),'debug',false)
--- end
+printh('debug started','debug',true)
+function debug(s)
+ printh(tostr(s),'debug',false)
+end
 
 poke(0x5f5c,-1) -- disable btnp auto-repeat
 
@@ -526,6 +527,25 @@ end
 function emptyfn()
 end
 
+-- new general drawing functions
+function drawmissile(_bullet)
+ sspr(_bullet.sx,_bullet.sy,3,5,_bullet.x-_bullet.hw,_bullet.y,3,5)
+end
+
+function drawbubble(_bullet)
+ circ(_bullet.x,_bullet.y,2,_bullet.color)
+ pset(_bullet.x-1,_bullet.y-1,7)
+end
+
+function drawmine(_bullet)
+ _bullet.frame+=(t()*0.375)/_bullet.life
+ if _bullet.frame > 2 then
+  _bullet.frame=0
+ end
+ sspr(2*flr(_bullet.frame),_bullet.sy,2,2,_bullet.x,_bullet.y)
+end
+---
+
 function drawbullet(_bullet)
  sspr(5,119,1,4,_bullet.x,_bullet.y)
 end
@@ -566,13 +586,6 @@ end
 function onminedeath(_bullet)
  onminedeathbase(_bullet,bullets)
 end
-function drawmine(_bullet)
- _bullet.frame+=(t()*0.375)/_bullet.life
- if _bullet.frame > 2 then
-  _bullet.frame=0
- end
- sspr(2*flr(_bullet.frame),126,2,2,_bullet.x,_bullet.y)
-end
 function shootmine(_ship,_life,_angle)
  shipsfx(_ship,13)
  addbullet{
@@ -585,6 +598,7 @@ function shootmine(_ship,_life,_angle)
   dmg=5,
   life=_life,
   charge=_life,
+  sy=126,
   draw=drawmine,
   ondeath=onminedeath,
  }
@@ -598,10 +612,8 @@ function mergewmissilebase(_bullet)
  }),_bullet)
 end
 
+-- todo: xoff=1 is probably wrong, right?
 local missilep=mr(s2t'xoff=1,yoff=5,r=0.1,spdx=0,spdy=-0.1,spdr=0,life=3',{colors=split'7,10,9'})
-function drawmissile(_bullet)
- sspr(4,123,3,5,_bullet.x-_bullet.hw,_bullet.y)
-end
 function shootmissile(_ship,_life)
  shipsfx(_ship,12)
  addbullet(mergewmissilebase({
@@ -609,6 +621,7 @@ function shootmissile(_ship,_life)
   spdy=-rnd(0.175),accy=-0.05,
   dmg=12,
   life=_life,
+  sx=4,sy=123,
   draw=drawmissile,
   p=missilep,
  }))
@@ -757,10 +770,6 @@ function shootslicer(_x,_y,_spdx,_spdy,_slicecount,_isstraight)
  }
 end
 
-function drawbubble(_bullet)
- circ(_bullet.x,_bullet.y,2,12)
- pset(_bullet.x-1,_bullet.y-1,7)
-end
 local bubblepcolors=split'14,12,4'
 function shootbubble(_ship)
  for _i=1,3 do
@@ -784,6 +793,7 @@ function shootbubble(_ship)
   life=190,
   update=clearenemybullets,
   ondeath=fizzle,
+  color=12,
   draw=drawbubble,
  }
  shipsfx(_ship,29)
@@ -1013,22 +1023,9 @@ function newcargodrop(_x,_y)
 end
 
 -- enemies
-
-function drawenemymissile(_bullet)
- sspr(33,123,3,5,_bullet.x,_bullet.y,3,5)
-end
-local enemymissilep=mr(s2t'xoff=1,yoff=0,r=0.1,spdx=0,spdy=0.1,spdr=0,life=4',{colors=split'7,14,8'})
-
 function onenemyminedeath(_bullet)
  _bullet.charge=100
  onminedeathbase(_bullet,enemybullets)
-end
-function drawenemymine(_bullet)
- _bullet.frame+=(t()*0.375)/_bullet.life
- if _bullet.frame > 2 then
-  _bullet.frame=0
- end
- sspr(2*flr(_bullet.frame),121,2,2,_bullet.x,_bullet.y)
 end
 
 function drawenemybullet(_bullet)
@@ -1064,11 +1061,6 @@ function updateenemybubble(_bullet)
  bulletclearbullets(_bullet,bullets)
 end
 
-function drawenemybubble(_bullet)
- circ(_bullet.x,_bullet.y,2,14)
- pset(_bullet.x-1,_bullet.y-1,7)
-end
-
 function resetspecialweapons(_enemy)
  _enemy.boost,_enemy.boostts,_enemy.shieldts,_enemy.beamts,_enemy.icets=0
 end
@@ -1101,6 +1093,7 @@ function shootspecialweapons(_enemy)
 end
 
 local superbossweaponnames,bosstses,bosststs,blinkdirs=split'missile,mines,boost,shield,ice,blink,flak,bubbles,slicer',split'boostts,shieldts,beamts,icets',s2t'boostts=2,shieldts=2.5,beamts=2,icets=1.125',split'-1,0,1'
+local enemymissilep=mr(s2t'xoff=-1,yoff=0,r=0.1,spdx=0,spdy=0.1,spdr=0,life=4',{colors=split'7,14,8'})
 
 local enemyweapons={
  missile=function (_enemy)
@@ -1109,7 +1102,8 @@ local enemyweapons={
    x=_enemy.x,y=_enemy.y,
    spdy=0.1,accy=0.05,
    life=85,
-   draw=drawenemymissile,
+   sx=33,sy=123,
+   draw=drawmissile,
    p=enemymissilep,
   }))
  end,
@@ -1124,7 +1118,8 @@ local enemyweapons={
    escapefactor=0.5,
    spdx=rnd(0.5)-0.25,spdy=1.5,accy=0,
    life=110,
-   draw=drawenemymine,
+   sy=121,
+   draw=drawmine,
    ondeath=onenemyminedeath,
   }
  end,
@@ -1202,7 +1197,8 @@ local enemyweapons={
     life=210,
     update=updateenemybubble,
     ondeath=fizzle,
-    draw=drawenemybubble,
+    color=14,
+    draw=drawbubble,
    }
   end
  end,
