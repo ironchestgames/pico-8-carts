@@ -989,8 +989,7 @@ local secondary={
  end,
 }
 
-local weaponcolors=s2t'missile=13,boost=8,mines=5,shield=12,ice=6,blink=3,flak=15,beam=9,bubbles=14,slicer=11'
-local boostcolors=split'7,10,9,8'
+local weaponcolors,boostcolors=s2t'missile=13,boost=8,mines=5,shield=12,ice=6,blink=3,flak=15,beam=9,bubbles=14,slicer=11',split'7,10,9,8'
 local secondarysprites={
  missile=split'5,123',
  boost=split'8,123',
@@ -1035,8 +1034,7 @@ end
 function drawenemybullet(_bullet)
  sspr(32,125,1,3,_bullet.x,_bullet.y,1,3)
 end
-local enemybulletp=mr(s2t'xoff=0,yoff=0,r=0.1,spdx=0,spdy=0,spdr=0,life=3',{colors=split'2,2,4'})
-local enemybulletxoffs={-4,3}
+local enemybulletxoffs,enemybulletp=split'-4,3',mr(s2t'xoff=0,yoff=0,r=0.1,spdx=0,spdy=0,spdr=0,life=3',{colors=split'2,2,4'})
 function shootenemybullet(_enemy)
  sfx(8,3)
  for _i=1,2 do
@@ -1093,9 +1091,7 @@ function shootspecialweapons(_enemy)
  end
 end
 
-local blinkdirs=split'-1,0,1'
-local superbossweaponnames=split'missile,mines,boost,shield,ice,blink,flak,bubbles,slicer'
-local bosstses,bosststs=split'boostts,shieldts,beamts,icets',s2t'boostts=2,shieldts=2.5,beamts=2,icets=1.125'
+local superbossweaponnames,bosstses,bosststs,blinkdirs=split'missile,mines,boost,shield,ice,blink,flak,bubbles,slicer',split'boostts,shieldts,beamts,icets',s2t'boostts=2,shieldts=2.5,beamts=2,icets=1.125',split'-1,0,1'
 
 local enemyweapons={
  missile=function (_enemy)
@@ -1665,17 +1661,13 @@ function gameupdate()
 
  for _enemy in all(enemies) do
   for _exhaust in all(_enemy.exhausts) do
-   if _enemy.boostts then
-    newexhaustp(
-     _exhaust,
-     -5,
-     _enemy,
-     _enemy.boostts and boostcolors or _enemy.exhaustcolors,
-     _enemy.boostts and 5 or 3,
-     -1)
-   else
-    newexhaustp(_exhaust,-5,_enemy,_enemy.exhaustcolors,3,-1)
-   end
+   newexhaustp(
+    _exhaust,
+    -5,
+    _enemy,
+    _enemy.boostts and boostcolors or _enemy.exhaustcolors,
+    _enemy.boostts and 5 or 3,
+    -1)
   end
 
   if _enemy.hp <= 0 then
@@ -2065,8 +2057,7 @@ function pickerdraw()
    rect(_x,_y,_x+9,_y+9,11+_plidx)
    local _s='(no ship)'
    if isunlocked(_pick) then
-    local _ship=hangar[_pick]
-    _s=_ship.primary..','.._ship.secondary
+    _s=hangar[_pick].primary..','..hangar[_pick].secondary
    end
    if _pick == newship then
     newship=nil
@@ -2142,12 +2133,6 @@ music(1)
 _update60=emptyfn
 local splashshipsd=0
 _draw=function ()
- if btnp(4) then
-  music(-1)
-  sfx(3)
-  return pickerinit()
- end
-
  cls()
  splashshipsd+=0.5
  if splashshipsd > 16 then
@@ -2160,6 +2145,12 @@ _draw=function ()
  end
  sspr(unpacksplit'0,72,128,46,0,26')
  print(unpacksplit'\fbpress \x8e,48,121')
+
+ if btnp(4) then
+  music(-1)
+  sfx(3)
+  return pickerinit()
+ end
 end
 
 __gfx__
