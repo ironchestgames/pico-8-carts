@@ -48,10 +48,10 @@ sfx channels:
 -- cartdata'ironchestgames_shipnickers_v1-dev12'
 cartdata'ironchestgames_shipnickers_v1-dev13'
 
-printh('debug started','debug',true)
-function debug(s)
- printh(tostr(s),'debug',false)
-end
+-- printh('debug started','debug',true)
+-- function debug(s)
+--  printh(tostr(s),'debug',false)
+-- end
 
 poke(0x5f5c,-1) -- disable btnp auto-repeat
 
@@ -1082,12 +1082,17 @@ function shootspecialweapons(_enemy)
  end
 
  if _enemy.beamts then
-  addenemybullet(mr(s2t'hw=3,hh=64,spdfactor=0',{
-   x=_enemy.x,y=_enemy.y+64+6,
-   colors=enemybeamcolors,
-   pcolors=enemybeampcolors,
-   draw=drawbeam,
-  }))
+  if t() < _enemy.beamts + 0.25 then
+   local _dir=rnd(0.5)-0.25
+   addps(_enemy.x,_enemy.y+8,2,_dir,_dir,-0.25,split'8,14,7',30)
+  else
+   addenemybullet(mr(s2t'hw=3,hh=64,spdfactor=0',{
+    x=_enemy.x,y=_enemy.y+64+6,
+    colors=enemybeamcolors,
+    pcolors=enemybeampcolors,
+    draw=drawbeam,
+   }))
+  end
  end
 end
 
