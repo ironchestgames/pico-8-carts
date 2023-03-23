@@ -1069,6 +1069,10 @@ function drawenemybubble(_bullet)
  pset(_bullet.x-1,_bullet.y-1,7)
 end
 
+function resetspecialweapons(_enemy)
+ _enemy.boost,_enemy.boostts,_enemy.shieldts,_enemy.beamts,_enemy.icets=0
+end
+
 function shootspecialweapons(_enemy)
  if _enemy.boostts then
   addenemybullet(mr(s2t'hw=3,hh=5,spdfactor=0',{
@@ -1589,15 +1593,14 @@ function gameupdate()
     if _bossdt > boss.flydurationc+boss.waitdurationc then
      sfx(-2,2)
 
+     resetspecialweapons(boss)
+
      boss.waitdurationc,
      boss.flydurationc,
-     boss.ts,
-     boss.boost,
-     boss.boostts,boss.shieldts,boss.beamts=
+     boss.ts=
      0.875+rnd(1.75),
      boss.flyduration+rnd(5),
-     curt,
-     0
+     curt
 
      if not boss.icec then
       enemyweapons[rnd{boss.primary,boss.primary,boss.secondary}](boss)
@@ -1681,8 +1684,8 @@ function gameupdate()
    if _enemy.icec then
     updateicec(_enemy)
    end
-   if _enemy.ts and _enemy.ts + 0.5 < curt then
-    _enemy.boost,_enemy.boostts,_enemy.shieldts,_enemy.beamts,_enemy.icets=0
+   if _enemy.ts and _enemy.ts + 0.55 < curt then
+    resetspecialweapons(_enemy)
    end
 
    _enemy.update(_enemy)
