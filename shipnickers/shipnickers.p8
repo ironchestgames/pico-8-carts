@@ -5,6 +5,7 @@ __lua__
 -- by ironchest games
 
 --[[
+ - decide more distinctly which particles to draw above vs below
  - make enemy sfxs never loop
  - remove raids?
  - add police after nick
@@ -527,7 +528,7 @@ end
 function emptyfn()
 end
 
--- new general drawing functions
+-- general drawing functions
 function drawmissile(_bullet)
  sspr(_bullet.sx,_bullet.sy,3,5,_bullet.x-_bullet.hw,_bullet.y,3,5)
 end
@@ -544,11 +545,6 @@ function drawmine(_bullet)
  end
  sspr(2*flr(_bullet.frame),_bullet.sy,2,2,_bullet.x,_bullet.y)
 end
----
-
-function drawbullet(_bullet)
- sspr(5,119,1,4,_bullet.x,_bullet.y)
-end
 
 function drawshield(_x,_y,_color,_radius)
  _radius=_radius or 6
@@ -556,6 +552,12 @@ function drawshield(_x,_y,_color,_radius)
  fillp(rnd(32767))
  circ(_x+rnd(2)-1,_y+rnd(2)-1,_radius,_color)
  fillp()
+end
+
+----------------
+
+function drawbullet(_bullet)
+ sspr(5,119,1,4,_bullet.x,_bullet.y)
 end
 
 function mineexplodedraw(_bullet)
@@ -703,17 +705,14 @@ function drawbeam(_bullet)
 end
 function shootbeam(_ship)
  local _hh=_ship.y/2
- addbullet{
+ addbullet(mr(s2t'hw=3,spdfactor=0,dmg=0.25,life=1',{
   x=_ship.x,y=_hh-6,
-  hw=3,hh=_hh,
-  spdfactor=0,
-  dmg=0.25,
-  life=1,
+  hh=_hh,
   colors=beamcolors,
   pcolors=beampcolors,
   draw=drawbeam,
   update=clearenemybullets,
- }
+ }))
 end
 
 function shootboost(_ship)
