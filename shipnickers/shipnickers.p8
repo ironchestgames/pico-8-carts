@@ -431,6 +431,50 @@ function icefizzle(_obj)
  fizzlebase(_obj,icefizzlecolors)
 end
 
+function playbulletcollisions(_bullet)
+ if boss and isaabbscolliding(_bullet,boss) then
+  if not boss.shieldts then
+   local _dmg=_bullet.bossdmg or _bullet.dmg
+   if issuperboss then
+    _dmg*=0.5
+   end
+   boss.hp-=_dmg
+   _bullet.enemyhit=boss
+  end
+  _bullet.life=0
+  newhit(boss.x,boss.y)
+ end
+
+ for _enemy in all(enemies) do
+  if isaabbscolliding(_bullet,_enemy) then
+   if not _enemy.shieldts then
+    _enemy.hp-=_bullet.dmg
+   end
+   _bullet.enemyhit,_bullet.life=_enemy,0
+   newhit(_enemy.x,_enemy.y)
+  end
+ end
+end
+
+function enemybulletcollisions(_bullet)
+ for _ship in all(ships) do
+  if isaabbscolliding(_bullet,_ship) then
+   if not _ship.isshielding then
+    if _bullet.isice then
+     _bullet.enemyhit=_ship
+    else
+     _ship.hp-=1
+     _ship.primaryc=0
+     if _ship.hp > 0 then
+      sfx(21+_ship.hp,_ship.plidx)
+     end
+    end
+   end
+   _bullet.life=0
+   newhit(_ship.x,_ship.y)
+  end
+ end
+end
 
 function updatebullets(_bullets)
  for _b in all(_bullets) do
@@ -459,49 +503,9 @@ function updatebullets(_bullets)
   end
 
   if _b.isenemy then
-
-   for _ship in all(ships) do
-    if isaabbscolliding(_b,_ship) then
-     if not _ship.isshielding then
-      if _b.isice then
-       _b.enemyhit=_ship
-      else
-       _ship.hp-=1
-       _ship.primaryc=0
-       if _ship.hp > 0 then
-        sfx(21+_ship.hp,_ship.plidx)
-       end
-      end
-     end
-     _b.life=0
-     newhit(_ship.x,_ship.y)
-    end
-   end
-
+   enemybulletcollisions(_b)
   else
-
-   if boss and isaabbscolliding(_b,boss) then
-    if not boss.shieldts then
-     local _dmg=_b.bossdmg or _b.dmg
-     if issuperboss then
-      _dmg*=0.5
-     end
-     boss.hp-=_dmg
-     _b.enemyhit=boss
-    end
-    _b.life=0
-    newhit(boss.x,boss.y)
-   end
-
-   for _enemy in all(enemies) do
-    if isaabbscolliding(_b,_enemy) then
-     if not _enemy.shieldts then
-      _enemy.hp-=_b.dmg
-     end
-     _b.enemyhit,_b.life=_enemy,0
-     newhit(_enemy.x,_enemy.y)
-    end
-   end
+   playbulletcollisions(_b)
   end
 
   if _b.life <= 0 then
