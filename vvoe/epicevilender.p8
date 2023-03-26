@@ -4,7 +4,7 @@ __lua__
 -- virtuous vanquisher of evil 1.3
 -- by ironchest games
 
-cartdata'ironchestgames_vvoe_v1_save1'
+cartdata'ironchestgames_vvoe_v1_dev1'
 
 printh('debug started','debug',true)
 function debug(s)
