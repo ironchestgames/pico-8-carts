@@ -365,8 +365,8 @@ function performenemymelee(_a)
  add(attacks,{
   x=_a.x+cos(_a.a)*4,
   y=_a.y+sin(_a.a)*4,
-  hw=att_siz or 2,
-  hh=att_siz or 2,
+  hw=_a.att_siz or 2,
+  hh=_a.att_siz or 2,
   state_c=1,
   typ=_a.att_typ or 'knockback',
   recovertime=_a.att_recovertime,
@@ -1300,7 +1300,7 @@ function dungeonupdate()
           flrrnd(5+_n)+_m
 
          _suffixn=i.isbosschest and _suffixn or 0
-         _prefixn=_itemclassn >= 8 and _suffix != 0 and _prefixn == 0 and 1 or _prefixn
+         _prefixn=_itemclassn >= 8 and _suffixn != 0 and _prefixn == 0 and 1 or _prefixn
          _sfx'20'
          add(avatar.inventory,createitem(_itemclassn,_prefixn,_suffixn))
         else
