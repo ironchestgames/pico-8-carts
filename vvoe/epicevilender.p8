@@ -4,7 +4,7 @@ __lua__
 -- virtuous vanquisher of evil 1.2
 -- by ironchest games
 
-cartdata'ironchestgames_vvoe_v1'
+cartdata'ironchestgames_vvoe_v1_save1'
 
 function _sfx(_s)
  sfx(tonum(_s))
@@ -30,23 +30,8 @@ function flrrnd(_n)
  return flr(rnd(_n))
 end
 
--- note: last char needs to be ','
-function pfn(s)
- local t,_s={},''
- while #s > 0 do
-  local d=sub(s,1,1)
-  if d != ',' then
-   _s=_s..d
-  else
-   add(t,tonum(_s))
-   _s=''
-  end
-  s=sub(s,2)
- end
- return t
-end
-
 function saveitem(_slot,_class,_prefix,_suffix)
+ -- todo: do with poke 0x5e00?
  dset(_slot,_class+shl(_prefix,4)+shl(_suffix,8))
 end
 
@@ -55,6 +40,7 @@ if dget(1) == 0 then
 end
 
 function loaditem(_i)
+ -- todo: do with peek 0x5e00?
  local dat=dget(_i)
  local _class=band(dat,0b1111)
  return _class != 0 and createitem(
@@ -163,46 +149,46 @@ btnmasktoa={
 function aframes(_fs)
  local t,j={},1
  for i=0,1,0.125 do
-  t[i]=pfn(_fs[j])
+  t[i]=split(_fs[j])
   j+=1
  end
  return t
 end
 
 meleevfxframes=aframes{
- '0,20,4,7,-1,-5,', -- right
- '8,20,6,4,-3,-2,', -- right/up
- '20,20,9,3,-3,-1,', -- up
- '14,20,6,4,-2,-2,', -- up/left
- '4,20,4,7,-2,-5,', -- left
- '29,20,4,7,-3,-6,', -- left/down
- '20,23,9,3,-4,-2,', -- down
- '33,20,4,7,0,-6,', -- down/right
- '0,20,4,7,-1,-5,' -- right (wrapped)
+ '0,20,4,7,-1,-5', -- right
+ '8,20,6,4,-3,-2', -- right/up
+ '20,20,9,3,-3,-1', -- up
+ '14,20,6,4,-2,-2', -- up/left
+ '4,20,4,7,-2,-5', -- left
+ '29,20,4,7,-3,-6', -- left/down
+ '20,23,9,3,-4,-2', -- down
+ '33,20,4,7,0,-6', -- down/right
+ '0,20,4,7,-1,-5' -- right (wrapped)
 }
 
 bowvfxframes=aframes{
- '0,27,6,7,-3,-5,', -- right
- '17,32,7,7,-4,-3,', -- right/up
- '10,31,7,6,-3,-3,', -- up
- '34,32,7,7,-3,-3,', -- up/left
- '4,27,6,7, -2,-5,', -- left
- '22,27,7,7,-2,-5,', -- left/down
- '10,27,7,6,-3,-4,', -- down
- '29,27,7,7,-4,-4,', -- down/right
- '0,27,6,7,-3,-5,' -- right (wrapped)
+ '0,27,6,7,-3,-5', -- right
+ '17,32,7,7,-4,-3', -- right/up
+ '10,31,7,6,-3,-3', -- up
+ '34,32,7,7,-3,-3', -- up/left
+ '4,27,6,7, -2,-5', -- left
+ '22,27,7,7,-2,-5', -- left/down
+ '10,27,7,6,-3,-4', -- down
+ '29,27,7,7,-4,-4', -- down/right
+ '0,27,6,7,-3,-5' -- right (wrapped)
 }
 
 arrowframes=aframes{
- '50,20,2,1,-1,-0.5,', -- right
- '52,20,2,2,-1,-1,', -- right/up
- '54,20,1,2,-0.5,-1,', -- up
- '55,20,2,2,-1,-1,', -- up/left
- '50,20,2,1,-1,-0.5,', -- left
- '52,20,2,2,-1,-1,', -- left/down
- '54,20,1,2,-0.5,-1,', -- down
- '55,20,2,2,-1,-1,', -- down/right
- '50,20,2,1,-1,-0.5,' -- right (wrapped)
+ '50,20,2,1,-1,-0.5', -- right
+ '52,20,2,2,-1,-1', -- right/up
+ '54,20,1,2,-0.5,-1', -- up
+ '55,20,2,2,-1,-1', -- up/left
+ '50,20,2,1,-1,-0.5', -- left
+ '52,20,2,2,-1,-1', -- left/down
+ '54,20,1,2,-0.5,-1', -- down
+ '55,20,2,2,-1,-1', -- down/right
+ '50,20,2,1,-1,-0.5' -- right (wrapped)
 }
 
 function getvfxframei(a)
@@ -210,7 +196,7 @@ function getvfxframei(a)
 end
 
 -- effects
-pemdef=pfn'-0.3,0,'
+pemdef=split'-0.3,0'
 
 function burningeffect(_a)
  if _a.effect.c == nil then
@@ -218,9 +204,9 @@ function burningeffect(_a)
   add(pemitters,{
    follow=_a,
    life=_a.state_c,
-   prate=pfn'2,4,',
-   plife=pfn'15,25,',
-   poffsets=pfn'-2,0.5,2,0.5,',
+   prate=split'2,4',
+   plife=split'15,25',
+   poffsets=split'-2,0.5,2,0.5',
    pcol1=8,pcol2=14
   })
  end
@@ -328,9 +314,9 @@ function boltskillfactory(
    add(pemitters,{
     follow=_a,
     life=life,
-    prate=pfn'2,4,',
-    plife=pfn'15,25,',
-    poffsets=pfn'-2,0.5,2,0.5,',
+    prate=split'2,4',
+    plife=split'15,25',
+    poffsets=split'-2,0.5,2,0.5',
     pcol1=castpemcol1,pcol2=castpemcol2
    })
    _sfx'9'
@@ -347,7 +333,7 @@ function boltskillfactory(
     dy=sin(_a.a)*1.2,
     typ=typ,
     recovertime=120,
-    frame=pfn'47,20,3,3,-0.5,-0.5,',
+    frame=split'47,20,3,3,-0.5,-0.5',
     col=attackcol,
    }
    add(attacks,attack)
@@ -355,10 +341,10 @@ function boltskillfactory(
    add(pemitters,{
     follow=attack,
     life=1000,
-    prate=pfn'0,1,',
-    plife=pfn'3,5,',
-    poffsets=pfn'-1,-1,1,1,',
-    dy=pfn'0,0,',
+    prate=split'0,1',
+    plife=split'3,5',
+    poffsets=split'-1,-1,1,1',
+    dy=split'0,0',
     pcol1=boltpemcol1,pcol2=boltpemcol2
    })
    _sfx'32'
@@ -419,10 +405,10 @@ function newmeleetroll(x,y)
   att_preprfm=50,
   att_postprfm=20,
   prfmatt=performenemymelee,
-  idling={pfn'40,91,4,5,-2,-3,'},
-  moving={animspd=0.18,pfn'40,91,4,5,-2,-3,',pfn'44,91,4,5,-2,-3,'},
-  attacking={animspd=0,pfn'48,91,4,5,-2,-3,',pfn'51,91,6,5,-3,-3,'},
-  recovering={pfn'40,91,4,5,-2,-3,'}
+  idling={split'40,91,4,5,-2,-3'},
+  moving={animspd=0.18,split'40,91,4,5,-2,-3',split'44,91,4,5,-2,-3'},
+  attacking={animspd=0,split'48,91,4,5,-2,-3',split'51,91,6,5,-3,-3'},
+  recovering={split'40,91,4,5,-2,-3'}
  }
 end
 
@@ -452,11 +438,11 @@ function casterfactory(_hp,_cols,_idlef,_attackf,_boltskill)
 end
 
 newtrollcaster=casterfactory(
- 1,pfn'3,4,2,5,9,',pfn'41,32,4,7,-2,-4.5,',pfn'45,32,4,7,-2,-4.5,',
+ 1,split'3,4,2,5,9',split'41,32,4,7,-2,-4.5',split'45,32,4,7,-2,-4.5',
  boltskillfactory('fire',14,8,14,14,8))
 
 newdemoncaster=casterfactory(
- 3,pfn'8,13,5,6,12,',pfn'41,32,4,8,-2,-5.5,',pfn'45,32,4,8,-2,-5.5,',
+ 3,split'8,13,5,6,12',split'41,32,4,8,-2,-5.5',split'45,32,4,8,-2,-5.5',
  boltskillfactory('ice',7,12,12,12,13))
 
 function newgianttroll(x,y)
@@ -470,10 +456,10 @@ function newgianttroll(x,y)
   att_preprfm=40,
   att_postprfm=30,
   prfmatt=performenemymelee,
-  idling={pfn'36,25,7,7,-4,-4,'},
-  moving={animspd=0.18,pfn'43,25,7,7,-4,-4,',pfn'50,25,7,7,-4,-4,'},
-  attacking={animspd=0,pfn'57,25,7,7,-4,-4,',pfn'64,25,8,7,-4,-4,'},
-  recovering={pfn'72,25,7,7,-4,-4,'}
+  idling={split'36,25,7,7,-4,-4'},
+  moving={animspd=0.18,split'43,25,7,7,-4,-4',split'50,25,7,7,-4,-4'},
+  attacking={animspd=0,split'57,25,7,7,-4,-4',split'64,25,8,7,-4,-4'},
+  recovering={split'72,25,7,7,-4,-4'}
  }
  return boss
 end
@@ -487,10 +473,10 @@ function newmeleeskele(x,y)
   att_preprfm=40,
   att_postprfm=10,
   prfmatt=performenemymelee,
-  idling={pfn'0,15,4,5,-2,-3,'},
-  moving={animspd=0.18,pfn'0,15,4,5,-2,-3,',pfn'4,15,4,5,-2,-3,'},
-  attacking={animspd=0,pfn'8,15,4,5,-2,-3,',pfn'11,15,6,5,-3,-3,'},
-  recovering={pfn'0,15,4,5,-2,-3,'}
+  idling={split'0,15,4,5,-2,-3'},
+  moving={animspd=0.18,split'0,15,4,5,-2,-3',split'4,15,4,5,-2,-3'},
+  attacking={animspd=0,split'8,15,4,5,-2,-3',split'11,15,6,5,-3,-3'},
+  recovering={split'0,15,4,5,-2,-3'}
  }
 end
 
@@ -509,16 +495,16 @@ function batfactory(_cols,_att_col,_att_typ,_att_recovertime)
    att_recovertime=_att_recovertime,
    cols=_cols,
    prfmatt=performenemymelee,
-   idling={pfn'36,15,3,3,-1.5,-1.5,'},
-   moving={animspd=0.21,pfn'36,15,3,3,-1.5,-1.5,',pfn'39,15,3,3,-1.5,-1.5,'},
-   attacking={animspd=0.32,pfn'36,15,3,3,-1.5,-1.5,',pfn'39,15,3,3,-1.5,-1.5,'},
-   recovering={pfn'36,15,3,3,-1.5,-1.5,'}
+   idling={split'36,15,3,3,-1.5,-1.5'},
+   moving={animspd=0.21,split'36,15,3,3,-1.5,-1.5',split'39,15,3,3,-1.5,-1.5'},
+   attacking={animspd=0.32,split'36,15,3,3,-1.5,-1.5',split'39,15,3,3,-1.5,-1.5'},
+   recovering={split'36,15,3,3,-1.5,-1.5'}
   }
  end
 end
 
 newbatenemy=batfactory()
-newfirebatenemy=batfactory(pfn'0,0,0,0,8,',14,'fire',120)
+newfirebatenemy=batfactory(split'0,0,0,0,8,14,fire,120')
 
 function newvampireboss(x,y)
  boss=actfact{
@@ -540,7 +526,7 @@ function newvampireboss(x,y)
     state_c=1,
     dmg=2
    })
-   f=pfn'92,91,4,3,-2,-1.5,'
+   f=split'92,91,4,3,-2,-1.5'
    f.c=4
    _x,_y=getskillxy(_a)
    f[5]+=_x
@@ -548,10 +534,10 @@ function newvampireboss(x,y)
    add(vfxs,{f})
    _sfx'4'
   end,
-  idling={pfn'82,91,5,5,-3,-3,'},
-  moving={animspd=0.21,pfn'96,91,3,3,-1.5,-1.5,',pfn'99,91,3,3,-1.5,-1.5,'},
-  attacking={animspd=0.3,pfn'87,91,5,5,-3,-3,',pfn'82,91,5,5,-3,-3,'},
-  recovering={pfn'82,91,5,5,-3,-3,'}
+  idling={split'82,91,5,5,-3,-3'},
+  moving={animspd=0.21,split'96,91,3,3,-1.5,-1.5',split'99,91,3,3,-1.5,-1.5'},
+  attacking={animspd=0.3,split'87,91,5,5,-3,-3',split'82,91,5,5,-3,-3'},
+  recovering={split'82,91,5,5,-3,-3'}
  }
  return boss
 end
@@ -567,10 +553,10 @@ function newbowskele(x,y)
   att_range=40,
   prfmatt=performenemybow,
   comfydist=20,
-  idling={pfn'18,15,4,5,-2,-3,'},
-  moving={animspd=0.18,pfn'18,15,4,5,-2,-3,',pfn'22,15,4,5,-2,-3,'},
-  attacking={animspd=0,pfn'26,15,4,5,-2,-3,',pfn'31,15,4,5,-2,-3,'},
-  recovering={pfn'18,15,4,5,-2,-3,'}
+  idling={split'18,15,4,5,-2,-3'},
+  moving={animspd=0.18,split'18,15,4,5,-2,-3',split'22,15,4,5,-2,-3'},
+  attacking={animspd=0,split'26,15,4,5,-2,-3',split'31,15,4,5,-2,-3'},
+  recovering={split'18,15,4,5,-2,-3'}
  }
 end
 
@@ -586,7 +572,7 @@ function newskeleking(x,y)
   _a.onpreprfm,
   _a.nolos
    =7,30,60,performmelee,setupmagic,
-   {animspd=0,pfn'0,40,15,18,-7,-13,',pfn'0,58,20,18,-10,-13,'}
+   {animspd=0,split'0,40,15,18,-7,-13',split'0,58,20,18,-10,-13'}
  end
 
  function performmelee(_a)
@@ -612,8 +598,8 @@ function newskeleking(x,y)
   _a.nolos
     =60,110,0,performmagic,setupmelee,{
       animspd=0,
-      pfn'24,58,15,18,-7,-13,',
-      pfn'24,58,15,18,-7,-13,',
+      split'24,58,15,18,-7,-13',
+      split'24,58,15,18,-7,-13',
      },magicpreprfm,true
  end
 
@@ -622,9 +608,9 @@ function newskeleking(x,y)
   add(pemitters,{
    follow={x=_a.att_x,y=_a.att_y},
    life=140,
-   prate=pfn'1,2,',
-   plife=pfn'10,15,',
-   poffsets=pfn'-2,0.5,1,0.5,',
+   prate=split'1,2',
+   plife=split'10,15',
+   poffsets=split'-2,0.5,1,0.5',
    pcol1=11,pcol2=3
   })
   _sfx'9'
@@ -643,9 +629,9 @@ function newskeleking(x,y)
   hw=1.5,hh=3,
   spd=0.4,
   hp=10,
-  idling={pfn'0,40,15,18,-7,-13,'},
-  moving={animspd=0.24,pfn'16,40,15,18,-7,-13,',pfn'32,40,15,18,-7,-13,'},
-  recovering={pfn'0,40,15,18,-7,-13,'},
+  idling={split'0,40,15,18,-7,-13'},
+  moving={animspd=0.24,split'16,40,15,18,-7,-13',split'32,40,15,18,-7,-13'},
+  recovering={split'0,40,15,18,-7,-13'},
   onroam=setupmagic
  }
  setupmagic(boss)
@@ -669,16 +655,16 @@ function newdemonboss(x,y)
   att_recovertime=90,
   prfmatt=performenemymelee,
   passiveskills={{immune='fire'},{immune='ice'}},
-  idling={pfn'77,71,19,18,-10,-15,'},
-  moving={animspd=0.24,pfn'41,71,19,18,-10,-15,',pfn'59,71,19,18,-10,-15,'},
-  attacking={animspd=0,pfn'79,45,31,24,-15,-20,',pfn'48,45,31,24,-15,-20,'},
-  recovering={pfn'95,71,19,18,-10,-15,'}
+  idling={split'77,71,19,18,-10,-15'},
+  moving={animspd=0.24,split'41,71,19,18,-10,-15',split'59,71,19,18,-10,-15'},
+  attacking={animspd=0,split'79,45,31,24,-15,-20',split'48,45,31,24,-15,-20'},
+  recovering={split'95,71,19,18,-10,-15'}
  }
  return boss
 end
 
 -- items
-slots,comcols2={'weapon','offhand','armor','helmet','boots','amulet','book'},pfn'-1,-1,-1,-1,2,'
+slots,comcols2={'weapon','offhand','armor','helmet','boots','amulet','book'},split'-1,-1,-1,-1,2'
 
 function createitem(_itemclass,_prefix,_suffix)
  local itemclass=itemclasses[_itemclass]
@@ -741,28 +727,28 @@ end
 
 swordprefix={
  {name='',sprites={},skill=swordattackskillfactory(7)},
- {name='ice ',col=7,sprites=pfn'30,46,162,63,232,79,49,199,214,',
+ {name='ice ',col=7,sprites=split'30,46,162,63,232,79,49,199,214',
   skill=swordattackskillfactory(12,'ice',150)},
- {name='flaming ',col=8,sprites=pfn'29,45,162,62,231,78,178,198,213,',
+ {name='flaming ',col=8,sprites=split'29,45,162,62,231,78,178,198,213',
   skill=swordattackskillfactory(14,'fire',60)},
- {name='heavy ',col=5,sprites=pfn'-1,-1,-1,-1,-1,-1,-1,196,',
+ {name='heavy ',col=5,sprites=split'-1,-1,-1,-1,-1,-1,-1,196',
   skill=swordattackskillfactory(7,'knockback')},
- {name='sharp ',col=6,sprites=pfn'-1,-1,-1,-1,-1,-1,-1,200,',
+ {name='sharp ',col=6,sprites=split'-1,-1,-1,-1,-1,-1,-1,200',
   skill=swordattackskillfactory(7,nil,nil,2)},
 }
 
 bowprefix={
  {name='',col=4,sprites={},skill=bowattackskillfactory(26,7,2),twohand=true},
- {name='ice ',col=12,sprites=pfn'30,46,162,63,232,79,49,199,214,',
+ {name='ice ',col=12,sprites=split'30,46,162,63,232,79,49,199,214',
   skill=bowattackskillfactory(26,7,12,'ice',150),twohand=true},
- {name='flaming ',col=8,sprites=pfn'29,45,162,62,231,78,178,198,213,',
+ {name='flaming ',col=8,sprites=split'29,45,162,62,231,78,178,198,213',
   skill=bowattackskillfactory(26,14,8,'fire',60),twohand=true},
 }
 
 amuletprefix={
  {
   name='skull ',
-  sprites=pfn'-1,-1,31,',
+  sprites=split'-1,-1,31',
   skill={
    sprite=9,
    desc='passive, resurrect once',
@@ -787,28 +773,28 @@ amuletprefix={
 }
 
 prefix={
- {name='knight\'s ',sprites=pfn'26,42,-1,59,228,76,',
-  cols=pfn'13,13,-1,13,13,13,-1,13,',cols2=pfn'-1,-1,-1,-1,1,',armor=1},
- {name='feathered ',sprites=pfn'27,43,161,60,229,95,177,197,212,',
-  cols=pfn'4,13,-1,2,4,4,-1,15,3,',spdfactor=0.1},
- {name='dragonscale ',sprites=pfn'28,44,-1,61,230,77,',
-  cols=pfn'9,9,-1,9,9,9,-1,-1,-1,',cols2=pfn'-1,-1,-1,-1,4,',skill={
+ {name='knight\'s ',sprites=split'26,42,-1,59,228,76',
+  cols=split'13,13,-1,13,13,13,-1,13',cols2=split'-1,-1,-1,-1,1',armor=1},
+ {name='feathered ',sprites=split'27,43,161,60,229,95,177,197,212',
+  cols=split'4,13,-1,2,4,4,-1,15,3',spdfactor=0.1},
+ {name='dragonscale ',sprites=split'28,44,-1,61,230,77',
+  cols=split'9,9,-1,9,9,9,-1,-1,-1',cols2=split'-1,-1,-1,-1,4',skill={
   sprite=8,desc='passive, cannot be burned',immune='fire'}},
- {name='warming ',sprites=pfn'29,45,162,62,231,78,178,198,213,',
-  cols=pfn'8,8,-1,2,8,8,-1,8,8,',skill={
+ {name='warming ',sprites=split'29,45,162,62,231,78,178,198,213',
+  cols=split'8,8,-1,2,8,8,-1,8,8',skill={
   sprite=11,desc='passive, cannot be frozen',immune='ice'}}
 }
 
 suffix={
- {name=' of haste',sprites=pfn'27,43,161,60,229,95,177,197,212,',
-  cols=pfn'4,13,-1,2,4,4,-1,15,3,',spdfactor=0.1},
- {name=' of phasing',sprites=pfn'143,127,164,111,246,94,47,199,214,',
-  cols=pfn'13,1,-1,1,2,1,-1,12,12,',cols2=pfn'-1,-1,-1,-1,1,',skill={
+ {name=' of haste',sprites=split'27,43,161,60,229,95,177,197,212',
+  cols=split'4,13,-1,2,4,4,-1,15,3',spdfactor=0.1},
+ {name=' of phasing',sprites=split'143,127,164,111,246,94,47,199,214',
+  cols=split'13,1,-1,1,2,1,-1,12,12',cols2=split'-1,-1,-1,-1,1',skill={
    sprite=10,
    desc='passive, phase away on hit',
    onhit=function(_a)
     local x,y=findflr(_a.x,_a.y)
-    local _f=pfn'9,9,1,1,0,0,'
+    local _f=split'9,9,1,1,0,0'
     _a.x,_a.y,_f.c=x,y,2
     add(vfxs,{
      _f,
@@ -821,19 +807,19 @@ suffix={
    end
   }
  },
- {name=' of firebolt',sprites=pfn'29,45,162,62,231,78,178,198,213,',
-  cols=pfn'8,8,-1,2,8,8,-1,8,8,',skill=boltskillfactory(
+ {name=' of firebolt',sprites=split'29,45,162,62,231,78,178,198,213',
+  cols=split'8,8,-1,2,8,8,-1,8,8',skill=boltskillfactory(
   'fire',14,8,14,14,8,15,'firebolt')},
- {name=' of icebolt',sprites=pfn'30,46,163,63,232,79,179,199,214,',
-  cols=pfn'13,6,-1,12,12,12,-1,7,12,',cols2=pfn'-1,-1,-1,-1,1,',skill=boltskillfactory(
+ {name=' of icebolt',sprites=split'30,46,163,63,232,79,179,199,214',
+  cols=split'13,6,-1,12,12,12,-1,7,12',cols2=split'-1,-1,-1,-1,1',skill=boltskillfactory(
   'ice',7,12,12,12,13,14,'icebolt')},
- {name=' of concentration',sprites=pfn'244,245,159,175,191,249,216,247,215,',
-  cols=pfn'3,6,-1,3,3,6,-1,6,11,',cols2=pfn'-1,-1,-1,-1,1,',att_spd_dec=3}
+ {name=' of concentration',sprites=split'244,245,159,175,191,249,216,247,215',
+  cols=split'3,6,-1,3,3,6,-1,6,11',cols2=split'-1,-1,-1,-1,1',att_spd_dec=3}
 }
 
 cloakidling,shieldidling,swordidling,bowidling
-  ={pfn'40,9,3,4,-1,-2,'},{pfn'35,9,5,5,-2,-3,'},
-  {pfn'9,9,5,5,-2,-3,'},{pfn'25,9,5,5,-2,-3,'}
+  ={split'40,9,3,4,-1,-2'},{split'35,9,5,5,-2,-3'},
+  {split'9,9,5,5,-2,-3'},{split'25,9,5,5,-2,-3'}
 
 itemclasses={
  {slot='boots',name='boots',sprite=25,col=2},
@@ -847,11 +833,11 @@ itemclasses={
  {slot='book',name='book',sprite=176},
  {slot='weapon',name='sword',sprite=71,col=6,prefix=swordprefix,
   idling=swordidling,moving=swordidling,attacking={
-   pfn'14,9,5,5,-2,-3,',pfn'18,9,7,5,-3,-3,'},
+   split'14,9,5,5,-2,-3',split'18,9,7,5,-3,-3'},
   recovering=swordidling},
  {slot='weapon',name='bow',sprite=72,col=4,twohand=true,prefix=bowprefix,
   idling=bowidling,moving=bowidling,attacking={
-   pfn'30,9,5,5,-2,-3,',pfn'25,9,1,1,-2,-3,'},
+   split'30,9,5,5,-2,-3',split'25,9,1,1,-2,-3'},
   recovering=bowidling}
 }
 
@@ -863,7 +849,7 @@ themes={
 }
 
 -- init avatar
-idleframe=pfn'0,10,3,4,-1,-2,'
+idleframe=split'0,10,3,4,-1,-2'
 avatar=actfact{
  isavatar=true,
  x=64,y=56,
@@ -878,8 +864,8 @@ avatar=actfact{
  inventory={},
  passiveskills={},
  idling={idleframe},
- moving={idleframe,pfn'3,10,3,4,-1,-2,'},
- attacking={animspd=0,pfn'6,10,3,4,-1,-2,',idleframe},
+ moving={idleframe,split'3,10,3,4,-1,-2'},
+ attacking={animspd=0,split'6,10,3,4,-1,-2',idleframe},
  recovering={idleframe}
 }
 
@@ -913,8 +899,8 @@ function mapinit()
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,enemies,steps,angles=
   avatarx,avatary,0,10,{},({250,500,600,700})[theme],
-   ({pfn'0.25,-0.25,',pfn'0,0,0,0,0,0.5,0.25,-0.25,',
-    pfn'0,0,0.5,0.25,',pfn'0.25,'})[theme]
+   ({split'0.25,-0.25',split'0,0,0,0,0,0.5,0.25,-0.25',
+    split'0,0,0.5,0.25',split'0.25'})[theme]
  local step_c,_theme=steps,themes[theme]
  _theme.lvl_c-=1
 
