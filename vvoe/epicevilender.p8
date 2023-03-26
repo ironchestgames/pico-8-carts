@@ -1,10 +1,15 @@
 pico-8 cartridge // http://www.pico-8.com
 version 18
 __lua__
--- virtuous vanquisher of evil 1.2
+-- virtuous vanquisher of evil 1.3
 -- by ironchest games
 
 cartdata'ironchestgames_vvoe_v1_save1'
+
+printh('debug started','debug',true)
+function debug(s)
+ printh(tostr(s),'debug',false)
+end
 
 function _sfx(_s)
  sfx(tonum(_s))
@@ -973,7 +978,8 @@ function mapinit()
      enter=function()
       theme=nexttheme
       dungeonlvl+=1
-      mapinit()
+      avatar.x,avatar.y=door.x,door.y
+      return true
      end
     }
 
@@ -1031,8 +1037,8 @@ function dungeonupdate()
    if isaabbscolliding(avatar,i) then
     skillbuttondown=0
     curinteractable=i
-    if btnp(4) then
-     i.enter(i)
+    if btnp(4) and i.enter(i) then
+     return mapinit()
     end
    end
   end
