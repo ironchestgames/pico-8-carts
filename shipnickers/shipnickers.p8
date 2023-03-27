@@ -543,7 +543,7 @@ function drawbubble(_bullet)
 end
 
 function drawmine(_bullet)
- _bullet.frame+=(t()*0.375)/_bullet.life
+ _bullet.frame+=t()*0.375/_bullet.life
  if _bullet.frame > 2 then
   _bullet.frame=0
  end
@@ -622,7 +622,7 @@ end
 local missilep=mr(s2t'xoff=1,yoff=5,r=0.1,spdx=0,spdy=-0.1,spdr=0,life=3',{colors=split'7,10,9'})
 function shootmissile(_ship,_life)
  shipsfx(_ship,12)
- addbullet(mergewmissilebase({
+ addbullet(mergewmissilebase{
   x=_ship.x,y=_ship.y,
   spdy=-rnd(0.175),accy=-0.05,
   dmg=12,
@@ -630,7 +630,7 @@ function shootmissile(_ship,_life)
   sx=4,sy=123,
   draw=drawmissile,
   p=missilep,
- }))
+ })
 end
 
 local flakcolors,flakbulletbase=split'7,10,5',s2t'hw=1,hh=1,accy=0.01,spdfactor=0.95,escapefactor=0.5,dmg=2'
@@ -877,7 +877,7 @@ local primary={
   end
  end,
  ice=function(_btn4,_ship)
-  if (not _btn4 and _ship.primaryc > 1 and flr(_ship.primaryc*10) % 5 == 0) then
+  if not _btn4 and _ship.primaryc > 1 and flr(_ship.primaryc*10) % 5 == 0 then
    shootice(_ship,_ship.primaryc*2.25,bullets)
   end
  end,
@@ -964,8 +964,8 @@ local secondary={
  blink=function(_ship)
   local _dx,_dy=getdirs(_ship.plidx)
   if _ship.secondaryshots > 0 and (
-    (btnp(5,_ship.plidx) and (_dx != 0 or _dy != 0)) or
-    (btn(5,_ship.plidx) and (btnp(0,_ship.plidx) or btnp(1,_ship.plidx) or btnp(2,_ship.plidx) or btnp(3,_ship.plidx)))
+    btnp(5,_ship.plidx) and (_dx != 0 or _dy != 0) or
+    btn(5,_ship.plidx) and (btnp(0,_ship.plidx) or btnp(1,_ship.plidx) or btnp(2,_ship.plidx) or btnp(3,_ship.plidx))
   ) then
    shipsfx(_ship,21)
    _ship.secondaryshots-=1
@@ -1101,14 +1101,14 @@ local enemymissilep=mr(s2t'xoff=-1,yoff=0,r=0.1,spdx=0,spdy=0.1,spdr=0,life=4',{
 local enemyweapons={
  missile=function (_enemy)
   sfx(12,_enemy.sfxch)
-  addenemybullet(mergewmissilebase({
+  addenemybullet(mergewmissilebase{
    x=_enemy.x,y=_enemy.y,
    spdy=0.1,accy=0.05,
    life=85,
    sx=33,sy=123,
    draw=drawmissile,
    p=enemymissilep,
-  }))
+  })
  end,
 
  mines=function (_enemy)
@@ -1256,7 +1256,7 @@ end
 function fighterupdate(_enemy)
  if not _enemy.target then
   _enemy.x=flr(8+rnd(120))
-  _enemy.spdy=(rnd(0.5)+0.5)
+  _enemy.spdy=rnd(0.5)+0.5
   _enemy.target=true
  end
  if t()-_enemy.ts > 0.875 and not _enemy.icec then
@@ -1646,13 +1646,13 @@ function gameupdate()
  if escapeelapsed then
   _spawninterval=max(0.25,2*lockedpercentage)
  end
- local gamestartdone=issuperboss or (boss and t()-gamestartts > 1.25) or true
+ local gamestartdone=issuperboss or boss and t()-gamestartts > 1.25 or true
  if gamestartdone and
-    (not (hasescaped or issuperbossdead)) and
+    not (hasescaped or issuperbossdead) and
     curt-enemyts > _spawninterval and
     #enemies < 25 and
     nickitts == nil and
-    curt-(nickedts or (curt-2)) > 1.5 then
+    curt-(nickedts or curt-2) > 1.5 then
   enemyts=curt
   local _count=1
   if #enemies < 2 then
@@ -1692,7 +1692,7 @@ function gameupdate()
 
    local _boostfactor=1+(_enemy.boost or 0)
    _enemy.x+=_enemy.spdx*_boostfactor*(issuperboss and 1.5 or 1)*(_enemy.icec and 0.5 or 1)
-   _enemy.y+=_enemy.spdy*_boostfactor*(issuperboss and 1.25 or 1)*((boss and _enemy.icec and 0.5) or 1)
+   _enemy.y+=_enemy.spdy*_boostfactor*(issuperboss and 1.25 or 1)*(boss and _enemy.icec and 0.5 or 1)
 
    if not ispointinsideaabb(_enemy.x,_enemy.y,64,41,75,101) then
     if boss and not _enemy.factory == 5 then
@@ -1719,7 +1719,7 @@ function gameupdate()
  end
 
  -- events
- if ((hasescaped and #enemies == 0) or issuperbossdead) and not madeitts then
+ if (hasescaped and #enemies == 0 or issuperbossdead) and not madeitts then
   if issuperbossdead and boss then
    boss=nil
    dset(63,dget(63)+1)
@@ -1747,7 +1747,7 @@ function gameupdate()
   gameoverts=t()
  end
 
- if ((hasescaped or issuperbossdead) and madeitts and _isshipinsideexit) or
+ if (hasescaped or issuperbossdead) and madeitts and _isshipinsideexit or
     gameoverts and t()-gameoverts > 1 and btnp(4) then
   sfx(4)
   return pickerinit()
@@ -1812,7 +1812,7 @@ function gamedraw()
  -- draw enemies
  pal(enemypal,0)
  for _enemy in all(enemies) do
-  spr((issuperboss and _enemy.s2 or _enemy.s),_enemy.x-4,_enemy.y-4)
+  spr(issuperboss and _enemy.s2 or _enemy.s,_enemy.x-4,_enemy.y-4)
   if _enemy.shieldts then
    drawshield(_enemy.x,_enemy.y,6)
   end
@@ -1907,7 +1907,7 @@ function gamedraw()
   -- primary
   if _ship.hp < 3 then
    sspr(74,123,38,5,_xoff,121)
-   if (t()*12)%6 >= 3 then
+   if t()*12%6 >= 3 then
     print('\ferepair',_xoff+13,121)
    end
    sspr(74,118,_ship.primaryc,5,_xoff,121)
@@ -2060,7 +2060,7 @@ function pickerdraw()
  for _i=1,2 do
   local _plidx,_pick=_i-1,picks[_i]
   if _pick then
-   local _x,_y=9+(_pick%10)*11,9+flr(_pick/10)*11
+   local _x,_y=9+_pick%10*11,9+flr(_pick/10)*11
    rect(_x,_y,_x+9,_y+9,11+_plidx)
    local _s='(no ship)'
    if isunlocked(_pick) then
