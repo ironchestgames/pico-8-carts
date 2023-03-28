@@ -72,8 +72,7 @@ function isinsidewall(aabb)
   -- note: hitboxes should not be larger than 8x8
   if not walls[mapy] or not walls[mapy][mapx] then
    aabb.removeme=true
-  elseif walls[mapy][mapx] == 1 and
-     isaabbscolliding(aabb,wallaabb) then
+  elseif walls[mapy][mapx] == 1 and isaabbscolliding(aabb,wallaabb) then
    return wallaabb
   end
  end
@@ -444,11 +443,11 @@ end
 
 newtrollcaster=casterfactory(
  1,split'3,4,2,5,9',split'41,32,4,7,-2,-4.5',split'45,32,4,7,-2,-4.5',
- boltskillfactory('fire',14,8,14,14,8))
+ boltskillfactory(unpack(split'fire,14,8,14,14,8')))
 
 newdemoncaster=casterfactory(
  3,split'8,13,5,6,12',split'41,32,4,8,-2,-5.5',split'45,32,4,8,-2,-5.5',
- boltskillfactory('ice',7,12,12,12,13))
+ boltskillfactory(unpack(split'ice,7,12,12,12,13')))
 
 function newgianttroll(x,y)
  boss=actfact{
@@ -669,7 +668,7 @@ function newdemonboss(x,y)
 end
 
 -- items
-slots,comcols2={'weapon','offhand','armor','helmet','boots','amulet','book'},split'-1,-1,-1,-1,2'
+slots,comcols2=split'weapon,offhand,armor,helmet,boots,amulet,book',split'-1,-1,-1,-1,2'
 
 function createitem(_itemclass,_prefix,_suffix)
  local itemclass=itemclasses[_itemclass]
@@ -813,11 +812,11 @@ suffix={
   }
  },
  {name=' of firebolt',sprites=split'29,45,162,62,231,78,178,198,213',
-  cols=split'8,8,-1,2,8,8,-1,8,8',skill=boltskillfactory(
-  'fire',14,8,14,14,8,15,'firebolt')},
+  cols=split'8,8,-1,2,8,8,-1,8,8',
+  skill=boltskillfactory(unpack(split('fire,14,8,14,14,8,15,firebolt')))},
  {name=' of icebolt',sprites=split'30,46,163,63,232,79,179,199,214',
-  cols=split'13,6,-1,12,12,12,-1,7,12',cols2=split'-1,-1,-1,-1,1',skill=boltskillfactory(
-  'ice',7,12,12,12,13,14,'icebolt')},
+  cols=split'13,6,-1,12,12,12,-1,7,12',cols2=split'-1,-1,-1,-1,1',
+  skill=boltskillfactory(unpack(split'ice,7,12,12,12,13,14,icebolt'))},
  {name=' of concentration',sprites=split'244,245,159,175,191,249,216,247,215',
   cols=split'3,6,-1,3,3,6,-1,6,11',cols2=split'-1,-1,-1,-1,1',att_spd_dec=3}
 }
@@ -903,7 +902,7 @@ function mapinit()
 
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,enemies,steps,angles=
-  avatarx,avatary,0,10,{},({250,500,600,700})[theme],
+  avatarx,avatary,0,10,{},split'250,500,600,700'[theme],
    ({split'0.25,-0.25',split'0,0,0,0,0,0.5,0.25,-0.25',
     split'0,0,0.5,0.25',split'0.25'})[theme]
  local step_c,_theme=steps,themes[theme]
@@ -1558,14 +1557,15 @@ function dungeondraw()
 
   -- draw item colors
   if _a == avatar then
-   if avatar.items.helmet then
-    pal(15,avatar.items.helmet.col,0)
+   local avataritems=avatar.items
+   if avataritems.helmet then
+    pal(15,avataritems.helmet.col,0)
    end
-   if avatar.items.armor then
-    pal(4,avatar.items.armor.col,0)
+   if avataritems.armor then
+    pal(4,avataritems.armor.col,0)
    end
-   if avatar.items.boots then
-    pal(2,avatar.items.boots.col,0)
+   if avataritems.boots then
+    pal(2,avataritems.boots.col,0)
    end
   end
 
@@ -1622,7 +1622,7 @@ function dungeondraw()
    f.draw(f)
   else
    pal(7,f.col,0)
-   sspr(f[1],f[2],f[3],f[4],f[5],f[6])
+   sspr(unpack(f))
    pal(7,7,0)
   end
  end
@@ -1894,7 +1894,7 @@ end
 function equipdraw()
  cls()
  fillp(0b1010000110000101)
- rectfill(0,0,128,3,1)
+ rectfill(unpack(split'0,0,128,3,1'))
  fillp()
 
  -- draw inventory section
@@ -1967,22 +1967,20 @@ end
 
 function splash()
  music()
- _update60=function()
-  tick+=1
-  if btnp(4) then
-   theme=nil
-   equipinit()
-  end
- end
  _draw=function()
   cls(1)
-  sspr(79,99,49,29,42,32)
+  sspr(unpack(split'79,99,49,29,42,32'))
   col=tick % 60 <= 30 and 13 or 7
   if theme then
    print('you truly are a',32,17,13)
    print('\x8e to continue',38,118,col)
   else
    print('\x8e to start',42,118,col)
+  end
+  tick+=1
+  if btnp(4) then
+   theme=nil
+   equipinit()
   end
  end
 end
