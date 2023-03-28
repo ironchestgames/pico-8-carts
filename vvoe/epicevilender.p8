@@ -4,7 +4,7 @@ __lua__
 -- virtuous vanquisher of evil 1.3
 -- by ironchest games
 
-cartdata'ironchestgames_vvoe_v1_dev1'
+cartdata'ironchestgames_vvoe_v1_dev100'
 
 printh('debug started','debug',true)
 function debug(s)
@@ -1028,17 +1028,22 @@ function dungeonupdate()
  end
 
  -- button input
- skillbuttondown=btn(4) and 1 or btn(5) and 2 or nil
+ skillbuttondown,curinteractable=btn(4) and 1 or btn(5) and 2 or nil
 
  -- collide against interactables
- curinteractable=nil
  if isdoorspawned then
-  for i in all(interactables) do
-   if isaabbscolliding(avatar,i) then
-    skillbuttondown=0
-    curinteractable=i
-    if btnp(4) and i.enter(i) then
-     return mapinit()
+  for i=#interactables,1,-1 do
+   local interactable=interactables[i]
+   if isaabbscolliding(avatar,interactable) then
+    if curinteractable == nil or curinteractable.isopen then
+     curinteractable=interactable
+    end
+    skillbuttondown=nil
+    if btnp(4) and interactable.enter(interactable) then
+     if interactable == door then
+      return mapinit()
+     end
+     break
     end
    end
   end
@@ -1248,8 +1253,7 @@ function dungeonupdate()
     local dmg,hitsfx=attack.dmg or 1,6
 
     for skill in all(_a.passiveskills) do
-     if attack.typ != nil and
-        skill.immune == attack.typ then
+     if attack.typ != nil and skill.immune == attack.typ then
       attack.recovertime,attack.typ=nil
      end
     end
@@ -1270,8 +1274,7 @@ function dungeonupdate()
     else
      _a.hp-=dmg
     end
-    _a.state='recovering'
-    _a.state_c=attack.recovertime or 0
+    _a.state,_a.state_c='recovering',attack.recovertime or 0
 
     -- check if actor is dead
     if _a.hp <= 0 then
@@ -1309,6 +1312,7 @@ function dungeonupdate()
          _prefixn=_itemclassn >= 8 and _suffixn != 0 and _prefixn == 0 and 1 or _prefixn
          _sfx'20'
          add(avatar.inventory,createitem(_itemclassn,_prefixn,_suffixn))
+         return true
         else
          _sfx'30'
         end
