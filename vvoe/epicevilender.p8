@@ -4,7 +4,7 @@ __lua__
 -- virtuous vanquisher of evil 1.3
 -- by ironchest games
 
-cartdata'ironchestgames_vvoe_v1_dev101'
+cartdata'ironchestgames_vvoe_v1_dev100'
 
 printh('debug started','debug',true)
 function debug(s)
@@ -1297,7 +1297,7 @@ function dungeonupdate()
 
          _itemclassn,_n,_m=
           flrrnd(9)+1,1,0
-         if theme == 4 and boss then
+         if i.isbosschest then
           _n,_m=0,1
          end
 
@@ -1967,6 +1967,13 @@ end
 
 function splash()
  music()
+ _update60=function()
+  tick+=1
+  if btnp(4) then
+   theme=nil
+   equipinit()
+  end
+ end
  _draw=function()
   cls(1)
   sspr(unpack(split'79,99,49,29,42,32'))
@@ -1976,11 +1983,6 @@ function splash()
    ?'\x8e to continue',38,118,col
   else
    ?'\x8e to start',42,118,col
-  end
-  tick+=1
-  if btnp(4) then
-   theme=nil
-   equipinit()
   end
  end
 end
