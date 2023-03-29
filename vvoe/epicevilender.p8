@@ -4,7 +4,7 @@ __lua__
 -- virtuous vanquisher of evil 1.3
 -- by ironchest games
 
-cartdata'ironchestgames_vvoe_v1_dev100'
+cartdata'ironchestgames_vvoe_v1_dev101'
 
 printh('debug started','debug',true)
 function debug(s)
@@ -1646,7 +1646,7 @@ function dungeondraw()
 
  -- draw gui
  for _i=0,avatar.hp-1 do
-  print('\x87',121-_i*6,1,8)
+  ?'\x87',121-_i*6,1,8
   offset=(_i+1)*6-1
  end
 
@@ -1656,14 +1656,14 @@ function dungeondraw()
  end
 
  if dungeonlvl > 0 then
-  print('level '..dungeonlvl,3,1,6)
+  ?'level '..dungeonlvl,3,1,6
  end
 
  if avatar.hp <= 0 then
-  print('a deadly blow',40,60,8)
+  ?'a deadly blow',40,60,8
   if tick-deathts > 150 then
-   print('(you\'ve lost your inventory)',12,72,8)
-   print('press \x8e to continue',26,80,8)
+   ?'(you\'ve lost your inventory)',12,72,8
+   ?'press \x8e to continue',26,80,8
   end
  end
 
@@ -1671,7 +1671,7 @@ function dungeondraw()
  if boss and boss.hp > 0 then
   local hw=boss.hp*6/2
   rectfill(64-hw,123,64+hw,125,8)
-  print(boss.name,64-#boss.name*2,122,15)
+  ?boss.name,64-#boss.name*2,122,15
  end
 
 end
@@ -1899,7 +1899,7 @@ function equipdraw()
 
  -- draw inventory section
  local offsetx,i=0,1
- print('saddlebags',4,8,sectioncur == 1 and 10 or 4)
+ ?'saddlebags',4,8,sectioncur == 1 and 10 or 4
  for item in all(avatar.inventory) do
   spr(item.sprite,6+offsetx,17)
   if sectioncur == 1 and i == inventorycur then
@@ -1907,7 +1907,7 @@ function equipdraw()
    if i == sellcur then
     sspr(58,40,5,5,offsetx+4,15)
    end
-   print(item.name,4,29,7)
+   ?item.name,4,29,7
   end
   offsetx+=12
   i+=1
@@ -1915,9 +1915,9 @@ function equipdraw()
 
  -- draw equipped section
  offsetx,i=0,1
- print('equipped',4,43,sectioncur == 2 and 10 or 4)
- print('+'..spdfactornr..'% spd',41,43,13)
- print(avatar.att_spd_dec..' -af',79,43,3)
+ ?'equipped',4,43,sectioncur == 2 and 10 or 4
+ ?'+'..spdfactornr..'% spd',41,43,13
+ ?avatar.att_spd_dec..' -af',79,43,3
  for _i=0,avatar.startarmor-1 do
   sspr(48,40,5,5,121-_i*6,43)
  end
@@ -1931,7 +1931,7 @@ function equipdraw()
   if sectioncur == 2 and k == equippedcur then
    rect(4+offsetx,50,15+offsetx,61,10)
    if item then
-    print(item.name,4,64,7)
+    ?item.name,4,64,7
    end
   end
   offsetx+=12
@@ -1939,30 +1939,30 @@ function equipdraw()
 
  -- draw availableskills section
  offsetx,i=0,1
- print('skills',4,79,sectioncur == 3 and 10 or 4)
+ ?'skills',4,79,sectioncur == 3 and 10 or 4
  for skill in all(availableskills) do
   local offsetx6=offsetx+6
   spr(skill.sprite,offsetx6,88)
   if sectioncur == 3 and i == availableskillscur then
    rect(4+offsetx,86,15+offsetx,97,10)
    if skill then
-    print(skill.desc,4,109,7)
+    ?skill.desc,4,109,7
    end
   end
   if skill == avatar.skill1 then
    spr(24,offsetx6,100)
-   print('\x8e',7+offsetx,100,11)
+   ?'\x8e',7+offsetx,100,11
   end
   if skill == avatar.skill2 then
    spr(24,offsetx6,100)
-   print('\x97',7+offsetx,100,8)
+   ?'\x97',7+offsetx,100,8
   end
   offsetx+=12
   i+=1
  end
 
  -- draw exit button
- print('exit',57,120,sectioncur == 4 and 10 or 4)
+ ?'exit',57,120,sectioncur == 4 and 10 or 4
 end
 
 function splash()
@@ -1972,10 +1972,10 @@ function splash()
   sspr(unpack(split'79,99,49,29,42,32'))
   col=tick % 60 <= 30 and 13 or 7
   if theme then
-   print('you truly are a',32,17,13)
-   print('\x8e to continue',38,118,col)
+   ?'you truly are a',32,17,13
+   ?'\x8e to continue',38,118,col
   else
-   print('\x8e to start',42,118,col)
+   ?'\x8e to start',42,118,col
   end
   tick+=1
   if btnp(4) then
