@@ -916,7 +916,7 @@ function mapinit()
    a+=angles[flrrnd(#angles)+1]
   elseif step_c != 0 and step_c % (steps / enemy_c) == 0 then
    add(enemies,{x=curx,y=cury,typ=flrrnd(3)+1})
-  else
+  elseif nextx != avatarx or nexty != avatary then
    curx,cury=nextx,nexty
    basemap[cury][curx]=5
   end
