@@ -5,6 +5,8 @@ __lua__
 -- by ironchest games
 
 --[[
+ - add update to enemy hangar
+ - are the fumes rendered when player ships are damaged?
  - decide more distinctly which particles to draw above vs below
  - make enemy sfxs never loop
  - remove raids?
@@ -1253,7 +1255,7 @@ function kamikazeupdate(_enemy)
  end
 end
 
-function fighterupdate(_enemy)
+function shooterupdate(_enemy)
  if not _enemy.target then
   _enemy.x=flr(8+rnd(120))
   _enemy.spdy=rnd(0.5)+0.5
@@ -1265,7 +1267,7 @@ function fighterupdate(_enemy)
  end
 end
 
-function minelayerupdate(_enemy)
+function zigzagupdate(_enemy)
  if _enemy.target then
   if t()-_enemy.ts > _enemy.duration or ispointinsideaabb(_enemy.target.x,_enemy.target.y,_enemy.x,_enemy.y,_enemy.hw,_enemy.hh) then
    _enemy.target=nil
@@ -1281,7 +1283,7 @@ function minelayerupdate(_enemy)
  end
 end
 
-function bomberupdate(_enemy)
+function straferupdate(_enemy)
  if not _enemy.target then
   _enemy.x=rnd(128)
   _enemy.target=true
@@ -1318,7 +1320,7 @@ local enemyfactories={
  function()
   return mr(getship(101),{
    ts=t(),
-   update=fighterupdate,
+   update=shooterupdate,
   })
  end,
 
@@ -1328,7 +1330,7 @@ local enemyfactories={
   return mr(getship(102),{
    x=rnd(128),
    ts=t(),
-   update=minelayerupdate,
+   update=zigzagupdate,
   })
  end,
 
@@ -1338,7 +1340,7 @@ local enemyfactories={
   return mr(getship(103),{
    spdy=_spdy,ogspdy=_spdy,
    ts=t(),
-   update=bomberupdate,
+   update=straferupdate,
   })
  end,
 
