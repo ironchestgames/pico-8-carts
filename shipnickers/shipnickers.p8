@@ -5,19 +5,16 @@ __lua__
 -- by ironchest games
 
 --[[
- - add update to enemy hangar
  - are the fumes rendered when player ships are damaged?
+ - fix enemy blinks killing boss
  - decide more distinctly which particles to draw above vs below
  - make enemy sfxs never loop
  - remove raids?
  - add police after nick
  - unify enemy update and boss update
- - add generalised weapons (like hangar)
  - add enemy shooting bullets?
- - replace boost?
  - different exhausts for different enemies?
  - add bigger mines (graphics)
- - redesign bg color in hangar?
  - data loading from like excel sheet or smt?
  - does 2p work?
  - add cargo moving down by escapefactor
@@ -47,9 +44,6 @@ sfx channels:
 -- cartdata'ironchestgames_shipnickers_v1'
 -- cartdata'ironchestgames_shipnickers_v1-qa' -- ottos
 -- cartdata'ironchestgames_shipnickers_v1-dev9' -- all unlocked
--- cartdata'ironchestgames_shipnickers_v1-dev10'
--- cartdata'ironchestgames_shipnickers_v1-dev11'
--- cartdata'ironchestgames_shipnickers_v1-dev12'
 cartdata'ironchestgames_shipnickers_v1-dev13'
 
 printh('debug started','debug',true)
@@ -57,7 +51,7 @@ function debug(s)
  printh(tostr(s),'debug',false)
 end
 
-poke(0x5f5c,-1) -- disable btnp auto-repeat
+poke(0x5f5c,-1)
 
 function unlock(_n)
  poke(0x5e00+_n,1)
@@ -133,7 +127,7 @@ function isaabbscolliding(a,b)
 end
 
 -- globals
-local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemiestoadd,enemybullets,boss,issuperboss,cargos,lockedpercentage,escapefactor,enemycurrentweapons,enemypal
+local ships,bullets,stars,ps,psfollow,bottomps,enemies,enemiestoadd,enemybullets,boss,issuperboss,cargos,lockedpercentage,escapefactor,curenemytypes
 
 local hangar={
  [0]='s=0,bulletcolor=11,primary="missile",secondary="missile",psets="3;6;3_3;4;11",guns="2;1;5;1",exhaustcolors="7;9;5",exhausts="-1;4;0;4",flyduration=1,sfxch=2',
@@ -247,17 +241,41 @@ local hangar={
  's=99,bulletcolor=9,primary="slicer",secondary="slicer",psets="3;4;9_3;3;10",guns="2;0;5;0",exhaustcolors="11;15;5",exhausts="-1;4;0;4",flyduration=10,sfxch=2',
 
  -- enemies
- 's=100,s2=112,bulletcolor=0,factory=1,primary="kamikaze",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,hp=4,firedir=1,sfxch=3',
- 's=101,s2=113,bulletcolor=0,factory=2,primary="fighter",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9;2",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5,firedir=1,sfxch=3',
- 's=102,s2=114,bulletcolor=0,factory=3,primary="minelayer",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="12",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=4,firedir=1,sfxch=3',
- 's=103,s2=115,bulletcolor=0,factory=4,primary="bomber",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-3;-2;1;2",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=8,firedir=1,sfxch=3',
- 's=104,s2=116,bulletcolor=0,factory=5,primary="cargoship",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0.25,accx=0,hp=14,firedir=1,sfxch=3',
 
- -- superboss
- 's=105,bulletcolor=14,primary="slicer",secondary="beam",psets="3;4;7_3;3;11",guns="2;0;5;0",exhaustcolors="7;9;5",exhausts="-3;6;-2;6;1;6;2;6",x=64,y=40,hw=7,hh=7,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1,sfxch=2',
+ 's=100,bulletcolor=0,factory=4,primary="missile",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=7,firedir=1,sfxch=3',
+ 's=101,bulletcolor=0,factory=1,primary="boost",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,hp=4,firedir=1,sfxch=3',
+ 's=102,bulletcolor=0,factory=3,primary="mines",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=4,firedir=1,sfxch=3',
+ 's=103,bulletcolor=0,factory=1,primary="shield",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,hp=3,firedir=1,sfxch=3',
+ 's=104,bulletcolor=0,factory=3,primary="ice",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=6,firedir=1,sfxch=3',
+ 's=105,bulletcolor=0,factory=2,primary="blink",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=3,firedir=1,sfxch=3',
+ 's=106,bulletcolor=0,factory=2,primary="flak",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5,firedir=1,sfxch=3',
+ 's=107,bulletcolor=0,factory=2,primary="beam",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5,firedir=1,sfxch=3',
+ 's=108,bulletcolor=0,factory=3,primary="bubbles",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=4,firedir=1,sfxch=3',
+ 's=109,bulletcolor=0,factory=4,primary="slicer",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=7,firedir=1,sfxch=3',
+
+ 'not=used, s=110,bulletcolor=0,factory=4,primary="bullets",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=7,firedir=1,sfxch=3',
+
+ 's=111,bulletcolor=0,factory=4,primary="missile",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=7,firedir=1,sfxch=3',
+ 's=112,bulletcolor=0,factory=1,primary="boost",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,hp=4,firedir=1,sfxch=3',
+ 's=113,bulletcolor=0,factory=3,primary="mines",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=4,firedir=1,sfxch=3',
+ 's=114,bulletcolor=0,factory=1,primary="shield",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,hp=3,firedir=1,sfxch=3',
+ 's=115,bulletcolor=0,factory=3,primary="ice",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=6,firedir=1,sfxch=3',
+ 's=116,bulletcolor=0,factory=2,primary="blink",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=3,firedir=1,sfxch=3',
+ 's=117,bulletcolor=0,factory=2,primary="flak",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5,firedir=1,sfxch=3',
+ 's=118,bulletcolor=0,factory=2,primary="beam",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=5,firedir=1,sfxch=3',
+ 's=119,bulletcolor=0,factory=3,primary="bubbles",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0,accx=0,hp=4,firedir=1,sfxch=3',
+ 's=120,bulletcolor=0,factory=4,primary="slicer",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=7,firedir=1,sfxch=3',
+
+ 'not=used, s=121,bulletcolor=0,factory=4,primary="bullets",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="10;9",exhausts="-1;0",x=0,y=-12,hw=4,hh=4,spdx=0,accx=0,hp=7,firedir=1,sfxch=3',
+
+ 's=122,bulletcolor=0,factory=5,primary="cargoship",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0.25,accx=0,hp=14,firedir=1,sfxch=3',
+ 's=128,bulletcolor=0,factory=5,primary="cargoship",secondary="none",secondaryshots=0,psets="0;0;0_0;0;0",guns="0;0;0;0",exhaustcolors="7;6;13",exhausts="-1;0",y=-12,hw=4,hh=4,spdx=0,spdy=0.25,accx=0,hp=14,firedir=1,sfxch=3',
+
+ -- superboss (hangaridx 124)
+ 's=126,bulletcolor=14,primary="slicer",secondary="beam",psets="3;4;7_3;3;11",guns="2;0;5;0",exhaustcolors="7;9;5",exhausts="-3;6;-2;6;1;6;2;6",x=64,y=40,hw=7,hh=7,hp=127,flydurationc=3,waitdurationc=1,boost=0,flyduration=1,plidx=2,firedir=1,sfxch=2',
 }
-dset(62,6)
-for _i=0,105 do
+
+for _i=0,124 do
  hangar[_i]=s2t(hangar[_i])
 end
 
@@ -1101,7 +1119,7 @@ local superbossweaponnames,bosstses,bosststs,blinkdirs=split'missile,mines,boost
 local enemymissilep=mr(s2t'xoff=-1,yoff=0,r=0.1,spdx=0,spdy=0.1,spdr=0,life=4',{colors=split'7,14,8'})
 
 local enemyweapons={
- missile=function (_enemy)
+ missile=function(_enemy)
   sfx(12,_enemy.sfxch)
   addenemybullet(mergewmissilebase{
    x=_enemy.x,y=_enemy.y,
@@ -1113,7 +1131,7 @@ local enemyweapons={
   })
  end,
 
- mines=function (_enemy)
+ mines=function(_enemy)
   sfx(13,_enemy.sfxch)
   addenemybullet{
    x=_enemy.x,y=_enemy.y,
@@ -1129,7 +1147,7 @@ local enemyweapons={
   }
  end,
 
- boost=function (_enemy)
+ boost=function(_enemy)
   if _enemy.sfxch == 2 then
    sfx(15,2)
   end
@@ -1137,24 +1155,24 @@ local enemyweapons={
   _enemy.boost=0.5
  end,
 
- shield=function (_enemy)
+ shield=function(_enemy)
   if _enemy.sfxch == 2 then
    sfx(19,2)
   end
   _enemy.shieldts=t()
  end,
 
- ice=function (_enemy)
+ ice=function(_enemy)
   -- todo: sfx??
   _enemy.icets=t()
  end,
 
- blink=function (_enemy)
+ blink=function(_enemy)
   sfx(21,_enemy.sfxch)
   blinkaway(_enemy,rnd(blinkdirs),rnd(blinkdirs),38)
  end,
 
- flak=function (_enemy)
+ flak=function(_enemy)
   sfx(17,3)
   for _i=1,8 do
    local _spdx,_spdy=1+rnd(2),rnd(1)-0.5
@@ -1183,7 +1201,7 @@ local enemyweapons={
   end
  end,
 
- beam=function (_enemy)
+ beam=function(_enemy)
   if _enemy.sfxch == 2 then
    sfx(16,2)
   end
@@ -1208,7 +1226,7 @@ local enemyweapons={
   end
  end,
 
- slicer=function (_enemy)
+ slicer=function(_enemy)
   addenemybullet{
    x=_enemy.x,y=_enemy.y,
    hw=3,hh=3,
@@ -1230,14 +1248,14 @@ function shootenemycargoshipbullet(_enemy)
   hw=1,hh=1,life=1000,spdy=1,
   escapefactor=0,
   x=_enemy.x,y=_enemy.y,
-  spdx=_enemy.s == 107 and -1 or 1,
+  spdx=_enemy.s % 2 == 1 and -1 or 1,
   draw=drawenemycargobullet,
   ondeath=explode,
   p=mr(s2t'xoff=0,yoff=0,r=0.1,spdx=0,spdy=0,spdr=0,life=3',{ colors=enemycargobulletpcolors }),
  }
 end
 
-local cargoshipsprites,cargoshipsprites2=split'104,105,106,107',split'116,117,118,119'
+local cargoshipsprites,cargoshipsprites2=split'122,123,124,125',split'128,129,130,131'
 
 function kamikazeupdate(_enemy)
  if _enemy.target == nil then
@@ -1249,7 +1267,7 @@ function kamikazeupdate(_enemy)
   _enemy.spdx=cos(_a)*0.5
   _enemy.spdy+=0.011+_enemy.ifactor
   if t()-_enemy.ts > 1.5 and not _enemy.icec and not _enemy.hasfired then
-   enemycurrentweapons[1](_enemy)
+   enemyweapons[_enemy.primary](_enemy)
    _enemy.hasfired=true
   end
  end
@@ -1262,12 +1280,12 @@ function shooterupdate(_enemy)
   _enemy.target=true
  end
  if t()-_enemy.ts > 0.875 and not _enemy.icec then
-  enemycurrentweapons[2](_enemy)
+  enemyweapons[_enemy.primary](_enemy)
   _enemy.ts=t()
  end
 end
 
-function zigzagupdate(_enemy)
+function layerupdate(_enemy)
  if _enemy.target then
   if t()-_enemy.ts > _enemy.duration or ispointinsideaabb(_enemy.target.x,_enemy.target.y,_enemy.x,_enemy.y,_enemy.hw,_enemy.hh) then
    _enemy.target=nil
@@ -1275,7 +1293,7 @@ function zigzagupdate(_enemy)
  else
   _enemy.spdx,_enemy.spdy=0,0
   if t()-_enemy.ts > 1.5 and not _enemy.icec then
-   enemycurrentweapons[3](_enemy)
+   enemyweapons[_enemy.primary](_enemy)
    _enemy.ts,_enemy.duration,_enemy.target=t(),1+rnd(2),{x=4+rnd(120),y=rnd(116)}
    local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
    _enemy.spdx,_enemy.spdy=cos(_a)*0.75,sin(_a)*0.75
@@ -1291,7 +1309,7 @@ function straferupdate(_enemy)
  if t()-_enemy.ts > 0.875 then
   _enemy.accx=rnd{0.0125,-0.0125}
   if rnd() > 0.375 and not _enemy.icec then
-   enemycurrentweapons[4](_enemy)
+   enemyweapons[_enemy.primary](_enemy)
   end
   _enemy.ts=t()
  end
@@ -1300,7 +1318,8 @@ function straferupdate(_enemy)
 end
 
 function cargoshipupdate(_enemy)
- if _enemy.s >= 106 and t()-_enemy.ts > 2+rnd(2) and not _enemy.icec then
+ local _s=_enemy.s
+ if (_s == 124 or _s == 125 or _s == 130 or _s == 131) and t()-_enemy.ts > 2+rnd(2) and not _enemy.icec then
   shootenemycargoshipbullet(_enemy)
   _enemy.ts=t()
  end
@@ -1309,64 +1328,56 @@ end
 local enemyfactories={
  -- kamikaze
  function()
-  return mr(getship(100),{
-   x=rnd(128),
-   ts=t(),
-   update=kamikazeupdate,
-  })
+  return {x=rnd(128),ts=t(),update=kamikazeupdate}
  end,
 
- -- fighter
+ -- shooter
  function()
-  return mr(getship(101),{
-   ts=t(),
-   update=shooterupdate,
-  })
+  return {ts=t(),update=shooterupdate}
  end,
 
- -- minelayer
+ -- layer
+ function()
+  return {x=rnd(128),ts=t(),update=layerupdate}
+ end,
+
+ -- strafer
  function()
   local _spdy=rnd(0.25)+0.325
-  return mr(getship(102),{
-   x=rnd(128),
-   ts=t(),
-   update=zigzagupdate,
-  })
- end,
-
- -- bomber
- function()
-  local _spdy=rnd(0.25)+0.325
-  return mr(getship(103),{
-   spdy=_spdy,ogspdy=_spdy,
-   ts=t(),
-   update=straferupdate,
-  })
+  return {spdy=_spdy,ogspdy=_spdy,ts=t(),update=straferupdate}
  end,
 
  -- cargoship
  function()
-  local _x,_len=flr(16+rnd(100)),flr(2+rnd(4))
+  local _x,_len,_part=flr(16+rnd(100)),flr(2+rnd(4))
   for _i=1,_len do
    local _si=_i == 1 and 1 or rnd(split'2,2,3,4')
-   local _part=mr(getship(104),{
+   _part=mr(getship(issuperboss and 123 or 122),{
     x=_x,y=-12+_i*-8,
-    s=cargoshipsprites[_si],
-    s2=cargoshipsprites2[_si],
+    s=issuperboss and cargoshipsprites2[_si] or cargoshipsprites[_si],
     ts=t(),
     update=cargoshipupdate,
    })
    if _i < _len then
     _part.exhausts=nil
+    add(enemies,_part)
    end
-   add(enemies,_part)
   end
+  return _part
  end,
 }
 
+function createenemy(_hangaridx)
+ local factoryresult=enemyfactories[hangar[_hangaridx].factory]()
+ if _hangaridx >= 122 then
+  return factoryresult
+ end
+ return mr(getship(_hangaridx),factoryresult)
+end
+
 function explodeenemy(_enemy)
  explode(_enemy)
- if _enemy.s == 105 then
+ if _enemy.s == 123 or _enemy.s == 129 then
   newcargodrop(_enemy.x,_enemy.y)
  end
  del(enemies,_enemy)
@@ -1661,10 +1672,9 @@ function gameupdate()
    _count=4
   end
 
-  local _enemytypes=clone(enemyfactories)
-  add(_enemytypes,enemyfactories[1]) -- note: add kamikaze again to have more of those
   for _i=0,_count do
-   add(enemies,rnd(_enemytypes)())
+   local _enemytype=rnd(curenemytypes)
+   add(enemies,createenemy(_enemytype))
   end
  end
 
@@ -1698,7 +1708,7 @@ function gameupdate()
 
    if not ispointinsideaabb(_enemy.x,_enemy.y,64,41,75,101) then
     if boss and not _enemy.factory == 5 then
-     local _newenemy=enemyfactories[_enemy.factory]()
+     local _newenemy=createenemy(_enemy.s)
      _newenemy.x,_newenemy.y=_enemy.x,-12
      add(enemiestoadd,_newenemy)
     end
@@ -1812,14 +1822,12 @@ function gamedraw()
  end
 
  -- draw enemies
- pal(enemypal,0)
  for _enemy in all(enemies) do
-  spr(issuperboss and _enemy.s2 or _enemy.s,_enemy.x-4,_enemy.y-4)
+  spr(_enemy.s,_enemy.x-4,_enemy.y-4)
   if _enemy.shieldts then
    drawshield(_enemy.x,_enemy.y,6)
   end
  end
- pal(split'1,2,3,4,5,6,7,8,9,10,11,12,13,14,15',0)
 
  -- draw ships
  for _ship in all(ships) do
@@ -2029,7 +2037,7 @@ function pickerupdate()
     if #picks == #ships then
      local _locked=getlocked()
      if #_locked == 0 or dget(62) >= 5 then
-      boss,issuperboss=getship(105),true
+      boss,issuperboss=getship(124),true
      else
       boss,issuperboss=mr(getship(rnd(_locked)),s2t'x=64,y=0,hw=3,hh=3,hp=127,flydurationc=8,waitdurationc=2,boost=0,plidx=2,firedir=1,sfxch=2')
      end
@@ -2120,19 +2128,17 @@ function pickerinit()
  dset(62,_d62)
  ships={}
 
- local _enemycolors,_enemyweaponnames,_enemycoltopalindex,_enemyweaponcolors={},keys(enemyweapons),split'2,3,8,9,10,11,12,14',s2t'missile1=13,missile2=6,boost1=9,boost2=10,mines1=13,mines2=14,shield1=1,shield2=12,ice1=12,ice2=11,blink1=3,blink2=11,flak1=2,flak2=9,beam1=8,beam2=14,bubbles1=14,bubbles2=7,slicer1=11,slicer2=10,bullets1=6,bullets2=7'
- enemycurrentweapons,enemypal={},split'1,2,3,4,5,6,7,8,9,10,11,12,13,14,15'
- for _i=1,4 do
-  local _weaponname=deli(_enemyweaponnames,flr(rnd(#_enemyweaponnames)+1))
-  add(enemycurrentweapons,enemyweapons[_weaponname])
-  add(_enemycolors,_enemyweaponcolors[_weaponname..'1'])
-  add(_enemycolors,_enemyweaponcolors[_weaponname..'2'])
+ curenemytypes=split'100,101,102,103,104,105,106,107,108,109'
+ while #curenemytypes > 4 do
+  deli(curenemytypes,rnd(#curenemytypes))
  end
 
- for _i=1,8 do
-  enemypal[_enemycoltopalindex[_i]]=_enemycolors[_i]
+ if _d62 >= 5 then
+  add(curenemytypes,123)
+ else
+  add(curenemytypes,122)
  end
- 
+
  _update60,_draw=pickerupdate,pickerdraw
 end
 
