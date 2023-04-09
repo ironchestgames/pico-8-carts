@@ -362,8 +362,7 @@ end
 
 local burningcolors=split'10,9,5'
 function newburning(_x,_y)
- addps(
-  _x,_y,0.5,
+ addps(_x,_y,0.5,
   (rnd()-0.5)*0.125,
   rnd()*0.25+1,
   0.25*rnd(),
@@ -375,9 +374,7 @@ local hitcolors=split'7,7,10'
 function newhit(_x,_y)
  sfx(11,3)
  for _i=1,7 do
-  addps(
-   _x+(rnd()-0.5)*5,
-   _y+(rnd()-0.5)*5,
+  addps(_x+(rnd()-0.5)*5,_y+(rnd()-0.5)*5,
    rnd()*5,
    (rnd()-0.5)*2,
    rnd()-0.5,
@@ -387,14 +384,13 @@ function newhit(_x,_y)
  end
 end
 
-local smokecolors={5}
 function explosionsmoke(_x,_y)
- addps(
-  _x,_y,8,
+ addps(_x,_y,
+  8,
   rnd()-0.5,
   rnd()-1.22,
   -0.28,
-  smokecolors,
+  {5},
   rnd()*10+25)
 end
 
@@ -415,8 +411,7 @@ function explode(_obj)
  del(enemybullets,_obj)
  sfx(10,3)
  for _i=1,7 do
-  addps(
-   _obj.x,_obj.y,
+  addps(_obj.x,_obj.y,
    rnd()*5,
    rnd()-0.5,
    rnd()-1,
@@ -432,8 +427,7 @@ function fizzlebase(_obj,_colors)
  del(enemybullets,_obj)
  sfx(18,3)
  for _i=1,5 do
-  addps(
-   _obj.x+rnd(8)-4,_obj.y+rnd(8)-4,
+  addps(_obj.x+rnd(8)-4,_obj.y+rnd(8)-4,
    0.9,
    0,
    -rnd(0.375),
@@ -500,11 +494,8 @@ function updatebullets(_bullets)
  for _b in all(_bullets) do
   _b.x+=_b.spdx
   _b.y+=_b.spdy+_b.escapefactor*(escapefactor-1)
-
   _b.spdy+=_b.accy
-
   _b.life-=1
-
   _b.spdx*=_b.spdfactor
   _b.spdy*=_b.spdfactor
 
@@ -680,9 +671,7 @@ local blinkpcolors,blinkaab=split'7,11,11,3,5',s2t'hw=16,hh=16'
 function blinkaway(_ship,_dx,_dy,_h)
  local _newx,_newy=_ship.x+_dx*_h,_ship.y+_dy*_h
  for _i=1,6 do
-  addps(
-   _ship.x+rnd(8)-4,
-   _ship.y+rnd(8)-4,
+  addps(_ship.x+rnd(8)-4,_ship.y+rnd(8)-4,
    1+rnd(0.25),
    0,
    0,
@@ -707,19 +696,14 @@ function blinkaway(_ship,_dx,_dy,_h)
  end
 end
 
-local beamcolors=split'9,10'
-local enemybeamcolors=split'8,14'
-local beampcolors=split'7,10,9'
-local enemybeampcolors=split'7,7,14'
+local beamcolors,enemybeamcolors,beampcolors,enemybeampcolors=split'9,10',split'8,14',split'7,10,9',split'7,7,14'
 local dirs={1,-1}
 function drawbeam(_bullet)
  local _x,_topy,_bottomy=_bullet.x,_bullet.y-_bullet.hh,_bullet.y+_bullet.hh
  rectfill(_x-3,_topy+2,_x+2,_bottomy-2,_bullet.colors[1])
  rectfill(_x-2,_topy+1,_x+1,_bottomy-1,_bullet.colors[2])
  rectfill(_x-1,_topy,_x,_bottomy,7)
- addps(
-  _x,
-  _topy+rnd(_bottomy),
+ addps(_x,_topy+rnd(_bottomy),
   0.9,
   rnd(dirs)*(rnd(0.125)+0.125),
   0,
@@ -751,16 +735,7 @@ function shootboost(_ship)
 end
 
 function drawslicer(_bullet)
- sspr(
-  _bullet.sx,
-  _bullet.sy,
-  _bullet.sw,
-  _bullet.sh,
-  _bullet.x-_bullet.hw,
-  _bullet.y-_bullet.hh,
-  _bullet.sw,
-  _bullet.sh,
-  _bullet.spdx > 0)
+ sspr(_bullet.sx,_bullet.sy,_bullet.sw,_bullet.sh,_bullet.x-_bullet.hw,_bullet.y-_bullet.hh,_bullet.sw,_bullet.sh,_bullet.spdx > 0)
 end
 function slicerdeath(_bullet)
  local _slicecount=_bullet.slicecount-1
@@ -796,9 +771,7 @@ end
 local bubblepcolors=split'14,12,4'
 function shootbubble(_ship)
  for _i=1,3 do
-  addps(
-   _ship.x,
-   _ship.y,
+  addps(_ship.x,_ship.y,
    1+rnd(1),
    rnd(0.5)-0.25,
    rnd(0.5)-0.25,
@@ -823,9 +796,7 @@ function shootbubble(_ship)
 end
 
 function addicep(_x,_y,_spdy,_life)
- addps(
-  _x,
-  _y,
+ addps(_x,_y,
   0.05,
   rnd(0.25)-0.125,
   _spdy,
@@ -1303,8 +1274,7 @@ end
 
 function straferupdate(_enemy)
  if not _enemy.target then
-  _enemy.x=rnd(128)
-  _enemy.target=true
+  _enemy.x,_enemy.target=rnd(128),true
  end
  if t()-_enemy.ts > 0.875 then
   _enemy.accx=rnd{0.0125,-0.0125}
@@ -1313,8 +1283,7 @@ function straferupdate(_enemy)
   end
   _enemy.ts=t()
  end
- _enemy.spdx=mid(-0.5,_enemy.spdx+_enemy.accx,0.5)
- _enemy.spdy=_enemy.ogspdy
+ _enemy.spdx,_enemy.spdy=mid(-0.5,_enemy.spdx+_enemy.accx,0.5),_enemy.ogspdy
 end
 
 function cargoshipupdate(_enemy)
@@ -1326,28 +1295,19 @@ function cargoshipupdate(_enemy)
 end
 
 local enemyfactories={
- -- kamikaze
  function()
   return {x=rnd(128),ts=t(),update=kamikazeupdate}
  end,
-
- -- shooter
  function()
   return {ts=t(),update=shooterupdate}
  end,
-
- -- layer
  function()
   return {x=rnd(128),ts=t(),update=layerupdate}
  end,
-
- -- strafer
  function()
   local _spdy=rnd(0.25)+0.325
   return {spdy=_spdy,ogspdy=_spdy,ts=t(),update=straferupdate}
  end,
-
- -- cargoship
  function()
   local _x,_len,_part=flr(16+rnd(100)),flr(2+rnd(4))
   for _i=1,_len do
@@ -1383,10 +1343,8 @@ function explodeenemy(_enemy)
  del(enemies,_enemy)
 end
 
-
 local lastframe,curt
 function gameupdate()
-
  curt=t()
  
  escapefactor=1
@@ -1501,9 +1459,7 @@ function gameupdate()
   end
 
   for _i=1,#_ship.exhausts,2 do
-   newexhaustp(
-    _ship.exhausts[_i],
-    _ship.exhausts[_i+1],
+   newexhaustp(_ship.exhausts[_i],_ship.exhausts[_i+1],
     _ship,
     _ship.isboosting and boostcolors or _ship.exhaustcolors,
     _ship.isboosting and 5 or 4,
@@ -1563,9 +1519,7 @@ function gameupdate()
  if boss then
   if boss.hp > 0 then
    for _i=1,#boss.exhausts,2 do
-    newexhaustp(
-     boss.exhausts[_i],
-     -(boss.exhausts[_i+1]+0.5),
+    newexhaustp(boss.exhausts[_i],-(boss.exhausts[_i+1]+0.5),
      boss,
      boss.boostts and boostcolors or boss.exhaustcolors,
      boss.boostts and 5 or 4,
@@ -1680,9 +1634,7 @@ function gameupdate()
 
  for _enemy in all(enemies) do
   for _exhaust in all(_enemy.exhausts) do
-   newexhaustp(
-    _exhaust,
-    -5,
+   newexhaustp(_exhaust,-5,
     _enemy,
     _enemy.boostts and boostcolors or _enemy.exhaustcolors,
     _enemy.boostts and 5 or 3,
@@ -1891,14 +1843,6 @@ function gamedraw()
   end
  end
 
- -- draw debug bullet mids
- -- for _b in all(enemybullets) do
- --  pset(_b.x,_b.y,11)
- -- end
- -- for _b in all(bullets) do
- --  pset(_b.x,_b.y,12)
- -- end
-
  -- draw gui
  if boss then
   rectfill(0,127,boss.hp,127,2)
@@ -1986,7 +1930,6 @@ function gamedraw()
  end
 
  lastframe=curt
-
 end
 
 function gameinit()
@@ -2014,7 +1957,7 @@ function pickerupdate()
   elseif not ships[_i] then
    if btnp(0,_plidx) then
     _pick-=1
-    sfx(26)
+    sfx(26) -- todo: do smarter
    elseif btnp(1,_plidx) then
     _pick+=1
     sfx(26)
