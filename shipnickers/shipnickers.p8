@@ -6,11 +6,9 @@ __lua__
 
 --[[
  - are the fumes rendered when player ships are damaged?
- - fix enemy blinks killing boss
  - decide more distinctly which particles to draw above vs below
  - make enemy sfxs never loop
  - remove raids?
- - add police after nick
  - unify enemy update and boss update
  - add enemy shooting bullets?
  - different exhausts for different enemies?
@@ -690,9 +688,6 @@ function blinkaway(_ship,_dx,_dy,_h)
   if _ship != _enemy and isaabbscolliding(blinkaab,_enemy) then
    _enemy.hp=0
   end
- end
- if boss and _ship != boss and isaabbscolliding(blinkaab,boss) then
-  boss.hp-=55
  end
 end
 
@@ -2044,7 +2039,7 @@ function pickerdraw()
  end
  if btn(5) then
   rectfill(unpacksplit'0,24,128,102,1')
-  print(unpacksplit'nick scouting,40,28,13')
+  print(unpacksplit'next enemies,40,28,13')
   local _y=40
   for _enemytype in all(curenemytypes) do
    if _enemytype < 121 then
