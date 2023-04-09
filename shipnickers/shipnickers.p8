@@ -2099,6 +2099,18 @@ function pickerdraw()
    end
   end
  end
+ if btn(5) then
+  rectfill(unpacksplit'0,24,128,102,1')
+  print(unpacksplit'nick scouting,40,28,13')
+  local _y=40
+  for _enemytype in all(curenemytypes) do
+   if _enemytype < 121 then
+    spr(_enemytype,40,_y)
+    print(hangar[_enemytype].primary,52,_y+2,6)
+    _y+=16
+   end
+  end
+ end
 end
 
 function pickerinit()
