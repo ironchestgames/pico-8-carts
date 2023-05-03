@@ -1,18 +1,16 @@
 pico-8 cartridge // http://www.pico-8.com
 version 39
 __lua__
--- shipnickers 0.2
+-- shipnickers 0.3
 -- by ironchest games
 
 --[[
- - are the fumes rendered when player ships are damaged?
  - decide more distinctly which particles to draw above vs below
- - make enemy sfxs never loop
+ - make enemy sfxs never loop?
  - remove raids?
  - unify enemy update and boss update
  - add enemy shooting bullets?
  - different exhausts for different enemies?
- - add bigger mines (graphics)
  - data loading from like excel sheet or smt?
  - does 2p work?
  - add cargo moving down by escapefactor
@@ -39,10 +37,10 @@ sfx channels:
 
 --]]
 
--- cartdata'ironchestgames_shipnickers_v1'
+cartdata'ironchestgames_shipnickers_v1'
 -- cartdata'ironchestgames_shipnickers_v1-qa' -- ottos
 -- cartdata'ironchestgames_shipnickers_v1-dev9' -- all unlocked
-cartdata'ironchestgames_shipnickers_v1-dev13'
+-- cartdata'ironchestgames_shipnickers_v1-dev13'
 
 printh('debug started','debug',true)
 function debug(s)
@@ -1642,7 +1640,8 @@ function gameupdate()
    if _enemy.icec then
     updateicec(_enemy)
    end
-   if _enemy.ts and _enemy.ts + 0.55 < curt then
+   local _ts=_enemy.boostts or _enemy.shieldts or _enemy.beamts or _enemy.icets
+   if _ts and _ts + 0.55 < curt then
     resetspecialweapons(_enemy)
    end
 
