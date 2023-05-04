@@ -200,13 +200,13 @@ function _update()
  scan(_firstrow,d,ais[1])
 
 
- local _firstrow=newrow(1,-1,1)
- scan(_firstrow,d,ais[2])
+--  local _firstrow=newrow(1,-1,1)
+--  scan(_firstrow,d,ais[2])
 
- -- for _dir=0,3 do
- --  local _firstrow=newrow(1,-1,1)
- --  scan(_firstrow,_dir,ais[1])
- -- end
+ for _dir=0,3 do
+  local _firstrow=newrow(1,-1,1)
+  scan(_firstrow,_dir,ais[1])
+ end
 
 end
 

@@ -1,6 +1,15 @@
 pico-8 cartridge // http://www.pico-8.com
 version 32
 __lua__
+-- some hero 0.1
+-- by ironchest games
+
+--[[
+  - add animation system
+  - add attacking
+  - add enemies attacking
+
+--]]
 
 debugdraw=false
 -- debugdraw=true
@@ -16,39 +25,9 @@ function debug(_s1,_s2,_s3,_s4,_s5,_s6,_s7,_s8)
  printh(result,'debug',false)
 end
 
--- s2t usage:
--- t=s2t'1;2;3;4;5;6;7;hej pa dig din gamle gries;'
--- t=s2t'.x;1;.y;2;'
-function s2t(s)
- local _t,_i,_s,_d={},1,''
- repeat
-  _d,s=sub(s,1,1),sub(s,2)
-  if _d != ';' then
-   _s=_s.._d
-  else
-   if sub(_s,1,1) != '.' then
-    _s=tonum(_s) or _s
-   end
-   _t[_i]=_s
-   if (_s == '') _t[_i]=nil
-   _i+=1
-   _s=''
-  end
- until #s == 0
- for _i=2,#_t,2 do
-  local _tib=_t[_i-1]
-  if sub(tostr(_tib),1,1) == '.' then
-   _s=sub(_tib,2)
-   _s=tonum(_s) or _s
-   _t[_s],_t[_i-1],_t[_i]=_t[_i]
-  end
- end
- return _t
-end
-
 local actors
 local attacks
-local walls={
+local mapobjs={
  {
   x=48,y=48,
   r=3,
@@ -126,7 +105,7 @@ end
 function haslos(_x1,_y1,_x2,_y2)
  local _h=dist(_x1,_y1,_x2,_y2)
  -- if _h < 64 then -- todo: blinded here?!
- for _w in all(walls) do
+ for _w in all(mapobjs) do
   if isintersectcircle(_w.x,_w.y,_w.r,_x1,_y1,_x2,_y2) then
    return false
   end
@@ -253,12 +232,14 @@ function _update60()
      if _ishaslos then
       _a.targetx=_a.aggrotarget.x
       _a.targety=_a.aggrotarget.y
+      _a.spd=0.375
       _a.counter=30
-     elseif not _a.targetx then
-      _a.targetx=rnd(worldw)
-      _a.targety=rnd(worldh)
+    elseif not _a.targetx then
+      _a.targetx=mid(0,rnd(40)+_a.x-20,worldw)
+      _a.targety=mid(0,rnd(40)+_a.y-20,worldh)
+      _a.spd=0.125
       _a.counter=30
-     end
+    end
      _a.state='moving'
     end
    end
@@ -301,7 +282,6 @@ function _update60()
   end
 
   -- flip
-  debug(_a.angle)
   if _a.angle != 0.25 and _a.angle != 0.75 then
    _a.flipx=_a.angle > 0.25 and _a.angle < 0.75
   end
@@ -312,7 +292,7 @@ function _update60()
   _nextx=mid(8+_a.foffx,_nextx,worldw-8-_a.foffx)
   _nexty=mid(8+_a.foffy,_nexty,worldh-8-_a.foffy)
 
-  for _w in all(walls) do
+  for _w in all(mapobjs) do
    if iscirclescollide(_nextx,_a.y,_a.r,_w.x,_w.y,_w.r) then
     _nextx=_a.x-_a.dx*0.02
     _a.iscolliding=true
@@ -361,12 +341,12 @@ function _draw()
   spr(32,worldw-8,_i)
  end
 
- -- draw actors and walls
+ -- draw actors and mapobjs
  local _mapstuff={}
  for _a in all(actors) do
   add(_mapstuff,_a)
  end
- for _w in all(walls) do
+ for _w in all(mapobjs) do
   add(_mapstuff,_w)
  end
  sortony(_mapstuff)
@@ -394,18 +374,6 @@ function _draw()
    circ(_at.x,_at.y,_at.r,8)
   end
  end
-
- -- circlex,circley=64,64
- -- radius=4
- -- x1,y1=10,10
- -- x2,y2=avatar.x,avatar.y
- -- circ(circlex,circley,radius,15)
- -- line(x1,y1,x2,y2,12)
- -- print(isintersectcircle(circlex,circley,radius,x1,y1,x2,y2),0,0,10)
- -- for _r in all(rects) do
- --  rect(_r[1],_r[2],_r[3],_r[4],10)
- -- end
- print(stat(1),camx+100,camy,7)
 end
 
 __gfx__
