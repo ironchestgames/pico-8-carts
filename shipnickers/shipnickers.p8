@@ -11,13 +11,11 @@ __lua__
  - unify enemy update and boss update
  - add enemy shooting bullets?
  - different exhausts for different enemies?
- - data loading from like excel sheet or smt?
  - does 2p work?
  - add cargo moving down by escapefactor
  - fix drawing of bullets (sometimes above sometimes below)
  - fix beam + boost bug (beam stops after btn up for boost)
  - no sound if enemy shooting off screen
- - fix psets
  - fix hangar flyduration?
  - unify game event code?
 
@@ -331,7 +329,7 @@ function getship(_hangaridx)
 end
 
 function getplayership(_hangaridx)
- return mr(s2t'y=110,firedir=-1,hw=3,hh=3,spd=1,hp=3,firingc=0,primaryc=12,secondaryc=0,secondaryshots=3',clone(getship(_hangaridx)))
+ return mr(s2t'y=110,firedir=-1,hw=3,hh=3,spd=1,hp=3,firingc=0,primaryc=12,secondaryc=0,secondaryshots=3,justshotc=0',clone(getship(_hangaridx)))
 end
 
 function getdirs(_plidx)
@@ -473,9 +471,14 @@ function enemybulletcollisions(_bullet)
     if _bullet.isice then
      _bullet.enemyhit=_ship
     else
-     _ship.hp-=1
+     if _ship.justshotc == 0 then
+      _ship.hp-=1
+      if _ship.hp == 1 then
+       _ship.justshotc=30
+      end
+     end
      _ship.primaryc=0
-     if _ship.hp > 0 then
+     if _ship.hp > 0 and _ship.justshotc == 0 then
       sfx(21+_ship.hp,_ship.plidx)
      end
     end
@@ -486,7 +489,7 @@ function enemybulletcollisions(_bullet)
  end
 end
 
-function updatebullets(_bullets)
+function updatebullets(_bullets,_colfunc)
  for _b in all(_bullets) do
   _b.x+=_b.spdx
   _b.y+=_b.spdy+_b.escapefactor*(escapefactor-1)
@@ -509,11 +512,7 @@ function updatebullets(_bullets)
    }))
   end
 
-  if _b.isenemy then
-   enemybulletcollisions(_b)
-  else
-   playbulletcollisions(_b)
-  end
+  _colfunc(_b)
 
   if _b.life <= 0 then
    _b.ondeath(_b)
@@ -1354,12 +1353,14 @@ function gameupdate()
  end
 
  -- update bullets
- updatebullets(bullets)
- updatebullets(enemybullets)
+ updatebullets(bullets,playbulletcollisions)
+ updatebullets(enemybullets,enemybulletcollisions)
 
  -- update ships
  for _ship in all(ships) do
   local _plidx,_newx,_newy,_spd=_ship.plidx,_ship.x,_ship.y,1
+
+  _ship.justshotc=max(_ship.justshotc-1,0)
 
   if _ship.isboosting then
    _spd=2
