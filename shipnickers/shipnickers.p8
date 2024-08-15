@@ -5,15 +5,11 @@ __lua__
 -- by ironchest games
 
 --[[
- - decide more distinctly which particles to draw above vs below
  - make enemy sfxs never loop?
- - remove raids?
  - unify enemy update and boss update
  - add enemy shooting bullets?
- - different exhausts for different enemies?
  - does 2p work?
  - add cargo moving down by escapefactor
- - fix drawing of bullets (sometimes above sometimes below)
  - fix beam + boost bug (beam stops after btn up for boost)
  - no sound if enemy shooting off screen
  - fix hangar flyduration?
@@ -1127,7 +1123,7 @@ local enemyweapons={
 
  ice=function(_enemy)
   -- todo: sfx??
-  _enemy.icets=t()
+  _enemy.icets=t()-0.3
  end,
 
  blink=function(_enemy)
@@ -1242,7 +1238,7 @@ function shooterupdate(_enemy)
   _enemy.spdy=rnd(0.5)+0.5
   _enemy.target=true
  end
- if t()-_enemy.ts > 0.875 and not _enemy.icec then
+ if t()-_enemy.ts > 1.125 and not _enemy.icec then
   enemyweapons[_enemy.primary](_enemy)
   _enemy.ts=t()
  end
@@ -1255,9 +1251,9 @@ function layerupdate(_enemy)
   end
  else
   _enemy.spdx,_enemy.spdy=0,0
-  if t()-_enemy.ts > 1.5 and not _enemy.icec then
+  if t()-_enemy.ts > 1.75 and not _enemy.icec then
    enemyweapons[_enemy.primary](_enemy)
-   _enemy.ts,_enemy.duration,_enemy.target=t(),1+rnd(2),{x=4+rnd(120),y=rnd(116)}
+   _enemy.ts,_enemy.duration,_enemy.target=t(),1+rnd(2),{x=4+rnd(128),y=rnd(116)}
    local _a=atan2(_enemy.target.x-_enemy.x,_enemy.target.y-_enemy.y)
    _enemy.spdx,_enemy.spdy=cos(_a)*0.75,sin(_a)*0.75
   end
@@ -1268,7 +1264,7 @@ function straferupdate(_enemy)
  if not _enemy.target then
   _enemy.x,_enemy.target=rnd(128),true
  end
- if t()-_enemy.ts > 0.875 then
+ if t()-_enemy.ts > 1 then
   _enemy.accx=rnd{0.0125,-0.0125}
   if rnd() > 0.375 and not _enemy.icec then
    enemyweapons[_enemy.primary](_enemy)
@@ -1605,7 +1601,7 @@ function gameupdate()
  enemiestoadd={}
  local _spawninterval=max(0.75,6*lockedpercentage)
  if escapeelapsed then
-  _spawninterval=max(0.25,2*lockedpercentage)
+  _spawninterval=max(0.5,2*lockedpercentage)
  end
  local gamestartdone=issuperboss or boss and t()-gamestartts > 1.25 or true
  if gamestartdone and
