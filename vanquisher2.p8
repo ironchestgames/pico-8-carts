@@ -40,18 +40,10 @@ function sortony(_t)
  end
 end
 
-
 function isaabbscolliding(a,b)
  return a.x-a.hw < b.x+b.hw and a.x+a.hw > b.x-b.hw and
   a.y-a.hh < b.y+b.hh and a.y+a.hh > b.y-b.hh and b
 end
-
--- if
---         other.pos.x+other.hitbox.x+other.hitbox.w > obj.pos.x+obj.hitbox.x and 
---         other.pos.y+other.hitbox.y+other.hitbox.h > obj.pos.y+obj.hitbox.y and
---         other.pos.x+other.hitbox.x < obj.pos.x+obj.hitbox.x+obj.hitbox.w and
---         other.pos.y+other.hitbox.y < obj.pos.y+obj.hitbox.y+obj.hitbox.h 
---     then
 
 wallaabb={hw=4,hh=4}
 function isinsidewall(aabb)
