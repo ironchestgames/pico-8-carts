@@ -11,16 +11,18 @@ function debug(s)
  printh(tostr(s),'debug',false)
 end
 
-btnmasktoa={
- [0x0002]=0, -- right
- [0x0006]=0.125, -- right/up
- [0x0004]=0.25, -- up
- [0x0005]=0.375, -- up/left
- [0x0001]=0.5, -- left
- [0x0009]=0.625, -- left/down
- [0x0008]=0.75, -- down
- [0x000a]=0.875, -- down/right
-}
+btnmasktoa=split'0.5,0,,0.25,0.375,0.125,,0.75,0.625,0.875'
+
+-- btnmasktoa={
+--  [0x0002]=0, -- right
+--  [0x0006]=0.125, -- right/up
+--  [0x0004]=0.25, -- up
+--  [0x0005]=0.375, -- up/left
+--  [0x0001]=0.5, -- left
+--  [0x0009]=0.625, -- left/down
+--  [0x0008]=0.75, -- down
+--  [0x000a]=0.875, -- down/right
+-- }
 
 function flrrnd(_n)
  return flr(rnd(_n))
@@ -30,15 +32,7 @@ function norm(n)
  return n == 0 and 0 or sgn(n)
 end
 
-function sortony(_t)
- for _i=1,#_t do
-  local _j=_i
-  while _j > 1 and _t[_j-1].y > _t[_j].y do
-   _t[_j],_t[_j-1]=_t[_j-1],_t[_j]
-   _j=_j-1
-  end
- end
-end
+-- collision funcs
 
 function isaabbscolliding(a,b)
  return a.x-a.hw < b.x+b.hw and a.x+a.hw > b.x-b.hw and
@@ -84,19 +78,36 @@ function collideaabbs(func,aabb,other,_dx,_dy)
  return dx,dy
 end
 
+-- drawing funcs
+
+function sortony(_t)
+ for _i=1,#_t do
+  local _j=_i
+  while _j > 1 and _t[_j-1].y+_t[_j-1].hh > _t[_j].y+_t[_j].hh do -- todo: make cleaner
+   _t[_j],_t[_j-1]=_t[_j-1],_t[_j]
+   _j=_j-1
+  end
+ end
+end
+
+function drawactor(_a)
+ pal(_a.colors,0)
+ spr(_a.s[flr(_a.f)],_a.x-4,_a.y-(8-_a.hh),1,1,_a.sflip)
+ pal()
+end
+
+---- 
 
 avatar={
  x=68,y=60,
- hw=1.5,hh=1.5,
+ hw=1,hh=1,
  -- s=split'48,49',
- -- s=split'52,53',
- s=split'56,57',
+ s=split'52,53',
+ -- s=split'56,57',
  f=1,
- spdfactor=1,
- spd=0.5,
+ spd=1,
+ spdfactor=0.5,
  hp=3,
- att_spd_dec=0,
- armor=0,
  colors=split'15,2,6,4,4,1,13,5'
 }
 
@@ -136,7 +147,7 @@ function mapinit()
  end
 
  -- add warpstone
- warpstone={x=curx*8+4,y=cury*8+7,dx=0,dy=0,hw=4,hh=4,s=20}
+ warpstone={x=curx*8+4,y=cury*8+4,dx=0,dy=0,hw=4,hh=4,s=20,spd=0}
 
  -- populate actors
  add(actors,avatar)
@@ -155,15 +166,6 @@ function mapinit()
   end
  end
 
- -- reset
- curenemyi,
- tick,
- attacks,
- pemitters,
- vfxs,
- boss=
-  1,0,{},{},{},{}
-
  -- todo: start music here
 end
 
@@ -172,20 +174,30 @@ function _init()
 end
 
 function _update60()
- local angle=btnmasktoa[band(btn(),0b1111)] -- note: filter out o/x buttons from dpad input
- if angle then
-  if avatar.state != 'recovering' and
-     avatar.state != 'attacking' then
-   avatar.a,avatar.dx,avatar.dy,avatar.state,avatar.state_c=
-    angle,norm(cos(angle)),norm(sin(angle)),'moving',2
-  end
- elseif avatar.state != 'recovering' then
-  avatar.dx,avatar.dy=0,0
- end
-
- avatar.f+=.1
+ 
+ avatar.f+=.2
  if avatar.f >= 3 then
   avatar.f=1
+ end
+
+ local angle=btnmasktoa[band(btn(),0b1111)] -- note: filter out o/x buttons from dpad input
+ if angle then
+  if avatar.state != 'readying' and
+     avatar.state != 'striking' then
+   avatar.a,avatar.dx,avatar.dy=angle,norm(cos(angle)),norm(sin(angle))
+  end
+ else
+  avatar.dx,avatar.dy,avatar.f=0*sgn(avatar._dx),0,1
+ end
+
+ -- update the next-position
+ for _a in all(actors) do
+  local spdfactor=_a.spdfactor or 1
+  _a.dx,_a.dy=_a.dx*(_a.spd*spdfactor),_a.dy*(_a.spd*spdfactor)
+  if avatar.dx != 0 then
+   avatar.sflip=sgn(avatar.dx) < 0
+  end
+  -- note: after this deltas should not change by input
  end
 
  -- movement check against walls
@@ -234,17 +246,19 @@ function _draw()
  -- draw actors
  add(actors,warpstone)
  sortony(actors)
+
+ local _iscollide=isaabbscolliding(avatar,warpstone)
+
  for _a in all(actors) do
   if _a == warpstone then
-   spr(_a.s,_a.x-4,_a.y-7)
+   spr(_a.s,_a.x-_a.hw,_a.y-_a.hh)
   else
-   pal(_a.colors,0)
-   spr(_a.s[flr(_a.f)],_a.x-4,_a.y-7)
-   pal()
+   drawactor(_a)
   end
 
-  rect(_a.x,_a.y,_a.x+_a.hw,_a.y+_a.hh,12)
-  pset(_a.x,_a.y,7)
+  -- rect(_a.x-_a.hw,_a.y-_a.hh,_a.x+_a.hw,_a.y+_a.hh,_iscollide and 8 or 12)
+  -- pset(_a.x,_a.y,7)
+  -- pset(_a.x,_a.y+_a.hh,9)
  end
  del(actors,warpstone)
 
