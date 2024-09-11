@@ -14,6 +14,17 @@ end
 btnmasktoa=split'0.5,0,,0.25,0.375,0.125,,0.75,0.625,0.875'
 confusedbtnmasktoa=split'0,0.5,,0.75,0.875,0.625,,0.25,0.125,0.375'
 
+-- [0x0001]=0.5, -- left
+-- [0x0002]=0, -- right
+-- [0x0004]=0.25, -- up
+-- [0x0005]=0.375, -- up/left
+-- [0x0006]=0.125, -- right/up
+-- [0x0008]=0.75, -- down
+-- [0x0009]=0.625, -- left/down
+-- [0x000a]=0.875, -- down/right
+
+atoswordfx=split'240,241,,242,243,244,,245,246,247'
+
 function flrrnd(_n)
  return flr(rnd(_n))
 end
@@ -148,6 +159,7 @@ avatar={
 }
 
 attacks={}
+fxs={}
 
 theme=1
 
@@ -241,9 +253,11 @@ function _update60()
   hp=5
  end
 
- local _angle=btnmasktoa[band(btn(),0b1111)] -- note: filter out o/x buttons from dpad input
+ local _btnmask=band(btn(),0b1111) -- note: filter out o/x buttons from dpad input
+ local _angle=btnmasktoa[_btnmask]
  if _angle then
   avatar.a=_angle
+  avatar.a_btnmask=_btnmask
   if avatar.state != 'readying' and
      avatar.state != 'striking' then
    avatar.dx,avatar.dy=norm(cos(_angle)),norm(sin(_angle))
@@ -252,35 +266,60 @@ function _update60()
   avatar.dx,avatar.dy,avatar.f=0,0,1
  end
 
- if btn(4) or btn(5) then
-  if avatar.state_c <= 0 then
-   if avatar.state != 'readying' then
-    avatar.state='readying'
-    avatar.state_c=24
-   elseif avatar.state == 'readying' then
-    avatar.state='striking'
-    avatar.state_c=24
-    add(attacks,{
-     s=253,
-     hw=2,hh=3,
-     x=avatar.x+cos(avatar.a)*6,y=avatar.y-2+sin(avatar.a)*6,
-     sflip=avatar.sflip,
-     dur=10,
-     colors=split'7,6',
-     dmg=1,
-     })
-   end
-  end
-  if btn(4) and btn(5) then
-   avatar.s=avatar.ss[3]
-  elseif btn(5) then
-   avatar.s=avatar.ss[2]
-  elseif btn(4) then
-   avatar.s=avatar.ss[1]
-  end
- else
+ if btn(4) then
+  avatar.state='readying'
+  avatar.state_c=0
+  avatar.s=avatar.ss[1]
+ elseif avatar.state == 'readying' then
+  avatar.state='striking'
+  avatar.state_c=24
+  add(attacks,{
+   s=253,
+   hw=2,hh=3, -- todo: set to something better
+   x=avatar.x+cos(avatar.a)*6,y=avatar.y-2+sin(avatar.a)*6,
+   dmg=1,
+   dur=1,
+   })
+  add(fxs,{
+   x=avatar.x+cos(avatar.a)*6,y=avatar.y-2+sin(avatar.a)*6, -- todo: do neater
+   hw=2,hh=3, -- todo: remove
+   s=atoswordfx[avatar.a_btnmask],
+   colors=split'7,6',
+   dur=10,
+   })
+ elseif avatar.state_c <= 0 then
   avatar.state_c,avatar.state=0
  end
+
+ -- if btn(4) or btn(5) then
+ --  if avatar.state_c <= 0 then
+ --   if avatar.state != 'readying' then
+ --    avatar.state='readying'
+ --    avatar.state_c=24
+ --   elseif avatar.state == 'readying' then
+ --    avatar.state='striking'
+ --    avatar.state_c=24
+ --    add(attacks,{
+ --     s=253,
+ --     hw=2,hh=3,
+ --     x=avatar.x+cos(avatar.a)*6,y=avatar.y-2+sin(avatar.a)*6,
+ --     sflip=avatar.sflip,
+ --     dur=10,
+ --     colors=split'7,6',
+ --     dmg=1,
+ --     })
+ --   end
+ --  end
+ --  if btn(4) and btn(5) then
+ --   avatar.s=avatar.ss[3]
+ --  elseif btn(5) then
+ --   avatar.s=avatar.ss[2]
+ --  elseif btn(4) then
+ --   avatar.s=avatar.ss[1]
+ --  end
+ -- else
+ --  avatar.state_c,avatar.state=0
+ -- end
 
  update60_curenemyi+=1
  if update60_curenemyi > #actors then
@@ -389,6 +428,14 @@ function _update60()
   end
  end
 
+ -- update fxs
+ for _fx in all(fxs) do
+  _fx.dur-=1
+  if _fx.dur <= 0 then
+   del(fxs,_fx)
+  end
+ end
+
  -- remove dead enemies
  for _e in all(actors) do
   if _e.isenemy and _e.hp <= 0 then
@@ -459,13 +506,13 @@ function _draw()
  end
  del(actors,warpstone)
 
- -- draw attacks
- sortony(attacks)
- for _a in all(attacks) do
-  drawattack(_a)
-  -- rect(_a.x-_a.hw,_a.y-_a.hh,_a.x+_a.hw,_a.y+_a.hh,8)
-  -- pset(_a.x,_a.y,7)
-  -- pset(_a.x,_a.y+_a.hh,9)
+ -- draw fxs
+ sortony(fxs)
+ for _fx in all(fxs) do
+  drawattack(_fx)
+  -- rect(_fx.x-_fx.hw,_fx.y-_fx.hh,_fx.x+_fx.hw,_fx.y+_fx.hh,8)
+  -- pset(_fx.x,_fx.y,7)
+  -- pset(_fx.x,_fx.y+_fx.hh,9)
  end
 
  -- custom pause screen
@@ -596,11 +643,10 @@ ddd5d5d0ddd5d5d00d5d5d0000d666d00055511000555110000551005515551511111111dd1ddd1d
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000010101000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000010000001000000101000001010100
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000021000000100000010100002101010
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000110000111100000210000021010002101010
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000021000000210000021010002101010
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000010000000210000021010002101010
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000001100000110100011010100
+00000000000000000000000000000000000000000000000000100000000001000000000000000000000000000000000000000000000000000000000000000000
+00000100000100000000000000000000000000000000000000100000000001000000000000000000000000000000000000000000000000000000000000000000
+00001000000010000000000000001111111100001000000100120000000021000000000000000000000000000000000000000000000000000000000000000000
+00012000000021000011110000011200002110000122221000112200002211000000000000000000000000000000000000000000000000000000000000000000
+00012000000021000122221000112000000211000011110000011100001110000000000000000000000000000000000000000000000000000000000000000000
+00012000000021001000000100012000000210000000000000001000000100000000000000000000000000000000000000000000000000000000000000000000
+00001100000110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
