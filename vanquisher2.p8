@@ -119,7 +119,7 @@ end
 function sortony(_t)
  for _i=1,#_t do
   local _j=_i
-  while _j > 1 and _t[_j-1].y+_t[_j-1].hh > _t[_j].y+_t[_j].hh do -- todo: make cleaner
+  while _j > 1 and _t[_j-1].y+(_t[_j-1].hh or 4) > _t[_j].y+(_t[_j].hh or 4) do -- todo: make cleaner
    _t[_j],_t[_j-1]=_t[_j-1],_t[_j]
    _j=_j-1
   end
@@ -132,36 +132,31 @@ function drawactor(_a)
  pal()
 end
 
-function drawattack(_a)
- -- todo: change colors
- pal(_a.colors,0)
- spr(_a.s,_a.x-4,_a.y-(8-_a.hh),1,1,_a.sflip)
- pal()
-end
-
 ---- 
 
 avatar={
  x=68,y=60,
+ a_btnmask=2,
  hw=1,hh=1,
  ss={
   split'41,42,43,44', -- swordsman
   split'45,46,47,48', -- ranger
   split'49,50,51,52', -- caster
  },
- s=split'41,42,43,44', -- swordsman
  f=1,
  spd=.5,
  spdfactor=1,
- colors=split'15,2,6,4,4,1,13,5',
+ sflip=nil, -- todo: remove for token hunt
+ colors=split'15,4,6,4,4,2,13,5',
  hp=3,
  state_c=0,
 }
+avatar.s=avatar.ss[1]
 
 attacks={}
 fxs={}
 
-theme=1
+theme=2
 
 function mapinit()
  actors={}
@@ -253,14 +248,28 @@ function _update60()
   hp=5
  end
 
+ if btnp(5) then
+  hp-=1
+ end
+
+ -- todo: the filtering does not seem to work properly!
  local _btnmask=band(btn(),0b1111) -- note: filter out o/x buttons from dpad input
  local _angle=btnmasktoa[_btnmask]
- if _angle then
+ -- if _angle then
+ if _angle and type(_angle) == 'number' then
   avatar.a=_angle
   avatar.a_btnmask=_btnmask
   if avatar.state != 'readying' and
      avatar.state != 'striking' then
    avatar.dx,avatar.dy=norm(cos(_angle)),norm(sin(_angle))
+  end
+
+  if avatar.state != 'striking' then
+   if _angle >= .375 and _angle <= .625 then
+    avatar.sflip=true
+   elseif _angle >= .875 or _angle <= .125 then
+    avatar.sflip=nil
+   end
   end
  else
   avatar.dx,avatar.dy,avatar.f=0,0,1
@@ -272,20 +281,26 @@ function _update60()
   avatar.s=avatar.ss[1]
  elseif avatar.state == 'readying' then
   avatar.state='striking'
-  avatar.state_c=24
+  avatar.state_c=28
+  local _x,_y=avatar.x+cos(avatar.a)*6,avatar.y-1+sin(avatar.a)*6
   add(attacks,{
-   s=253,
-   hw=2,hh=3, -- todo: set to something better
-   x=avatar.x+cos(avatar.a)*6,y=avatar.y-2+sin(avatar.a)*6,
+   x=_x,y=_y,
+   hw=2.5,hh=2.5,
+   dur=2,
    dmg=1,
-   dur=1,
    })
   add(fxs,{
-   x=avatar.x+cos(avatar.a)*6,y=avatar.y-2+sin(avatar.a)*6, -- todo: do neater
-   hw=2,hh=3, -- todo: remove
    s=atoswordfx[avatar.a_btnmask],
-   colors=split'7,6',
-   dur=10,
+   x=_x-4,y=_y-4,
+   colors=split'2,2,5,5,5,6', -- mundane
+   -- colors=split'12,11,7,11,12,7', -- teleport
+   -- colors=split'1,5,5,6,6,7', -- steel
+   -- colors=split'5,5,13,13,13,14', -- arcane
+   -- colors=split'4,4,10,10,10,7', -- stun
+   -- colors=split'3,3,3,11,11,10', -- venom
+   -- colors=split'3,13,12,12,12,7', -- ice
+   -- colors=split'8,8,8,15,15,14', -- fire
+   dur=12,
    })
  elseif avatar.state_c <= 0 then
   avatar.state_c,avatar.state=0
@@ -367,7 +382,7 @@ function _update60()
   local _spdfactor=_a.spd*(_a.spdfactor or 1)
 
   _a.dx,_a.dy=_a.dx*_spdfactor,_a.dy*_spdfactor
-  if _a.dx != 0 then -- todo: fix to work on angle instead
+  if _a ~= avatar and _a.dx != 0 then -- todo: fix to work on angle instead
    _a.sflip=sgn(_a.dx) < 0
   end
 
@@ -447,19 +462,13 @@ end
 function _draw()
  cls()
 
- local _isalive=hp>0
- local _afflictioncolor=8
- local _afflictionblink=_isalive and t()*8%2<1
  if hp < 5 then
-  local _afflictiontext=_isalive and 'burning! run!' or 'dead'
   local _clipsize=128*(hp/5)
   local _y=mid(0,avatar.y-_clipsize/2,128-_clipsize)
-  cls(_afflictioncolor)
-  print(
-   _afflictiontext,
-   mid(1,avatar.x-#_afflictiontext*2,127-#_afflictiontext*4),
-   _y-6,
-   _afflictionblink and 6 or 5)
+  cls(11) -- affliction color
+  if hp <= 0 then
+   print('dead',avatar.x-6,avatar.y-4,0)
+  end
   clip(mid(0,avatar.x-_clipsize/2,128-_clipsize),_y,_clipsize+1,_clipsize+1)
   rectfill(0,0,128,128,0)
  end
@@ -509,11 +518,16 @@ function _draw()
  -- draw fxs
  sortony(fxs)
  for _fx in all(fxs) do
-  drawattack(_fx)
-  -- rect(_fx.x-_fx.hw,_fx.y-_fx.hh,_fx.x+_fx.hw,_fx.y+_fx.hh,8)
-  -- pset(_fx.x,_fx.y,7)
-  -- pset(_fx.x,_fx.y+_fx.hh,9)
+  pal(1,_fx.colors[min(_fx.dur,6)])
+  spr(_fx.s,_fx.x,_fx.y)
+  pal()
  end
+
+ -- debug draw attacks
+ -- for _a in all(attacks) do
+ --  rect(_a.x-_a.hw,_a.y-_a.hh,_a.x+_a.hw,_a.y+_a.hh,8)
+ --  pset(_a.x,_a.y,7)
+ -- end
 
  -- custom pause screen
  if btn(6) then
@@ -643,10 +657,9 @@ ddd5d5d0ddd5d5d00d5d5d0000d666d00055511000555110000551005515551511111111dd1ddd1d
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000100000000001000000000000000000000000000000000000000000000000000000000000000000
 00000100000100000000000000000000000000000000000000100000000001000000000000000000000000000000000000000000000000000000000000000000
-00001000000010000000000000001111111100001000000100120000000021000000000000000000000000000000000000000000000000000000000000000000
-00012000000021000011110000011200002110000122221000112200002211000000000000000000000000000000000000000000000000000000000000000000
-00012000000021000122221000112000000211000011110000011100001110000000000000000000000000000000000000000000000000000000000000000000
-00012000000021001000000100012000000210000000000000001000000100000000000000000000000000000000000000000000000000000000000000000000
-00001100000110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00001000000010000000000000000000000000000000000000100000000001000000000000000000000000000000000000000000000000000000000000000000
+00011000000011000000000000001111111100001000000100110000000011000000000000000000000000000000000000000000000000000000000000000000
+00011000000011000011110000011100001110000111111000111100001111000000000000000000000000000000000000000000000000000000000000000000
+00011000000011000111111000111000000111000011110000011100001110000000000000000000000000000000000000000000000000000000000000000000
+00001100000110001000000100011000000110000000000000001000000100000000000000000000000000000000000000000000000000000000000000000000
