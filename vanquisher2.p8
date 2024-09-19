@@ -140,6 +140,10 @@ function getfxcolor(_fx)
  return _fx.colors[flr(#_fx.colors*((_fx.dur-_fx.durc)/_fx.dur))+1]
 end
 
+function getsflip(_angle)
+ return _angle >= .375 and _angle <= .625
+end
+
 ----
 
 -- ice,fyre,stun,venom,fear,confusion
@@ -162,6 +166,7 @@ icecolor=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12'
 
 avatar={
  x=68,y=60,
+ a=0,
  hw=1,hh=1,
  ss={
   split'41,42,43,44', -- swordsman
@@ -195,7 +200,7 @@ function mapinit()
 
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,enemies,steps,angles=
-  avatarx,avatary,0,0,{},split'440,600,420,600,450'[theme],
+  avatarx,avatary,0,1,{},split'440,600,420,600,450'[theme],
    ({split'0,0.25,-0.25',split'0,0,0,0.25,-0.25',split'0,0,0,0,0,0,0,0.5,0.5,0.25,-0.25',
     split'0,0,0,0,0,0,0,0,0,0.25',split'0,0,0.25'})[theme]
  local step_c=steps
@@ -224,11 +229,12 @@ function mapinit()
    a=0,
    hw=1,hh=1,
    dx=0,dy=0,
-   spd=.375,spdfactor=1,
+   spd=.25,spdfactor=1,
    s=split'53,54,55,56',
    f=1,
    colors=split'12,5,13',
    isenemy=true,
+   walking=true,
    hp=5,
    })
  end
@@ -278,11 +284,7 @@ function _update60()
  
  if avatar.afflic != 1 and _angle and type(_angle) == 'number' then
   avatar.a=_angle
-  if avatar.state != 'readying' and
-     avatar.state != 'striking' then
-   avatar.dx,avatar.dy=norm(cos(_angle)),norm(sin(_angle))
-   avatar.walking=true
-  end
+  avatar.walking=avatar.state != 'readying' and avatar.state != 'striking'
 
   if avatar.state != 'striking' then
    if _angle >= .375 and _angle <= .625 then
@@ -292,7 +294,7 @@ function _update60()
    end
   end
  else
-  avatar.dx,avatar.dy,avatar.f,avatar.walking=0,0,1
+  avatar.f,avatar.walking=1
  end
 
  avatar.colors=split'15,4,4,4,4,2,13,5'
@@ -399,6 +401,7 @@ function _update60()
    end
 
   elseif _haslostoavatar and _disttoavatar < _enemyrange then
+   -- debug('attaack avatar')
    _enemy.targetx,_enemy.targety=avatar.x,avatar.y
    _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
 
@@ -417,10 +420,12 @@ function _update60()
     _enemy.a+=.5
    end
    _enemy.spdfactor=1
+
   elseif _enemy.wallcollisiondx or _enemy.wallcollisiondy then
    -- debug('move out of wall collision')
    _enemy.a+=.5
    _enemy.targetx=nil
+
   elseif _enemy.targetx then
    -- debug('move towards target')
    _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
@@ -429,61 +434,60 @@ function _update60()
    if _disttotarget < 4 then
     _enemy.targetx=nil
    end
+
   else -- roam
    -- debug('roam')
    _enemy.a+=rnd(.01)-.005
    _enemy.spdfactor=.25
   end
-
-  _enemy.dx,_enemy.dy=cos(_enemy.a),sin(_enemy.a)
  end
 
  -- update the next-position
  for _a in all(actors) do
   local _spdfactor=_a.spd*(_a.spdfactor or 1)
+  local _dx,_dy=0,0
 
-  _a.dx,_a.dy=_a.dx*_spdfactor,_a.dy*_spdfactor
-  if _a ~= avatar and _a.dx != 0 then -- todo: fix to work on angle instead
-   _a.sflip=sgn(_a.dx) < 0
-  end
+  if _a.walking then
+   -- set sflip
+   _a.sflip=getsflip(_a.a)
 
-  if _a.dx != 0 or _a.dy != 0 then
-   _a.f+=_spdfactor*.3125
+   -- set walk frame
+   _a.f+=_spdfactor*.375
    if _a.f >= 3 then
     _a.f=1
    end
+
+   -- calc deltas
+   if _a == avatar then
+    _dx,_dy=norm(cos(_a.a))*_spdfactor,norm(sin(_a.a))*_spdfactor
+   else
+    _dx,_dy=cos(_a.a)*_spdfactor,sin(_a.a)*_spdfactor
+   end
+
   else
+   -- set stand frame
    _a.f=1
   end
-  -- note: after this deltas should not change by input
 
-  if _a.state == 'readying' then
-   _a.dx,_a.dy,_a.f=0,0,3
-   _a.state_c-=1
-  elseif _a.state == 'striking' then
-   _a.dx,_a.dy,_a.f=0,0,4
+  -- update state
+  if _a.state then
+   _dx,_dy,_a.f=0,0,_a.state == 'readying' and 3 or 4
    _a.state_c-=1
   end
 
- end
-
- -- movement check against walls
- for _a in all(actors) do
+  -- movement check against walls
   if not _a.isstatic then
-   local _dx,_dy=collideaabbs(isinsidewall,_a,nil,_a.dx,_a.dy)
+   local _postcolldx,_postcolldy=collideaabbs(isinsidewall,_a,nil,_dx,_dy)
    _a.wallcollisiondx,_a.wallcollisiondy=nil
-   if _dx != _a.dx or _dy != _a.dy then
+   if _postcolldx != _dx or _postcolldy != _dy then
     _a.wallcollisiondx,_a.wallcollisiondy=_dx,_dy
    end
-   _a.dx=_dx
-   _a.dy=_dy
+   _dx,_dy=_postcolldx,_postcolldy
   end
- end
 
- -- move
- for _a in all(actors) do
-  _a.x+=_a.dx
-  _a.y+=_a.dy
+  -- move
+  _a.x+=_dx
+  _a.y+=_dy
  end
 
  -- update attacks
