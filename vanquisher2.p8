@@ -331,7 +331,7 @@ function _update60()
    dur=12,
    })
  elseif avatar.state_c <= 0 then
-  avatar.state_c,avatar.state=0
+  avatar.state=nil
  end
 
  -- if btn(4) or btn(5) then
@@ -476,14 +476,12 @@ function _update60()
   end
 
   -- movement check against walls
-  if not _a.isstatic then
-   local _postcolldx,_postcolldy=collideaabbs(isinsidewall,_a,nil,_dx,_dy)
-   _a.wallcollisiondx,_a.wallcollisiondy=nil
-   if _postcolldx != _dx or _postcolldy != _dy then
-    _a.wallcollisiondx,_a.wallcollisiondy=_dx,_dy
-   end
-   _dx,_dy=_postcolldx,_postcolldy
+  local _postcolldx,_postcolldy=collideaabbs(isinsidewall,_a,nil,_dx,_dy)
+  _a.wallcollisiondx,_a.wallcollisiondy=nil
+  if _postcolldx != _dx or _postcolldy != _dy then
+   _a.wallcollisiondx,_a.wallcollisiondy=_dx,_dy
   end
+  _dx,_dy=_postcolldx,_postcolldy
 
   -- move
   _a.x+=_dx
