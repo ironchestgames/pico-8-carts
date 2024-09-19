@@ -11,6 +11,8 @@ function debug(s)
  printh(tostr(s),'debug',false)
 end
 
+poke(0x5f5c, -1) -- set auto-repeat delay for btnp
+
 btnmasktoa=split'0.5,0,,0.25,0.375,0.125,,0.75,0.625,0.875'
 confusedbtnmasktoa=split'0,0.5,,0.75,0.875,0.625,,0.25,0.125,0.375'
 
@@ -23,14 +25,16 @@ confusedbtnmasktoa=split'0,0.5,,0.75,0.875,0.625,,0.25,0.125,0.375'
 -- [0x0009]=0.625, -- left/down
 -- [0x000a]=0.875, -- down/right
 
-atoswordfx=split'240,241,,242,243,244,,245,246,247'
-
 function flrrnd(_n)
  return flr(rnd(_n))
 end
 
 function norm(n)
  return n == 0 and 0 or sgn(n)
+end
+
+function atodirections(_a)
+ return flr((_a%1)*8)/8 -- todo: maybe %1 is not needed
 end
 
 -- collision funcs
@@ -132,11 +136,32 @@ function drawactor(_a)
  pal()
 end
 
----- 
+function getfxcolor(_fx)
+ return _fx.colors[flr(#_fx.colors*((_fx.dur-_fx.durc)/_fx.dur))+1]
+end
+
+----
+
+-- ice,fyre,stun,venom,fear,confusion
+affliccolors=split'12,8,10,11,13,14'
+
+swordfxcolors={
+ split'7,12,12,13,3', -- ice
+ -- split'3,13,12,12,12,7', -- ice
+ split'8,8,8,15,15,14', -- fyre
+ split'4,4,10,10,10,7', -- stun
+ split'3,3,3,11,11,10', -- venom
+
+-- colors=split'12,11,7,11,12,7', -- teleport
+-- colors=split'1,5,5,6,6,7', -- steel
+-- colors=split'5,5,13,13,13,14', -- arcane
+ -- colors=split'2,2,5,5,5,6', -- mundane
+}
+
+icecolor=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12'
 
 avatar={
  x=68,y=60,
- a_btnmask=2,
  hw=1,hh=1,
  ss={
   split'41,42,43,44', -- swordsman
@@ -147,8 +172,8 @@ avatar={
  spd=.5,
  spdfactor=1,
  sflip=nil, -- todo: remove for token hunt
- colors=split'15,4,6,4,4,2,13,5',
- hp=3,
+ -- colors=split'15,4,6,4,4,2,13,5',
+ hp=5,
  state_c=0,
 }
 avatar.s=avatar.ss[1]
@@ -170,7 +195,7 @@ function mapinit()
 
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,enemies,steps,angles=
-  avatarx,avatary,0,1,{},split'440,600,420,600,450'[theme],
+  avatarx,avatary,0,0,{},split'440,600,420,600,450'[theme],
    ({split'0,0.25,-0.25',split'0,0,0,0.25,-0.25',split'0,0,0,0,0,0,0,0.5,0.5,0.25,-0.25',
     split'0,0,0,0,0,0,0,0,0,0.25',split'0,0,0.25'})[theme]
  local step_c=steps
@@ -236,32 +261,27 @@ function _init()
 end
 
 update60_curenemyi=1
-hp=5
 function _update60()
 
- if hp <= 0 then
+ if avatar.hp <= 0 then
   return -- dead
  end
 
- -- hp+=0.01
- if hp > 5 then
-  hp=5
- end
-
- if btnp(5) then
-  hp-=1
+ if avatar.hp >= 5 then
+  avatar.afflic=nil
+  avatar.hp=5
  end
 
  -- todo: the filtering does not seem to work properly!
  local _btnmask=band(btn(),0b1111) -- note: filter out o/x buttons from dpad input
  local _angle=btnmasktoa[_btnmask]
- -- if _angle then
- if _angle and type(_angle) == 'number' then
+ 
+ if avatar.afflic != 1 and _angle and type(_angle) == 'number' then
   avatar.a=_angle
-  avatar.a_btnmask=_btnmask
   if avatar.state != 'readying' and
      avatar.state != 'striking' then
    avatar.dx,avatar.dy=norm(cos(_angle)),norm(sin(_angle))
+   avatar.walking=true
   end
 
   if avatar.state != 'striking' then
@@ -272,14 +292,20 @@ function _update60()
    end
   end
  else
-  avatar.dx,avatar.dy,avatar.f=0,0,1
+  avatar.dx,avatar.dy,avatar.f,avatar.walking=0,0,1
  end
 
- if btn(4) then
+ avatar.colors=split'15,4,4,4,4,2,13,5'
+ if avatar.afflic == 1 then
+  avatar.colors=icecolor
+  if btnp(4) or btnp(5) then
+   avatar.hp+=0.25
+  end
+ elseif btnp(4) then
   avatar.state='readying'
-  avatar.state_c=0
+  avatar.state_c=6
   avatar.s=avatar.ss[1]
- elseif avatar.state == 'readying' then
+ elseif avatar.state == 'readying' and avatar.state_c <= 0 then
   avatar.state='striking'
   avatar.state_c=28
   local _x,_y=avatar.x+cos(avatar.a)*6,avatar.y-1+sin(avatar.a)*6
@@ -289,17 +315,17 @@ function _update60()
    dur=2,
    dmg=1,
    })
+
   add(fxs,{
-   s=atoswordfx[avatar.a_btnmask],
+   s=240+atodirections(avatar.a)*8, -- note: 240 is swordfx start
    x=_x-4,y=_y-4,
-   colors=split'2,2,5,5,5,6', -- mundane
-   -- colors=split'12,11,7,11,12,7', -- teleport
-   -- colors=split'1,5,5,6,6,7', -- steel
-   -- colors=split'5,5,13,13,13,14', -- arcane
-   -- colors=split'4,4,10,10,10,7', -- stun
-   -- colors=split'3,3,3,11,11,10', -- venom
-   -- colors=split'3,13,12,12,12,7', -- ice
-   -- colors=split'8,8,8,15,15,14', -- fire
+   colors=split'6,6,4,2', -- mundane
+   -- colors=split'14,14,8,2', -- fire
+   -- colors=split'7,10,7,4', -- stun
+   -- colors=split'10,11,3', -- venom
+   -- colors=split'7,7,6,5,1', -- steel
+   -- colors=split'14,14,13,5', -- arcane
+   -- colors=split'12,12,10,11,11,7,1', -- teleport
    dur=12,
    })
  elseif avatar.state_c <= 0 then
@@ -342,12 +368,48 @@ function _update60()
  end
  local _enemy=actors[update60_curenemyi]
  if _enemy and _enemy.isenemy then
-  local _disttoavatar,_haslostoavatar,_enemysight=
+  local _disttoavatar,_haslostoavatar,_enemysight,_enemyrange=
    dist(_enemy.x,_enemy.y,avatar.x,avatar.y),
    haslos(_enemy.x,_enemy.y,avatar.x,avatar.y),
-   52
+   52,8
 
-  if _haslostoavatar and _disttoavatar < _enemysight then
+  if _enemy.state then
+   if _enemy.state == 'readying' and _enemy.state_c <= 0 then
+    _enemy.state='striking'
+    _enemy.state_c=40
+    local _dir=atodirections(_enemy.a)
+    local _x,_y=_enemy.x+cos(_dir)*6,_enemy.y-1+sin(_dir)*6
+    add(attacks,{
+     x=_x,y=_y,
+     hw=2.5,hh=2.5,
+     dur=2,
+     afflic=1,
+     isenemy=true,
+     })
+    add(fxs,{
+     s=240+_dir*8, -- note: 240 is swordfx start
+     x=_x-4,y=_y-4,
+     colors=swordfxcolors[1],
+     dur=12,
+     })
+   else
+    if _enemy.state_c <= 0 then
+     _enemy.state=nil
+    end
+   end
+
+  elseif _haslostoavatar and _disttoavatar < _enemyrange then
+   _enemy.targetx,_enemy.targety=avatar.x,avatar.y
+   _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
+
+   if not _enemy.state then
+    _enemy.state='readying'
+    _enemy.state_c=36
+   end
+   
+  elseif _haslostoavatar and
+    _disttoavatar < _enemysight and
+    _disttoavatar > _enemyrange then
    -- debug('move towards avatar')
    _enemy.targetx,_enemy.targety=avatar.x,avatar.y
    _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
@@ -374,7 +436,6 @@ function _update60()
   end
 
   _enemy.dx,_enemy.dy=cos(_enemy.a),sin(_enemy.a)
-
  end
 
  -- update the next-position
@@ -410,15 +471,19 @@ function _update60()
  for _a in all(actors) do
   if not _a.isstatic then
    local _dx,_dy=collideaabbs(isinsidewall,_a,nil,_a.dx,_a.dy)
-   if _a != avatar then
-    _a.wallcollisiondx,_a.wallcollisiondy=nil
-    if _dx != _a.dx or _dy != _a.dy then
-     _a.wallcollisiondx,_a.wallcollisiondy=_dx,_dy
-    end
+   _a.wallcollisiondx,_a.wallcollisiondy=nil
+   if _dx != _a.dx or _dy != _a.dy then
+    _a.wallcollisiondx,_a.wallcollisiondy=_dx,_dy
    end
-   _a.x+=_dx
-   _a.y+=_dy
+   _a.dx=_dx
+   _a.dy=_dy
   end
+ end
+
+ -- move
+ for _a in all(actors) do
+  _a.x+=_a.dx
+  _a.y+=_a.dy
  end
 
  -- update attacks
@@ -426,16 +491,20 @@ function _update60()
   _a.dur-=1
   if _a.dur <= 0 then
    del(attacks,_a)
-  end
-
-  if _a.isenemy then
-   -- todo
+  elseif _a.isenemy then
+   local _dx,_dy=collideaabbs(isaabbscolliding,_a,avatar,0,0)
+   if _dx != 0 or _dy != 0 then
+    _a.dur=0
+    avatar.afflic=_a.afflic
+    avatar.hp-=1
+   end
   else
    for _e in all(actors) do
     if _e.isenemy then
      local _dx,_dy=collideaabbs(isaabbscolliding,_a,_e,0,0)
      if _dx != 0 or _dy != 0 then
       _a.dur=0
+      _e.afflic=_a.afflic
       _e.hp-=1
      end
     end
@@ -445,16 +514,19 @@ function _update60()
 
  -- update fxs
  for _fx in all(fxs) do
-  _fx.dur-=1
-  if _fx.dur <= 0 then
+  if not _fx.durc then
+   _fx.durc=_fx.dur
+  end
+  _fx.durc-=1
+  if _fx.durc <= 0 then
    del(fxs,_fx)
   end
  end
 
- -- remove dead enemies
- for _e in all(actors) do
-  if _e.isenemy and _e.hp <= 0 then
-   del(actors,_e)
+ -- remove dead actors
+ for _a in all(actors) do
+  if _a.hp and _a.hp <= 0 then
+   del(actors,_a)
   end
  end
 end
@@ -462,11 +534,11 @@ end
 function _draw()
  cls()
 
- if hp < 5 then
-  local _clipsize=128*(hp/5)
+ if avatar.hp < 5 then
+  local _clipsize=128*(avatar.hp/5)
   local _y=mid(0,avatar.y-_clipsize/2,128-_clipsize)
-  cls(11) -- affliction color
-  if hp <= 0 then
+  cls(affliccolors[avatar.afflic])
+  if avatar.hp <= 0 then
    print('dead',avatar.x-6,avatar.y-4,0)
   end
   clip(mid(0,avatar.x-_clipsize/2,128-_clipsize),_y,_clipsize+1,_clipsize+1)
@@ -518,7 +590,8 @@ function _draw()
  -- draw fxs
  sortony(fxs)
  for _fx in all(fxs) do
-  pal(1,_fx.colors[min(_fx.dur,6)])
+  -- pal(1,_fx.colors[min(_fx.dur,6)])
+  pal(1,getfxcolor(_fx))
   spr(_fx.s,_fx.x,_fx.y)
   pal()
  end
@@ -558,8 +631,8 @@ ddd5d5d0ddd5d5d00d5d5d0000d666d00055511000555110000551005515551511111111dd1ddd1d
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00333000033322000000040000000300000004000022100000332000033022000330200000000000000000000000330000000000000004000000040000000000
 03413200032212000000400000004300000020000443110002241100012311000440300000001030000010300000170000001000000010400000104000001400
-03312200032412000304000000040300000300000000310002201100003210000330200000887730008877300088700006887733000677400006774000077740
-00222000021112000030000000402000003000000403110002201100002430000233020000887600008876000088700066887000000674000006740000067400
+03312200032412000304000000040300000300000000310002201100003210000330200000887730008877300088700000887733000677400006774000077740
+00222000021112000030000000402000003000000403110002201100002430000233020000887600008876000088700006887000000674000006740000067400
 00000000002220000102000003330000020000000403100002201100003210000022010000026200000626000062620066620200000262000006200000026200
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -657,9 +730,9 @@ ddd5d5d0ddd5d5d00d5d5d0000d666d00055511000555110000551005515551511111111dd1ddd1d
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000100000100000000000000000000000000000000000000100000000001000000000000000000000000000000000000000000000000000000000000000000
-00001000000010000000000000000000000000000000000000100000000001000000000000000000000000000000000000000000000000000000000000000000
-00011000000011000000000000001111111100001000000100110000000011000000000000000000000000000000000000000000000000000000000000000000
-00011000000011000011110000011100001110000111111000111100001111000000000000000000000000000000000000000000000000000000000000000000
-00011000000011000111111000111000000111000011110000011100001110000000000000000000000000000000000000000000000000000000000000000000
-00001100000110001000000100011000000110000000000000001000000100000000000000000000000000000000000000000000000000000000000000000000
+00010000000000000000000000000000000001000010000000000000000001000000000000000000000000000000000000000000000000000000000000000000
+00001000000000000000000000000000000010000010000000000000000001000000000000000000000000000000000000000000000000000000000000000000
+00001100111100000000000000001111000110000011000010000001000011000000000000000000000000000000000000000000000000000000000000000000
+00001100001110000011110000011100000110000011110001111110001111000000000000000000000000000000000000000000000000000000000000000000
+00001100000111000111111000111000000110000001110000111100001110000000000000000000000000000000000000000000000000000000000000000000
+00011000000110001000000100011000000011000000100000000000000100000000000000000000000000000000000000000000000000000000000000000000
