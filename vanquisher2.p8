@@ -144,6 +144,19 @@ function getsflip(_angle)
  return _angle >= .375 and _angle <= .625
 end
 
+-- creators
+
+function getfx(_s,_x,_y,_dur,_colors,_vx,_vy,_ax,_ay)
+ return {
+  s=_s,
+  x=_x,y=_y,
+  dur=_dur,durc=_dur,
+  colors=_colors,
+  vx=_vx or 0,vy=_vy or 0,
+  ax=_ax or 0,ay=_ay or 0,
+ }
+end
+
 ----
 
 -- ice,fyre,stun,venom,fear,confusion
@@ -179,7 +192,9 @@ avatar={
  sflip=nil, -- todo: remove for token hunt
  -- colors=split'15,4,6,4,4,2,13,5',
  hp=5,
+ maxhp=5,
  state_c=0,
+ draw=drawactor,
 }
 avatar.s=avatar.ss[1]
 
@@ -230,17 +245,22 @@ function mapinit()
    hw=1,hh=1,
    dx=0,dy=0,
    spd=.25,spdfactor=1,
-   s=split'53,54,55,56',
+   -- s=split'53,54,55,56',
+   s=split'57,58,59,60',
    f=1,
    colors=split'12,5,13',
+   bloodcolors=split'8,8,2', -- note: need to be 3
    isenemy=true,
    walking=true,
    hp=5,
+   maxhp=5,
+   draw=drawactor,
    })
  end
 
  -- add warpstone
- warpstone={x=curx*8+4,y=cury*8+4,dx=0,dy=0,hw=4,hh=4,s=20,spd=0,f=1}
+ warpstone={x=curx*8+4,y=cury*8+4,dx=0,dy=0,hw=4,hh=4,s=20,spd=0,f=1,
+  draw=function(_a) spr(_a.s,_a.x-_a.hw,_a.y-_a.hh) end}
 
  -- populate actors
  add(actors,avatar)
@@ -312,23 +332,20 @@ function _update60()
   local _x,_y=avatar.x+cos(avatar.a)*6,avatar.y-1+sin(avatar.a)*6
   add(attacks,{
    x=_x,y=_y,
+   a=avatar.a,
    hw=2.5,hh=2.5,
    durc=2,
    dmg=1,
    })
 
-  add(fxs,{
-   s=240+atodirections(avatar.a)*8, -- note: 240 is swordfx start
-   x=_x-4,y=_y-4,
-   colors=split'6,6,4,2', -- mundane
-   -- colors=split'14,14,8,2', -- fire
-   -- colors=split'7,10,7,4', -- stun
-   -- colors=split'10,11,3', -- venom
-   -- colors=split'7,7,6,5,1', -- steel
-   -- colors=split'14,14,13,5', -- arcane
-   -- colors=split'12,12,10,11,11,7,1', -- teleport
-   dur=12,
-   })
+  local _colors=split'6,6,4,2' -- mundane
+  -- local _colors=split'14,14,8,2' -- fire
+  -- local _colors=split'7,10,7,4' -- stun
+  -- local _colors=split'10,11,3' -- venom
+  -- local _colors=split'7,7,6,5,1' -- steel
+  -- local _colors=split'14,14,13,5' -- arcane
+  -- local _colors=split'12,12,10,11,11,7,1' -- teleport
+  add(fxs,getfx(240+atodirections(avatar.a)*8,_x-4,_y-4,12,_colors))
  elseif avatar.state_c <= 0 then
   avatar.state=nil
  end
@@ -382,17 +399,13 @@ function _update60()
     local _x,_y=_enemy.x+cos(_dir)*6,_enemy.y-1+sin(_dir)*6
     add(attacks,{
      x=_x,y=_y,
+     a=_dir,
      hw=2.5,hh=2.5,
      durc=2,
      afflic=1,
      isenemy=true,
      })
-    add(fxs,{
-     s=240+_dir*8, -- note: 240 is swordfx start
-     x=_x-4,y=_y-4,
-     colors=swordfxcolors[1],
-     dur=12,
-     })
+    add(fxs,getfx(240+_dir*8,_x-4,_y-4,12,swordfxcolors[1]))
    else
     if _enemy.state_c <= 0 then
      _enemy.state=nil
@@ -485,6 +498,25 @@ function _update60()
   -- move
   _a.x+=_dx
   _a.y+=_dy
+
+  -- add bleed fx
+  if _a.hp and _a.hp/_a.maxhp < .5 then
+   add(fxs,getfx(
+    225,
+    _a.x-_a.hw,_a.y-_a.hh,
+    6+flrrnd(2),
+    {_a.bloodcolors[1]},
+    0,0,
+    0,.075))
+   if rnd() < 0.025 then
+    add(fxs,getfx(
+     225,
+     _a.x-_a.hw,
+     _a.y,
+     240,
+     {_a.bloodcolors[3]}))
+   end
+  end
  end
 
  -- update attacks
@@ -498,6 +530,7 @@ function _update60()
     _a.durc=0
     avatar.afflic=_a.afflic
     avatar.hp-=1
+    add(fxs,getfx(224,_a.x-_a.hw,_a.y-_a.hh,8,split'7'))
    end
   else
    for _e in all(actors) do
@@ -507,6 +540,22 @@ function _update60()
       _a.durc=0
       _e.afflic=_a.afflic
       _e.hp-=1
+      add(fxs,getfx(224,_a.x-_a.hw,_a.y-_a.hh,8,split'7'))
+
+      if _e.hp/_e.maxhp < .5 then
+       for _i=1,flr((_e.maxhp/2-_e.hp)/2) do
+        add(fxs,getfx(
+         225,
+         _a.x-_a.hw+flrrnd(4),
+         _a.y-_a.hh+flrrnd(4),
+         16+flrrnd(5),
+         _e.bloodcolors,
+         cos(_a.a)*.5,
+         -.25,
+         0,
+         .05))
+       end
+      end
      end
     end
    end
@@ -518,6 +567,12 @@ function _update60()
   if not _fx.durc then
    _fx.durc=_fx.dur
   end
+
+  _fx.vx+=_fx.ax
+  _fx.vy+=_fx.ay
+  _fx.x+=_fx.vx
+  _fx.y+=_fx.vy
+
   _fx.durc-=1
   if _fx.durc <= 0 then
    del(fxs,_fx)
@@ -579,11 +634,7 @@ function _draw()
   if _a.afflic == 1 then
    _a.colors=icecolor
   end
-  if _a == warpstone then
-   spr(_a.s,_a.x-_a.hw,_a.y-_a.hh)
-  else
-   drawactor(_a)
-  end
+  _a.draw(_a)
 
   -- rect(_a.x-_a.hw,_a.y-_a.hh,_a.x+_a.hw,_a.y+_a.hh,_iscollide and 8 or 12)
   -- pset(_a.x,_a.y,7)
