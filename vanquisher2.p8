@@ -57,9 +57,15 @@ function isinsidewall(aabb)
   -- note: hitboxes should not be larger than 8x8
   if not walls[mapy] or not walls[mapy][mapx] then
    -- aabb.removeme=true
-   debug('inside wall')
-  elseif walls[mapy][mapx] == 1 and isaabbscolliding(aabb,isinsidewall_wallabb) then
+   debug('warn - inside wall! should not happen')
+  elseif walls[mapy][mapx] != 0 and isaabbscolliding(aabb,isinsidewall_wallabb) then
    return isinsidewall_wallabb
+  end
+ end
+
+ for _dw in all(dynwalls) do
+  if isaabbscolliding(aabb,_dw) then
+   return _dw
   end
  end
 end
@@ -104,7 +110,7 @@ function haslos(_x1,_y1,_x2,_y2)
 
  while n > 0 do
   n-=1
-  if walls[flr(y/8)][flr(x/8)] == 1 then
+  if walls[flr(y/8)][flr(x/8)] != 0 then
    return
   end
   if err > 0 then
@@ -207,6 +213,7 @@ theme=2
 function mapinit()
  actors={}
  walls={}
+ dynwalls={}
  for _y=0,15 do
   walls[_y]={}
   for _x=0,15 do
@@ -254,20 +261,20 @@ function mapinit()
    bloodcolors=split'8,8,2', -- note: need to be 3
    isenemy=true,
    walking=true,
-   hp=5,
-   maxhp=5,
+   hp=8,
+   maxhp=8,
    draw=drawactor,
    })
  end
 
  -- add warpstone
- warpstone={x=curx*8+4,y=cury*8+4,dx=0,dy=0,hw=4,hh=4,s=20,spd=0,f=1,
+ warpstone={x=curx*8,y=cury*8,dx=0,dy=0,hw=4,hh=4,s=20,spd=0,f=1,
   draw=function(_a) spr(_a.s,_a.x-_a.hw,_a.y-_a.hh) end}
+ add(actors,warpstone)
 
  -- populate actors
  add(actors,avatar)
  -- ...
- add(actors,warpstone)
 
  -- remove walls around actors
  local _clearingarr=split'-1,-1, 0,-1, 1,-1, -1,0, 0,0, 1,0, -1,1, 0,1, 1,1'
@@ -275,11 +282,15 @@ function mapinit()
   for _i=1,16,2 do
    local _myx,_myy=flr(_a.x/8)+_clearingarr[_i],flr(_a.y/8)+_clearingarr[_i+1]
    if _myx > 0 and _myx < 15 and
-      _myy > 0 and _myy < 15 and walls[_myy][_myx] == 1 then
+      _myy > 0 and _myy < 15 and walls[_myy][_myx] != 0 then
     walls[_myy][_myx]=0
    end
   end
  end
+
+ del(actors,warpstone)
+ walls[cury][curx]=20
+
 
  -- todo: start music here
 end
@@ -336,7 +347,23 @@ function _update60()
    a=avatar.a,
    hw=2.5,hh=2.5,
    durc=2,
-   dmg=1,
+   onmiss=function(_attack)
+    local _wx,_wy=flr(avatar.x/8)+norm(cos(avatar.a)),flr(avatar.y/8)+norm(sin(avatar.a))
+    local _dw={
+     x=_attack.x,y=_attack.y,
+     hw=4,hh=4,
+     }
+    add(dynwalls,_dw)
+    add(attacks,{
+     x=999,y=999,
+     durc=120,
+     hw=0,hh=0,
+     onmiss=function()
+      del(dynwalls,_dw)
+     end
+     })
+    add(fxs,getfx(226,_attack.x-4,_attack.y-4,120,split''))
+   end,
    })
 
   local _colors=split'6,6,4,2' -- mundane
@@ -392,18 +419,13 @@ function _update60()
    haslos(_enemy.x,_enemy.y,avatar.x,avatar.y),
    52,8
 
-  -- if _enemy.afflic then
-  --  _enemy.afflic_c-=1
-  --  if _enemy.afflic_c <= 0 then
-  --   _enemy.afflic=nil
-  --  else
-  --   if _enemy.afflic == 1 then
-  --    _enemy.afflic_c-=
-  --   end
-  --  end
+  if _enemy.afflic == 1 then
+   _enemy.hp+=0.025
+   if _enemy.hp >= _enemy.maxhp then
+    _enemy.afflic=nil
+   end
 
-  -- elseif _enemy.state then
-  if _enemy.state then
+  elseif _enemy.state then
    if _enemy.state == 'readying' and _enemy.state_c <= 0 then
     _enemy.state='striking'
     _enemy.state_c=40
@@ -416,6 +438,7 @@ function _update60()
      durc=2,
      afflic=_enemy.attackafflic,
      isenemy=true,
+     onmiss=function () end,
      })
     add(fxs,getfx(240+_dir*8,_x-4,_y-4,12,swordfxcolors[1]))
    else
@@ -515,11 +538,13 @@ function _update60()
   _dx,_dy=_postcolldx,_postcolldy
 
   -- move
+  -- _a.x=mid(0,_a.x+_dx,128)
+  -- _a.y=mid(0,_a.y+_dy,128)
   _a.x+=_dx
   _a.y+=_dy
 
   -- add bleed fx
-  if _a.hp and _a.hp/_a.maxhp < .5 then
+  if _a.bleeding then
    add(fxs,getfx(
     225,
     _a.x-_a.hw,_a.y-_a.hh,
@@ -542,11 +567,12 @@ function _update60()
  for _a in all(attacks) do
   _a.durc-=1
   if _a.durc <= 0 then
+   _a.onmiss(_a)
    del(attacks,_a)
   elseif _a.isenemy then
    local _dx,_dy=collideaabbs(isaabbscolliding,_a,avatar,0,0)
    if _dx != 0 or _dy != 0 then
-    _a.durc=0
+    del(attacks,_a)
     avatar.afflic=_a.afflic
     avatar.hp-=1
     add(fxs,getfx(224,_a.x-_a.hw,_a.y-_a.hh,8,split'7'))
@@ -556,12 +582,17 @@ function _update60()
     if _e.isenemy then
      local _dx,_dy=collideaabbs(isaabbscolliding,_a,_e,0,0)
      if _dx != 0 or _dy != 0 then
-      _a.durc=0
+      del(attacks,_a)
       _e.afflic=_a.afflic
       _e.hp-=1
       add(fxs,getfx(224,_a.x-_a.hw,_a.y-_a.hh,8,split'7'))
 
-      if _e.hp/_e.maxhp < .5 then
+      if _e.bleeding == nil and _e.hp/_e.maxhp < .5 then
+       _e.maxhp*=.5
+       _e.bleeding=true
+      end
+
+      if _e.bleeding then
        for _i=1,flr((_e.maxhp/2-_e.hp)/2) do
         add(fxs,getfx(
          225,
@@ -600,7 +631,8 @@ function _update60()
 
  -- remove dead actors
  for _a in all(actors) do
-  if _a.hp and _a.hp <= 0 then
+  if _a.hp and _a.hp <= 0 or
+   _a.x <= 0 or _a.x >= 128 or _a.y <= 0 or _a.y >= 128 then -- note: intentional ice wall kill bug
    del(actors,_a)
   end
  end
@@ -621,30 +653,31 @@ function _draw()
  end
 
  -- draw walls
- local spr1=(theme-1)*4
  for _y=0,#walls do
   for _x=0,#walls[_y] do
+   local spr1=(theme-1)*4
    if walls[_y][_x] != 0 then
     _x8=_x*8
     _y8=_y*8
 
-    if walls[_y+1] != nil and walls[_y+1][_x] != 0 then
-     spr(spr1,_x8,_y8)
-    else
+    if walls[_y][_x] != 1 then
+     spr1=walls[_y][_x]
+    elseif walls[_y+1] != nil and walls[_y+1][_x] != 1 then
      if (_y + _x) % 7 == 0 then
-      spr(spr1+2,_x8,_y8)
+      spr1+=2
      elseif (_y + _x) % 9 == 0 then
-      spr(spr1+3,_x8,_y8)
+      spr1+=3
      else
-      spr(spr1+1,_x8,_y8)
+      spr1+=1
      end
     end
+
+    spr(spr1,_x8,_y8)
    end
   end
  end
 
  -- draw actors
- add(actors,warpstone)
  sortony(actors)
 
  -- local _iscollide=isaabbscolliding(avatar,warpstone)
@@ -656,7 +689,6 @@ function _draw()
   -- pset(_a.x,_a.y,7)
   -- pset(_a.x,_a.y+_a.hh,9)
  end
- del(actors,warpstone)
 
  -- draw fxs
  sortony(fxs)
@@ -669,7 +701,13 @@ function _draw()
  -- debug draw attacks
  -- for _a in all(attacks) do
  --  rect(_a.x-_a.hw,_a.y-_a.hh,_a.x+_a.hw,_a.y+_a.hh,8)
- --  pset(_a.x,_a.y,7)
+ --  pset(_a.x,_a.y,8)
+ -- end
+
+ -- debug draw dynwalls
+ -- for _dw in all(dynwalls) do
+ --  rect(_dw.x-_dw.hw,_dw.y-_dw.hh,_dw.x+_dw.hw,_dw.y+_dw.hh,4)
+ --  pset(_dw.x,_dw.y,4)
  -- end
 
  -- custom pause screen
@@ -792,14 +830,14 @@ ddd5d5d0ddd5d5d00d5d5d0000d666d00055511000555110000551005515551511111111dd1ddd1d
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-01100000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-11110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-11110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-01100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+01100000100000000000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+11110000000000000007cc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+11110000000000000007cc7000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0110000000000000007cc7c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000ccccc000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000007ccccc700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000007ccc7c7c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000ccc7cccc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00010000000000000000000000000000000001000010000000000000000001000000000000000000000000000000000000000000000000000000000000000000
 00001000000000000000000000000000000010000010000000000000000001000000000000000000000000000000000000000000000000000000000000000000
 00001100111100000000000000001111000110000011000010000001000011000000000000000000000000000000000000000000000000000000000000000000
