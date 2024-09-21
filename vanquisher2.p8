@@ -37,6 +37,17 @@ function atodirections(_a)
  return flr((_a%1)*8)/8 -- todo: maybe %1 is not needed
 end
 
+function tconcat(_t1,_t2)
+ local _t={}
+ for _i in all(_t1) do
+  add(_t,_i)
+ end
+ for _i in all(_t2) do
+  add(_t,_i)
+ end
+ return _t
+end
+
 -- collision funcs
 
 function isaabbscolliding(a,b)
@@ -142,6 +153,12 @@ function drawactor(_a)
  pal()
 end
 
+function drawfx(_fx)
+ pal(1,getfxcolor(_fx))
+ spr(_fx.s,_fx.x-4,_fx.y-4)
+ pal()
+end
+
 function getfxcolor(_fx)
  return _fx.colors[flr(#_fx.colors*((_fx.dur-_fx.durc)/_fx.dur))+1]
 end
@@ -160,6 +177,7 @@ function getfx(_s,_x,_y,_dur,_colors,_vx,_vy,_ax,_ay)
   colors=_colors,
   vx=_vx or 0,vy=_vy or 0,
   ax=_ax or 0,ay=_ay or 0,
+  draw=drawfx,
  }
 end
 
@@ -345,12 +363,12 @@ function _update60()
   add(attacks,{
    x=_x,y=_y,
    a=avatar.a,
-   hw=2.5,hh=2.5,
+   afflic=1,
+   hw=4,hh=4,
    durc=2,
    onmiss=function(_attack)
-    local _wx,_wy=flr(avatar.x/8)+norm(cos(avatar.a)),flr(avatar.y/8)+norm(sin(avatar.a))
     local _dw={
-     x=_attack.x,y=_attack.y,
+     x=avatar.x+cos(avatar.a)*10,y=avatar.y+sin(avatar.a)*10,
      hw=4,hh=4,
      }
     add(dynwalls,_dw)
@@ -362,7 +380,7 @@ function _update60()
       del(dynwalls,_dw)
      end
      })
-    add(fxs,getfx(226,_attack.x-4,_attack.y-4,120,split''))
+    add(fxs,getfx(226,_attack.x,_attack.y,120,split''))
    end,
    })
 
@@ -373,7 +391,7 @@ function _update60()
   -- local _colors=split'7,7,6,5,1' -- steel
   -- local _colors=split'14,14,13,5' -- arcane
   -- local _colors=split'12,12,10,11,11,7,1' -- teleport
-  add(fxs,getfx(240+atodirections(avatar.a)*8,_x-4,_y-4,12,_colors))
+  add(fxs,getfx(240+atodirections(avatar.a)*8,_x,_y,12,_colors))
  elseif avatar.state_c <= 0 then
   avatar.state=nil
  end
@@ -417,13 +435,10 @@ function _update60()
   local _disttoavatar,_haslostoavatar,_enemysight,_enemyrange=
    dist(_enemy.x,_enemy.y,avatar.x,avatar.y),
    haslos(_enemy.x,_enemy.y,avatar.x,avatar.y),
-   52,8
+   80,8
 
   if _enemy.afflic == 1 then
    _enemy.hp+=0.025
-   if _enemy.hp >= _enemy.maxhp then
-    _enemy.afflic=nil
-   end
 
   elseif _enemy.state then
    if _enemy.state == 'readying' and _enemy.state_c <= 0 then
@@ -438,9 +453,8 @@ function _update60()
      durc=2,
      afflic=_enemy.attackafflic,
      isenemy=true,
-     onmiss=function () end,
      })
-    add(fxs,getfx(240+_dir*8,_x-4,_y-4,12,swordfxcolors[1]))
+    add(fxs,getfx(240+_dir*8,_x,_y,12,swordfxcolors[1]))
    else
     if _enemy.state_c <= 0 then
      _enemy.state=nil
@@ -494,7 +508,7 @@ function _update60()
   local _spdfactor=_a.spd*(_a.spdfactor or 1)
   local _dx,_dy=0,0
 
-  if _a.walking then
+  if _a.walking and _a.afflic != 1 then
    -- set sflip
    _a.sflip=getsflip(_a.a)
 
@@ -525,6 +539,10 @@ function _update60()
   -- update afflictions
   if _a.afflic == 1 then
    _a.colors=icecolor
+   _dx,_dy=0,0
+   if _enemy.hp >= _enemy.maxhp then
+    _enemy.afflic=nil
+   end
   else
    _a.colors=_a.basecolors
   end
@@ -547,15 +565,15 @@ function _update60()
   if _a.bleeding then
    add(fxs,getfx(
     225,
-    _a.x-_a.hw,_a.y-_a.hh,
-    6+flrrnd(2),
+    _a.x,_a.y,
+    4+flrrnd(2),
     {_a.bloodcolors[1]},
     0,0,
     0,.075))
    if rnd() < 0.025 then
     add(fxs,getfx(
      225,
-     _a.x-_a.hw,
+     _a.x,
      _a.y,
      240,
      {_a.bloodcolors[3]}))
@@ -567,7 +585,9 @@ function _update60()
  for _a in all(attacks) do
   _a.durc-=1
   if _a.durc <= 0 then
-   _a.onmiss(_a)
+   if _a.onmiss then
+    _a.onmiss(_a)
+   end
    del(attacks,_a)
   elseif _a.isenemy then
    local _dx,_dy=collideaabbs(isaabbscolliding,_a,avatar,0,0)
@@ -575,7 +595,7 @@ function _update60()
     del(attacks,_a)
     avatar.afflic=_a.afflic
     avatar.hp-=1
-    add(fxs,getfx(224,_a.x-_a.hw,_a.y-_a.hh,8,split'7'))
+    add(fxs,getfx(224,_a.x,_a.y,8,split'7'))
    end
   else
    for _e in all(actors) do
@@ -585,7 +605,7 @@ function _update60()
       del(attacks,_a)
       _e.afflic=_a.afflic
       _e.hp-=1
-      add(fxs,getfx(224,_a.x-_a.hw,_a.y-_a.hh,8,split'7'))
+      add(fxs,getfx(224,_a.x,_a.y,8,split'7'))
 
       if _e.bleeding == nil and _e.hp/_e.maxhp < .5 then
        _e.maxhp*=.5
@@ -677,32 +697,37 @@ function _draw()
   end
  end
 
+ -- draw things in scene
+ local _things=tconcat(actors,fxs)
+ sortony(_things)
+ for _thing in all(_things) do
+  _thing.draw(_thing)
+ end
+
  -- draw actors
- sortony(actors)
+ -- sortony(actors)
 
  -- local _iscollide=isaabbscolliding(avatar,warpstone)
 
- for _a in all(actors) do
-  _a.draw(_a)
+ -- for _a in all(actors) do
+ --  _a.draw(_a)
 
   -- rect(_a.x-_a.hw,_a.y-_a.hh,_a.x+_a.hw,_a.y+_a.hh,_iscollide and 8 or 12)
   -- pset(_a.x,_a.y,7)
   -- pset(_a.x,_a.y+_a.hh,9)
- end
+ -- end
 
  -- draw fxs
- sortony(fxs)
- for _fx in all(fxs) do
-  pal(1,getfxcolor(_fx))
-  spr(_fx.s,_fx.x,_fx.y)
-  pal()
- end
+ -- sortony(fxs)
+ -- for _fx in all(fxs) do
+  -- _fx.draw(_fx)
+ -- end
 
  -- debug draw attacks
- -- for _a in all(attacks) do
- --  rect(_a.x-_a.hw,_a.y-_a.hh,_a.x+_a.hw,_a.y+_a.hh,8)
- --  pset(_a.x,_a.y,8)
- -- end
+ for _a in all(attacks) do
+  rect(_a.x-_a.hw,_a.y-_a.hh,_a.x+_a.hw,_a.y+_a.hh,8)
+  pset(_a.x,_a.y,8)
+ end
 
  -- debug draw dynwalls
  -- for _dw in all(dynwalls) do
@@ -830,12 +855,12 @@ ddd5d5d0ddd5d5d00d5d5d0000d666d00055511000555110000551005515551511111111dd1ddd1d
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-01100000100000000000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-11110000000000000007cc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-11110000000000000007cc7000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0110000000000000007cc7c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000000000000ccccc000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000000000007ccccc700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000007cc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00011000000000000007cc7000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0011110000010000007cc7c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001111000000000000ccccc000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000110000000000007ccccc700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000007ccc7c7c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000ccc7cccc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00010000000000000000000000000000000001000010000000000000000001000000000000000000000000000000000000000000000000000000000000000000
