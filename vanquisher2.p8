@@ -167,6 +167,17 @@ function getsflip(_angle)
  return _angle >= .375 and _angle <= .625
 end
 
+function getfirefx(_x,_y)
+ return getfx(
+  225,
+  _x,_y,
+  12,
+  -- split'15,14,14,14,8,2',
+  split'15,14,14,14,2',
+  0,-.0125,
+  0,-.05)
+end
+
 -- creators
 
 function getfx(_s,_x,_y,_dur,_colors,_vx,_vy,_ax,_ay)
@@ -189,7 +200,7 @@ affliccolors=split'12,8,10,11,13,14'
 swordfxcolors={
  split'7,12,12,13,3', -- ice
  -- split'3,13,12,12,12,7', -- ice
- split'8,8,8,15,15,14', -- fyre
+ split'7,14,15,15,14,14', -- fyre
  split'4,4,10,10,10,7', -- stun
  split'3,3,3,11,11,10', -- venom
 
@@ -200,6 +211,63 @@ swordfxcolors={
 }
 
 icecolor=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12'
+
+sword_iceattack=function(_a)
+ local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
+ add(attacks,{
+  x=_x,y=_y,
+  a=_a.a,
+  afflic=1,
+  hw=4,hh=4,
+  durc=2,
+  onmiss=function(_attack)
+   local _dw={
+    x=_a.x+cos(_a.a)*10,y=_a.y+sin(_a.a)*10,
+    hw=4,hh=4,
+    }
+   add(dynwalls,_dw)
+   add(attacks,{
+    x=999,y=999,
+    durc=120,
+    hw=0,hh=0,
+    onmiss=function()
+     del(dynwalls,_dw)
+    end
+    })
+   add(fxs,getfx(226,_attack.x,_attack.y,120,split''))
+  end,
+  })
+
+ add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[1]))
+end
+
+sword_fireattack=function(_a)
+ local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
+ add(attacks,{
+  x=_x,y=_y,
+  a=_a.a,
+  afflic=2,
+  hw=4,hh=4,
+  durc=2,
+  onmiss=function(_attack)
+   add(attacks,{
+    x=_x,y=_y,
+    afflic=2,
+    hw=8,hh=8,
+    durc=80,
+    update=function()
+     if rnd() > .5 then
+      local _x,_y=_x-4+rnd(8),_y-4+rnd(8)
+      add(fxs,getfirefx(_x,_y))
+      add(fxs,getfx(225,_x,_y,20,split'2'))
+     end
+    end,
+    })
+  end,
+  })
+
+ add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[2]))
+end
 
 avatar={
  x=68,y=60,
@@ -220,6 +288,7 @@ avatar={
  maxhp=5,
  state_c=0,
  draw=drawactor,
+ swordattack=sword_fireattack,
 }
 avatar.s=avatar.ss[1]
 
@@ -359,39 +428,7 @@ function _update60()
  elseif avatar.state == 'readying' and avatar.state_c <= 0 then
   avatar.state='striking'
   avatar.state_c=28
-  local _x,_y=avatar.x+cos(avatar.a)*6,avatar.y-1+sin(avatar.a)*6
-  add(attacks,{
-   x=_x,y=_y,
-   a=avatar.a,
-   afflic=1,
-   hw=4,hh=4,
-   durc=2,
-   onmiss=function(_attack)
-    local _dw={
-     x=avatar.x+cos(avatar.a)*10,y=avatar.y+sin(avatar.a)*10,
-     hw=4,hh=4,
-     }
-    add(dynwalls,_dw)
-    add(attacks,{
-     x=999,y=999,
-     durc=120,
-     hw=0,hh=0,
-     onmiss=function()
-      del(dynwalls,_dw)
-     end
-     })
-    add(fxs,getfx(226,_attack.x,_attack.y,120,split''))
-   end,
-   })
-
-  local _colors=split'6,6,4,2' -- mundane
-  -- local _colors=split'14,14,8,2' -- fire
-  -- local _colors=split'7,10,7,4' -- stun
-  -- local _colors=split'10,11,3' -- venom
-  -- local _colors=split'7,7,6,5,1' -- steel
-  -- local _colors=split'14,14,13,5' -- arcane
-  -- local _colors=split'12,12,10,11,11,7,1' -- teleport
-  add(fxs,getfx(240+atodirections(avatar.a)*8,_x,_y,12,_colors))
+  avatar.swordattack(avatar)
  elseif avatar.state_c <= 0 then
   avatar.state=nil
  end
@@ -438,7 +475,16 @@ function _update60()
    80,8
 
   if _enemy.afflic == 1 then
-   _enemy.hp+=0.025
+   _enemy.hp+=.025
+
+  elseif _enemy.afflic == 2 then
+   _enemy.state=nil
+   _enemy.a+=rnd(.01)-.005
+   if rnd() < .05 then
+    _enemy.a+=.5
+   end
+   _enemy.spdfactor=1.5
+   _enemy.walking=true
 
   elseif _enemy.state then
    if _enemy.state == 'readying' and _enemy.state_c <= 0 then
@@ -451,7 +497,8 @@ function _update60()
      a=_dir,
      hw=2.5,hh=2.5,
      durc=2,
-     afflic=_enemy.attackafflic,
+     -- afflic=_enemy.attackafflic,
+     afflic=2,
      isenemy=true,
      })
     add(fxs,getfx(240+_dir*8,_x,_y,12,swordfxcolors[1]))
@@ -537,12 +584,19 @@ function _update60()
   end
 
   -- update afflictions
+  if _a.afflic and _enemy.hp >= _enemy.maxhp then
+   _enemy.afflic=nil
+  end
   if _a.afflic == 1 then
    _a.colors=icecolor
    _dx,_dy=0,0
-   if _enemy.hp >= _enemy.maxhp then
-    _enemy.afflic=nil
+  elseif _a.afflic == 2 then
+   if _dx == 0 and _dy == 0 then
+    _a.hp-=.0125
+   else
+    _a.hp+=.025
    end
+   add(fxs,getfirefx(_a.x-2+rnd(4),_a.y-3+rnd(3)))
   else
    _a.colors=_a.basecolors
   end
@@ -590,6 +644,9 @@ function _update60()
    end
    del(attacks,_a)
   elseif _a.isenemy then
+   if _a.update then
+    _a.update(_a)
+   end
    local _dx,_dy=collideaabbs(isaabbscolliding,_a,avatar,0,0)
    if _dx != 0 or _dy != 0 then
     del(attacks,_a)
@@ -598,6 +655,9 @@ function _update60()
     add(fxs,getfx(224,_a.x,_a.y,8,split'7'))
    end
   else
+   if _a.update then
+    _a.update(_a)
+   end
    for _e in all(actors) do
     if _e.isenemy then
      local _dx,_dy=collideaabbs(isaabbscolliding,_a,_e,0,0)
@@ -698,36 +758,36 @@ function _draw()
  end
 
  -- draw things in scene
- local _things=tconcat(actors,fxs)
- sortony(_things)
- for _thing in all(_things) do
-  _thing.draw(_thing)
- end
+ -- local _things=tconcat(actors,fxs)
+ -- sortony(_things)
+ -- for _thing in all(_things) do
+ --  _thing.draw(_thing)
+ -- end
 
  -- draw actors
- -- sortony(actors)
+ sortony(actors)
 
  -- local _iscollide=isaabbscolliding(avatar,warpstone)
 
- -- for _a in all(actors) do
- --  _a.draw(_a)
+ for _a in all(actors) do
+  _a.draw(_a)
 
   -- rect(_a.x-_a.hw,_a.y-_a.hh,_a.x+_a.hw,_a.y+_a.hh,_iscollide and 8 or 12)
   -- pset(_a.x,_a.y,7)
   -- pset(_a.x,_a.y+_a.hh,9)
- -- end
+ end
 
  -- draw fxs
- -- sortony(fxs)
- -- for _fx in all(fxs) do
-  -- _fx.draw(_fx)
- -- end
+ sortony(fxs)
+ for _fx in all(fxs) do
+  _fx.draw(_fx)
+ end
 
  -- debug draw attacks
- for _a in all(attacks) do
-  rect(_a.x-_a.hw,_a.y-_a.hh,_a.x+_a.hw,_a.y+_a.hh,8)
-  pset(_a.x,_a.y,8)
- end
+ -- for _a in all(attacks) do
+ --  rect(_a.x-_a.hw,_a.y-_a.hh,_a.x+_a.hw,_a.y+_a.hh,8)
+ --  pset(_a.x,_a.y,8)
+ -- end
 
  -- debug draw dynwalls
  -- for _dw in all(dynwalls) do
