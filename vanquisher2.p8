@@ -191,6 +191,7 @@ avatar={
  spdfactor=1,
  sflip=nil, -- todo: remove for token hunt
  -- colors=split'15,4,6,4,4,2,13,5',
+ basecolors=split'15,4,4,4,4,2,13,5',
  hp=5,
  maxhp=5,
  state_c=0,
@@ -248,7 +249,8 @@ function mapinit()
    -- s=split'53,54,55,56',
    s=split'57,58,59,60',
    f=1,
-   colors=split'12,5,13',
+   attackafflic=1, -- ice
+   basecolors=split'12,5,13',
    bloodcolors=split'8,8,2', -- note: need to be 3
    isenemy=true,
    walking=true,
@@ -317,7 +319,6 @@ function _update60()
   avatar.f,avatar.walking=1
  end
 
- avatar.colors=split'15,4,4,4,4,2,13,5'
  if avatar.afflic == 1 then
   if btnp(4) or btnp(5) then
    avatar.hp+=0.25
@@ -391,6 +392,17 @@ function _update60()
    haslos(_enemy.x,_enemy.y,avatar.x,avatar.y),
    52,8
 
+  -- if _enemy.afflic then
+  --  _enemy.afflic_c-=1
+  --  if _enemy.afflic_c <= 0 then
+  --   _enemy.afflic=nil
+  --  else
+  --   if _enemy.afflic == 1 then
+  --    _enemy.afflic_c-=
+  --   end
+  --  end
+
+  -- elseif _enemy.state then
   if _enemy.state then
    if _enemy.state == 'readying' and _enemy.state_c <= 0 then
     _enemy.state='striking'
@@ -402,7 +414,7 @@ function _update60()
      a=_dir,
      hw=2.5,hh=2.5,
      durc=2,
-     afflic=1,
+     afflic=_enemy.attackafflic,
      isenemy=true,
      })
     add(fxs,getfx(240+_dir*8,_x-4,_y-4,12,swordfxcolors[1]))
@@ -485,6 +497,13 @@ function _update60()
   if _a.state then
    _dx,_dy,_a.f=0,0,_a.state == 'readying' and 3 or 4
    _a.state_c-=1
+  end
+
+  -- update afflictions
+  if _a.afflic == 1 then
+   _a.colors=icecolor
+  else
+   _a.colors=_a.basecolors
   end
 
   -- movement check against walls
@@ -631,9 +650,6 @@ function _draw()
  -- local _iscollide=isaabbscolliding(avatar,warpstone)
 
  for _a in all(actors) do
-  if _a.afflic == 1 then
-   _a.colors=icecolor
-  end
   _a.draw(_a)
 
   -- rect(_a.x-_a.hw,_a.y-_a.hh,_a.x+_a.hw,_a.y+_a.hh,_iscollide and 8 or 12)
