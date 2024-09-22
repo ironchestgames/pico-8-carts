@@ -382,51 +382,50 @@ function staff_fireattack(_a)
  end
 end
 
-avatar={
- x=68,y=60,
- a=0,
- hw=1,hh=1,
- ss={
-  split'40,41,42,43', -- swordsman
-  split'44,45,46,47', -- ranger
-  split'48,49,50,51', -- caster
- },
- f=1,
- spd=.5,
- spdfactor=1,
- sflip=nil, -- todo: remove for token hunt
- basecolors=split'15,4,4,4,4,2,13,5',
- hp=5,
- maxhp=5,
- state_c=0,
- draw=drawactor,
+function setupavatar()
+ avatar={
+  x=68,y=60,
+  a=0,
+  hw=1,hh=1,
+  ss={
+   split'40,41,42,43', -- swordsman
+   split'44,45,46,47', -- ranger
+   split'48,49,50,51', -- caster
+  },
+  f=1,
+  spd=.5,
+  spdfactor=1,
+  sflip=nil, -- todo: remove for token hunt
+  basecolors=split'15,4,4,4,4,2,13,5',
+  hp=5,
+  maxhp=5,
+  state_c=0,
+  draw=drawactor,
 
- -- swordattack=sword_iceattack,
- swordattack=sword_mundaneattack,
+  -- swordattack=sword_iceattack,
+  swordattack=sword_mundaneattack,
 
- bow_c=0,
- -- bowattack=bow_fireattack,
- bowattack=bow_mundaneattack,
+  bow_c=0,
+  -- bowattack=bow_fireattack,
+  bowattack=bow_mundaneattack,
 
- staffattack_c=0,
- staffdx=0,
- staffdy=0,
- -- staffattack=staff_fireattack,
- staffattack=staff_mundaneattack,
-}
-avatar.s=avatar.ss[1]
+  staffattack_c=0,
+  staffdx=0,
+  staffdy=0,
+  -- staffattack=staff_fireattack,
+  staffattack=staff_mundaneattack,
+ }
+ avatar.s=avatar.ss[1]
+end
+setupavatar()
 
-world=1
-level=1
+world,level=1,1
 
 enemybloodcolor=split'8,8,2' -- note: need to be 3
 
 function mapinit()
- attacks={}
- actors={}
- walls={}
- dynwalls={}
- fxs={}
+ deathts=nil
+ walls,dynwalls,actors,attacks,fxs={},{},{},{},{}
  for _y=0,15 do
   walls[_y]={}
   for _x=0,15 do
@@ -436,7 +435,7 @@ function mapinit()
 
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,enemies,steps,angles=
-  avatarx,avatary,0,level*9,{},split'440,600,420,600,450'[world],
+  avatarx,avatary,0,level*6,{},split'440,600,420,600,450'[world],
    ({split'0,0.25,-0.25',split'0,0,0,0.25,-0.25',split'0,0,0,0,0,0,0,0.5,0.5,0.25,-0.25',
     split'0,0,0,0,0,0,0,0,0,0.25',split'0,0,0.25'})[world]
  local step_c=steps
@@ -529,7 +528,7 @@ function mapinit()
 
  -- add warpstone
  warpstone={x=curx*8,y=cury*8,hw=6,hh=6,wx=curx,wy=cury,draw=function()
-  spr(226,warpstone.x,warpstone.y)
+  spr(226,warpstone.x-4,warpstone.y-4)
   end}
  add(actors,warpstone)
 
@@ -567,7 +566,16 @@ end
 update60_curenemyi=1
 function _update60()
 
+ if deathts and t() > deathts and btnp(4) then
+  world,level=1,1
+  setupavatar()
+  mapinit()
+ end
+
  if avatar.hp <= 0 then
+  if deathts == nil then
+   deathts=t()+2
+  end
   return -- dead
  end
 
@@ -951,12 +959,12 @@ function _draw()
  cls()
 
  if warpstone.iswarping then
-  rectfill(warpstone.x+1,0,warpstone.x+7,warpstone.y+8,7)
+  rectfill(warpstone.x-3,0,warpstone.x+3,warpstone.y+4,7)
   local _str='\f1  ➡️\n\f2⬇️'
   if level >= 3 then
    _str='\f1\n\f2⬇️'
   end
-  ?_str,warpstone.x+1,warpstone.y+4
+  ?_str,warpstone.x-3,warpstone.y
   warpstone.draw()
   return
  end
@@ -966,7 +974,10 @@ function _draw()
   local _y=mid(0,avatar.y-_clipsize/2,128-_clipsize)
   cls(affliccolors[avatar.afflic])
   if avatar.hp <= 0 then
-   print('dead',avatar.x-6,avatar.y-4,0)
+   ?'dead',avatar.x-6,avatar.y-4,0
+   if deathts and t() > deathts then
+    ?'\f0🅾️ to start over',30,122
+   end
   end
   clip(mid(0,avatar.x-_clipsize/2,128-_clipsize),_y,_clipsize+1,_clipsize+1)
   rectfill(0,0,128,128,0)
