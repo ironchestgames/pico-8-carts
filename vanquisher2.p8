@@ -314,7 +314,7 @@ function staff_fireattack(_a)
   add(fxs,getfirefx(_a.x-1,_a.y))
   add(fxs,getfirefx(_a.x,_a.y))
   _a.staffattack_c=0
-  addfissure(_a.x+rnd(32)-16,_a.y+rnd(32)-16,80)
+  addfissure(_a.x+_a.staffdx-16+rnd(32),_a.y+_a.staffdy-16+rnd(32),80)
  end
 end
 
@@ -353,7 +353,7 @@ avatar.s=avatar.ss[1]
 attacks={}
 fxs={}
 
-theme=2
+theme=3
 
 function mapinit()
  actors={}
@@ -486,9 +486,11 @@ function _update60()
     avatar.iscasting=true
     avatar.staffdx,avatar.staffdy=0,0
    end
-   local _castingspeed=.5
-   avatar.staffdx+=norm(cos(avatar.a))*_castingspeed
-   avatar.staffdy+=norm(sin(avatar.a))*_castingspeed
+   if _angle then
+    local _castingspeed=.25
+    avatar.staffdx+=norm(cos(avatar.a))*_castingspeed
+    avatar.staffdy+=norm(sin(avatar.a))*_castingspeed
+   end
    avatar.state='readying'
    avatar.state_c=1
    avatar.s=avatar.ss[3]
@@ -519,36 +521,6 @@ function _update60()
    avatar.state=nil
   end
  end
-
- -- if btn(4) or btn(5) then
- --  if avatar.state_c <= 0 then
- --   if avatar.state != 'readying' then
- --    avatar.state='readying'
- --    avatar.state_c=24
- --   elseif avatar.state == 'readying' then
- --    avatar.state='striking'
- --    avatar.state_c=24
- --    add(attacks,{
- --     s=253,
- --     hw=2,hh=3,
- --     x=avatar.x+cos(avatar.a)*6,y=avatar.y-2+sin(avatar.a)*6,
- --     sflip=avatar.sflip,
- --     dur=10,
- --     colors=split'7,6',
- --     dmg=1,
- --     })
- --   end
- --  end
- --  if btn(4) and btn(5) then
- --   avatar.s=avatar.ss[3]
- --  elseif btn(5) then
- --   avatar.s=avatar.ss[2]
- --  elseif btn(4) then
- --   avatar.s=avatar.ss[1]
- --  end
- -- else
- --  avatar.state_c,avatar.state=0
- -- end
 
  update60_curenemyi+=1
  if update60_curenemyi > #actors then
