@@ -153,14 +153,14 @@ function drawactor(_a)
  pal()
 end
 
+function getfxcolor(_fx)
+ return _fx.colors[flr(#_fx.colors*((_fx.dur-_fx.durc)/_fx.dur))+1]
+end
+
 function drawfx(_fx)
  pal(1,getfxcolor(_fx))
  spr(_fx.s,_fx.x-4,_fx.y-4)
  pal()
-end
-
-function getfxcolor(_fx)
- return _fx.colors[flr(#_fx.colors*((_fx.dur-_fx.durc)/_fx.dur))+1]
 end
 
 function getsflip(_angle)
@@ -259,13 +259,11 @@ sword_fireattack=function(_a)
     durc=80,
     draw=function()
      if rnd() < .5 then
-      -- rectfill(_x-4,_y-4,_x+4,_y+4,2)
       circfill(_x,_y,5,2)
      end
     end,
     update=function()
-     local _x,_y=_x-4+rnd(8),_y-4+rnd(8)
-     add(fxs,getfirefx(_x,_y))
+     add(fxs,getfirefx(_x-4+rnd(8),_y-4+rnd(8)))
     end,
     })
   end,
@@ -294,6 +292,72 @@ avatar={
  state_c=0,
  draw=drawactor,
  swordattack=sword_fireattack,
+ bow_c=0,
+ bowattack=function(_a)
+  local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
+  add(attacks,{
+   x=_x,y=_y,
+   a=_a.a,
+   afflic=2,
+   hw=3,hh=3,
+   durc=_a.bow_c,
+   missonwall=true,
+   update=function(_attack)
+    _attack.x+=cos(_attack.a)*2
+    _attack.y+=sin(_attack.a)*2
+   end,
+   draw=function(_attack)
+    pal(1,4)
+    spr(248+atodirections(_attack.a)*8,_attack.x-4,_attack.y-4)
+    pal()
+   end,
+   onmiss=function(_attack)
+    add(attacks,{
+     x=_attack.x,y=_attack.y,
+     afflic=2,
+     hw=8,hh=8,
+     durc=80,
+     draw=function()
+      if rnd() < .5 then
+       circfill(_attack.x,_attack.y,5,2)
+      end
+     end,
+     update=function()
+      add(fxs,getfirefx(_attack.x-4+rnd(8),_attack.y-4+rnd(8)))
+     end,
+     })
+   end,
+   })
+ end,
+
+ staffattack_c=0,
+ staffdx=0,
+ staffdy=0,
+ staffattack=function(_a)
+  _a.staffattack_c+=1
+  if _a.staffattack_c >= 16 then
+   add(fxs,getfirefx(_a.x-2,_a.y))
+   add(fxs,getfirefx(_a.x-1,_a.y))
+   add(fxs,getfirefx(_a.x,_a.y))
+   add(fxs,getfirefx(_a.x+1,_a.y))
+   _a.staffattack_c=0
+   local _x,_y=rnd(128),rnd(128)
+   add(attacks,{
+    x=_x,y=_y,
+    afflic=2,
+    hw=8,hh=8,
+    durc=80,
+    draw=function()
+     if rnd() < .5 then
+      circfill(_x,_y,5,2)
+     end
+    end,
+    update=function()
+     add(fxs,getfirefx(_x-4+rnd(8),_y-4+rnd(8)))
+    end,
+    })
+  end
+ end,
 }
 avatar.s=avatar.ss[1]
 
@@ -426,16 +490,45 @@ function _update60()
   if btnp(4) or btnp(5) then
    avatar.hp+=0.25
   end
- elseif btnp(4) then
-  avatar.state='readying'
-  avatar.state_c=6
-  avatar.s=avatar.ss[1]
- elseif avatar.state == 'readying' and avatar.state_c <= 0 then
-  avatar.state='striking'
-  avatar.state_c=28
-  avatar.swordattack(avatar)
- elseif avatar.state_c <= 0 then
-  avatar.state=nil
+ else
+
+  if btn(4) and btn(5) then
+   if avatar.iscasting != true then
+    avatar.iscasting=true
+    avatar.staffdx,avatar.staffdy=0,0
+   end
+   local _castingspeed=.5
+   avatar.staffdx+=norm(cos(avatar.a))*_castingspeed
+   avatar.staffdy+=norm(sin(avatar.a))*_castingspeed
+   avatar.state='readying'
+   avatar.state_c=1
+   avatar.s=avatar.ss[3]
+   avatar.attack=function() end
+   avatar.staffattack(avatar)
+
+  elseif btnp(4) then
+   avatar.state='readying'
+   avatar.state_c=6
+   avatar.s=avatar.ss[1]
+   avatar.attack=avatar.swordattack
+  elseif btn(5) then
+   avatar.bow_c+=1
+   avatar.state='readying'
+   avatar.state_c=1
+   avatar.s=avatar.ss[2]
+   avatar.attack=avatar.bowattack
+  end
+
+  if avatar.state == 'readying' and avatar.state_c <= 0 then
+   avatar.state='striking'
+   avatar.state_c=28
+   avatar.attack(avatar)
+   avatar.bow_c=0
+   avatar.iscasting=nil
+   avatar.ireadyingbow=nil
+  elseif avatar.state_c <= 0 then
+   avatar.state=nil
+  end
  end
 
  -- if btn(4) or btn(5) then
@@ -643,6 +736,18 @@ function _update60()
  -- update attacks
  for _a in all(attacks) do
   _a.durc-=1
+
+  -- if _a.x <= 0 or _a.x >= 128 or _a.y <= 0 or _a.y >= 128 then
+  --  _a.durc=0
+  -- end
+
+  if _a.missonwall then
+   local _postcolldx,_postcolldy=collideaabbs(isinsidewall,_a,nil,0,0)
+   if _postcolldx != 0 or _postcolldy != 0 then
+    _a.durc=0
+   end
+  end
+
   if _a.durc <= 0 then
    if _a.onmiss then
     _a.onmiss(_a)
@@ -737,6 +842,12 @@ function _draw()
   rectfill(0,0,128,128,0)
  end
 
+ -- debug draw attacks
+ -- for _a in all(attacks) do
+ --  rect(_a.x-_a.hw,_a.y-_a.hh,_a.x+_a.hw,_a.y+_a.hh,8)
+ --  pset(_a.x,_a.y,8)
+ -- end
+
  -- draw attack areas
  for _attack in all(attacks) do
   if _attack.draw then
@@ -793,12 +904,6 @@ function _draw()
  -- sortony(fxs)
  -- for _fx in all(fxs) do
  --  _fx.draw(_fx)
- -- end
-
- -- debug draw attacks
- -- for _a in all(attacks) do
- --  rect(_a.x-_a.hw,_a.y-_a.hh,_a.x+_a.hw,_a.y+_a.hh,8)
- --  pset(_a.x,_a.y,8)
  -- end
 
  -- debug draw dynwalls
@@ -938,6 +1043,6 @@ ddd5d5d0ddd5d5d00d5d5d0000d666d00055511000555110000551005515551511111111dd1ddd1d
 00010000000000000000000000000000000001000010000000000000000001000000000000000000000000000000000000000000000000000000000000000000
 00001000000000000000000000000000000010000010000000000000000001000000000000000000000000000000000000000000000000000000000000000000
 00001100111100000000000000001111000110000011000010000001000011000000000000000000000000000000000000000000000000000000000000000000
-00001100001110000011110000011100000110000011110001111110001111000000000000000000000000000000000000000000000000000000000000000000
-00001100000111000111111000111000000110000001110000111100001110000000000000000000000000000000000000000000000000000000000000000000
+00001100001110000011110000011100000110000011110001111110001111000000000000001000000010000001000000000000000010000000100000010000
+00001100000111000111111000111000000110000001110000111100001110000000110000010000000010000000100000001100000100000000100000001000
 00011000000110001000000100011000000011000000100000000000000100000000000000000000000000000000000000000000000000000000000000000000
