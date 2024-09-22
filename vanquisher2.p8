@@ -200,18 +200,14 @@ end
 affliccolors=split'2,12,14,10,11,13'
 
 swordfxcolors={
+ split'6,6,4,2', -- mundane
  split'7,7,7,12,13', -- ice
  split'7,14,15,15,14,14', -- fyre
  split'3,3,3,11,11,10', -- venom
  split'4,4,10,10,10,7', -- stun
-
--- colors=split'12,11,7,11,12,7', -- teleport
--- colors=split'1,5,5,6,6,7', -- steel
--- colors=split'5,5,13,13,13,14', -- arcane
- -- colors=split'2,2,5,5,5,6', -- mundane
 }
 
-icecolor=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12'
+frozencolor=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12'
 
 function missile_update(_attack)
  _attack.x+=cos(_attack.a)*_attack.missile_spd
@@ -239,6 +235,50 @@ function stonethrow(_a)
    pal()
   end,
   })
+end
+
+function sword_mundaneattack(_a)
+ local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
+ add(attacks,{
+  isenemy=_a.isenemy,
+  x=_x,y=_y,
+  a=_a.a,
+  afflic=1,
+  hw=4,hh=4,
+  durc=2,
+  })
+
+ add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[1]))
+end
+
+function bow_mundaneattack(_a)
+ local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
+ add(attacks,{
+  x=_x,y=_y,
+  a=_a.a,
+  afflic=1,
+  hw=2,hh=2,
+  durc=_a.bow_c,
+  wallaware=true,
+  missile_spd=2,
+  update=missile_update,
+  draw=function(_attack)
+   pal(1,4)
+   spr(248+atodirections(_attack.a)*8,_attack.x-4,_attack.y-4)
+   pal()
+  end,
+  onmiss=function(_attack)
+   add(fxs,getfx(225,_attack.x,_attack.y,3,split'6,5'))
+  end,
+  })
+end
+
+function staff_mundaneattack(_a)
+ _a.staffattack_c+=1
+ if _a.staffattack_c >= 16 then
+  _a.staffattack_c=0
+  sword_mundaneattack(_a)
+ end
 end
 
 create_icewall_colors=split'6,6,6,6,6,6,13'
@@ -273,7 +313,7 @@ function sword_iceattack(_a)
   end,
   })
 
- add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[1]))
+ add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[2]))
 end
 
 function addfissure(_x,_y,_dur)
@@ -306,7 +346,7 @@ function sword_fireattack(_a)
   end,
   })
 
- add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[2]))
+ add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[3]))
 end
 
 function bow_fireattack(_a)
@@ -315,7 +355,7 @@ function bow_fireattack(_a)
   x=_x,y=_y,
   a=_a.a,
   afflic=3,
-  hw=3,hh=3,
+  hw=2,hh=2,
   durc=_a.bow_c,
   wallaware=true,
   missile_spd=2,
@@ -361,15 +401,18 @@ avatar={
  state_c=0,
  draw=drawactor,
 
- swordattack=sword_iceattack,
+ -- swordattack=sword_iceattack,
+ swordattack=sword_mundaneattack,
 
  bow_c=0,
- bowattack=bow_fireattack,
+ -- bowattack=bow_fireattack,
+ bowattack=bow_mundaneattack,
 
  staffattack_c=0,
  staffdx=0,
  staffdy=0,
- staffattack=staff_fireattack,
+ -- staffattack=staff_fireattack,
+ staffattack=staff_mundaneattack,
 }
 avatar.s=avatar.ss[1]
 
@@ -463,8 +506,7 @@ function mapinit()
  end
 
  -- add warpstone
- warpstone={x=curx*8,y=cury*8,dx=0,dy=0,hw=4,hh=4,s=20,spd=0,f=1,
-  draw=function(_a) spr(_a.s,_a.x-_a.hw,_a.y-_a.hh) end}
+ warpstone={x=curx*8,y=cury*8,wx=curx,wy=cury}
  add(actors,warpstone)
 
  -- populate actors
@@ -584,8 +626,9 @@ function _update60()
 
   if _enemy.afflic == 1 then
    _enemy.hp+=.0075
+  end
 
-  elseif _enemy.afflic == 2 then
+  if _enemy.afflic == 2 then
    _enemy.hp+=.025
 
   elseif _enemy.afflic == 3 and _enemy.state == nil then
@@ -691,7 +734,7 @@ function _update60()
   if _a.afflic == 1 then
    _a.hp+=0.0075
   elseif _a.afflic == 2 then
-   _a.colors=icecolor
+   _a.colors=frozencolor
    _dx,_dy=0,0
   elseif _a.afflic == 3 then
    if _dx == 0 and _dy == 0 then
