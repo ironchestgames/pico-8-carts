@@ -416,17 +416,17 @@ avatar={
 }
 avatar.s=avatar.ss[1]
 
-attacks={}
-fxs={}
-
-theme=1
+world=1
+level=1
 
 enemybloodcolor=split'8,8,2' -- note: need to be 3
 
 function mapinit()
+ attacks={}
  actors={}
  walls={}
  dynwalls={}
+ fxs={}
  for _y=0,15 do
   walls[_y]={}
   for _x=0,15 do
@@ -436,9 +436,9 @@ function mapinit()
 
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,enemies,steps,angles=
-  avatarx,avatary,0,10,{},split'440,600,420,600,450'[theme],
+  avatarx,avatary,0,level*8,{},split'440,600,420,600,450'[world],
    ({split'0,0.25,-0.25',split'0,0,0,0.25,-0.25',split'0,0,0,0,0,0,0,0.5,0.5,0.25,-0.25',
-    split'0,0,0,0,0,0,0,0,0,0.25',split'0,0,0.25'})[theme]
+    split'0,0,0,0,0,0,0,0,0,0.25',split'0,0,0.25'})[world]
  local step_c=steps
 
  while step_c > 0 do
@@ -461,7 +461,28 @@ function mapinit()
  -- setup enemies
  for _i=1,#enemies do
   local _e=enemies[_i]
-  if _i % 3 == 0 then
+  if level == 3 and _i == 1 then
+    add(actors,{
+    x=_e.x,y=_e.y,
+    a=0,
+    hw=1,hh=1,
+    dx=0,dy=0,
+    spd=.25,spdfactor=1,
+    s=split'56,57,58,59',
+    f=1,
+    attack=sword_iceattack,
+    sight=80,
+    range=8,
+    basecolors=split'12,5,13',
+    bloodcolors=enemybloodcolor,
+    isenemy=true,
+    walking=true,
+    hp=12,
+    maxhp=12,
+    draw=drawactor,
+    })
+
+  elseif _i % 3 == 0 then
    add(actors,{
     x=_e.x,y=_e.y,
     a=0,
@@ -506,7 +527,9 @@ function mapinit()
  end
 
  -- add warpstone
- warpstone={x=curx*8,y=cury*8,wx=curx,wy=cury}
+ warpstone={x=curx*8,y=cury*8,hw=6,hh=6,wx=curx,wy=cury,draw=function()
+  spr(226,warpstone.x,warpstone.y)
+  end}
  add(actors,warpstone)
 
  -- populate actors
@@ -525,9 +548,13 @@ function mapinit()
   end
  end
 
+ warpstone.x+=4
+ warpstone.y+=4
  del(actors,warpstone)
  walls[cury][curx]=224
 
+ avatar.iswarping=true
+ avatar.hp=0.0125
 
  -- todo: start music here
 end
@@ -543,9 +570,37 @@ function _update60()
   return -- dead
  end
 
- if avatar.hp >= 5 then
+ if avatar.iswarping then
+  avatar.hp+=0.05
+  if avatar.hp >= avatar.maxhp then
+   avatar.iswarping=nil
+  end
+  return
+ end
+
+ if warpstone.iswarping then
+  local _dowarp
+  if btnp(3) then
+   world+=1
+   _dowarp=true
+  elseif level < 3 and btnp(1) then
+   level+=1
+   _dowarp=true
+  end
+  if _dowarp then
+   avatar.hp=avatar.maxhp
+   -- avatar.afflic=nil
+   mapinit()
+  end
+  return
+ elseif warpstone.istouching and btnp(4) then
+  warpstone.iswarping=true
+  return
+ end
+
+ if avatar.hp >= avatar.maxhp then
   avatar.afflic=nil
-  avatar.hp=5
+  avatar.hp=avatar.maxhp
  end
 
  -- todo: the filtering does not seem to work properly!
@@ -868,10 +923,26 @@ function _update60()
  end
 
  -- remove dead actors
+ local _enemycount=0
  for _a in all(actors) do
   if _a.hp and _a.hp <= 0 or
    _a.x <= 0 or _a.x >= 128 or _a.y <= 0 or _a.y >= 128 then -- note: intentional ice wall kill bug
    del(actors,_a)
+  elseif _a.isenemy then
+   _enemycount+=1
+  end
+ end
+
+ if _enemycount == 0 then
+  walls[warpstone.wy][warpstone.wx]=225
+
+  warpstone.istouching=nil
+  if isaabbscolliding(avatar,warpstone) then
+   warpstone.istouching=true
+  end
+
+  if rnd() < .125 then
+   add(fxs,getfx(228,warpstone.x-2+rnd(4),warpstone.y+3-rnd(5),30,split'12,3,1',0,0,0,-.0125))
   end
  end
 end
@@ -879,8 +950,19 @@ end
 function _draw()
  cls()
 
- if avatar.hp < 5 then
-  local _clipsize=128*(avatar.hp/5)
+ if warpstone.iswarping then
+  rectfill(warpstone.x+1,0,warpstone.x+7,warpstone.y+8,7)
+  local _str='\f1  ➡️\n\f2⬇️'
+  if level >= 3 then
+   _str='\f1\n\f2⬇️'
+  end
+  ?_str,warpstone.x+1,warpstone.y+4
+  warpstone.draw()
+  return
+ end
+
+ if avatar.hp < avatar.maxhp then
+  local _clipsize=128*(avatar.hp/avatar.maxhp)
   local _y=mid(0,avatar.y-_clipsize/2,128-_clipsize)
   cls(affliccolors[avatar.afflic])
   if avatar.hp <= 0 then
@@ -906,7 +988,7 @@ function _draw()
  -- draw walls
  for _y=0,#walls do
   for _x=0,#walls[_y] do
-   local spr1=(theme-1)*4
+   local spr1=(world-1)*4
    if walls[_y][_x] != 0 then
     _x8=_x*8
     _y8=_y*8
@@ -959,6 +1041,16 @@ function _draw()
  --  rect(_dw.x-_dw.hw,_dw.y-_dw.hh,_dw.x+_dw.hw,_dw.y+_dw.hh,4)
  --  pset(_dw.x,_dw.y,4)
  -- end
+
+ if avatar.iswarping then
+  pal(split'7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,',1)
+  pal(0,1,1)
+ end
+
+ -- draw warpstone gui
+ if warpstone.istouching then
+  print('\fc\#0🅾️ travel',mid(0,warpstone.x-18,110),warpstone.y+6)
+ end
 
  -- custom pause screen
  if btn(6) then
