@@ -435,7 +435,7 @@ function mapinit()
 
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,enemies,steps,angles=
-  avatarx,avatary,0,level*6,{},split'440,600,420,600,450'[world],
+  avatarx,avatary,0,level*1,{},split'440,600,420,600,450'[world],
    ({split'0,0.25,-0.25',split'0,0,0,0.25,-0.25',split'0,0,0,0,0,0,0,0.5,0.5,0.25,-0.25',
     split'0,0,0,0,0,0,0,0,0,0.25',split'0,0,0.25'})[world]
  local step_c=steps
@@ -590,11 +590,16 @@ function _update60()
 
  if warpstone.iswarping then
   local _dowarp
-  if btnp(3) then
-   world+=1
-   _dowarp=true
+  if world == 5 and level == 3 then
+   if btnp(2) then
+    world,level=1,1
+    _dowarp=true
+   end
   elseif level < 3 and btnp(1) then
    level+=1
+   _dowarp=true
+  elseif world != 5 and btnp(3) then
+   world+=1
    _dowarp=true
   end
   if _dowarp then
@@ -961,8 +966,13 @@ function _draw()
  if warpstone.iswarping then
   rectfill(warpstone.x-3,0,warpstone.x+3,warpstone.y+4,7)
   local _str='\f1  ➡️\n\f2⬇️'
-  if level >= 3 then
-   _str='\f1\n\f2⬇️'
+  if world == 5 then
+   _str='\f1  ➡️'
+  elseif level >= 3 then
+   _str='\n\f2⬇️'
+  end
+  if level == 3 and world == 5 then
+   _str='\n\fd⬆️'
   end
   ?_str,warpstone.x-3,warpstone.y
   warpstone.draw()
@@ -1019,6 +1029,10 @@ function _draw()
     spr(spr1,_x8,_y8)
    end
   end
+ end
+
+ if world == 5 and level == 3 and walls[warpstone.wy][warpstone.wx] == 225 then
+  ?'\fdyou truly are a\n  \f6vanquisher\n    \fdof \f8evil',18,32
  end
 
  -- draw things in scene
