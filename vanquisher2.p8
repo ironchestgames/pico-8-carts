@@ -600,6 +600,7 @@ function _update60()
    _dowarp=true
   elseif world != 5 and btnp(3) then
    world+=1
+   level=1
    _dowarp=true
   end
   if _dowarp then
