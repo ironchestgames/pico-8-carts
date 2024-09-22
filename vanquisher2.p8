@@ -181,7 +181,7 @@ function getfx(_s,_x,_y,_dur,_colors,_vx,_vy,_ax,_ay)
  }
 end
 
-getfirefx_colors=split'15,14,14,8'
+getfirefx_colors=split'14,14,8'
 function getfirefx(_x,_y)
  if rnd() > .25 then
   return getfx(
@@ -196,15 +196,14 @@ end
 
 ----
 
--- ice,fyre,stun,venom,fear,confusion
-affliccolors=split'12,8,10,11,13,14'
+-- ice,fyre,stun,venom,fear
+affliccolors=split'12,14,10,11,13'
 
 swordfxcolors={
- split'7,12,12,13,3', -- ice
- -- split'3,13,12,12,12,7', -- ice
+ split'7,7,7,12,13', -- ice
  split'7,14,15,15,14,14', -- fyre
- split'4,4,10,10,10,7', -- stun
  split'3,3,3,11,11,10', -- venom
+ split'4,4,10,10,10,7', -- stun
 
 -- colors=split'12,11,7,11,12,7', -- teleport
 -- colors=split'1,5,5,6,6,7', -- steel
@@ -214,36 +213,64 @@ swordfxcolors={
 
 icecolor=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12'
 
-sword_iceattack=function(_a)
+function bow_update(_attack)
+ _attack.x+=cos(_attack.a)*2
+ _attack.y+=sin(_attack.a)*2
+end
+
+create_icewall_colors=split'6,6,6,6,6,6,13'
+function create_icewall(_a,_x,_y)
+ local _dw={
+  x=_x+cos(_a.a)*6,y=_y+sin(_a.a)*6,
+  hw=4,hh=4,
+  }
+ add(dynwalls,_dw)
+ add(attacks,{
+  x=999,y=999,
+  durc=120,
+  hw=0,hh=0,
+  onmiss=function()
+   del(dynwalls,_dw)
+  end
+  })
+ add(fxs,getfx(226,_dw.x,_dw.y,120,create_icewall_colors))
+end
+
+function sword_iceattack(_a)
  local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
  add(attacks,{
+  isenemy=_a.isenemy,
   x=_x,y=_y,
   a=_a.a,
   afflic=1,
   hw=4,hh=4,
   durc=2,
   onmiss=function(_attack)
-   local _dw={
-    x=_x+cos(_attack.a)*6,y=_y+sin(_attack.a)*6,
-    hw=4,hh=4,
-    }
-   add(dynwalls,_dw)
-   add(attacks,{
-    x=999,y=999,
-    durc=120,
-    hw=0,hh=0,
-    onmiss=function()
-     del(dynwalls,_dw)
-    end
-    })
-   add(fxs,getfx(226,_dw.x,_dw.y,120,split'6,6,6,6,6,6,13'))
+   create_icewall(_attack,_x,_y)
   end,
   })
 
  add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[1]))
 end
 
-sword_fireattack=function(_a)
+function addfissure(_x,_y,_dur)
+ add(attacks,{
+  x=_x,y=_y,
+  afflic=2,
+  hw=8,hh=8,
+  durc=_dur,
+  draw=function()
+   if rnd() < .5 then
+    circfill(_x,_y,5,2)
+   end
+  end,
+  update=function()
+   add(fxs,getfirefx(_x-4+rnd(8),_y-4+rnd(8)))
+  end,
+  })
+end
+
+function sword_fireattack(_a)
  local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
  add(attacks,{
   x=_x,y=_y,
@@ -252,24 +279,43 @@ sword_fireattack=function(_a)
   hw=4,hh=4,
   durc=2,
   onmiss=function(_attack)
-   add(attacks,{
-    x=_x,y=_y,
-    afflic=2,
-    hw=8,hh=8,
-    durc=80,
-    draw=function()
-     if rnd() < .5 then
-      circfill(_x,_y,5,2)
-     end
-    end,
-    update=function()
-     add(fxs,getfirefx(_x-4+rnd(8),_y-4+rnd(8)))
-    end,
-    })
+   addfissure(_x,_y,80)
   end,
   })
 
  add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[2]))
+end
+
+function bow_fireattack(_a)
+ local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
+ add(attacks,{
+  x=_x,y=_y,
+  a=_a.a,
+  afflic=2,
+  hw=3,hh=3,
+  durc=_a.bow_c,
+  missonwall=true,
+  update=bow_update,
+  draw=function(_attack)
+   pal(1,4)
+   spr(248+atodirections(_attack.a)*8,_attack.x-4,_attack.y-4)
+   pal()
+  end,
+  onmiss=function(_attack)
+   addfissure(_attack.x,_attack.y,80)
+  end,
+  })
+end
+
+function staff_fireattack(_a)
+ _a.staffattack_c+=1
+ if _a.staffattack_c >= 16 then
+  add(fxs,getfirefx(_a.x-2,_a.y))
+  add(fxs,getfirefx(_a.x-1,_a.y))
+  add(fxs,getfirefx(_a.x,_a.y))
+  _a.staffattack_c=0
+  addfissure(_a.x+rnd(32)-16,_a.y+rnd(32)-16,80)
+ end
 end
 
 avatar={
@@ -291,73 +337,16 @@ avatar={
  maxhp=5,
  state_c=0,
  draw=drawactor,
- swordattack=sword_fireattack,
+
+ swordattack=sword_iceattack,
+
  bow_c=0,
- bowattack=function(_a)
-  local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
-  add(attacks,{
-   x=_x,y=_y,
-   a=_a.a,
-   afflic=2,
-   hw=3,hh=3,
-   durc=_a.bow_c,
-   missonwall=true,
-   update=function(_attack)
-    _attack.x+=cos(_attack.a)*2
-    _attack.y+=sin(_attack.a)*2
-   end,
-   draw=function(_attack)
-    pal(1,4)
-    spr(248+atodirections(_attack.a)*8,_attack.x-4,_attack.y-4)
-    pal()
-   end,
-   onmiss=function(_attack)
-    add(attacks,{
-     x=_attack.x,y=_attack.y,
-     afflic=2,
-     hw=8,hh=8,
-     durc=80,
-     draw=function()
-      if rnd() < .5 then
-       circfill(_attack.x,_attack.y,5,2)
-      end
-     end,
-     update=function()
-      add(fxs,getfirefx(_attack.x-4+rnd(8),_attack.y-4+rnd(8)))
-     end,
-     })
-   end,
-   })
- end,
+ bowattack=bow_fireattack,
 
  staffattack_c=0,
  staffdx=0,
  staffdy=0,
- staffattack=function(_a)
-  _a.staffattack_c+=1
-  if _a.staffattack_c >= 16 then
-   add(fxs,getfirefx(_a.x-2,_a.y))
-   add(fxs,getfirefx(_a.x-1,_a.y))
-   add(fxs,getfirefx(_a.x,_a.y))
-   add(fxs,getfirefx(_a.x+1,_a.y))
-   _a.staffattack_c=0
-   local _x,_y=rnd(128),rnd(128)
-   add(attacks,{
-    x=_x,y=_y,
-    afflic=2,
-    hw=8,hh=8,
-    durc=80,
-    draw=function()
-     if rnd() < .5 then
-      circfill(_x,_y,5,2)
-     end
-    end,
-    update=function()
-     add(fxs,getfirefx(_x-4+rnd(8),_y-4+rnd(8)))
-    end,
-    })
-  end
- end,
+ staffattack=staff_fireattack,
 }
 avatar.s=avatar.ss[1]
 
@@ -435,7 +424,7 @@ function mapinit()
  -- remove walls around actors
  local _clearingarr=split'-1,-1, 0,-1, 1,-1, -1,0, 0,0, 1,0, -1,1, 0,1, 1,1'
  for _a in all(actors) do
-  for _i=1,16,2 do
+  for _i=1,18,2 do
    local _myx,_myy=flr(_a.x/8)+_clearingarr[_i],flr(_a.y/8)+_clearingarr[_i+1]
    if _myx > 0 and _myx < 15 and
       _myy > 0 and _myy < 15 and walls[_myy][_myx] != 0 then
@@ -575,8 +564,7 @@ function _update60()
   if _enemy.afflic == 1 then
    _enemy.hp+=.025
 
-  elseif _enemy.afflic == 2 then
-   _enemy.state=nil
+  elseif _enemy.afflic == 2 and _enemy.state == nil then
    _enemy.a+=rnd(.01)-.005
    if rnd() < .05 then
     _enemy.a+=.5
@@ -588,18 +576,8 @@ function _update60()
    if _enemy.state == 'readying' and _enemy.state_c <= 0 then
     _enemy.state='striking'
     _enemy.state_c=40
-    local _dir=atodirections(_enemy.a)
-    local _x,_y=_enemy.x+cos(_dir)*6,_enemy.y-1+sin(_dir)*6
-    add(attacks,{
-     x=_x,y=_y,
-     a=_dir,
-     hw=2.5,hh=2.5,
-     durc=2,
-     -- afflic=_enemy.attackafflic,
-     afflic=2,
-     isenemy=true,
-     })
-    add(fxs,getfx(240+_dir*8,_x,_y,12,swordfxcolors[1]))
+
+    sword_iceattack(_enemy)
    else
     if _enemy.state_c <= 0 then
      _enemy.state=nil
@@ -685,6 +663,7 @@ function _update60()
   if _a.afflic and _enemy.hp >= _enemy.maxhp then
    _enemy.afflic=nil
   end
+  _a.colors=_a.basecolors
   if _a.afflic == 1 then
    _a.colors=icecolor
    _dx,_dy=0,0
