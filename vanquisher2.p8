@@ -213,9 +213,27 @@ swordfxcolors={
 
 icecolor=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12'
 
-function bow_update(_attack)
+function missile_update(_attack)
  _attack.x+=cos(_attack.a)*2
  _attack.y+=sin(_attack.a)*2
+end
+
+function stonethrow(_a)
+ local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
+ add(attacks,{
+  isenemy=_a.isenemy,
+  x=_x,y=_y,
+  a=_a.a,
+  hw=3,hh=3,
+  durc=999,
+  wallaware=true,
+  update=missile_update,
+  draw=function(_attack)
+   pal(1,13)
+   spr(226,_attack.x-4,_attack.y-4)
+   pal()
+  end,
+  })
 end
 
 create_icewall_colors=split'6,6,6,6,6,6,13'
@@ -294,8 +312,8 @@ function bow_fireattack(_a)
   afflic=2,
   hw=3,hh=3,
   durc=_a.bow_c,
-  missonwall=true,
-  update=bow_update,
+  wallaware=true,
+  update=missile_update,
   draw=function(_attack)
    pal(1,4)
    spr(248+atodirections(_attack.a)*8,_attack.x-4,_attack.y-4)
@@ -369,7 +387,7 @@ function mapinit()
 
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,enemies,steps,angles=
-  avatarx,avatary,0,10,{},split'440,600,420,600,450'[theme],
+  avatarx,avatary,0,1,{},split'440,600,420,600,450'[theme],
    ({split'0,0.25,-0.25',split'0,0,0,0.25,-0.25',split'0,0,0,0,0,0,0,0.5,0.5,0.25,-0.25',
     split'0,0,0,0,0,0,0,0,0,0.25',split'0,0,0.25'})[theme]
  local step_c=steps
@@ -394,16 +412,16 @@ function mapinit()
  -- setup enemies
  for _i=1,#enemies do
   local _e=enemies[_i]
-  if _i % 3 == 0 then
+  if true or _i % 3 == 0 then
    add(actors,{
     x=_e.x,y=_e.y,
     a=0,
     hw=1,hh=1,
     dx=0,dy=0,
-    spd=.5,spdfactor=1,
-    s=split'56,57,58,59',
+    spd=.375,spdfactor=1,
+    s=split'60,61,62,63',
     f=1,
-    attack=sword_iceattack,
+    attack=stonethrow,
     basecolors=split'12,5,13',
     bloodcolors=enemybloodcolor,
     isenemy=true,
@@ -714,7 +732,7 @@ function _update60()
   --  _a.durc=0
   -- end
 
-  if _a.missonwall then
+  if _a.wallaware then
    local _postcolldx,_postcolldy=collideaabbs(isinsidewall,_a,nil,0,0)
    if _postcolldx != 0 or _postcolldy != 0 then
     _a.durc=0
