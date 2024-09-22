@@ -196,8 +196,8 @@ end
 
 ----
 
--- ice,fyre,stun,venom,fear
-affliccolors=split'12,14,10,11,13'
+-- damage,ice,fyre,stun,venom,fear
+affliccolors=split'2,12,14,10,11,13'
 
 swordfxcolors={
  split'7,7,7,12,13', -- ice
@@ -214,8 +214,8 @@ swordfxcolors={
 icecolor=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12'
 
 function missile_update(_attack)
- _attack.x+=cos(_attack.a)*2
- _attack.y+=sin(_attack.a)*2
+ _attack.x+=cos(_attack.a)*_attack.missile_spd
+ _attack.y+=sin(_attack.a)*_attack.missile_spd
 end
 
 function stonethrow(_a)
@@ -224,10 +224,15 @@ function stonethrow(_a)
   isenemy=_a.isenemy,
   x=_x,y=_y,
   a=_a.a,
+  afflic=1,
   hw=3,hh=3,
   durc=999,
   wallaware=true,
+  missile_spd=1.5,
   update=missile_update,
+  onmiss=function(_attack)
+   add(fxs,getfx(225,_attack.x,_attack.y,3,split'6,5'))
+  end,
   draw=function(_attack)
    pal(1,13)
    spr(226,_attack.x-4,_attack.y-4)
@@ -260,7 +265,7 @@ function sword_iceattack(_a)
   isenemy=_a.isenemy,
   x=_x,y=_y,
   a=_a.a,
-  afflic=1,
+  afflic=2,
   hw=4,hh=4,
   durc=2,
   onmiss=function(_attack)
@@ -274,7 +279,7 @@ end
 function addfissure(_x,_y,_dur)
  add(attacks,{
   x=_x,y=_y,
-  afflic=2,
+  afflic=3,
   hw=8,hh=8,
   durc=_dur,
   draw=function()
@@ -293,7 +298,7 @@ function sword_fireattack(_a)
  add(attacks,{
   x=_x,y=_y,
   a=_a.a,
-  afflic=2,
+  afflic=3,
   hw=4,hh=4,
   durc=2,
   onmiss=function(_attack)
@@ -309,10 +314,11 @@ function bow_fireattack(_a)
  add(attacks,{
   x=_x,y=_y,
   a=_a.a,
-  afflic=2,
+  afflic=3,
   hw=3,hh=3,
   durc=_a.bow_c,
   wallaware=true,
+  missile_spd=2,
   update=missile_update,
   draw=function(_attack)
    pal(1,4)
@@ -370,7 +376,7 @@ avatar.s=avatar.ss[1]
 attacks={}
 fxs={}
 
-theme=3
+theme=1
 
 enemybloodcolor=split'8,8,2' -- note: need to be 3
 
@@ -387,7 +393,7 @@ function mapinit()
 
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,enemies,steps,angles=
-  avatarx,avatary,0,1,{},split'440,600,420,600,450'[theme],
+  avatarx,avatary,0,10,{},split'440,600,420,600,450'[theme],
    ({split'0,0.25,-0.25',split'0,0,0,0.25,-0.25',split'0,0,0,0,0,0,0,0.5,0.5,0.25,-0.25',
     split'0,0,0,0,0,0,0,0,0,0.25',split'0,0,0.25'})[theme]
  local step_c=steps
@@ -412,16 +418,18 @@ function mapinit()
  -- setup enemies
  for _i=1,#enemies do
   local _e=enemies[_i]
-  if true or _i % 3 == 0 then
+  if _i % 3 == 0 then
    add(actors,{
     x=_e.x,y=_e.y,
     a=0,
     hw=1,hh=1,
     dx=0,dy=0,
-    spd=.375,spdfactor=1,
-    s=split'60,61,62,63',
+    spd=.25,spdfactor=1,
+    s=split'56,57,58,59',
     f=1,
-    attack=stonethrow,
+    attack=sword_iceattack,
+    sight=80,
+    range=8,
     basecolors=split'12,5,13',
     bloodcolors=enemybloodcolor,
     isenemy=true,
@@ -437,10 +445,12 @@ function mapinit()
     a=0,
     hw=1,hh=1,
     dx=0,dy=0,
-    spd=.25,spdfactor=1,
+    spd=.375,spdfactor=1,
     s=split'52,53,54,55',
     f=1,
-    attack=sword_iceattack,
+    attack=stonethrow,
+    sight=80,
+    range=58,
     basecolors=split'12,5,13',
     bloodcolors=enemybloodcolor,
     isenemy=true,
@@ -500,7 +510,7 @@ function _update60()
  local _btnmask=band(btn(),0b1111) -- note: filter out o/x buttons from dpad input
  local _angle=btnmasktoa[_btnmask]
  
- if avatar.afflic != 1 and _angle and type(_angle) == 'number' then
+ if avatar.afflic != 2 and _angle and type(_angle) == 'number' then
   avatar.a=_angle
   avatar.walking=avatar.state != 'readying' and avatar.state != 'striking'
 
@@ -515,7 +525,7 @@ function _update60()
   avatar.f,avatar.walking=1
  end
 
- if avatar.afflic == 1 then
+ if avatar.afflic == 2 then
   if btnp(4) or btnp(5) then
    avatar.hp+=0.25
   end
@@ -568,15 +578,17 @@ function _update60()
  end
  local _enemy=actors[update60_curenemyi]
  if _enemy and _enemy.isenemy then
-  local _disttoavatar,_haslostoavatar,_enemysight,_enemyrange=
+  local _disttoavatar,_haslostoavatar=
    dist(_enemy.x,_enemy.y,avatar.x,avatar.y),
-   haslos(_enemy.x,_enemy.y,avatar.x,avatar.y),
-   80,8
+   haslos(_enemy.x,_enemy.y,avatar.x,avatar.y)
 
   if _enemy.afflic == 1 then
+   _enemy.hp+=.0075
+
+  elseif _enemy.afflic == 2 then
    _enemy.hp+=.025
 
-  elseif _enemy.afflic == 2 and _enemy.state == nil then
+  elseif _enemy.afflic == 3 and _enemy.state == nil then
    _enemy.a+=rnd(.01)-.005
    if rnd() < .05 then
     _enemy.a+=.5
@@ -596,7 +608,7 @@ function _update60()
     end
    end
 
-  elseif _haslostoavatar and _disttoavatar < _enemyrange then
+  elseif _haslostoavatar and _disttoavatar < _enemy.range then
    -- debug('attaack avatar')
    _enemy.targetx,_enemy.targety=avatar.x,avatar.y
    _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
@@ -607,8 +619,8 @@ function _update60()
    end
    
   elseif _haslostoavatar and
-    _disttoavatar < _enemysight and
-    _disttoavatar > _enemyrange then
+    _disttoavatar < _enemy.sight and
+    _disttoavatar > _enemy.range then
    -- debug('move towards avatar')
    _enemy.targetx,_enemy.targety=avatar.x,avatar.y
    _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
@@ -643,7 +655,7 @@ function _update60()
   local _spdfactor=_a.spd*(_a.spdfactor or 1)
   local _dx,_dy=0,0
 
-  if _a.walking and _a.afflic != 1 then
+  if _a.walking and _a.afflic != 2 then
    -- set sflip
    _a.sflip=getsflip(_a.a)
 
@@ -677,9 +689,11 @@ function _update60()
   end
   _a.colors=_a.basecolors
   if _a.afflic == 1 then
+   _a.hp+=0.0075
+  elseif _a.afflic == 2 then
    _a.colors=icecolor
    _dx,_dy=0,0
-  elseif _a.afflic == 2 then
+  elseif _a.afflic == 3 then
    if _dx == 0 and _dy == 0 then
     _a.hp-=.0125
    else
@@ -937,12 +951,12 @@ ddd5d5d0ddd5d5d00d5d5d0000d666d00055511000555110000551005515551511111111dd1ddd1d
 00222000010200000333000002000000040310000220110000321000002201000002620000062600006262006662020000026200000620000002620000026200
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000500000000000000000000000000000000000000000000030000000300000331100000000000000000000000000000000000000000000
-00005000000050000066650000000050000000000000000000003300000000000031100000311000002110000001100000011000000110000011000000001100
-00001500000015000067165000001050000010300000103000001100000010000031100000311000002110000001100000311000003110000311000000001100
-00077750000777500006770500077750000121300001213000012000000121330012210000122100002220000022200000122100001221000122100000022210
-00067605000676050000700000067650000020000000200000002000000020000022200000222000002220000021133000222000002220000022200000222000
-00026200000626000002020000626250000101000000100000010100000101000020200000020000002020000220200000202000000200000020000000002000
+00000000000000000000500000000000000000000000000000000000000000000003000000030000000000000000000000000000000000000000000000000000
+00005000000050000066650000000050000000000000000000000000000000000003110000031100033111000000000000000000000000000000000000000000
+00001500000015000067165000001050000310000003100000301000000001000003110000031100000211000000110000000000000000000000000000000000
+00077750000777500006770500077750000121000001210000112000000022100001221000012210000222000000110000000000000000000000000000000000
+00067605000676050000700000067650000020000000200000002100000120000002220000022200000222000002220000000000000000000000000000000000
+00026200000626000002020000626250000101000000100000010000000001000002020000002000000202000022213300000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
