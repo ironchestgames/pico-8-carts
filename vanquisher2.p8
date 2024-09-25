@@ -459,7 +459,11 @@ function setupavatar()
 end
 setupavatar()
 
-world,level=1,0
+function getworld()
+ return level == 0 and 1 or flr(level/3.0005)+1
+end
+
+level=0
 
 enemybloodcolor=split'8,8,2' -- note: need to be 3
 
@@ -475,9 +479,10 @@ function mapinit()
 
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,enemies,steps,angles=
-  avatarx,avatary,0,level*5,{},split'440,600,420,600,450'[world],
-   ({split'0,0.25,-0.25',split'0,0,0,0.25,-0.25',split'0,0,0,0,0,0,0,0.5,0.5,0.25,-0.25',
-    split'0,0,0,0,0,0,0,0,0,0.25',split'0,0,0.25'})[world]
+  avatarx,avatary,0,split'5,9,13,5,9,13,5,9,13,5,9,13,5,9,13'[level] or 0,{},
+  split'440,600,420,600,450'[getworld()],
+  ({split'0,0.25,-0.25',split'0,0,0,0.25,-0.25',split'0,0,0,0,0,0,0,0.5,0.5,0.25,-0.25',
+  split'0,0,0,0,0,0,0,0,0,0.25',split'0,0,0.25'})[getworld()]
  local step_c=steps
 
  while step_c > 0 do
@@ -501,7 +506,7 @@ function mapinit()
    _x,_y=flrrnd(15),flrrnd(15)
   end
   _x,_y=_x*8+4,_y*8+4
-  if level == 3 and _i == 1 then
+  if level%3 == 0 and _i == 1 then
     add(actors,{
      x=_x,y=_y,
      a=0,
@@ -612,7 +617,7 @@ update60_curenemyi=1
 function _update60()
 
  if deathts and t() > deathts and btnp(4) then
-  world,level=1,0
+  level=0
   setupavatar()
   mapinit()
  end
@@ -635,17 +640,23 @@ function _update60()
 
  if warpstone.iswarping then
   local _dowarp
-  if world == 5 and level == 3 then
+  if level == 15 then
    if btnp(2) then
-    world,level=1,0
+    level=0
     _dowarp=true
    end
-  elseif level < 3 and btnp(1) then
+  elseif level == 0 then
+   if btnp(1) then
+    level+=1
+    _dowarp=true
+   end
+  elseif level%3 == 0 then 
+   if btnp(3) then
+    level+=1
+    _dowarp=true
+   end
+  elseif btnp(1) then
    level+=1
-   _dowarp=true
-  elseif world != 5 and btnp(3) then
-   world+=1
-   level=1
    _dowarp=true
   end
   if _dowarp then
@@ -1012,13 +1023,12 @@ function _draw()
  if warpstone.iswarping then
   rectfill(warpstone.x-3,0,warpstone.x+3,warpstone.y+4,7)
   local _str='\f6  ➡️\n⬇️'
-  if world == 5 then
-   _str='\f1  ➡️'
-  elseif level >= 3 then
-   _str='\n\f6⬇️'
-  end
-  if level == 3 and world == 5 then
+  if level == 15 then
    _str='\n\f3⬆️'
+  elseif level >= 13 or level == 0 then
+   _str='\f6  ➡️'
+  elseif level%3 == 0 then
+   _str='\n\f6⬇️'
   end
   ?_str,warpstone.x-3,warpstone.y
   warpstone.draw()
@@ -1058,7 +1068,7 @@ function _draw()
  end
  for _y=0,#walls do
   for _x=0,#walls[_y] do
-   local spr1=(world-1)*4
+   local spr1=(getworld()-1)*4
    if walls[_y][_x] != 0 then
     _x8=_x*8
     _y8=_y*8
@@ -1080,10 +1090,6 @@ function _draw()
   end
  end
  pal()
-
- if world == 5 and level == 3 and walls[warpstone.wy][warpstone.wx] == 225 then
-  ?'\fdyou truly are a\n  \f6vanquisher\n    \fdof \f8evil',18,32
- end
 
  -- draw things in scene
  local _things=tconcat(actors,fxs)
