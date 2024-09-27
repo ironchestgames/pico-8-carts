@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
--- virtuous vanquisher of evil 2.0-alpha
+-- vanquisher of evil 2 1.0-alpha
 -- by ironchest games
 
 printh('debug started','debug',true)
@@ -243,6 +243,30 @@ function stonethrow(_a)
   })
 end
 
+function fireballthrow(_a)
+ local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
+ add(attacks,{
+  isenemy=_a.isenemy,
+  x=_x,y=_y,
+  a=_a.a,
+  afflic=3,
+  hw=1.5,hh=1.5,
+  durc=999,
+  wallaware=true,
+  missile_spd=1.25,
+  update=function(_attack)
+   missile_update(_attack)
+   add(fxs,getfx(228,_attack.x,_attack.y,6,split'15,14,14,8,2'))
+  end,
+  onmiss=function(_attack)
+   add(fxs,getfx(227,_attack.x,_attack.y,4,split'14,14,8'))
+  end,
+  draw=function(_attack)
+   pset(_attack.x,_attack.y,15)
+  end,
+  })
+end
+
 function sword_mundaneattack(_a)
  local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
  add(attacks,{
@@ -363,8 +387,9 @@ function staff_iceboltattack(_a)
   })
 end
 
-function addfissure(_x,_y,_dur)
+function addfissure(_a,_x,_y,_dur)
  add(attacks,{
+  isenemy=_a.isenemy,
   x=_x,y=_y,
   afflic=3,
   hw=8,hh=8,
@@ -383,13 +408,14 @@ end
 function sword_fireattack(_a)
  local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
  add(attacks,{
+  isenemy=_a.isenemy,
   x=_x,y=_y,
   a=_a.a,
   afflic=3,
   hw=4,hh=4,
   durc=2,
   onmiss=function(_attack)
-   addfissure(_x,_y,80)
+   addfissure(_attack,_x,_y,80)
   end,
   })
 
@@ -413,7 +439,7 @@ function bow_fireattack(_a)
    pal()
   end,
   onmiss=function(_attack)
-   addfissure(_attack.x,_attack.y,80)
+   addfissure(_attack,_attack.x,_attack.y,80)
   end,
   })
 end
@@ -425,7 +451,7 @@ function staff_fireattack(_a)
   add(fxs,getfirefx(_a.x-1,_a.y))
   add(fxs,getfirefx(_a.x,_a.y))
   _a.staffattack_c=0
-  addfissure(_a.x+_a.staffdx-16+rnd(32),_a.y+_a.staffdy-16+rnd(32),80)
+  addfissure(_a,_a.x+_a.staffdx-16+rnd(32),_a.y+_a.staffdy-16+rnd(32),80)
  end
 end
 
@@ -474,6 +500,145 @@ level=0
 
 enemybloodcolor=split'8,8,2' -- note: need to be 3
 
+
+
+enemytypes={
+ { -- ice orcs
+  function (_x,_y) -- stonethrower
+   return {
+    x=_x,y=_y,
+    a=0,
+    hw=2,hh=2,
+    dx=0,dy=0,
+    spd=.375,spdfactor=1,
+    s=split'48,49,50,51',
+    f=1,
+    attack=stonethrow,
+    sight=80,
+    range=58,
+    basecolors=split'12,5,13,2,7',
+    bloodcolors=enemybloodcolor,
+    isenemy=true,
+    walking=true,
+    hp=6,
+    maxhp=6,
+    draw=drawactor,
+   }
+  end,
+
+  function (_x,_y) -- big guy
+   return {
+    x=_x,y=_y,
+    a=0,
+    hw=3,hh=3,
+    dx=0,dy=0,
+    spd=.25,spdfactor=1,
+    s=split'52,53,54,55',
+    f=1,
+    attack=sword_iceattack,
+    sight=64,
+    range=8,
+    basecolors=split'12,5,13,2,7',
+    bloodcolors=enemybloodcolor,
+    isenemy=true,
+    walking=true,
+    hp=12,
+    maxhp=12,
+    draw=drawactor,
+   }
+  end,
+
+  function (_x,_y) -- ice orc caster
+   return {
+    x=_x,y=_y,
+    a=0,
+    hw=3,hh=3,
+    dx=0,dy=0,
+    spd=.25,spdfactor=1,
+    s=split'56,57,58,59',
+    f=1,
+    attack=staff_iceboltattack,
+    sight=90,
+    range=64,
+    basecolors=split'12,5,13,2,7',
+    bloodcolors=enemybloodcolor,
+    isenemy=true,
+    walking=true,
+    hp=20,
+    maxhp=20,
+    draw=drawactor,
+   }
+  end,
+ },
+ { -- fire trolls
+  function (_x,_y) -- fireball thrower
+   return {
+    x=_x,y=_y,
+    a=0,
+    hw=1.5,hh=1.5,
+    dx=0,dy=0,
+    spd=.5,spdfactor=1,
+    s=split'64,65,66,67',
+    f=1,
+    attack=fireballthrow,
+    sight=96,
+    range=48,
+    basecolors=split'9,2,4,8,13,14',
+    bloodcolors=enemybloodcolor,
+    isenemy=true,
+    walking=true,
+    hp=6,
+    maxhp=6,
+    draw=drawactor,
+   }
+  end,
+
+  function (_x,_y) -- stun troll
+   return {
+    x=_x,y=_y,
+    a=0,
+    hw=3,hh=3,
+    dx=0,dy=0,
+    spd=.25,spdfactor=1,
+    s=split'68,69,70,71',
+    f=1,
+    attack=sword_mundaneattack, -- todo: change to stun
+    sight=64,
+    range=8,
+    basecolors=split'9,2,4,8,13,14',
+    bloodcolors=enemybloodcolor,
+    isenemy=true,
+    walking=true,
+    hp=10,
+    maxhp=10,
+    draw=drawactor,
+   }
+  end,
+
+  function (_x,_y) -- fire troll champion
+   return {
+    x=_x,y=_y,
+    a=0,
+    hw=3,hh=3,
+    dx=0,dy=0,
+    spd=.5,spdfactor=1,
+    s=split'72,73,74,75',
+    f=1,
+    attack=sword_fireattack,
+    sight=56,
+    range=10,
+    basecolors=split'9,2,4,8,13,14',
+    bloodcolors=enemybloodcolor,
+    isenemy=true,
+    walking=true,
+    hp=24,
+    maxhp=24,
+    draw=drawactor,
+   }
+  end,
+ }
+}
+
 function mapinit()
  deathts=nil
  walls,dynwalls,actors,attacks,fxs={},{},{},{},{}
@@ -515,69 +680,13 @@ function mapinit()
    _x,_y=flrrnd(15),flrrnd(15)
   end
   _x,_y=_x*8+4,_y*8+4
+  local _enemytype=1
   if level%3 == 0 and _i == 1 then
-    add(actors,{
-     x=_x,y=_y,
-     a=0,
-     hw=3,hh=3,
-     dx=0,dy=0,
-     spd=.125,spdfactor=1,
-     s=split'56,57,58,59',
-     f=1,
-     attack=staff_iceboltattack,
-     sight=90,
-     range=64,
-     basecolors=split'12,5,13,2,7',
-     bloodcolors=enemybloodcolor,
-     isenemy=true,
-     walking=true,
-     hp=20,
-     maxhp=20,
-     draw=drawactor,
-     })
-
+   _enemytype=3
   elseif _i % 3 == 0 or rnd() < .1 then
-   add(actors,{
-    x=_x,y=_y,
-    a=0,
-    hw=3,hh=3,
-    dx=0,dy=0,
-    spd=.25,spdfactor=1,
-    s=split'52,53,54,55',
-    f=1,
-    attack=sword_iceattack,
-    sight=64,
-    range=8,
-    basecolors=split'12,5,13',
-    bloodcolors=enemybloodcolor,
-    isenemy=true,
-    walking=true,
-    hp=12,
-    maxhp=12,
-    draw=drawactor,
-    })
-
-  else
-   add(actors,{
-    x=_x,y=_y,
-    a=0,
-    hw=2,hh=2,
-    dx=0,dy=0,
-    spd=.375,spdfactor=1,
-    s=split'48,49,50,51',
-    f=1,
-    attack=stonethrow,
-    sight=80,
-    range=58,
-    basecolors=split'12,5,13',
-    bloodcolors=enemybloodcolor,
-    isenemy=true,
-    walking=true,
-    hp=6,
-    maxhp=6,
-    draw=drawactor,
-    })
+   _enemytype=2
   end
+  add(actors,enemytypes[getworld()][_enemytype](_x,_y))
  end
 
  -- add warpstone
@@ -792,8 +901,16 @@ function _update60()
     end
    end
 
+  elseif _haslostoavatar and
+    _disttoavatar < _enemy.range*.375 and
+    not _enemy.wallcollisiondx then
+   -- debug('run away from avatar')
+   _enemy.spdfactor=1
+   _enemy.targetx,_enemy.targety=avatar.x,avatar.y
+   _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)+.5
+
   elseif _haslostoavatar and _disttoavatar < _enemy.range then
-   -- debug('attaack avatar')
+   -- debug('attack avatar')
    _enemy.targetx,_enemy.targety=avatar.x,avatar.y
    _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
 
@@ -1221,14 +1338,14 @@ ddd5d5d0ddd5d5d00d5d5d0000d666d00055511000555110000551005515551511111111dd1ddd1d
 01222100012221001122100000022210112221101122211011333300221133330042210000422100044224300002210000000000000000000000000000000000
 00222000002220000022200000222000222220002222200022222000222220000041230000412300044224000001230000000000000000000000000000000000
 00202000000200000020000000002000200020000220000020002000200020000442230044422300044224000002230000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000002220000022200060222000002220600000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000602120006021200060212000002120600000000000000000000000000000000
+00000000000000000000000000000000000300000003000000000000000000000652110006521100065211000002110600000000000000000000000000000000
+00000000000000000000000000000000000311000003110003311100000000000655550006555500115555000055551100000000000000000000000000000000
+00041000000410000040100000000100000311000003110000021100000011001152521111525211115252110555551100000000000000000000000000000000
+00012100000121000011200000002210000122100001221000022200000011001125251111252511022525110225250000000000000000000000000000000000
+00002000000020000000210000012000000222000002220000022200000222000222220002222200022222002222220000000000000000000000000000000000
+00010100000010000001000000000100000202000000200000020200002221330200020000220000020002000000020000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
