@@ -113,6 +113,44 @@ function collideaabbs(_func,_aabb,_other,_dx,_dy)
  return _dx,_dy
 end
 
+function detectandresolvehit(_attack,_actor)
+ -- detect
+ local _dx,_dy=collideaabbs(isaabbscolliding,_attack,_actor,0,0)
+ if _dx != 0 or _dy != 0 then
+  del(attacks,_attack)
+  _actor.afflic=_attack.afflic
+  _actor.hp-=1
+  add(fxs,getfx(227,_attack.x,_attack.y,8,split'7'))
+
+  -- resolve
+  if _attack.knockback then
+   _actor.knockbackangle=_attack.a
+  end
+  if _actor.isenemy and _actor.bleeding == nil and _actor.hp/_actor.maxhp < .5 then
+   _actor.maxhp*=.5
+   _actor.bleeding=true
+  end
+
+  if _actor.bleeding then
+   for _i=1,flr((_actor.maxhp/2-_actor.hp)/2) do
+    add(fxs,getfx(
+     228,
+     _attack.x-_attack.hw+flrrnd(4),
+     _attack.y-_attack.hh+flrrnd(4),
+     16+flrrnd(5),
+     _actor.bloodcolors,
+     cos(_attack.a)*.5,
+     -.25,
+     0,
+     .05))
+   end
+  end
+ end
+end
+
+
+-- helpers
+
 function dist(x1,y1,x2,y2)
  local dx,dy=x2-x1,y2-y1
  return sqrt(dx*dx+dy*dy)
@@ -231,6 +269,7 @@ function stonethrow(_a)
   durc=999,
   wallaware=true,
   missile_spd=1.5,
+  knockback=true,
   update=missile_update,
   onmiss=function(_attack)
    add(fxs,getfx(227,_attack.x,_attack.y,3,split'6,5'))
@@ -259,7 +298,7 @@ function fireballthrow(_a)
    add(fxs,getfx(228,_attack.x,_attack.y,6,split'15,14,14,8,2'))
   end,
   onmiss=function(_attack)
-   add(fxs,getfx(227,_attack.x,_attack.y,4,split'14,14,8'))
+   addfissure(_attack,_attack.x,_attack.y,80)
   end,
   draw=function(_attack)
    pset(_attack.x,_attack.y,15)
@@ -276,6 +315,21 @@ function sword_mundaneattack(_a)
   afflic=1,
   hw=4,hh=4,
   durc=2,
+  })
+
+ add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[1]))
+end
+
+function sword_knockbackattack(_a)
+ local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
+ add(attacks,{
+  isenemy=_a.isenemy,
+  x=_x,y=_y,
+  a=_a.a,
+  afflic=1,
+  hw=4,hh=4,
+  durc=2,
+  knockback=true,
   })
 
  add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[1]))
@@ -476,7 +530,7 @@ function setupavatar()
   draw=drawactor,
 
   -- swordattack=sword_icewallattack,
-  swordattack=sword_mundaneattack,
+  swordattack=sword_knockbackattack,
 
   bow_c=0,
   -- bowattack=bow_fireattack,
@@ -485,8 +539,8 @@ function setupavatar()
   staffattack_c=0,
   staffdx=0,
   staffdy=0,
-  -- staffattack=staff_fireattack,
-  staffattack=staff_mundaneattack,
+  staffattack=staff_fireattack,
+  -- staffattack=staff_mundaneattack,
  }
  avatar.s=avatar.ss[1]
 end
@@ -504,7 +558,7 @@ enemybloodcolor=split'8,8,2' -- note: need to be 3
 
 enemytypes={
  { -- ice orcs
-  function (_x,_y) -- stonethrower
+  function (_x,_y) -- ice orc stonethrower
    return {
     x=_x,y=_y,
     a=0,
@@ -526,7 +580,7 @@ enemytypes={
    }
   end,
 
-  function (_x,_y) -- big guy
+  function (_x,_y) -- big ice orc
    return {
     x=_x,y=_y,
     a=0,
@@ -587,13 +641,13 @@ enemytypes={
     bloodcolors=enemybloodcolor,
     isenemy=true,
     walking=true,
-    hp=6,
-    maxhp=6,
+    hp=4,
+    maxhp=4,
     draw=drawactor,
    }
   end,
 
-  function (_x,_y) -- stun troll
+  function (_x,_y) -- fire troll w club
    return {
     x=_x,y=_y,
     a=0,
@@ -602,7 +656,7 @@ enemytypes={
     spd=.25,spdfactor=1,
     s=split'68,69,70,71',
     f=1,
-    attack=sword_mundaneattack, -- todo: change to stun
+    attack=sword_knockbackattack,
     sight=64,
     range=8,
     basecolors=split'9,2,4,8,13,14',
@@ -1005,6 +1059,10 @@ function _update60()
    _a.colors=_a.basecolors
   end
 
+  if _a.knockbackangle then
+   _dx,_dy=_dx+cos(_a.knockbackangle)*6,_dy+sin(_a.knockbackangle)*6
+   _a.knockbackangle=nil
+  end
   -- movement check against walls
   local _postcolldx,_postcolldy=collideaabbs(isinsidewall,_a,nil,_dx,_dy)
   _a.wallcollisiondx,_a.wallcollisiondy=nil
@@ -1014,7 +1072,7 @@ function _update60()
   _dx,_dy=_postcolldx,_postcolldy
 
   -- move
-  -- _a.x=mid(0,_a.x+_dx,128)
+  -- _a.x=mid(0,_a.x+_dx,128) -- todo: add this when adding wallwarping
   -- _a.y=mid(0,_a.y+_dy,128)
   _a.x+=_dx
   _a.y+=_dy
@@ -1043,9 +1101,9 @@ function _update60()
  for _a in all(attacks) do
   _a.durc-=1
 
-  -- if _a.x <= 0 or _a.x >= 128 or _a.y <= 0 or _a.y >= 128 then
-  --  _a.durc=0
-  -- end
+  if _a.x <= 0 or _a.x >= 128 or _a.y <= 0 or _a.y >= 128 then
+   _a.durc=0
+  end
 
   if _a.wallaware then
    local _postcolldx,_postcolldy=collideaabbs(isinsidewall,_a,nil,0,0)
@@ -1059,49 +1117,16 @@ function _update60()
     _a.onmiss(_a)
    end
    del(attacks,_a)
-  elseif _a.isenemy then
-   if _a.update then
-    _a.update(_a)
-   end
-   local _dx,_dy=collideaabbs(isaabbscolliding,_a,avatar,0,0)
-   if _dx != 0 or _dy != 0 then
-    del(attacks,_a)
-    avatar.afflic=_a.afflic
-    avatar.hp-=1
-    add(fxs,getfx(227,_a.x,_a.y,8,split'7'))
-   end
   else
    if _a.update then
     _a.update(_a)
    end
-   for _e in all(actors) do
-    if _e.isenemy then
-     local _dx,_dy=collideaabbs(isaabbscolliding,_a,_e,0,0)
-     if _dx != 0 or _dy != 0 then
-      del(attacks,_a)
-      _e.afflic=_a.afflic
-      _e.hp-=1
-      add(fxs,getfx(227,_a.x,_a.y,8,split'7'))
-
-      if _e.bleeding == nil and _e.hp/_e.maxhp < .5 then
-       _e.maxhp*=.5
-       _e.bleeding=true
-      end
-
-      if _e.bleeding then
-       for _i=1,flr((_e.maxhp/2-_e.hp)/2) do
-        add(fxs,getfx(
-         228,
-         _a.x-_a.hw+flrrnd(4),
-         _a.y-_a.hh+flrrnd(4),
-         16+flrrnd(5),
-         _e.bloodcolors,
-         cos(_a.a)*.5,
-         -.25,
-         0,
-         .05))
-       end
-      end
+   if _a.isenemy then
+    detectandresolvehit(_a,avatar)
+   else
+    for _actor in all(actors) do
+     if _actor.isenemy then
+      detectandresolvehit(_a,_actor)
      end
     end
    end
