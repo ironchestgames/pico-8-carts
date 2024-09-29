@@ -240,131 +240,6 @@ end
 
 ----
 
--- damage,ice,fyre,stun,venom,fear
-affliccolors=split'2,12,14,10,11,13'
-
-swordfxcolors={
- split'6,6,4,2', -- mundane
- split'7,7,7,12,13', -- ice
- split'7,14,15,15,14,14', -- fyre
- split'3,3,3,11,11,10', -- venom
- split'4,4,10,10,10,7', -- stun
-}
-
-frozencolor=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12'
-
-function missile_update(_attack)
- _attack.x+=cos(_attack.a)*_attack.missile_spd
- _attack.y+=sin(_attack.a)*_attack.missile_spd
-end
-
-function stonethrow(_a)
- local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
- add(attacks,{
-  isenemy=_a.isenemy,
-  x=_x,y=_y,
-  a=_a.a,
-  afflic=1,
-  hw=3,hh=3,
-  durc=999,
-  wallaware=true,
-  missile_spd=1.5,
-  knockback=true,
-  update=missile_update,
-  onmiss=function(_attack)
-   add(fxs,getfx(227,_attack.x,_attack.y,3,split'6,5'))
-  end,
-  draw=function(_attack)
-   pal(1,13)
-   spr(232,_attack.x-4,_attack.y-4)
-   pal()
-  end,
-  })
-end
-
-function fireballthrow(_a)
- local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
- add(attacks,{
-  isenemy=_a.isenemy,
-  x=_x,y=_y,
-  a=_a.a,
-  afflic=3,
-  hw=1.5,hh=1.5,
-  durc=999,
-  wallaware=true,
-  missile_spd=1.25,
-  update=function(_attack)
-   missile_update(_attack)
-   add(fxs,getfx(228,_attack.x,_attack.y,6,split'15,14,14,8,2'))
-  end,
-  onmiss=function(_attack)
-   addfissure(_attack,_attack.x,_attack.y,80)
-  end,
-  draw=function(_attack)
-   pset(_attack.x,_attack.y,15)
-  end,
-  })
-end
-
-function sword_mundaneattack(_a)
- local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
- add(attacks,{
-  isenemy=_a.isenemy,
-  x=_x,y=_y,
-  a=_a.a,
-  afflic=1,
-  hw=4,hh=4,
-  durc=2,
-  })
-
- add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[1]))
-end
-
-function sword_knockbackattack(_a)
- local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
- add(attacks,{
-  isenemy=_a.isenemy,
-  x=_x,y=_y,
-  a=_a.a,
-  afflic=1,
-  hw=4,hh=4,
-  durc=2,
-  knockback=true,
-  })
-
- add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[1]))
-end
-
-function bow_mundaneattack(_a)
- local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
- add(attacks,{
-  x=_x,y=_y,
-  a=_a.a,
-  afflic=1,
-  hw=2,hh=2,
-  durc=_a.bow_c,
-  wallaware=true,
-  missile_spd=2,
-  update=missile_update,
-  draw=function(_attack)
-   pal(1,4)
-   spr(248+atodirections(_attack.a)*8,_attack.x-4,_attack.y-4)
-   pal()
-  end,
-  onmiss=function(_attack)
-   add(fxs,getfx(227,_attack.x,_attack.y,3,split'6,5'))
-  end,
-  })
-end
-
-function staff_mundaneattack(_a)
- _a.staffattack_c+=1
- if _a.staffattack_c >= 16 then
-  _a.staffattack_c=0
-  sword_mundaneattack(_a)
- end
-end
-
 create_icewall_colors=split'6,6,6,6,6,6,13'
 function create_icewall(_a,_x,_y)
  local _dw={
@@ -383,6 +258,204 @@ function create_icewall(_a,_x,_y)
  add(fxs,getfx(229,_dw.x,_dw.y,120,create_icewall_colors))
 end
 
+function addfissure(_a,_x,_y,_dur)
+ add(attacks,{
+  isenemy=_a.isenemy,
+  x=_x,y=_y,
+  afflic=3,
+  hw=8,hh=8,
+  durc=_dur,
+  draw=function()
+   if rnd() < .5 then
+    circfill(_x,_y,5,2)
+   end
+  end,
+  update=function()
+   add(fxs,getfirefx(_x-4+rnd(8),_y-4+rnd(8)))
+  end,
+  })
+end
+
+-- damage,ice,fyre,stun,venom,fear
+affliccolors=split'2,12,14,10,11,13'
+
+quickfxcolors={
+ split'6,6,4,1', -- mundane
+ split'7,7,7,12,13', -- ice
+ split'7,14,15,15,14,14', -- fyre
+ split'7,7,13,2', -- knockback
+
+ -- split'3,3,3,11,11,10', -- venom
+ -- split'4,4,10,10,10,7', -- stun
+}
+
+function getswordattack(_actor,_afflic)
+ local _x,_y=_actor.x+cos(_actor.a)*6,_actor.y-1+sin(_actor.a)*6
+ add(fxs,getfx(240+atodirections(_actor.a)*8,_x,_y,12,quickfxcolors[_afflic]))
+ return {
+  isenemy=_actor.isenemy,
+  x=_x,y=_y,
+  a=_actor.a,
+  afflic=_afflic,
+  hw=4,hh=4,
+  durc=2,
+ },_x,_y
+end
+
+swordskills={
+ function (_actor) -- 1 - mundane
+  local _a=getswordattack(_actor,1)
+  add(attacks,_a)
+ end,
+
+ function (_actor) -- 2 - icewall
+  local _a,_x,_y=getswordattack(_actor,2)
+  _a.onmiss=function(_attack)
+   create_icewall(_attack,_x,_y)
+  end
+  add(attacks,_a)
+ end,
+
+ function (_actor) -- 3 - fire fissure
+  local _a,_x,_y=getswordattack(_actor,3)
+  _a.onmiss=function(_attack)
+   addfissure(_attack,_x,_y,80)
+  end
+  add(attacks,_a)
+ end,
+
+ function (_actor) -- 4 - knockback
+  local _a=getswordattack(_actor,4)
+  _a.knockback=true
+  add(attacks,_a)
+ end
+}
+
+function missile_update(_attack)
+ _attack.x+=cos(_attack.a)*_attack.missile_spd
+ _attack.y+=sin(_attack.a)*_attack.missile_spd
+end
+
+function arrow_onmiss_factory(_afflic)
+ return function(_attack)
+  add(fxs,getfx(227,_attack.x,_attack.y,6,quickfxcolors[_afflic]))
+ end
+end
+
+function arrow_draw_factory(_color)
+ return function(_attack)
+  pal(1,_color)
+  spr(248+atodirections(_attack.a)*8,_attack.x-4,_attack.y-4)
+  pal()
+ end
+end
+
+function getbowattack(_actor,_afflic)
+ return {
+  isenemy=_actor.isenemy,
+  x=_actor.x+cos(_actor.a)*6,
+  y=_actor.y-1+sin(_actor.a)*6,
+  a=_actor.a,
+  afflic=_afflic,
+  hw=2,hh=2,
+  durc=_actor.bow_c,
+  wallaware=true,
+  missile_spd=2,
+  update=missile_update,
+ }
+end
+
+bowskills={
+ function (_actor) -- 1 - mundane
+  local _a=getbowattack(_actor,1)
+  _a.draw,_a.onmiss=arrow_draw_factory(4),arrow_onmiss_factory(1)
+  add(attacks,_a)
+ end,
+
+ nil, -- 2 - icewall
+
+ function (_actor) -- 3 - fire fissure
+  local _a=getbowattack(_actor,3)
+  _a.draw=arrow_draw_factory(14)
+  local _onmiss=arrow_onmiss_factory(3)
+  _a.onmiss=function(_attack)
+   _onmiss(_attack)
+   addfissure(_attack,_attack.x,_attack.y,80)
+  end
+  add(attacks,_a)
+ end,
+
+ function (_actor) -- 4 - knockback
+  local _a=getbowattack(_actor,1)
+  _a.draw,_a.onmiss,_a.knockback=arrow_draw_factory(6),arrow_onmiss_factory(4),true
+  add(attacks,_a)
+ end,
+}
+
+
+
+frozencolor=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12'
+
+function stonethrow_draw(_attack)
+ pal(1,13)
+ spr(232,_attack.x-4,_attack.y-4)
+ pal()
+end
+
+function stonethrow(_actor)
+ local _a=getbowattack(_actor,1)
+ _a.draw,
+ _a.onmiss,
+ _a.knockback,
+ _a.missile_spd,
+ _a.hh,_a.hw=
+  stonethrow_draw,
+  arrow_onmiss_factory(1),
+  true,
+  1.5,
+  3,3
+
+ add(attacks,_a)
+end
+
+fireballthrow_update_colors=split'15,14,14,8,2'
+function fireballthrow_update(_attack)
+ missile_update(_attack)
+ add(fxs,getfx(228,_attack.x,_attack.y,6,fireballthrow_update_colors))
+end
+
+function fireballthrow_draw(_attack)
+ pset(_attack.x,_attack.y,15)
+end
+
+function fireballthrow_onmiss(_attack)
+ addfissure(_attack,_attack.x,_attack.y,80)
+end
+
+function fireballthrow(_actor)
+ local _a=getbowattack(_actor,3)
+ _a.update,
+ _a.draw,
+ _a.onmiss,
+ _a.missile_spd,
+ _a.hh,_a.hw=
+  fireballthrow_update,
+  fireballthrow_draw,
+  fireballthrow_onmiss,
+  1.25,
+  1.5,1.5
+
+ add(attacks,_a)
+end
+
+function staff_mundaneattack(_a)
+ _a.staffattack_c+=1
+ if _a.staffattack_c >= 16 then
+  _a.staffattack_c=0
+  swordskills[1](_a)
+ end
+end
+
 function sword_iceattack(_a)
  local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
  add(attacks,{
@@ -394,24 +467,7 @@ function sword_iceattack(_a)
   durc=2,
   })
 
- add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[2]))
-end
-
-function sword_icewallattack(_a)
- local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
- add(attacks,{
-  isenemy=_a.isenemy,
-  x=_x,y=_y,
-  a=_a.a,
-  afflic=2,
-  hw=4,hh=4,
-  durc=2,
-  onmiss=function(_attack)
-   create_icewall(_attack,_x,_y)
-  end,
-  })
-
- add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[2]))
+ add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,quickfxcolors[2]))
 end
 
 function staff_iceboltattack(_a)
@@ -437,63 +493,6 @@ function staff_iceboltattack(_a)
    pal(1,7)
    spr(232,_attack.x-4,_attack.y-4)
    pal()
-  end,
-  })
-end
-
-function addfissure(_a,_x,_y,_dur)
- add(attacks,{
-  isenemy=_a.isenemy,
-  x=_x,y=_y,
-  afflic=3,
-  hw=8,hh=8,
-  durc=_dur,
-  draw=function()
-   if rnd() < .5 then
-    circfill(_x,_y,5,2)
-   end
-  end,
-  update=function()
-   add(fxs,getfirefx(_x-4+rnd(8),_y-4+rnd(8)))
-  end,
-  })
-end
-
-function sword_fireattack(_a)
- local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
- add(attacks,{
-  isenemy=_a.isenemy,
-  x=_x,y=_y,
-  a=_a.a,
-  afflic=3,
-  hw=4,hh=4,
-  durc=2,
-  onmiss=function(_attack)
-   addfissure(_attack,_x,_y,80)
-  end,
-  })
-
- add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,swordfxcolors[3]))
-end
-
-function bow_fireattack(_a)
- local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
- add(attacks,{
-  x=_x,y=_y,
-  a=_a.a,
-  afflic=3,
-  hw=2,hh=2,
-  durc=_a.bow_c,
-  wallaware=true,
-  missile_spd=2,
-  update=missile_update,
-  draw=function(_attack)
-   pal(1,4)
-   spr(248+atodirections(_attack.a)*8,_attack.x-4,_attack.y-4)
-   pal()
-  end,
-  onmiss=function(_attack)
-   addfissure(_attack,_attack.x,_attack.y,80)
   end,
   })
 end
@@ -529,12 +528,10 @@ function setupavatar()
   state_c=0,
   draw=drawactor,
 
-  -- swordattack=sword_icewallattack,
-  swordattack=sword_knockbackattack,
+  swordattack=swordskills[4],
 
   bow_c=0,
-  -- bowattack=bow_fireattack,
-  bowattack=bow_mundaneattack,
+  bowattack=bowskills[4],
 
   staffattack_c=0,
   staffdx=0,
@@ -567,6 +564,7 @@ enemytypes={
     spd=.375,spdfactor=1,
     s=split'48,49,50,51',
     f=1,
+    bow_c=999,
     attack=stonethrow,
     sight=80,
     range=58,
@@ -589,7 +587,7 @@ enemytypes={
     spd=.25,spdfactor=1,
     s=split'52,53,54,55',
     f=1,
-    attack=sword_iceattack,
+    attack=swordskills[2],
     sight=64,
     range=8,
     basecolors=split'12,5,13,2,7',
@@ -634,6 +632,7 @@ enemytypes={
     spd=.5,spdfactor=1,
     s=split'64,65,66,67',
     f=1,
+    bow_c=999,
     attack=fireballthrow,
     sight=96,
     range=48,
@@ -656,7 +655,7 @@ enemytypes={
     spd=.25,spdfactor=1,
     s=split'68,69,70,71',
     f=1,
-    attack=sword_knockbackattack,
+    attack=swordskills[4],
     sight=64,
     range=8,
     basecolors=split'9,2,4,8,13,14',
@@ -678,7 +677,7 @@ enemytypes={
     spd=.5,spdfactor=1,
     s=split'72,73,74,75',
     f=1,
-    attack=sword_fireattack,
+    attack=swordskills[3],
     sight=56,
     range=10,
     basecolors=split'9,2,4,8,13,14',
