@@ -62,26 +62,26 @@ function isaabbscolliding(a,b)
 end
 
 isinsidewall_wallabb={hw=4,hh=4}
-function isinsidewall(aabb)
- local x1,y1,x2,y2=
-  aabb.x-aabb.hw,aabb.y-aabb.hh,
-  aabb.x+aabb.hw,aabb.y+aabb.hh
+function isinsidewall(_aabb)
+ local _x1,_y1,_x2,_y2=
+  _aabb.x-_aabb.hw,_aabb.y-_aabb.hh,
+  _aabb.x+_aabb.hw,_aabb.y+_aabb.hh
 
- for p in all{{x1,y1},{x2,y1},{x2,y2},{x1,y2}} do
-  local mapx,mapy=flr(p[1]/8),flr(p[2]/8)
-  isinsidewall_wallabb.x,isinsidewall_wallabb.y=mapx*8+isinsidewall_wallabb.hw,mapy*8+isinsidewall_wallabb.hh
+ for _p in all{{_x1,_y1},{_x2,_y1},{_x2,_y2},{_x1,_y2}} do
+  local _mapx,_mapy=flr(_p[1]/8),flr(_p[2]/8)
+  isinsidewall_wallabb.x,isinsidewall_wallabb.y=_mapx*8+isinsidewall_wallabb.hw,_mapy*8+isinsidewall_wallabb.hh
 
   -- note: hitboxes should not be larger than 8x8
-  if not walls[mapy] or not walls[mapy][mapx] then
-   -- aabb.removeme=true
+  if not walls[_mapy] or not walls[_mapy][_mapx] then
+   -- _aabb.removeme=true
    debug('warn - inside wall! should not happen')
-  elseif walls[mapy][mapx] != 0 and isaabbscolliding(aabb,isinsidewall_wallabb) then
+  elseif walls[_mapy][_mapx] != 0 and isaabbscolliding(_aabb,isinsidewall_wallabb) then
    return isinsidewall_wallabb
   end
  end
 
  for _dw in all(dynwalls) do
-  if isaabbscolliding(aabb,_dw) then
+  if isaabbscolliding(_aabb,_dw) then
    return _dw
   end
  end
@@ -151,29 +151,29 @@ end
 
 -- helpers
 
-function dist(x1,y1,x2,y2)
- local dx,dy=x2-x1,y2-y1
- return sqrt(dx*dx+dy*dy)
+function dist(_x1,_y1,_x2,_y2)
+ local _dx,_dy=_x2-_x1,_y2-_y1
+ return sqrt(_dx*_dx+_dy*_dy)
 end
 
 function haslos(_x1,_y1,_x2,_y2)
- local dx,dy,x,y,xinc,yinc=
+ local _dx,_dy,_x,_y,_xinc,_yinc=
   abs(_x2-_x1),abs(_y2-_y1),_x1,_y1,sgn(_x2-_x1),sgn(_y2-_y1)
- local n,err=1+dx+dy,dx-dy
- dx*=2
- dy*=2
+ local _n,_err=1+_dx+_dy,_dx-_dy
+ _dx*=2
+ _dy*=2
 
- while n > 0 do
-  n-=1
-  if walls[flr(y/8)][flr(x/8)] != 0 then
+ while _n > 0 do
+  _n-=1
+  if walls[flr(_y/8)][flr(_x/8)] != 0 then
    return
   end
-  if err > 0 then
-   x+=xinc
-   err-=dy
+  if _err > 0 then
+   _x+=_xinc
+   _err-=_dy
   else
-   y+=yinc
-   err+=dx
+   _y+=_yinc
+   _err+=_dx
   end
  end
  return true
@@ -1308,6 +1308,10 @@ function _draw()
   local _x=split'63,75,87,99,111,12,24,36,63,75,87,99,111,12,24,36'[_itemnr]
   local _y=split'24,24,24,24,24,116,116,116,116,116,116,116,116,24,24,24'[_itemnr]
 
+  pal{1,1,1,1}
+  spr(19+_itemnr,_x,_y-19)
+  pal()
+
   for _i=1,3 do
    if _skillactionbtns[_i] then
     spr(232+_i,_x,_y)
@@ -1321,6 +1325,10 @@ function _draw()
   pal()
   cls(0)
   rectfill(0,42,128,85,4)
+
+  spr(233,12,89)
+  spr(234,24,89)
+  spr(235,36,89)
 
   for _i=1,16 do
    drawskillactionbtns(_i)
