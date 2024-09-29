@@ -775,7 +775,7 @@ function mapinit()
 
  avatar.iswarping=true
  avatar.afflic=2
- avatar.hp=0.0125
+ avatar.hp=.0125
 
 
 end
@@ -801,7 +801,7 @@ function _update60()
  end
 
  if avatar.iswarping then
-  avatar.hp+=0.05
+  avatar.hp+=.05
   if avatar.hp >= avatar.maxhp then
    avatar.iswarping=nil
    avatar.afflic=nil
@@ -872,7 +872,7 @@ function _update60()
 
  if avatar.afflic == 2 then
   if btnp(4) or btnp(5) then
-   avatar.hp+=0.25
+   avatar.hp+=.25
   end
  else
 
@@ -1043,7 +1043,7 @@ function _update60()
   end
   _a.colors=_a.basecolors
   if _a.afflic == 1 then
-   _a.hp+=0.0075
+   _a.hp+=.0075
   elseif _a.afflic == 2 then
    _a.colors=frozencolor
    _dx,_dy=0,0
@@ -1085,7 +1085,7 @@ function _update60()
     {_a.bloodcolors[1]},
     0,0,
     0,.075))
-   if rnd() < 0.025 then
+   if rnd() < .025 then
     add(fxs,getfx(
      228,
      _a.x,
