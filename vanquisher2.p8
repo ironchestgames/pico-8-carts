@@ -17,7 +17,7 @@ cartdata'ironchestgames_vvoe2_v1_dev1'
 
 --]]
 
-poke(0x5f5c, -1) -- set auto-repeat delay for btnp
+poke(0x5f5c, -1) -- set auto-repeat delay for btnp to none
 
 btnmasktoa=split'0.5,0,,0.25,0.375,0.125,,0.75,0.625,0.875'
 confusedbtnmasktoa=split'0,0.5,,0.75,0.875,0.625,,0.25,0.125,0.375'
@@ -52,6 +52,13 @@ function tconcat(_t1,_t2)
   add(_t,_i)
  end
  return _t
+end
+
+function lmerge(_t1,_t2)
+ for _k,_v in pairs(_t2) do
+  _t1[_k]=_v
+ end
+ return _t1
 end
 
 -- collision funcs
@@ -326,9 +333,20 @@ swordskills={
 
  function (_actor) -- 4 - knockback
   local _a=getswordattack(_actor,4)
-  _a.knockback=true
+  _a.skillvl=_actor.skillvl
+  if _actor.maxhp then
+   -- _a.skillvl=_actor.swordskillvl
+   _a.skillvl=4
+  end
+  _a.wallaware,_a.knockback,_a.durc=true,true,4
+  _a.onmiss=function (_attack)
+   _attack.skillvl-=1
+   if _attack.skillvl > 0 and not _attack.wallcollision then
+    swordskills[4](_attack,4)
+   end
+  end
   add(attacks,_a)
- end
+ end,
 }
 
 function missile_update(_attack)
@@ -549,147 +567,101 @@ end
 
 level=0
 
-enemybloodcolor=split'8,8,2' -- note: need to be 3
+function getenemybase(_x,_y)
+ return {
+  -- need to haves:
+  -- s=split'48,49,50,51',
+  -- basecolors=split'12,5,13,2,7',
+  -- maxhp=6,
+  -- spd=.375
+  -- attack=stonethrow,
 
+  -- defaults
+  hw=2,hh=2,
+  sight=64,
+  range=8,
+  bow_c=999,
+  bloodcolors=split'8,8,2',
 
+  -- internals
+  x=_x,y=_y,
+  a=0,
+  dx=0,dy=0,
+  f=1,
+  isenemy=true,
+  walking=true,
+  spdfactor=1,
+  draw=drawactor,
+ }
+end
 
 enemytypes={
- { -- ice orcs
-  function (_x,_y) -- ice orc stonethrower
-   return {
-    x=_x,y=_y,
-    a=0,
-    hw=2,hh=2,
-    dx=0,dy=0,
-    spd=.375,spdfactor=1,
-    s=split'48,49,50,51',
-    f=1,
-    bow_c=999,
-    attack=stonethrow,
-    sight=80,
-    range=58,
-    basecolors=split'12,5,13,2,7',
-    bloodcolors=enemybloodcolor,
-    isenemy=true,
-    walking=true,
-    hp=6,
-    maxhp=6,
-    draw=drawactor,
-   }
-  end,
+ -- ice orcs
+ {
+  { -- ice orc stonethrower
+   s=split'48,49,50,51',
+   basecolors=split'12,5,13,2,7',
+   maxhp=6,
+   spd=.375,
+   attack=stonethrow,
+   sight=80,
+   range=58,
+  },
 
-  function (_x,_y) -- big ice orc
-   return {
-    x=_x,y=_y,
-    a=0,
-    hw=3,hh=3,
-    dx=0,dy=0,
-    spd=.25,spdfactor=1,
-    s=split'52,53,54,55',
-    f=1,
-    attack=swordskills[2],
-    sight=64,
-    range=8,
-    basecolors=split'12,5,13,2,7',
-    bloodcolors=enemybloodcolor,
-    isenemy=true,
-    walking=true,
-    hp=12,
-    maxhp=12,
-    draw=drawactor,
-   }
-  end,
+  { -- big ice orc
+   s=split'52,53,54,55',
+   basecolors=split'12,5,13,2,7',
+   maxhp=12,
+   spd=.25,
+   attack=swordskills[2],
+   hw=3,hh=3,
+  },
 
-  function (_x,_y) -- ice orc caster
-   return {
-    x=_x,y=_y,
-    a=0,
-    hw=3,hh=3,
-    dx=0,dy=0,
-    spd=.25,spdfactor=1,
-    s=split'56,57,58,59',
-    f=1,
-    attack=staff_iceboltattack,
-    sight=90,
-    range=64,
-    basecolors=split'12,5,13,2,7',
-    bloodcolors=enemybloodcolor,
-    isenemy=true,
-    walking=true,
-    hp=20,
-    maxhp=20,
-    draw=drawactor,
-   }
-  end,
+  { -- ice orc caster
+   s=split'56,57,58,59',
+   basecolors=split'12,5,13,2,7',
+   maxhp=20,
+   spd=.25,
+   attack=staff_iceboltattack,
+   hw=3,hh=3,
+   sight=90,
+   range=64,
+  },
  },
- { -- fire trolls
-  function (_x,_y) -- fireball thrower
-   return {
-    x=_x,y=_y,
-    a=0,
-    hw=1.5,hh=1.5,
-    dx=0,dy=0,
-    spd=.5,spdfactor=1,
-    s=split'64,65,66,67',
-    f=1,
-    bow_c=999,
-    attack=fireballthrow,
-    sight=96,
-    range=48,
-    basecolors=split'9,2,4,8,13,14',
-    bloodcolors=enemybloodcolor,
-    isenemy=true,
-    walking=true,
-    hp=4,
-    maxhp=4,
-    draw=drawactor,
-   }
-  end,
 
-  function (_x,_y) -- fire troll w club
-   return {
-    x=_x,y=_y,
-    a=0,
-    hw=3,hh=3,
-    dx=0,dy=0,
-    spd=.25,spdfactor=1,
-    s=split'68,69,70,71',
-    f=1,
-    attack=swordskills[4],
-    sight=64,
-    range=8,
-    basecolors=split'9,2,4,8,13,14',
-    bloodcolors=enemybloodcolor,
-    isenemy=true,
-    walking=true,
-    hp=10,
-    maxhp=10,
-    draw=drawactor,
-   }
-  end,
+ -- fire trolls
+ {
+  { -- fireball thrower
+   s=split'64,65,66,67',
+   basecolors=split'9,2,4,8,13,14',
+   maxhp=4,
+   spd=.5,
+   attack=fireballthrow,
+   hw=1.5,hh=1.5,
+   sight=96,
+   range=48,
+  },
 
-  function (_x,_y) -- fire troll champion
-   return {
-    x=_x,y=_y,
-    a=0,
-    hw=3,hh=3,
-    dx=0,dy=0,
-    spd=.5,spdfactor=1,
-    s=split'72,73,74,75',
-    f=1,
-    attack=swordskills[3],
-    sight=56,
-    range=10,
-    basecolors=split'9,2,4,8,13,14',
-    bloodcolors=enemybloodcolor,
-    isenemy=true,
-    walking=true,
-    hp=24,
-    maxhp=24,
-    draw=drawactor,
-   }
-  end,
- }
+  { -- fire troll w club
+   s=split'68,69,70,71',
+   basecolors=split'9,2,4,8,13,14',
+   maxhp=10,
+   spd=.25,
+   attack=swordskills[4],
+   hw=3,hh=3,
+  },
+
+  { -- fire troll champion
+   s=split'72,73,74,75',
+   basecolors=split'9,2,4,8,13,14',
+   maxhp=24,
+   spd=.5,
+   attack=swordskills[3],
+   hw=3,hh=3,
+   sight=56,
+   range=10,
+  },
+ },
 }
 
 function mapinit()
@@ -702,8 +674,8 @@ function mapinit()
   end
  end
 
- local _enemycs=split'1,2,3,1,2,3,1,2,3,1,2,3,1,2,3'
- -- local _enemycs=split'5,9,13,5,9,13,5,9,13,5,9,13,5,9,13'
+ -- local _enemycs=split'1,2,3,1,2,3,1,2,3,1,2,3,1,2,3'
+ local _enemycs=split'5,9,13,5,9,13,5,9,13,5,9,13,5,9,13'
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,enemies,steps,angles=
   avatarx,avatary,0,_enemycs[level] or 0,{},
@@ -739,7 +711,9 @@ function mapinit()
   elseif _i % 3 == 0 or rnd() < .1 then
    _enemytype=2
   end
-  add(actors,enemytypes[getworld()][_enemytype](_x,_y))
+  local _enemy=lmerge(getenemybase(_x,_y),enemytypes[getworld()][_enemytype])
+  _enemy.hp=_enemy.maxhp
+  add(actors,_enemy)
  end
 
  -- add warpstone
@@ -1107,7 +1081,7 @@ function _update60()
   if _a.wallaware then
    local _postcolldx,_postcolldy=collideaabbs(isinsidewall,_a,nil,0,0)
    if _postcolldx != 0 or _postcolldy != 0 then
-    _a.durc=0
+    _a.wallcollision,_a.durc=true,0
    end
   end
 
