@@ -63,6 +63,10 @@ end
 
 -- collision funcs
 
+function ismiddleinsideaabb(_a,_b)
+ return _a.x > _b.x-_b.hw and _a.x < _b.x+_b.hw and _a.y > _b.y-_b.hh and _a.y < _b.y+_b.hh
+end
+
 function isaabbscolliding(a,b)
  return a.x-a.hw < b.x+b.hw and a.x+a.hw > b.x-b.hw and
   a.y-a.hh < b.y+b.hh and a.y+a.hh > b.y-b.hh and b
@@ -70,25 +74,17 @@ end
 
 isinsidewall_wallabb={hw=4,hh=4}
 function isinsidewall(_aabb)
- local _x1,_y1,_x2,_y2=
-  _aabb.x-_aabb.hw,_aabb.y-_aabb.hh,
-  _aabb.x+_aabb.hw,_aabb.y+_aabb.hh
-
- for _p in all{{_x1,_y1},{_x2,_y1},{_x2,_y2},{_x1,_y2}} do
-  local _mapx,_mapy=flr(_p[1]/8),flr(_p[2]/8)
-  isinsidewall_wallabb.x,isinsidewall_wallabb.y=_mapx*8+isinsidewall_wallabb.hw,_mapy*8+isinsidewall_wallabb.hh
-
-  -- note: hitboxes should not be larger than 8x8
-  if not walls[_mapy] or not walls[_mapy][_mapx] then
-   -- _aabb.removeme=true
-   debug('warn - inside wall! should not happen')
-  elseif walls[_mapy][_mapx] != 0 and isaabbscolliding(_aabb,isinsidewall_wallabb) then
-   return isinsidewall_wallabb
-  end
+ local _mapx,_mapy=flr(_aabb.x/8),flr(_aabb.y/8)
+ if walls[_mapy][_mapx] != 0 then
+  isinsidewall_wallabb.x,
+  isinsidewall_wallabb.y=
+   _mapx*8+4,
+   _mapy*8+4
+  return isinsidewall_wallabb
  end
 
  for _dw in all(dynwalls) do
-  if isaabbscolliding(_aabb,_dw) then
+  if ismiddleinsideaabb(_aabb,_dw) then
    return _dw
   end
  end
@@ -108,13 +104,13 @@ function collideaabbs(_func,_aabb,_other,_dx,_dy)
 
  local _collidedwith=_func(collideaabbs_aabb,_other)
  if _collidedwith then
-  _dx=(_aabb.hw+_collidedwith.hw-abs(_aabb.x-_collidedwith.x))*-_sgndx
+  _dx=(0.1+_collidedwith.hw-abs(_aabb.x-_collidedwith.x))*-_sgndx
  end
 
  collideaabbs_aabb.x,collideaabbs_aabb.y=_aabb.x,_aabb.y+_dy
  _collidedwith=_func(collideaabbs_aabb,_other)
  if _collidedwith then
-  _dy=(_aabb.hh+_collidedwith.hh-abs(_aabb.y-_collidedwith.y))*-_sgndy
+  _dy=(0.1+_collidedwith.hh-abs(_aabb.y-_collidedwith.y))*-_sgndy
  end
 
  return _dx,_dy
@@ -252,17 +248,17 @@ function create_icewall(_a,_x,_y)
  local _dw={
   x=_x+cos(_a.a)*6,y=_y+sin(_a.a)*6,
   hw=4,hh=4,
-  }
+ }
  add(dynwalls,_dw)
+ add(fxs,getfx(229,_dw.x,_dw.y,120,create_icewall_colors))
  add(attacks,{
-  x=999,y=999,
+  x=1,y=1,
   durc=120,
   hw=0,hh=0,
   onmiss=function()
    del(dynwalls,_dw)
   end
   })
- add(fxs,getfx(229,_dw.x,_dw.y,120,create_icewall_colors))
 end
 
 function addfissure(_a,_x,_y,_dur)
@@ -546,7 +542,7 @@ function setupavatar()
   state_c=0,
   draw=drawactor,
 
-  swordattack=swordskills[4],
+  swordattack=swordskills[2],
 
   bow_c=0,
   bowattack=bowskills[4],
@@ -1138,7 +1134,7 @@ function _update60()
   walls[warpstone.wy][warpstone.wx]=225
 
   warpstone.istouching=nil
-  if isaabbscolliding(avatar,warpstone) then
+  if ismiddleinsideaabb(avatar,warpstone) then
    warpstone.istouching=true
   end
 
