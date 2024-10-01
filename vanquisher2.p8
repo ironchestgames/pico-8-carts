@@ -122,6 +122,9 @@ function detectandresolvehit(_attack,_actor)
  if _dx != 0 or _dy != 0 then
   del(attacks,_attack)
   _actor.afflic=_attack.afflic
+  if _actor.isenemy and _attack.afflic == 5 then
+   _actor.a+=.5
+  end
   _actor.hp-=1
   add(fxs,getfx(227,_attack.x,_attack.y,8,split'7'))
 
@@ -135,9 +138,13 @@ function detectandresolvehit(_attack,_actor)
   end
 
   if _actor.bleeding then
-   for _i=1,flr((_actor.maxhp/2-_actor.hp)/2) do
+   local _s=228
+   if _actor.hp <= 1 then
+    _s=232
+   end
+   for _i=1,flr(_actor.maxhp-_actor.hp) do
     add(fxs,getfx(
-     228,
+     _s,
      _attack.x-_attack.hw+flrrnd(4),
      _attack.y-_attack.hh+flrrnd(4),
      16+flrrnd(5),
@@ -280,16 +287,16 @@ function addfissure(_a,_x,_y,_dur)
 end
 
 -- damage,ice,fyre,stun,venom,fear
-affliccolors=split'2,12,14,10,11,13'
+affliccolors=split'2,12,14,7,10,11,13'
 
 quickfxcolors={
  split'6,6,4,1', -- mundane
  split'7,7,7,12,13', -- ice
  split'7,14,15,15,14,14', -- fyre
  split'7,7,13,2', -- knockback
+ split'4,4,10,10,10,7', -- stun
 
  -- split'3,3,3,11,11,10', -- venom
- -- split'4,4,10,10,10,7', -- stun
 }
 
 function getswordattack(_actor,_afflic)
@@ -341,6 +348,11 @@ swordskills={
     swordskills[4](_attack,4)
    end
   end
+  add(attacks,_a)
+ end,
+
+ function (_actor)
+  local _a=getswordattack(_actor,5)
   add(attacks,_a)
  end,
 }
@@ -417,7 +429,7 @@ function stonethrow_draw(_attack)
 end
 
 function stonethrow(_actor)
- local _a=getbowattack(_actor,1)
+ local _a=getbowattack(_actor,5)
  _a.draw,
  _a.onmiss,
  _a.knockback,
@@ -542,7 +554,7 @@ function setupavatar()
   state_c=0,
   draw=drawactor,
 
-  swordattack=swordskills[2],
+  swordattack=swordskills[5],
 
   bow_c=0,
   bowattack=bowskills[4],
@@ -785,6 +797,9 @@ function _update60()
    level=getworld()*3+1
    mapinit()
   end
+  if btnp(5) then
+   warpstone.iswarping=nil
+  end
   if level == 15 then
    if btnp(2) then
     level=0
@@ -814,11 +829,6 @@ function _update60()
  elseif warpstone.istouching and btnp(4) then
   warpstone.iswarping=true
   return
- end
-
- if avatar.hp >= avatar.maxhp then
-  avatar.afflic=nil
-  avatar.hp=avatar.maxhp
  end
 
  -- todo: the filtering does not seem to work properly!
@@ -897,19 +907,18 @@ function _update60()
    dist(_enemy.x,_enemy.y,avatar.x,avatar.y),
    haslos(_enemy.x,_enemy.y,avatar.x,avatar.y)
 
-  if _enemy.afflic == 1 then
-   _enemy.hp+=.0075
+  if _enemy.afflic == 5 then
+   _disttoavatar,_haslostoavatar=nil
   end
 
   if _enemy.afflic == 2 then
-   _enemy.hp+=.025
+   -- note: frozen, do nothing
 
   elseif _enemy.afflic == 3 and _enemy.state == nil then
    _enemy.a+=rnd(.01)-.005
    if rnd() < .05 then
     _enemy.a+=.5
    end
-   _enemy.spdfactor=1.5
    _enemy.walking=true
 
   elseif _enemy.state then
@@ -928,7 +937,6 @@ function _update60()
     _disttoavatar < _enemy.range*.375 and
     not _enemy.wallcollisiondx then
    -- debug('run away from avatar')
-   _enemy.spdfactor=1
    _enemy.targetx,_enemy.targety=avatar.x,avatar.y
    _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)+.5
 
@@ -951,17 +959,17 @@ function _update60()
    if _disttoavatar < 6 then
     _enemy.a+=.5
    end
-   _enemy.spdfactor=1
 
   elseif _enemy.wallcollisiondx or _enemy.wallcollisiondy then
    -- debug('move out of wall collision')
-   _enemy.a+=.5
-   _enemy.targetx=nil
+   if _enemy.afflic != 5 then
+    _enemy.a+=.5
+    _enemy.targetx=nil
+   end
 
   elseif _enemy.targetx then
    -- debug('move towards target')
    _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
-   _enemy.spdfactor=1
    local _disttotarget=dist(_enemy.x,_enemy.y,_enemy.targetx,_enemy.targety)
    if _disttotarget < 4 then
     _enemy.targetx=nil
@@ -976,7 +984,15 @@ function _update60()
 
  -- update actors
  for _a in all(actors) do
-  local _spdfactor=_a.spd*(_a.spdfactor or 1)
+  -- set spdfactor
+  _a.spdfactor=1
+  if _a.afflic == 3 then
+   _a.spdfactor=1.375
+  elseif _a.afflic == 5 then
+   _a.spdfactor=.5
+  end
+
+  local _spdfactor=_a.spd*_a.spdfactor
   local _dx,_dy=0,0
 
   if _a.walking and _a.afflic != 2 then
@@ -1008,8 +1024,9 @@ function _update60()
   end
 
   -- update afflictions
-  if _a.afflic and _enemy.hp >= _enemy.maxhp then
-   _enemy.afflic=nil
+  if _a.afflic and _a.hp >= _a.maxhp then
+   _a.afflic=nil
+   _a.hp=_a.maxhp
   end
   _a.colors=_a.basecolors
   if _a.afflic == 1 then
@@ -1017,6 +1034,9 @@ function _update60()
   elseif _a.afflic == 2 then
    _a.colors=frozencolor
    _dx,_dy=0,0
+   if _a.isenemy then
+    _a.hp+=.025
+   end
   elseif _a.afflic == 3 then
    if _dx == 0 and _dy == 0 then
     _a.hp-=.0125
@@ -1024,6 +1044,17 @@ function _update60()
     _a.hp+=.025
    end
    add(fxs,getfirefx(_a.x-2+rnd(4),_a.y-3+rnd(3)))
+  elseif _a.afflic == 5 then
+   if _a.wallcollisiondx then
+    _a.hp+=.05
+   end
+   add(fxs,getfx(
+    228,
+    _a.x-2+rnd(2),
+    _a.y-_a.hh*2-2,
+    6,
+    split'7,2,10,2',
+    0,0.5))
   else
    _a.colors=_a.basecolors
   end
