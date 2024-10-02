@@ -252,6 +252,19 @@ function getfirefx(_x,_y)
  end
 end
 
+getlightningstrikefx_colors=split'7,7,10,5'
+function getlightningstrikefx(_x,_y)
+ if rnd() > .25 then
+  return getfx(
+   228,
+   _x,_y,
+   14,
+   getlightningstrikefx_colors,
+   0,0,
+   0,-.0375)
+ end
+end
+
 ----
 
 create_icewall_colors=split'6,6,6,6,6,6,13'
@@ -288,6 +301,43 @@ function addfissure(_a,_x,_y,_dur)
    add(fxs,getfirefx(_x-4+rnd(8),_y-4+rnd(8)))
   end,
   })
+end
+
+function lightningfx_draw(_fx)
+ for _i=2,#_fx.xs do
+  local _col=_i%3==0 and 10 or 7
+  line(_fx.xs[_i-1],_fx.ys[_i-1],_fx.xs[_i],_fx.ys[_i],rnd()>.5 and _col or 5)
+ end
+end
+
+function addlightningstrike(_a,_x,_y)
+ add(attacks,{
+  isenemy=_a.isenemy,
+  x=_x,y=_y,
+  afflic=5,
+  hw=8,hh=8,
+  durc=12,
+  draw=function()
+   circfill(_x,_y,5,5)
+  end,
+  update=function()
+   add(fxs,getlightningstrikefx(_x-4+rnd(8),_y-4+rnd(8)))
+  end,
+ })
+ local _lightningfx={
+  dur=12,durc=12,
+  x=0,y=0,vx=0,vy=0,ax=0,ay=0,
+ }
+ local _xs,_ys,_cury={_x},{_y},_y
+ while _cury > 0 do
+  add(_xs,_x-6+rnd(12))
+  _cury=mid(0,_cury-(4+rnd(8)),_y)
+  add(_ys,_cury)
+ end
+ _lightningfx.xs=_xs
+ _lightningfx.ys=_ys
+ _lightningfx.draw=lightningfx_draw
+ add(fxs,_lightningfx)
 end
 
 -- damage,ice,fyre,stun,venom,fear
@@ -357,8 +407,10 @@ swordskills={
 
  function (_actor) -- 5 - stun
   local _a=getswordattack(_actor,5)
-  _a.knockback=true
   add(attacks,_a)
+  -- if rnd() < .125 then -- todo: add chance based on skill level
+   addlightningstrike(_actor,8+rnd(112),8+rnd(112))
+  -- end
  end,
 }
 
@@ -428,6 +480,12 @@ bowskills={
 
 
 frozencolor=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12'
+
+function swordattack_stunandknockback(_actor)
+ local _a=getswordattack(_actor,5)
+ _a.knockback=true
+ add(attacks,_a)
+end
 
 function stonethrow_draw(_attack)
  pal(1,13)
@@ -652,7 +710,7 @@ enemytypes={
    s=split'68,69,70,71',
    maxhp=10,
    spd=.25,
-   attack=swordskills[5],
+   attack=swordattack_stunandknockback,
    hw=3,hh=3,
   },
 
@@ -670,7 +728,7 @@ enemytypes={
    s=split'72,73,74,75',
    maxhp=24,
    spd=.5,
-   attack=swordskills[5],
+   attack=swordattack_stunandknockback,
    hw=3,hh=3,
    sight=56,
    range=10,
@@ -748,8 +806,8 @@ function mapinit()
   end
  end
 
- local _enemycs=split'1,2,3,1,2,3,1,2,3,1,2,3,1,2,3'
- -- local _enemycs=split'5,9,13,5,9,13,5,9,13,5,9,13,5,9,13'
+ -- local _enemycs=split'1,2,3,1,2,3,1,2,3,1,2,3,1,2,3'
+ local _enemycs=split'5,9,13,5,9,13,5,9,13,5,9,13,5,9,13'
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,enemies,steps,angles=
   avatarx,avatary,0,_enemycs[level] or 0,{},
