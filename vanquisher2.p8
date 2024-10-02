@@ -358,7 +358,7 @@ function addlightningstrike(_a,_x,_y)
  add(fxs,_lightningfx)
 end
 -- damage,ice,fyre,stun,venom,fear
-affliccolors=split'2,12,14,7,10,11,13'
+affliccolors=split'2,12,14,7,10,11,9'
 
 quickfxcolors={
  split'6,6,4,1', -- bleed
@@ -511,7 +511,6 @@ bowskills={
 
 frozencolors=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12'
 envenomedcolors=split'3,3,3,11,3,11,11,11,11,11,11,11,3,11,11'
--- envenomedcolors=split'11,11,11,11,11,11,11,11,11,11,11,11,11,11,11'
 
 function swordattack_stunandknockback(_actor)
  local _a=getswordattack(_actor,5)
@@ -655,6 +654,33 @@ function staff_fireattack(_a)
  end
 end
 
+function enemyattack_confusionball(_a)
+ local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
+ add(attacks,{
+  isenemy=true,
+  x=_x,y=_y,
+  a=_a.a,
+  afflic=7,
+  hw=3,hh=3,
+  durc=999,
+  wallaware=true,
+  missile_spd=1,
+  update=function(_attack)
+   missile_update(_attack)
+   add(fxs,getfx(232,_attack.x,_attack.y,6,split'9,9,4,2'))
+  end,
+  onmiss=function(_attack)
+   add(fxs,getfx(227,_attack.x+1,_attack.y+1,6,split'9,4'))
+  end,
+  draw=function(_attack)
+   -- todo: rect instead?
+   pal(1,15)
+   spr(232,_attack.x-4,_attack.y-4)
+   pal()
+  end,
+  })
+end
+
 function bossondeath(_actor)
  for _y=0,7 do
   for _x=0,7 do
@@ -748,6 +774,7 @@ function getenemybase(_x,_y)
 end
 
 enemytypes={
+
  -- ice orcs
  {
   { -- ice orc stonethrower
@@ -869,6 +896,45 @@ enemytypes={
   },
  },
 
+ -- skeletons
+ {
+  { -- skeleton knight
+   s=split'96,97,98,99',
+   maxhp=10,
+   bloodcolors=split'6,6,5',
+   spd=.25,
+   attack=swordattack_stunandknockback,
+  },
+
+  { -- skeleton archer
+   s=split'100,101,102,103',
+   maxhp=6,
+   bloodcolors=split'6,6,5',
+   spd=.375,
+   attack=bowskills[1],
+   sight=80,
+   range=58,
+  },
+
+  { -- skeleton queen
+   s=split'104,105,106,107',
+   maxhp=20,
+   bloodcolors=split'6,6,5',
+   spd=.125,
+   attack=enemyattack_confusionball,
+   sight=90,
+   range=64,
+   ondeath=bossondeath,
+  },
+
+  { -- venomous bat
+   s=split'108,109,110,111',
+   maxhp=4,
+   spd=.75,
+   attack=swordskills[6],
+  },
+ },
+
   -- the devils
  {
   { -- big devil
@@ -917,6 +983,13 @@ enemytypes={
     sspr(flr(_a.f-1)*15,65,15,18,_a.x-7.5,_a.y-12,15,18,_a.sflip)
     pal()
    end,
+  },
+
+  { -- venomous bat -- todo: change to smt else
+   s=split'108,109,110,111',
+   maxhp=4,
+   spd=.75,
+   attack=swordskills[6],
   },
  }
 }
@@ -973,12 +1046,12 @@ function mapinit()
   _enemy.hp=_enemy.maxhp
   add(actors,_enemy)
 
-  -- if _extraenemyc > 0 then
-  --  local _enemy=lmerge(getenemybase(_x,_y),enemytypes[getworld()][4])
-  --  _enemy.hp=_enemy.maxhp
-  --  add(actors,_enemy)
-  --  _extraenemyc-=1
-  -- end
+  if _extraenemyc > 0 then
+   local _enemy=lmerge(getenemybase(_x,_y),enemytypes[getworld()][4])
+   _enemy.hp=_enemy.maxhp
+   add(actors,_enemy)
+   _extraenemyc-=1
+  end
  end
 
  -- add warpstone
@@ -1091,6 +1164,12 @@ function _update60()
  -- todo: the filtering does not seem to work properly!
  local _btnmask=band(btn(),0b1111) -- note: filter out o/x buttons from dpad input
  local _angle=btnmasktoa[_btnmask]
+ if avatar.afflic == 7 then
+  _angle=confusedbtnmasktoa[_btnmask]
+  if avatar.walking then
+   avatar.hp+=.0312
+  end
+ end
  
  if avatar.afflic != 2 and _angle and type(_angle) == 'number' then
   avatar.a=_angle
