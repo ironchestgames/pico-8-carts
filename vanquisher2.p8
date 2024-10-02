@@ -13,14 +13,10 @@ cartdata'ironchestgames_vvoe2_v1_dev1'
 
 --[[
 
+62 - last boss kills
 63 - level completion (boss levels only: 3,6,9,12)
 
 --]]
-
-poke(0x5f5c, -1) -- set auto-repeat delay for btnp to none
-
-btnmasktoa=split'0.5,0,,0.25,0.375,0.125,,0.75,0.625,0.875'
-confusedbtnmasktoa=split'0,0.5,,0.75,0.875,0.625,,0.25,0.125,0.375'
 
 -- [0x0001]=0.5, -- left
 -- [0x0002]=0, -- right
@@ -31,16 +27,19 @@ confusedbtnmasktoa=split'0,0.5,,0.75,0.875,0.625,,0.25,0.125,0.375'
 -- [0x0009]=0.625, -- left/down
 -- [0x000a]=0.875, -- down/right
 
+poke(0x5f5c, -1) -- set auto-repeat delay for btnp to none
+
+-- misc
+
+btnmasktoa=split'0.5,0,,0.25,0.375,0.125,,0.75,0.625,0.875'
+confusedbtnmasktoa=split'0,0.5,,0.75,0.875,0.625,,0.25,0.125,0.375'
+
 function flrrnd(_n)
  return flr(rnd(_n))
 end
 
 function norm(n)
  return n == 0 and 0 or sgn(n)
-end
-
-function atodirections(_a)
- return flr((_a%1)*8)/8 -- todo: maybe %1 is not needed
 end
 
 function tconcat(_t1,_t2)
@@ -60,6 +59,17 @@ function lmerge(_t1,_t2)
  end
  return _t1
 end
+
+function sortony(_t)
+ for _i=1,#_t do
+  local _j=_i
+  while _j > 1 and _t[_j-1].y+(_t[_j-1].hh or 4) > _t[_j].y+(_t[_j].hh or 4) do -- todo: make cleaner
+   _t[_j],_t[_j-1]=_t[_j-1],_t[_j]
+   _j=_j-1
+  end
+ end
+end
+
 
 -- collision funcs
 
@@ -155,7 +165,11 @@ function detectandresolvehit(_attack,_actor)
 end
 
 
--- helpers
+-- geometry
+
+function atodirections(_a)
+ return flr((_a%1)*8)/8 -- todo: maybe %1 is not needed
+end
 
 function dist(_x1,_y1,_x2,_y2)
  local _dx,_dy=_x2-_x1,_y2-_y1
@@ -185,17 +199,11 @@ function haslos(_x1,_y1,_x2,_y2)
  return true
 end
 
+
 -- drawing funcs
 
-function sortony(_t)
- for _i=1,#_t do
-  local _j=_i
-  while _j > 1 and _t[_j-1].y+(_t[_j-1].hh or 4) > _t[_j].y+(_t[_j].hh or 4) do -- todo: make cleaner
-   _t[_j],_t[_j-1]=_t[_j-1],_t[_j]
-   _j=_j-1
-  end
- end
-end
+frozencolors=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12'
+envenomedcolors=split'3,3,3,11,3,11,11,11,11,11,11,11,3,11,11'
 
 function drawactor(_a)
  if _a.afflic == 2 then
@@ -223,7 +231,35 @@ function getsflip(_angle)
  return _angle >= .375 and _angle <= .625
 end
 
--- creators
+function drawskillactionbtns(_itemnr)
+ -- todo: add dget
+ local _itemskill=1
+ local _swordskill=1
+ local _bowskill=0
+ local _staffskill=1
+ local _skillactionbtns={
+  _itemskill == _swordskill,
+  _itemskill == _bowskill,
+  _itemskill == _staffskill,
+ }
+
+ local _x=split'63,75,87,99,111,12,24,36,63,75,87,99,111,12,24,36'[_itemnr]
+ local _y=split'24,24,24,24,24,116,116,116,116,116,116,116,116,24,24,24'[_itemnr]
+
+ pal{1,1,1,1}
+ spr(19+_itemnr,_x,_y-19)
+ pal()
+
+ for _i=1,3 do
+  if _skillactionbtns[_i] then
+   spr(232+_i,_x,_y)
+   _y+=3
+  end
+ end
+end
+
+
+-- fx
 
 function getfx(_s,_x,_y,_dur,_colors,_vx,_vy,_ax,_ay)
  return {
@@ -263,7 +299,8 @@ function getlightningstrikefx(_x,_y)
  end
 end
 
-----
+
+-- secondary attack effects
 
 addicewall_colors=split'6,6,6,6,6,6,13'
 function addicewall(_a,_x,_y)
@@ -301,6 +338,11 @@ function addfissure(_a,_x,_y,_dur)
   })
 end
 
+function addvenomspit_update(_attack)
+ _attack.x+=cos(_attack.a)*.75
+ _attack.y+=sin(_attack.a)*.75+_attack.ay
+ _attack.ay+=.125
+end
 function addvenomspit(_actor,_x,_y,_a)
  add(attacks,{
   isenemy=_actor.isenemy,
@@ -311,7 +353,7 @@ function addvenomspit(_actor,_x,_y,_a)
   durc=20,
   ay=-1,
   update=function(_attack)
-   spit_update(_attack)
+   addvenomspit_update(_attack)
    add(fxs,getfx(
     228,
     _attack.x,_attack.y,
@@ -327,7 +369,6 @@ function lightningfx_draw(_fx)
   line(_fx.xs[_i-1],_fx.ys[_i-1],_fx.xs[_i],_fx.ys[_i],rnd()>.5 and _col or 5)
  end
 end
-
 function addlightningstrike(_a,_x,_y)
  add(attacks,{
   isenemy=_a.isenemy,
@@ -357,6 +398,10 @@ function addlightningstrike(_a,_x,_y)
  _lightningfx.draw=lightningfx_draw
  add(fxs,_lightningfx)
 end
+
+
+-- sword attacks
+
 -- damage,ice,fyre,stun,venom,fear
 affliccolors=split'2,12,14,7,10,11,9'
 
@@ -371,7 +416,11 @@ quickfxcolors={
 
 function getswordattack(_actor,_afflic,_damagetype)
  local _x,_y=_actor.x+cos(_actor.a)*6,_actor.y-1+sin(_actor.a)*6
- add(fxs,getfx(240+atodirections(_actor.a)*8,_x,_y,12,quickfxcolors[_damagetype or _afflic]))
+ add(fxs,getfx(
+   240+atodirections(_actor.a)*8,
+   _x,_y,
+   12,
+   quickfxcolors[_damagetype or _afflic]))
  return {
   isenemy=_actor.isenemy,
   x=_x,y=_y,
@@ -438,11 +487,28 @@ swordskills={
  end,
 }
 
-function spit_update(_attack)
- _attack.x+=cos(_attack.a)*.75
- _attack.y+=sin(_attack.a)*.75+_attack.ay
- _attack.ay+=.125
+-- enemy melee attacks
+
+function sword_iceattack(_a)
+ local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
+ add(attacks,{
+  isenemy=_a.isenemy,
+  x=_x,y=_y,
+  a=_a.a,
+  afflic=2,
+  hw=4,hh=4,
+  durc=2,
+  })
+ add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,quickfxcolors[2]))
 end
+
+function swordattack_stunandknockback(_actor)
+ local _a=getswordattack(_actor,5)
+ _a.knockback=true
+ add(attacks,_a)
+end
+
+-- bow attacks
 
 function missile_update(_attack)
  _attack.x+=cos(_attack.a)*_attack.missile_spd
@@ -509,21 +575,13 @@ bowskills={
 }
 
 
-frozencolors=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12'
-envenomedcolors=split'3,3,3,11,3,11,11,11,11,11,11,11,3,11,11'
-
-function swordattack_stunandknockback(_actor)
- local _a=getswordattack(_actor,5)
- _a.knockback=true
- add(attacks,_a)
-end
+-- enemy ranged attacks
 
 function stonethrow_draw(_attack)
  pal(1,13)
  spr(232,_attack.x-4,_attack.y-4)
  pal()
 end
-
 function stonethrow(_actor)
  local _a=getbowattack(_actor,_actor.stonethrow_afflic)
  _a.draw,
@@ -594,26 +652,41 @@ function bowattack_venom(_actor)
  add(attacks,_a)
 end
 
+function enemyattack_confusionball(_a)
+ local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
+ add(attacks,{
+  isenemy=true,
+  x=_x,y=_y,
+  a=_a.a,
+  afflic=7,
+  hw=3,hh=3,
+  durc=999,
+  wallaware=true,
+  missile_spd=1,
+  update=function(_attack)
+   missile_update(_attack)
+   add(fxs,getfx(232,_attack.x,_attack.y,6,split'9,9,4,2'))
+  end,
+  onmiss=function(_attack)
+   add(fxs,getfx(227,_attack.x+1,_attack.y+1,6,split'9,4'))
+  end,
+  draw=function(_attack)
+   -- todo: rect instead?
+   pal(1,15)
+   spr(232,_attack.x-4,_attack.y-4)
+   pal()
+  end,
+ })
+end
+
+-- staff attacks
+
 function staff_bleedattack(_a)
  _a.staffattack_c+=1
  if _a.staffattack_c >= 16 then
   _a.staffattack_c=0
   swordskills[1](_a)
  end
-end
-
-function sword_iceattack(_a)
- local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
- add(attacks,{
-  isenemy=_a.isenemy,
-  x=_x,y=_y,
-  a=_a.a,
-  afflic=2,
-  hw=4,hh=4,
-  durc=2,
-  })
-
- add(fxs,getfx(240+atodirections(_a.a)*8,_x,_y,12,quickfxcolors[2]))
 end
 
 function staff_iceboltattack(_a)
@@ -654,32 +727,8 @@ function staff_fireattack(_a)
  end
 end
 
-function enemyattack_confusionball(_a)
- local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
- add(attacks,{
-  isenemy=true,
-  x=_x,y=_y,
-  a=_a.a,
-  afflic=7,
-  hw=3,hh=3,
-  durc=999,
-  wallaware=true,
-  missile_spd=1,
-  update=function(_attack)
-   missile_update(_attack)
-   add(fxs,getfx(232,_attack.x,_attack.y,6,split'9,9,4,2'))
-  end,
-  onmiss=function(_attack)
-   add(fxs,getfx(227,_attack.x+1,_attack.y+1,6,split'9,4'))
-  end,
-  draw=function(_attack)
-   -- todo: rect instead?
-   pal(1,15)
-   spr(232,_attack.x-4,_attack.y-4)
-   pal()
-  end,
- })
-end
+
+-- misc enemy funcs
 
 function enemy_summonstone(_a)
  _a.summoningc+=1
@@ -711,52 +760,8 @@ function bossondeath(_actor)
  end
 end
 
-function setupavatar()
- avatar={
-  x=68,y=60,
-  a=0,
-  hw=1,hh=1,
-  ss={
-   split'36,37,38,39', -- swordsman
-   split'40,41,42,43', -- ranger
-   split'44,45,46,47', -- caster
-  },
-  f=1,
-  spd=.5,
-  spdfactor=1,
-  sflip=nil, -- todo: remove for token hunt
-  basecolors=split'15,4,4,4,4,2,13,5',
-  hp=5,
-  maxhp=5,
-  state_c=0,
-  draw=function(_a)
-   pal(_a.basecolors)
-   drawactor(_a)
-   pal()
-  end,
 
-  swordskill_level=14,
-  swordskill_c=0,
-  swordattack=swordskills[6],
-
-  bow_c=0,
-  bowattack=bowskills[4],
-
-  staffattack_c=0,
-  staffdx=0,
-  staffdy=0,
-  staffattack=staff_fireattack,
-  -- staffattack=staff_bleedattack,
- }
- avatar.s=avatar.ss[1]
-end
-setupavatar()
-
-function getworld()
- return level == 0 and 1 or flr(level/3.0005)+1
-end
-
-level=0
+-- enemy types
 
 function getenemybase(_x,_y)
  return {
@@ -1003,7 +1008,7 @@ enemytypes={
      hp=8,maxhp=8,
      bloodcolors=split'7,7,6',
      spd=.375,
-     attack=swordskills[2],
+     attack=swordskills[3],
     },
    },
   },
@@ -1048,6 +1053,59 @@ enemytypes={
  },
 }
 
+
+-- setup avatar
+
+function setupavatar()
+ avatar={
+  x=68,y=60,
+  a=0,
+  hw=1,hh=1,
+  ss={
+   split'36,37,38,39', -- swordsman
+   split'40,41,42,43', -- ranger
+   split'44,45,46,47', -- caster
+  },
+  f=1,
+  spd=.5,
+  spdfactor=1,
+  sflip=nil, -- todo: remove for token hunt
+  basecolors=split'15,4,4,4,4,2,13,5',
+  hp=5,
+  maxhp=5,
+  state_c=0,
+  draw=function(_a)
+   pal(_a.basecolors)
+   drawactor(_a)
+   pal()
+  end,
+
+  swordskill_level=14,
+  swordskill_c=0,
+  swordattack=swordskills[6],
+
+  bow_c=0,
+  bowattack=bowskills[4],
+
+  staffattack_c=0,
+  staffdx=0,
+  staffdy=0,
+  staffattack=staff_fireattack,
+  -- staffattack=staff_bleedattack,
+ }
+ avatar.s=avatar.ss[1]
+end
+setupavatar()
+
+
+-- world
+
+function getworld()
+ return level == 0 and 1 or flr(level/3.0005)+1
+end
+
+level=0
+
 function mapinit()
  deathts=nil
  walls,dynwalls,actors,attacks,fxs={},{},{},{},{}
@@ -1083,7 +1141,7 @@ function mapinit()
  end
 
  -- setup enemies
- local _extraenemyc=1 -- todo: base on bosses killed or smt
+ local _extraenemyc=dget(62)
  for _i=1,enemy_c do
   local _x,_y=0,0
   while walls[_y][_x] != 0 do
@@ -1143,16 +1201,22 @@ function mapinit()
  avatar.afflic=2
  avatar.hp=.0125
 
-
 end
+
+
+-- system init
 
 function _init()
  mapinit()
 end
 
+
+-- system update
+
 update60_curenemyi=1
 function _update60()
 
+ -- dead
  if deathts and t() > deathts and btnp(4) then
   level=0
   setupavatar()
@@ -1166,6 +1230,7 @@ function _update60()
   return -- dead
  end
 
+ -- warping
  if avatar.iswarping then
   avatar.hp+=.05
   if avatar.hp >= avatar.maxhp then
@@ -1186,6 +1251,7 @@ function _update60()
   end
   if level == 15 then
    if btnp(2) then
+    dset(62,dget(62)+1) -- note: exploitable
     level=0
     mapinit()
    end
@@ -1215,6 +1281,7 @@ function _update60()
   return
  end
 
+ -- player input
  -- todo: the filtering does not seem to work properly!
  local _btnmask=band(btn(),0b1111) -- note: filter out o/x buttons from dpad input
  local _angle=btnmasktoa[_btnmask]
@@ -1294,6 +1361,7 @@ function _update60()
   end
  end
 
+ -- enemy decision-making
  update60_curenemyi+=1
  if update60_curenemyi > #actors then
   update60_curenemyi=1
@@ -1578,6 +1646,7 @@ function _update60()
   end
  end
 
+ -- update warpstone
  if _enemycount == 0 then
   walls[warpstone.wy][warpstone.wx]=225
 
@@ -1595,6 +1664,7 @@ end
 function _draw()
  cls()
 
+ -- warpstone menu
  if warpstone.iswarping then
   rectfill(warpstone.x-3,0,warpstone.x+3,warpstone.y+4,7)
   local _str='\f6  ➡️\n⬇️'
@@ -1612,6 +1682,7 @@ function _draw()
   return
  end
 
+ -- draw player affliction
  if avatar.hp < avatar.maxhp then
   local _clipsize=128*(avatar.hp/avatar.maxhp)
   local _y=mid(0,avatar.y-_clipsize/2,128-_clipsize)
@@ -1700,44 +1771,17 @@ function _draw()
  --  pset(_dw.x,_dw.y,4)
  -- end
 
+ -- draw warping
  if avatar.iswarping then
   pal(split'7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,',1)
   pal(0,1,1)
  end
 
- -- draw warpstone gui
  if warpstone.istouching then
   print('\f7\#0🅾️✽',mid(0,warpstone.x-7,110),warpstone.y+6)
  end
 
- function drawskillactionbtns(_itemnr)
-  -- todo: add dget
-  local _itemskill=1
-  local _swordskill=1
-  local _bowskill=0
-  local _staffskill=1
-  local _skillactionbtns={
-   _itemskill == _swordskill,
-   _itemskill == _bowskill,
-   _itemskill == _staffskill,
-  }
-
-  local _x=split'63,75,87,99,111,12,24,36,63,75,87,99,111,12,24,36'[_itemnr]
-  local _y=split'24,24,24,24,24,116,116,116,116,116,116,116,116,24,24,24'[_itemnr]
-
-  pal{1,1,1,1}
-  spr(19+_itemnr,_x,_y-19)
-  pal()
-
-  for _i=1,3 do
-   if _skillactionbtns[_i] then
-    spr(232+_i,_x,_y)
-    _y+=3
-   end
-  end
- end
-
- -- custom pause screen
+ -- draw inventory
  if btn(6) then
   pal()
   cls(0)
