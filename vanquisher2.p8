@@ -16,8 +16,8 @@ cartdata'ironchestgames_vvoe2_v1_dev1'
 --  dset(_i,0)
 -- end
 -- dset(62,0) -- evil kills
--- dset(63,0) -- level progression
--- dset(6,6)
+-- dset(63,0) -- last level cleared
+-- dset(6,8)
 
 --[[
 
@@ -166,13 +166,18 @@ end
 function detectandresolvehit(_attack,_actor)
  -- detect
  local _dx,_dy=collideaabbs(isaabbscolliding,_attack,_actor,0,0)
+
+  -- resolve
  if _dx != 0 or _dy != 0 then
+  if _attack.onhit then
+   _attack.onhit(_attack,_actor)
+  end
+
   del(attacks,_attack)
   _actor.afflic=_attack.afflic
   _actor.hp-=1
   add(fxs,getfx(227,_attack.x,_attack.y,8,split'7'))
 
-  -- resolve
   if _attack.knockback then
    _actor.knockbackangle=_attack.a or atan2(_actor.x-_attack.x,_actor.y-_attack.y)
   end
@@ -233,6 +238,14 @@ function haslos(_x1,_y1,_x2,_y2)
  return true
 end
 
+function getrandomfloorpos()
+ local _x,_y=1,1
+ while walls[flr(_y/8)][flr(_x/8)] != 0 do
+  _x,_y=rnd(120),rnd(120)
+ end
+ return _x,_y
+end
+
 
 -- items
 
@@ -245,21 +258,18 @@ itemcolors={
  split'5,3,11,10', -- venom
 
  split'2,5,6,7', -- knockback
+ split'3,12,11,7', -- teleport
 
-
+ split'13,6,7,7', -- revive
 }
 
-function addflooritem(_typ)
+function addflooritem(_typ,_skill)
  local _flooritem={
-  x=0,y=0,
   hw=3,hh=3,
-  typ=_typ or rnd(split'6,7,8,9,10,11,12,13,14,15,16'),
-  skill=rnd(split'1,2,3,4,5,6')
+  typ=_typ,
+  skill=_skill,
  }
- while isinsidewall(_flooritem) do
-  _flooritem.x=rnd(128)
-  _flooritem.y=rnd(128)
- end
+ _flooritem.x,_flooritem.y=getrandomfloorpos()
  add(flooritems,_flooritem)
 end
 
@@ -267,15 +277,14 @@ function drawskillactionbtns(_itemnr)
  local _itemskill,_swordskill,_bowskill,_staffskill=
   dget(_itemnr),dget(6),dget(7),dget(8)
  local _skillactionbtns={
-  _itemnr == 6 or _itemskill > 1 and _itemskill <= 6 and _itemskill == _swordskill,
-  _itemnr == 7 or _itemskill > 1 and _itemskill <= 6 and _itemskill == _bowskill,
-  _itemnr == 8 or _itemskill > 1 and _itemskill <= 6 and _itemskill == _staffskill,
+  _itemnr == 6 or _itemskill > 1 and _itemskill <= 7 and _itemskill == _swordskill,
+  _itemnr == 7 or _itemskill > 1 and _itemskill <= 7 and _itemskill == _bowskill,
+  _itemnr == 8 or _itemskill > 1 and _itemskill <= 7 and _itemskill == _staffskill,
  }
 
  local _x,_y=
   split'63,75,87,99,111,12,24,36,63,75,87,99,111,12,24,36'[_itemnr],
   split'24,24,24,24,24,116,116,116,116,116,116,116,116,24,24,24'[_itemnr]
-
 
  pal(itemcolors[_itemskill])
  spr(19+_itemnr,_x,_y-19)
@@ -318,6 +327,10 @@ function drawfx(_fx)
  pal()
 end
 
+function drawfxpset(_fx)
+ pset(_fx.x,_fx.y,getfxcolor(_fx))
+end
+
 function getsflip(_angle)
  return _angle >= .375 and _angle <= .625
 end
@@ -337,29 +350,29 @@ function getfx(_s,_x,_y,_dur,_colors,_vx,_vy,_ax,_ay)
  }
 end
 
-getfirefx_colors=split'14,14,8'
+function getpsetfx(_x,_y,_dur,_colors,_vx,_vy,_ax,_ay)
+ return {
+  x=_x,y=_y,
+  dur=_dur,durc=_dur,
+  colors=_colors,
+  vx=_vx,vy=_vy,
+  ax=_ax,ay=_ay,
+  draw=drawfxpset,
+ }
+end
+
+
+getfirefx_colors=split'15,14,14,8'
 function getfirefx(_x,_y)
- if rnd() > .25 then
-  return getfx(
-   228,
-   _x,_y,
-   10,
-   getfirefx_colors,
-   0,-.0125,
-   0,-.0375)
- end
+ -- if rnd() > .5 then
+  return getpsetfx(_x,_y,8,getfirefx_colors,0,-.0125,0,-.0375)
+ -- end
 end
 
 getlightningstrikefx_colors=split'7,7,10,5'
 function getlightningstrikefx(_x,_y)
  if rnd() > .25 then
-  return getfx(
-   228,
-   _x,_y,
-   14,
-   getlightningstrikefx_colors,
-   0,0,
-   0,-.0375)
+  return getpsetfx(_x,_y,14,getlightningstrikefx_colors,0,0,0,-.0375)
  end
 end
 
@@ -398,7 +411,9 @@ function addfissure(_a,_x,_y,_lvl)
    end
   end,
   update=function(_attack)
-   add(fxs,getfirefx(_x-_lvl+rnd(_lvl*2),_y-_lvl+rnd(_lvl*2)))
+   if rnd() < .5 then
+    add(fxs,getfirefx(_x-_lvl+rnd(_lvl*2),_y-_lvl+rnd(_lvl*2)))
+   end
   end,
   })
 end
@@ -419,11 +434,7 @@ function addvenomspit(_actor,_x,_y,_a)
   ay=-1,
   update=function(_attack)
    addvenomspit_update(_attack)
-   add(fxs,getfx(
-    228,
-    _attack.x,_attack.y,
-    10,
-    bowattack_venom_fx_colors))
+   add(fxs,getpsetfx(_attack.x,_attack.y,10,bowattack_venom_fx_colors,0,0,0,0))
   end,
   })
 end
@@ -464,6 +475,24 @@ function addlightningstrike(_a,_x,_y)
  add(fxs,_lightningfx)
 end
 
+addspikes_playercolors=split'0,7,7,7,7,7,7,7,7,7,7,7,7,0'
+addspikes_enemycolors=split'0,4,4,4,4,4,4,4,4,4,4,4,4,0'
+function addspikes(_a,_lvl,_s,_colors,_x,_y)
+ local _durc=_lvl*45
+ local _fx=getfx(_s,_x,_y,_durc,_colors)
+ add(fxs,_fx)
+ add(attacks,{
+  isenemy=_a.isenemy,
+  x=_x,y=_y,
+  afflic=1,
+  knockback=true,
+  hw=4,hh=4,
+  durc=_durc,
+  onhit=function()
+   _fx.durc=8
+  end,
+ })
+end
 
 -- sword attacks
 
@@ -484,7 +513,8 @@ quickfxcolors={
  split'4,4,10,10,10,7', -- stun
  split'3,3,3,11,11,10', -- venom
 
- split'7,7,13,2', -- knockback
+ split'7,7,13,2', -- spikes
+ split'7,7,11,12', -- teleport
 }
 
 function getswordattack(_actor,_afflic,_damagetype)
@@ -505,8 +535,6 @@ function getswordattack(_actor,_afflic,_damagetype)
 end
 
 swordskills={
- [0]=function() end, -- 0 - no weapon
-
  function (_actor) -- 1 - bruise
   local _a=getswordattack(_actor,1)
   add(attacks,_a)
@@ -533,36 +561,40 @@ swordskills={
  function (_actor) -- 4 - stun/lightning strike
   local _a=getswordattack(_actor,4)
   add(attacks,_a)
-  if _actor.swordskill_hit then
+  if _actor.skill_hit then
    addlightningstrike(_actor,8+rnd(112),8+rnd(112))
   end
  end,
 
  function (_actor) -- 5 - venom/venomspit
   local _a=getswordattack(_actor,5)
-  if _actor.swordskill_hit then
+  add(attacks,_a)
+  if _actor.skill_hit then
    addvenomspit(_actor,_actor.x,_actor.y,rnd())
+  end
+ end,
+
+ function (_actor) -- 6 - knockback/spikes
+  local _a=getswordattack(_actor,1,6)
+  _a.knockback=true
+  _a.onmiss=function(_attack)
+   addspikes(_attack,_actor.swordskill_level,238,addspikes_playercolors,_attack.x,_attack.y)
   end
   add(attacks,_a)
  end,
 
- function (_actor) -- 6 - bruise/knockback
-  local _a=getswordattack(_actor,1,6)
-  _a.knockback_c=0
-  if _actor == avatar then
-   _a.knockback_c=avatar.swordskill_level
-  end
-  _a.wallaware,_a.knockback,_a.durc=true,true,4
-  _a.onmiss=function (_attack)
-   _attack.knockback_c-=1
-   if _attack.knockback_c > 0 and not _attack.wallcollision then
-    swordskills[6](_attack)
-   end
+ function (_actor) -- 7 - teleport
+  local _a=getswordattack(_actor,1,7)
+  _a.onhit=function(_attack,_enemy)
+   addteleportfx(208,_actor.x,_actor.y-3)
+   local _a=rnd()
+   _actor.x=_enemy.x+cos(_a)*6
+   _actor.y=_enemy.y+sin(_a)*6
+   addteleportfx(208,_actor.x,_actor.y-3)
   end
   add(attacks,_a)
  end,
 }
-
 
 -- enemy melee attacks
 
@@ -578,6 +610,13 @@ end
 function missile_update(_attack)
  _attack.x+=cos(_attack.a)*_attack.missile_spd
  _attack.y+=sin(_attack.a)*_attack.missile_spd
+end
+
+function bowattack_teleportupdate(_attack)
+ if isinsidewall(_attack) then
+  add(fxs,getpsetfx(_attack.x,_attack.y,10,teleport_colors,0,0,0,0))
+ end
+ missile_update(_attack)
 end
 
 function arrow_onmiss_factory(_afflic,_colors)
@@ -610,15 +649,24 @@ function getbowattack(_actor,_afflic)
 end
 
 bowskills={
- [0]=function() end, -- 0 - no weapon
-
  function (_actor) -- 1 - bruise
   local _a=getbowattack(_actor,1)
   _a.draw,_a.onmiss=arrow_draw_factory(4),arrow_onmiss_factory(1)
   add(attacks,_a)
  end,
 
- nil, -- 2 - icewall
+ function (_actor) -- 2 - icewall
+  local _a=getbowattack(_actor,2)
+  local _onmiss=arrow_onmiss_factory(2)
+  _a.draw=arrow_draw_factory(12)
+  _a.onmiss=function(_attack)
+   if _actor.bowskill_level then
+    addicewall(_attack,_attack.x,_attack.y,_actor.bowskill_level)
+   end
+   _onmiss(_attack)
+  end
+  add(attacks,_a)
+ end,
 
  function (_actor) -- 3 - fire fissure
   local _a=getbowattack(_actor,3)
@@ -631,12 +679,70 @@ bowskills={
   add(attacks,_a)
  end,
 
- function (_actor) -- 4 - knockback
+ function (_actor) -- 4 - stun/lightning
+  local _a=getbowattack(_actor,4)
+  _a.draw,_a.onmiss=arrow_draw_factory(4),arrow_onmiss_factory(1)
+  add(attacks,_a)
+ end,
+
+ function (_actor) -- 5 - venom
+  local _a=getbowattack(_actor,5)
+  _a.draw,_a.onmiss=arrow_draw_factory(11),arrow_onmiss_factory(5)
+  _a.spit_c=0
+  _a.update=function(_attack)
+   _attack.spit_c+=1
+   _actor.bowskill_level=10
+   if _attack.spit_c >= max(16-_actor.bowskill_level,4) then
+    local _durc=_actor.bowskill_level*2
+    add(attacks,{
+     isenemy=_actor.isenemy,
+     x=_attack.x,y=_attack.y,
+     afflic=5,
+     hw=5,hh=5,
+     missile_spd=.375,
+     a=rnd(),
+     update=missile_update,
+     durc=_durc,
+     draw=function(_attack)
+      if rnd() < .5 then
+       circfill(_attack.x,_attack.y,5*mid(1,_attack.durc/_durc*2,.5),3)
+      end
+     end,
+     })
+    _attack.spit_c=0
+   end
+   missile_update(_attack)
+  end
+  add(attacks,_a)
+ end,
+
+ function (_actor) -- 6 - knockback/spikes
   local _a=getbowattack(_actor,1)
   _a.draw,_a.onmiss,_a.knockback=
    arrow_draw_factory(6),
-   arrow_onmiss_factory(1,quickfxcolors[4]),
+   arrow_onmiss_factory(1,quickfxcolors[6]),
    true
+  add(attacks,_a)
+  if _actor.skill_hit then
+   for _i=0,.875,.125 do
+    if _i != _a.a and rnd() < .75 then
+     local _spike=getbowattack(_actor,1)
+     _spike.draw,_spike.x,_spike.y,_spike.a,_spike.durc,_spike.missile_spd,_spike.knockback=
+      arrow_draw_factory(6),
+      _actor.x,_actor.y-2,_i,16,1.25,true
+     add(attacks,_spike)
+    end
+   end
+  end
+ end,
+
+ function(_actor) -- 7 - teleport
+  local _a=getbowattack(_actor,1)
+  _a.draw,_a.onmiss,_a.update=
+   arrow_draw_factory(7),
+   arrow_onmiss_factory(7),
+   bowattack_teleportupdate
+  _a.wallaware=nil
   add(attacks,_a)
  end,
 }
@@ -665,10 +771,10 @@ function stonethrow(_actor)
  add(attacks,_a)
 end
 
-fireballthrow_update_colors=split'15,14,14,8,2'
+fireballthrow_update_colors=split'15,14,14,8'
 function fireballthrow_update(_attack)
  missile_update(_attack)
- add(fxs,getfx(228,_attack.x,_attack.y,6,fireballthrow_update_colors))
+ add(fxs,getpsetfx(_attack.x,_attack.y,6,fireballthrow_update_colors,0,0,0,0))
 end
 
 function fireballthrow_draw(_attack)
@@ -698,7 +804,7 @@ end
 bowattack_venom_fx_colors=split'10,11,11,3,5'
 function bowattack_venom_update(_attack)
  missile_update(_attack)
- add(fxs,getfx(228,_attack.x,_attack.y,6,bowattack_venom_fx_colors))
+ add(fxs,getpsetfx(_attack.x,_attack.y,6,bowattack_venom_fx_colors,0,0,0,0))
 end
 
 function bowattack_venom_draw(_attack)
@@ -719,62 +825,74 @@ function bowattack_venom(_actor)
  add(attacks,_a)
 end
 
-function iceboltattack(_a)
- local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
- add(attacks,{
-  isenemy=_a.isenemy,
-  x=_x,y=_y,
-  a=_a.a,
-  afflic=2,
-  hw=3,hh=3,
-  durc=999,
-  wallaware=true,
-  missile_spd=1,
-  update=function(_attack)
-   missile_update(_attack)
-   add(fxs,getfx(232,_attack.x,_attack.y,6,split'7,7,7,12,12,13,13'))
-  end,
-  onmiss=function(_attack)
-   add(fxs,getfx(227,_attack.x+1,_attack.y+1,6,split'7,12'))
-  end,
-  draw=function(_attack)
-   -- todo: rect instead?
-   pal(1,7)
-   spr(232,_attack.x-4,_attack.y-4)
-   pal()
-  end,
+function boltskillfactory(_afflic,_colors)
+ return function (_a)
+  local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
+  add(attacks,{
+   isenemy=_a.isenemy,
+   x=_x,y=_y,
+   a=_a.a,
+   afflic=_afflic,
+   hw=3,hh=3,
+   durc=999,
+   wallaware=true,
+   missile_spd=1,
+   update=function(_attack)
+    missile_update(_attack)
+    add(fxs,getpsetfx(_attack.x,_attack.y,rnd(6),_colors,0,0,0,0))
+    add(fxs,getpsetfx(_attack.x,_attack.y+1,rnd(6),_colors,0,0,0,0))
+    add(fxs,getpsetfx(_attack.x+1,_attack.y+1,rnd(6),_colors,0,0,0,0))
+    add(fxs,getpsetfx(_attack.x+1,_attack.y,rnd(6),_colors,0,0,0,0))
+   end,
+   onmiss=function(_attack)
+    add(fxs,getfx(227,_attack.x+1,_attack.y+1,6,_colors))
+   end,
+   draw=function(_attack)
+    rectfill(_attack.x,_attack.y,_attack.x+1,_attack.y+1,_colors[1])
+   end,
   })
+ end
 end
 
-function enemyattack_confusionball(_a)
- local _x,_y=_a.x+cos(_a.a)*6,_a.y-1+sin(_a.a)*6
- add(attacks,{
-  isenemy=true,
-  x=_x,y=_y,
-  a=_a.a,
-  afflic=6,
-  hw=3,hh=3,
-  durc=999,
-  wallaware=true,
-  missile_spd=1,
-  update=function(_attack)
-   missile_update(_attack)
-   add(fxs,getfx(232,_attack.x,_attack.y,6,split'9,9,4,2'))
-  end,
-  onmiss=function(_attack)
-   add(fxs,getfx(227,_attack.x+1,_attack.y+1,6,split'9,4'))
-  end,
-  draw=function(_attack)
-   -- todo: rect instead?
-   pal(1,15)
-   spr(232,_attack.x-4,_attack.y-4)
-   pal()
-  end,
- })
+iceboltattack_colors=split'7,7,12,3'
+iceboltattack=boltskillfactory(2,iceboltattack_colors)
+
+fireboltattack=boltskillfactory(3,fireballthrow_update_colors)
+
+venomboltattack=boltskillfactory(5,split'10,11,11,3')
+
+enemyattack_confusionball=boltskillfactory(6,split'9,9,4,2')
+
+function enemy_druidspikeattack(_a)
+ addspikes(_a,5,239,addspikes_enemycolors,getrandomfloorpos())
+end
+
+function enemy_lightningstrikeattack(_a)
+ addlightningstrike(_a,avatar.x,avatar.y)
+end
+
+teleport_colors=split'7,7,11,12,1'
+function addteleportfx(_s,_x,_y)
+ add(fxs,getfx(_s,_x,_y,15,teleport_colors))
+end
+function lastboss_teleport(_a)
+ addteleportfx(209,_a.x,_a.y-3)
+ _a.x,_a.y=getrandomfloorpos()
+ addteleportfx(209,_a.x,_a.y-3)
 end
 
 
 -- staff attacks
+
+function addcastingfx(_colors)
+ for _i=-2,1 do
+  add(fxs,getpsetfx(avatar.x+_i,avatar.y+1,10+rnd(8),_colors,0,-.375,0,0))
+ end
+end
+
+function addcastingmarkerfx(_colors)
+ add(fxs,getpsetfx(avatar.x+avatar.staffdx,avatar.y+avatar.staffdy,5,_colors,.5-rnd(1),.5-rnd(1),0,0))
+end
 
 staffskills={
  [0]=function() end, -- 0 - no weapon
@@ -786,59 +904,120 @@ staffskills={
    swordskills[1](_a)
   end
  end,
+
+ function (_a) -- 2 - ice
+  _a.staffattack_c+=1
+  if _a.staffattack_c >= 32 then
+   addcastingfx(iceboltattack_colors)
+   iceboltattack(_a)
+   _a.staffattack_c=0
+  end
+ end,
+
+ function (_a) -- 3 - fire
+  _a.staffattack_c+=1
+  if _a.staffattack_c >= 32-_a.staffskill_level then
+   addcastingfx(getfirefx_colors)
+   addfissure(_a,_a.x+_a.staffdx-8+rnd(16),_a.y+_a.staffdy-8+rnd(16),_a.staffskill_level)
+   _a.staffattack_c=0
+  end
+  addcastingmarkerfx(getfirefx_colors)
+ end,
+
+ function (_a) -- 4 - lightninig
+  _a.staffattack_c+=1
+  _a.staffskill_level=8
+  if _a.staffattack_c >= 50-_a.staffskill_level*3 then
+   addcastingfx(getlightningstrikefx_colors)
+   addlightningstrike(_a,8+rnd(112),8+rnd(112))
+   _a.staffattack_c=0
+  end
+ end,
+
+ function (_a) -- 5 - venom
+  _a.staffattack_c+=1
+  if _a.staffattack_c >= 16 then
+   _a.staffattack_c=0
+   swordskills[1](_a)
+  end
+ end,
+
+ function (_a) -- 6 - spikes
+  _a.staffattack_c+=1
+  _a.staffskill_level=8
+  if _a.staffattack_c >= 56-_a.staffskill_level*3 then
+   addcastingfx(split'7,7,6,2')
+   addspikes(_a,min(_a.staffskill_level*.5,3),238,addspikes_playercolors,getrandomfloorpos())
+   _a.staffattack_c=0
+  end
+ end,
+
+ function (_a) -- 7 - teleport
+  _a.staffattack_c+=1
+  if _a.staffattack_c >= 16 then
+   addcastingfx(split'7,7,11,12')
+   _a.staffattack_c=0
+  end
+  addcastingmarkerfx(split'7,7,11,12')
+ end,
 }
-
-function staff_fireattack(_a)
- _a.staffattack_c+=1
- if _a.staffattack_c >= 16 then
-  add(fxs,getfirefx(_a.x-2,_a.y))
-  add(fxs,getfirefx(_a.x-1,_a.y))
-  add(fxs,getfirefx(_a.x,_a.y))
-  _a.staffattack_c=0
-  addfissure(_a,_a.x+_a.staffdx-16+rnd(32),_a.y+_a.staffdy-16+rnd(32),_a.staffskill_level)
- end
-end
-
 
 -- misc enemy funcs
 
 function enemy_summonstone(_a)
- _a.summoningc+=1
- if #actors < 16 and _a.summoningc > 240 then
-  _a.summoningc=0
-  local _summonee=_a.summonees[1]
-  if rnd() < .25 then
-   _summonee=_a.summonees[2]
+ if _a.afflic != 2 then
+  _a.summoningc+=1
+  if #actors < 16 and _a.summoningc > 300 then
+   _a.summoningc=0
+   local _summonee=_a.summonees[1]
+   if rnd() < .25 then
+    _summonee=_a.summonees[2]
+   end
+   add(actors,lmerge(getenemybase(_a.x,_a.y),_summonee))
   end
-  add(actors,lmerge(getenemybase(_a.x,_a.y),_summonee))
  end
- spr(_a.s[1],_a.x-4,_a.y-(8-_a.hh))
+ drawactor(_a)
+end
+
+function enemyondeath(_actor)
+ for _i=-2,3 do
+  add(fxs,getfx(rnd(split'228,232,249,251'),_actor.x+_i,_actor.y,14,_actor.bloodcolors,0,-.125,0,rnd(.0625)))
+ end
 end
 
 function bossondeath(_actor)
- local _sgetystart,_sgetyend,_sgetxstart,_sgetxend=81,64,60,74
- if _actor.s then
-  _sgetystart,_sgetxstart=
-   flr(_actor.s[3]/16)*8+7,
-   (_actor.s[3]%16)*8
-  _sgetyend,_sgetxend=
-   _sgetystart-7,
-   _sgetxstart+7
+ for _i=0,.875,.125 do
+  local _vx,_vy=cos(_i),sin(_i)
+  add(fxs,getfx(227,_actor.x,_actor.y,40,_actor.bloodcolors,_vx,_vy,_vx*-.025,_vy*-.025))
  end
+end
+
+function lastbossondeath(_actor)
+ bossondeath(_actor)
+ -- todo: token hunt, specialise for last boss only
+ local _sgetystart,_sgetyend,_sgetxstart,_sgetxend=81,64,60,74
  local _xoff=(_sgetxend-_sgetxstart)/2
  for _y=_sgetyend-_sgetystart,0 do
   for _x=0,_sgetxend-_sgetxstart do
    local _col=sget(_sgetxstart+_x,_sgetystart+_y)
    if _col != 0 then
-    add(fxs,getfx(
-     228,
+    add(fxs,getpsetfx(
      _actor.x-_xoff+_x,
      _actor.y+_y,
      200+rnd(60),
      {_col,_col,_col,1},
-     0,-rnd()*.025))
+     0,-rnd()*.025,
+     0,0))
    end
   end
+ end
+end
+
+function enemy_rollingattacks(_actor)
+ _actor.attacks[_actor.cur_attack](_actor)
+ _actor.cur_attack+=1
+ if _actor.cur_attack > #_actor.attacks then
+  _actor.cur_attack=1
  end
 end
 
@@ -859,6 +1038,7 @@ function getenemybase(_x,_y)
   range=8,
   bow_c=999,
   bloodcolors=split'8,8,2',
+  ondeath=enemyondeath,
 
   -- internals
   x=_x,y=_y,
@@ -875,7 +1055,7 @@ end
 skeletonarcher={
  s=split'100,101,102,103',
  hp=6,maxhp=6,
- bloodcolors=split'6,6,5',
+ bloodcolors=split'7,7,6',
  spd=.375,
  attack=bowskills[1],
  sight=80,
@@ -884,7 +1064,7 @@ skeletonarcher={
 
 enemytypes={
 
- -- ice orcs
+ -- -- ice orcs
  {
   { -- ice orc stonethrower
    s=split'48,49,50,51',
@@ -989,8 +1169,14 @@ enemytypes={
   { -- poison druid
    s=split'88,89,90,91',
    maxhp=20,
-   spd=.125,
-   attack=iceboltattack,
+   spd=.25,
+   attacks={
+    enemy_druidspikeattack,
+    fireballthrow,
+    bowattack_venom,
+   },
+   cur_attack=1,
+   attack=enemy_rollingattacks,
    sight=90,
    range=64,
    ondeath=bossondeath,
@@ -1021,7 +1207,7 @@ enemytypes={
     { -- skeleton knight
      s=split'96,97,98,99',
      hp=10,maxhp=10,
-     bloodcolors=split'6,6,5',
+     bloodcolors=split'7,7,6',
      spd=.25,
      attack=swordskills[1],
     },
@@ -1032,7 +1218,7 @@ enemytypes={
   { -- skeleton queen
    s=split'104,105,106,107',
    maxhp=20,
-   bloodcolors=split'6,6,5',
+   bloodcolors=split'7,7,6',
    spd=.125,
    attack=enemyattack_confusionball,
    sight=90,
@@ -1052,11 +1238,11 @@ enemytypes={
  {
   { -- big devil
    s=split'112,113,114,115',
-   maxhp=16,
+   maxhp=12,
    spd=.5,
    attack=swordskills[3],
    hw=3,hh=3,
-   bloodcolors=split'7,7,6',
+   bloodcolors=split'9,9,4',
   },
 
   { -- evil warpstone
@@ -1070,18 +1256,18 @@ enemytypes={
    summonees={
     { -- devil thrower
      s=split'116,117,118,119',
-     hp=4,maxhp=4,
+     hp=2,maxhp=2,
      spd=.5,
      attack=fireballthrow,
      hw=1.5,hh=1.5,
      sight=96,
      range=48,
-     bloodcolors=split'7,7,6',
+     bloodcolors=split'9,9,4',
     },
     { -- devil fighter
      s=split'120,121,122,123',
-     hp=8,maxhp=8,
-     bloodcolors=split'7,7,6',
+     hp=4,maxhp=4,
+     bloodcolors=split'9,9,4',
      spd=.375,
      attack=swordskills[3],
     },
@@ -1094,21 +1280,21 @@ enemytypes={
    hw=3,hh=4,
    sight=128,
    range=86,
-   bloodcolors=split'7,7,6',
-   ondeath=bossondeath,
+   bloodcolors=split'9,9,4',
+   ondeath=lastbossondeath,
    attacks={
+    fireboltattack,
     iceboltattack,
-    fireballthrow,
+    fireboltattack,
+    venomboltattack,
+    fireboltattack,
+    enemy_lightningstrikeattack,
+    fireboltattack,
+    lastboss_teleport,
    },
    cur_attack=1,
-   attack_colors=split'12,8',
-   attack=function(_actor)
-    _actor.attacks[_actor.cur_attack](_actor)
-    _actor.cur_attack+=1
-    if _actor.cur_attack > #_actor.attacks then
-     _actor.cur_attack=1
-    end
-   end,
+   attack=enemy_rollingattacks,
+   attack_colors=split'8,12,8,11,8,10,8,7',
    draw=function(_a)
     pal(8,_a.attack_colors[_a.cur_attack])
     sspr(flr(_a.f-1)*15,65,15,18,_a.x-7.5,_a.y-12,15,18,_a.sflip)
@@ -1119,7 +1305,7 @@ enemytypes={
   { -- devil confusor
    s=split'124,125,126,127',
    maxhp=8,
-   bloodcolors=split'7,7,6',
+   bloodcolors=split'9,9,4',
    spd=.25,
    attack=enemyattack_confusionball,
    sight=90,
@@ -1139,22 +1325,27 @@ end
 
 function recalcskills()
  avatar.swordskill_level,avatar.bowskill_level,avatar.staffskill_level=0,0,0
- for _i=1,16 do
-  local _skill=dget(_i)
-  if _skill == dget(6) then
-   avatar.swordskill_level+=1
-  end
-  if _skill == dget(7) then
-   avatar.bowskill_level+=1
-  end
-  if _skill == dget(8) then
-   avatar.staffskill_level+=1
+ avatar.reviveitems={}
+ for _typ=1,16 do
+  local _skill=dget(_typ)
+  if _skill <= 7 then
+   if _skill == dget(6) then
+    avatar.swordskill_level+=1
+   end
+   if _skill == dget(7) then
+    avatar.bowskill_level+=1
+   end
+   if _skill == dget(8) then
+    avatar.staffskill_level+=1
+   end
+  elseif _skill == 8 then
+   add(avatar.reviveitems,_typ)
   end
  end
 
  -- set basecolors
  avatar.basecolors=split'6,4,4,4,15,0,13,2'
- local _itemtoskillcolor=split'4,3,2,3,3,1,2,2'
+ local _itemtoskillcolor=split'4,3,2,3,2,1,2,2'
  for _i=1,8 do
   local _skill=dget(5+_i)
   if _skill != 0 then
@@ -1164,7 +1355,7 @@ function recalcskills()
 
  avatar.swordattack=swordskills[dget(6)] or swordskills[1]
  avatar.bowattack=bowskills[dget(7)] or bowskills[1]
- -- todo: add staffattack
+ avatar.staffattack=staffskills[dget(8)] or staffskills[1]
 end
 
 function setupavatar()
@@ -1191,14 +1382,14 @@ function setupavatar()
    pal()
   end,
 
-  swordskill_c=0,
+  skill_c=0,
 
   bow_c=0,
 
   staffattack_c=0,
   staffdx=0,
   staffdy=0,
-  staffattack=staff_fireattack,
+  -- staffattack=staffskills[7],
  }
  avatar.s=avatar.ss[1]
 
@@ -1225,8 +1416,8 @@ function mapinit()
   end
  end
 
+ local _enemycs=split'3,4,5,4,6,7,5,8,12,4,6,6,4,6,6'
  -- local _enemycs=split'1,2,3,1,2,3,1,2,3,1,2,3,1,2,3'
- local _enemycs=split'3,5,6,5,8,11,5,8,11,4,6,8,5,7,9'
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,steps,angles=
   avatarx,avatary,0,_enemycs[level] or 0,
@@ -1323,6 +1514,7 @@ end
 -- system update
 
 update60_curenemyi=1
+update60_enemyattackts=0
 function _update60()
 
  -- dead
@@ -1361,12 +1553,16 @@ function _update60()
   if level == 15 then
    if btnp(2) then
     dset(62,dget(62)+1) -- note: exploitable
+    dset(63,0)
     level=0
     mapinit()
    end
   elseif level == 0 then
-   if btnp(1) then
-    level+=1
+   if dget(63) != 0 and btnp(3) then
+    level=dget(63)+1
+    mapinit()
+   elseif btnp(1) then
+    level=1
     mapinit()
    end
   elseif level%3 == 0 then
@@ -1442,9 +1638,8 @@ function _update60()
     avatar.staffdx,avatar.staffdy=0,0
    end
    if _angle then
-    local _castingspeed=.25
-    avatar.staffdx+=norm(cos(avatar.a))*_castingspeed
-    avatar.staffdy+=norm(sin(avatar.a))*_castingspeed
+    avatar.staffdx+=norm(cos(avatar.a))
+    avatar.staffdy+=norm(sin(avatar.a))
    end
    avatar.state='readying'
    avatar.state_c=1
@@ -1466,19 +1661,30 @@ function _update60()
   end
 
   if avatar.state == 'readying' and avatar.state_c <= 0 then
-   avatar.swordskill_hit=nil
-   avatar.swordskill_c+=1
-   -- if avatar.swordskill_c%(17-avatar.swordskill_level) == 0 then
-   if avatar.swordskill_c%flr(19/avatar.swordskill_level) == 0 then
-    avatar.swordskill_hit=true
-    avatar.swordskill_c=0
+   avatar.skill_hit=nil
+   avatar.skill_c+=1
+   local _skill_level=avatar.swordskill_level
+   if avatar.attack == avatar.bowattack then
+    _skill_level=avatar.bowskill_level
+   end
+   if avatar.skill_c%flr(19/_skill_level) == 0 then
+    avatar.skill_hit=true
+    avatar.skill_c=0
    end
    avatar.state='striking'
    avatar.state_c=28
    avatar.attack(avatar)
+
+   -- teleport
+   if avatar.iscasting and avatar.staffattack == staffskills[7] then
+    addteleportfx(208,avatar.x,avatar.y-3)
+    avatar.x+=avatar.staffdx
+    avatar.y+=avatar.staffdy
+    addteleportfx(208,avatar.x,avatar.y-3)
+   end
+
    avatar.bow_c=0
    avatar.iscasting=nil
-   avatar.ireadyingbow=nil
   elseif avatar.state_c <= 0 then
    avatar.state=nil
   end
@@ -1532,12 +1738,17 @@ function _update60()
 
   elseif _haslostoavatar and _disttoavatar < _enemy.range then
    -- debug('attack avatar')
-   _enemy.targetx,_enemy.targety=avatar.x,avatar.y
-   _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
 
-   if not _enemy.state then
-    _enemy.state='readying'
-    _enemy.state_c=36
+   if t()-update60_enemyattackts > .375 then
+    _enemy.targetx,_enemy.targety=avatar.x,avatar.y
+    _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
+
+    if not _enemy.state then
+     _enemy.state='readying'
+     _enemy.state_c=36
+    end
+
+    update60_enemyattackts=t()
    end
 
   elseif _enemy.afflic == 5 then
@@ -1645,13 +1856,11 @@ function _update60()
    if _a.wallcollisiondx then
     _a.hp+=.05
    end
-   add(fxs,getfx(
-    228,
-    _a.x-2+rnd(2),
+   add(fxs,getpsetfx(_a.x-2+rnd(2),
     _a.y-_a.hh*2-2,
     6,
     split'7,2,10,2',
-    0,0.5))
+    0,0.5,0,0))
   elseif _a.afflic == 5 then
    if _a.walking then
     _a.hp-=.025
@@ -1685,20 +1894,20 @@ function _update60()
   end
 
   if _a.bleeding then
-   add(fxs,getfx(
-    228,
+
+   add(fxs,getpsetfx(
     _a.x,_a.y,
-    4+flrrnd(2),
+    3+flrrnd(2),
     {_a.bloodcolors[1]},
     0,0,
-    0,.075))
+    0,.075,0,0))
    if rnd() < .025 then
-    add(fxs,getfx(
-     228,
+    add(fxs,getpsetfx(
      _a.x,
      _a.y,
-     240,
-     {_a.bloodcolors[3]}))
+     110,
+     {_a.bloodcolors[3]},
+     0,0,0,0))
    end
   end
  end
@@ -1765,6 +1974,28 @@ function _update60()
    if _a.ondeath then
     _a.ondeath(_a)
    end
+   if _a == avatar then
+    _a.hp=0
+    if #_a.reviveitems > 0 then
+     dset(_a.reviveitems[1],1)
+     recalcskills()
+     add(actors,_a)
+     _a.hp=_a.maxhp
+     _a.x,_a.y=getrandomfloorpos()
+     add(fxs,getfx(210,_a.x,_a.y,120,split'7,6,13,1',0,-.125))
+     for _i=1,10 do
+      add(attacks,{
+       x=64,y=64,
+       hw=64,hh=64,
+       durc=2,
+       afflic=4,
+       draw=function(_attack)
+        cls(7)
+       end
+      })
+     end
+    end
+   end
   elseif _a.isenemy then
    _enemycount+=1
   end
@@ -1773,11 +2004,12 @@ function _update60()
  -- update warpstone
  if _enemycount == 0 then
   if level > 0 and walls[warpstone.wy][warpstone.wx] != 225 then
+   local _typ=rnd(split'6,6,6,7,7,8,8,9,10,11,12,13,14,15,16')
    if level%3 == 2 then
-    addflooritem()
+    addflooritem(_typ,rnd(split'1,2,3,4,5,6,7,8'))
    elseif level%3 == 0 then
-    addflooritem()
-    addflooritem(getworld())
+    addflooritem(_typ,getworld()+1)
+    addflooritem(getworld(),rnd(split'2,3,4,5,6,7,8'))
    end
   end
 
@@ -1789,7 +2021,7 @@ function _update60()
   end
 
   if rnd() < .125 then
-   add(fxs,getfx(228,warpstone.x-2+rnd(4),warpstone.y+3-rnd(5),30,split'12,3,1',0,0,0,-.0125))
+   add(fxs,getpsetfx(warpstone.x-2+rnd(4),warpstone.y+3-rnd(5),30,split'12,3,1',0,0,0,-.0125))
   end
  end
 
@@ -1809,7 +2041,9 @@ function _draw()
  if warpstone.iswarping then
   rectfill(warpstone.x-3,0,warpstone.x+3,warpstone.y+4,7)
   local _str='\f6  ➡️\n⬇️'
-  if level == 15 then
+  if level == 0 and dget(63) > 0 then
+   -- pass
+  elseif level == 15 then
    _str='\n\f3⬆️'
   elseif level >= 13 or level == 0 then
    _str='\f6  ➡️'
@@ -1827,9 +2061,9 @@ function _draw()
  if avatar.hp < avatar.maxhp then
   local _clipsize=128*(avatar.hp/avatar.maxhp)
   local _y=mid(0,avatar.y-_clipsize/2,128-_clipsize)
-  cls(affliccolors[avatar.afflic])
+  cls(affliccolors[avatar.afflic] or 1)
   if avatar.hp <= 0 then
-   spr(231,avatar.x-4,avatar.y-6)
+   spr(231,mid(0,avatar.x-4,120),mid(0,avatar.y-6,120))
    if deathts and t() > deathts then
     ?'\f0🅾️⌂',56,122
    end
@@ -1956,17 +2190,17 @@ ddd5d5d0ddd5d5d00d5d5d0000d666d00055511000555110000551005515551511111111dd1ddd1d
 0d0050000d005000000500006666d66d055111110551111100551110111111111111111111111111113131111102020111111111221221222214522221212212
 000050000000500000050000000000000000200000002000000020005515551511111111dd1ddd1ddd3d3d1dd102020111111111221221222212212221212212
 22222222222222222222222222222222000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-22222222222222222222222222222222003300000043000000030000000000000033300000000400000003000000330003332200002210000033200003302200
-22222222000000000000000000000500034230000433200004434300030403000341320000004000000043000000430003221200044331000224110001231100
-22222222022022220222002202502522032230000131200004030200044133000331220003040000000403000002100003241200000031000220110000321000
-22222222020022200220002002055220003300000313000000332000023322000022200000300000004020000020100002111200040311000220110000243000
-22222222000000000000000000050000000000000032000000030000000000000000000001020000033300000200000000222000040310000220110000321000
+22222222222222222222222222222222003200000043000000030000000000000033300000000400000003000000330003332200002210000033200003302200
+22222222000000000000000000000500034120000433200004434300030403000341320000004000000042000000430003221200044331000224110001231100
+22222222022022220222002202502522021120000131200004030200044133000331220003040000000403000002100003241200000031000220110000321000
+22222222020022200220002002055220002200000313000000332000023322000022200000300000004010000020100002111200040311000220110000243000
+22222222000000000000000000050000000000000032000000030000000000000000000001020000032300000200000000222000040310000220110000321000
 22222222220222020002220222025202000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 22222222200220022002200220025002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 03302000002220000043000000040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-04201000020002000234200000443000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300000000000
-03302000020020000200100004433300000000000000000000001100000000000000020000000200000000000000020000003000000030000066630000000030
+04201000020001000234200000443000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300000000000
+03302000020010000200100004433300000000000000000000001100000000000000020000000200000000000000020000003000000030000066630000000030
 02330200004300000011000000322000000050100000501000005700000050000000502000005020000052000000502000005300000053000067563000005030
 00220100003300000000000000020000004477100044771000447000004477110006772000067720000777200007772000077730000777300006770300077730
 00000000000000000000000000000000004476000044760000447000064470000006720000067200000672000006702000067603000676030000700000067630
@@ -2027,28 +2261,21 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 000d2221dd208000d0d222dd12050000002221dd2050000d222d1dd2070000021dd1dd1200000000000000000000000000000000000000000000000000000000
 0d0d2221d12050000d2222d1120500000d2221d12080000222dd1d100500002111d1dd1120000000000000000000000000000000000000000000000000000000
 00d02221d120500000222dd10008000dd02221d12050000222d11d000500002111d11d1120000000000000000000000000000000000000000000000000000000
-00000d00d000800000000dd000050000000d00d00000000000d00d000700000000d00d0000000000000000000000000000000000000000000000000000000000
-00000500500050000000050000000000000500500000000000500507777700000050050000000000000000000000000000000000000000000000000000000000
+00000d00d000800000000dd000050000000d00d00000000000d00d070707000000d00d0000000000000000000000000000000000000000000000000000000000
+00000500500050000000050000000000000500500000000000500500767000000050050000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000222222202222222022222220222222202222222000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000022272220222e22202ddddd2022222b202726222000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000022277220222ee220222722202222b3202272622000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000022777c2022eee220222aa220292723202277262000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000022777c2022efee2022227220229222202277262000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000002777cc202eeffe2022227220242922202772622000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000222222202222222022222220222222202222222000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000222222202222222022222220222222202222222022222220111111100000000000000000000000000000000000000000000000000000000000000000
+0000000022272220222e22202ddddd2022222b2022222220222277201176d1100000000000000000000000000000000000000000000000000000000000000000
+0000000022277220222ee220222722202222b32022272220222b772017776d100000000000000000000000000000000000000000000000000000000000000000
+0000000022777c2022eee220222aa220292723202727222022cbb2201176d1100000000000000000000000000000000000000000000000000000000000000000
+0000000022777c2022efee2022227220229222202726272027cc22201176d1100000000000000000000000000000000000000000000000000000000000000000
+000000002777cc202eeffe20222272202429222026262620277222201176d1100000000000000000000000000000000000000000000000000000000000000000
+00000000222222202222222022222220222222202222222022222220111111100000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -2058,15 +2285,22 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00005000000050000000500000000000000000000000700000051500066666600000000000000000000000000000000000000000000020000000000001000000
-0000550000005500000055000000000000000000000777000055120066666666000000000e8888000f9999000e88999000000000000022000000000002010010
-00051500000575000005050000011000000000000007717005551110d666666d00000000e8111880f9191990e811919900ddd100000282000000000000020020
-00055500000555000005550000111100000000000077177055551111d11611dd000110008818182099919940881819940dd1dd10000222000000000010020000
-00515500005755000050550000111100000010000077177055500111d11611dd000110008811122099191440881191440d1d1d10002822000000000020000100
-0055550000555500005555000001100000000000077777775502201166d1d660000000000222220004444400022244400dd1dd10002222000000000000100200
-005515500055755000550550000000000000000077177171002222000d6d6d00000000000000000000000000000000000dd1dd10002282200000000000200201
-0055555000555550005555500000000000000000717717110222222006060600000000000000000000000000000000000ddddd10002222200000000000000002
+00000000000110010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000110010000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000001111010001110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000001111110000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00001000001111010000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00011100001111010000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00001000011111010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00010100001001010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00005000000050000000500000000000000000000000700000051500066666600000000000000000000000000000000000000000000020000100000001000000
+0000550000005500000055000000000000000000000777000055120066666666000000000e8888000f9999000e88999000000000000022000601001002010010
+00051500000575000005050000011000000000000007717005551110d666666d00000000e8111880f9191990e811919900ddd100000282000006006000020020
+00055500000555000005550000111100000000000077177055551111d11611dd000110008818182099919940881819940dd1dd10000222001006000010020000
+00515500005755000050550000111100000010000077177055500111d11611dd000110008811122099191440881191440d1d1d10002822006000010020000100
+0055550000555500005555000001100000000000077777775502201166d1d660000000000222220004444400022244400dd1dd10002222000010060000100200
+005515500055755000550550000000000000000077177171002222000d6d6d00000000000000000000000000000000000dd1dd10002282200060060100200201
+0055555000555550005555500000000000000000717717110222222006060600000000000000000000000000000000000ddddd10002222200000000600000002
 00010000000000000000000000000000000001000010000000000000000001000000000000000000000000000000000000000000000000000000000000000000
 00001000000000000000000000000000000010000010000000000000000001000000000000000000000000000000000000000000000000000000000000000000
 00001100111100000000000000001111000110000011000010000001000011000000000000000000000000000000000000000000000000000000000000000000
