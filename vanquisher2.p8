@@ -4,6 +4,29 @@ __lua__
 -- vanquisher of evil 2 1.0-alpha
 -- by ironchest games
 
+--[[
+
+todo:
+
+add sfx
+
+arcane:
+- sword - knockback + wall
+- bow - knockback spikes
+- staff - 
+
+venom skills:
+- bow: poisonous vines
+- 
+
+hp leeching skill
+- how to scale?
+- sword: leech
+- bow: create potion
+- staff: heal
+
+--]]
+
 printh('debug started','debug',true)
 function debug(s)
  printh(tostr(s),'debug',false)
@@ -163,6 +186,7 @@ function collideaabbs(_func,_aabb,_other,_dx,_dy)
  return _dx,_dy
 end
 
+detectandresolvehit_fxcolors=split'7'
 function detectandresolvehit(_attack,_actor)
  -- detect
  local _dx,_dy=collideaabbs(isaabbscolliding,_attack,_actor,0,0)
@@ -176,7 +200,7 @@ function detectandresolvehit(_attack,_actor)
   del(attacks,_attack)
   _actor.afflic=_attack.afflic
   _actor.hp-=1
-  add(fxs,getfx(227,_attack.x,_attack.y,8,split'7'))
+  add(fxs,getfx(227,_attack.x,_attack.y,8,detectandresolvehit_fxcolors))
 
   if _attack.knockback then
    _actor.knockbackangle=_attack.a or atan2(_actor.x-_attack.x,_actor.y-_attack.y)
@@ -243,6 +267,7 @@ function getrandomfloorpos()
  while walls[flr(_y/8)][flr(_x/8)] != 0 do
   _x,_y=rnd(120),rnd(120)
  end
+ -- todo: add dynwalls?
  return _x,_y
 end
 
@@ -273,16 +298,13 @@ function addflooritem(_typ,_skill)
  add(flooritems,_flooritem)
 end
 
+-- 7639
+function drawskillactionbtns_getifbtn(_itemnr,_itemskill,_skilltype)
+ return _itemnr == _skilltype or
+  _itemskill > 1 and _itemskill <= 7 and _itemskill == dget(_skilltype)
+end
 function drawskillactionbtns(_itemnr)
- local _itemskill,_swordskill,_bowskill,_staffskill=
-  dget(_itemnr),dget(6),dget(7),dget(8)
- local _skillactionbtns={
-  _itemnr == 6 or _itemskill > 1 and _itemskill <= 7 and _itemskill == _swordskill,
-  _itemnr == 7 or _itemskill > 1 and _itemskill <= 7 and _itemskill == _bowskill,
-  _itemnr == 8 or _itemskill > 1 and _itemskill <= 7 and _itemskill == _staffskill,
- }
-
- local _x,_y=
+ local _itemskill,_x,_y=dget(_itemnr),
   split'63,75,87,99,111,12,24,36,63,75,87,99,111,12,24,36'[_itemnr],
   split'24,24,24,24,24,116,116,116,116,116,116,116,116,24,24,24'[_itemnr]
 
@@ -292,9 +314,9 @@ function drawskillactionbtns(_itemnr)
 
  spr(175+_itemskill,_x,_y-8)
 
- for _i=1,3 do
-  if _skillactionbtns[_i] then
-   spr(232+_i,_x,_y)
+ for _i=6,8 do
+  if drawskillactionbtns_getifbtn(_itemnr,_itemskill,_i) then
+   spr(227+_i,_x,_y) -- note: sprite is offset to accomodate _i
    _y+=3
   end
  end
