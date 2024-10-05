@@ -2011,7 +2011,7 @@ function _draw()
 
  -- draw player affliction
  if avatar.hp < avatar.maxhp then
-  local _clipsize=128*(avatar.hp/avatar.maxhp)
+  local _clipsize=127*(avatar.hp/avatar.maxhp)
   local _y=mid(0,avatar.y-_clipsize/2,129-_clipsize)
   cls(affliccolors[avatar.afflic] or 1)
   if avatar.hp <= 0 then
