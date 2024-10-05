@@ -524,10 +524,10 @@ end
 affliccolors=split'2,12,14,10,3,9'
 
 quickfxcolors={
- split'6,6,4,1', -- bruised
+ split'6,6,4,1', -- bruise
  split'7,7,7,12,13', -- ice
- split'7,14,15,15,14,14', -- fyre
- split'4,4,10,10,10,7', -- stun
+ split'7,14,15,15,14,14', -- fire
+ split'4,4,10,10,10,7', -- stun/lightning
  split'3,3,3,11,11,10', -- venom
 
  split'7,7,13,2', -- spikes
@@ -551,7 +551,6 @@ function getswordattack(_actor,_afflic,_quickfxcolori)
  },_x,_y
 end
 
--- 7570
 swordskills={
  function (_actor) -- 1 - bruise
   add(attacks,getswordattack(_actor,1))
@@ -630,21 +629,7 @@ function bowattack_teleportupdate(_attack)
  missile_update(_attack)
 end
 
-function arrow_onmiss_factory(_afflic,_colors)
- return function(_attack)
-  add(fxs,getfx(227,_attack.x,_attack.y,6,_colors or quickfxcolors[_afflic]))
- end
-end
-
-function arrow_draw_factory(_color)
- return function(_attack)
-  pal(1,_color)
-  spr(248+atodirections(_attack.a)*8,_attack.x-4,_attack.y-4)
-  pal()
- end
-end
-
-function getbowattack(_actor,_afflic)
+function getbowattack(_actor,_afflic,_quickfxcolori)
  return {
   isenemy=_actor.isenemy,
   x=_actor.x+cos(_actor.a)*6,
@@ -656,20 +641,25 @@ function getbowattack(_actor,_afflic)
   wallaware=true,
   missile_spd=2,
   update=missile_update,
+  onmiss=function(_attack)
+   add(fxs,getfx(227,_attack.x,_attack.y,6,quickfxcolors[_quickfxcolori or _afflic]))
+  end,
+  draw=function(_attack)
+   pal(1,_actor.basecolors[2])
+   spr(248+atodirections(_attack.a)*8,_attack.x-4,_attack.y-4)
+   pal()
+  end,
  }
 end
 
 bowskills={
  function (_actor) -- 1 - bruise
-  local _a=getbowattack(_actor,1)
-  _a.draw,_a.onmiss=arrow_draw_factory(4),arrow_onmiss_factory(1)
-  add(attacks,_a)
+  add(attacks,getbowattack(_actor,1))
  end,
 
  function (_actor) -- 2 - icewall
   local _a=getbowattack(_actor,2)
-  local _onmiss=arrow_onmiss_factory(2)
-  _a.draw=arrow_draw_factory(12)
+  local _onmiss=_a.onmiss
   _a.onmiss=function(_attack)
    if _actor.bowskill_level then
     addicewall(_attack,_attack.x,_attack.y,_actor.bowskill_level)
@@ -681,8 +671,7 @@ bowskills={
 
  function (_actor) -- 3 - fire fissure
   local _a=getbowattack(_actor,3)
-  _a.draw=arrow_draw_factory(14)
-  local _onmiss=arrow_onmiss_factory(3)
+  local _onmiss=_a.onmiss
   _a.onmiss=function(_attack)
    _onmiss(_attack)
    addfissure(_attack,_attack.x,_attack.y,_actor.bowskill_level)
@@ -692,13 +681,11 @@ bowskills={
 
  function (_actor) -- 4 - stun/lightning
   local _a=getbowattack(_actor,4)
-  _a.draw,_a.onmiss=arrow_draw_factory(4),arrow_onmiss_factory(1)
   add(attacks,_a)
  end,
 
  function (_actor) -- 5 - venom
   local _a=getbowattack(_actor,5)
-  _a.draw,_a.onmiss=arrow_draw_factory(11),arrow_onmiss_factory(5)
   _a.spit_c=0
   _a.update=function(_attack)
    _attack.spit_c+=1
@@ -728,18 +715,14 @@ bowskills={
  end,
 
  function (_actor) -- 6 - knockback/spikes
-  local _a=getbowattack(_actor,1)
-  _a.draw,_a.onmiss,_a.knockback=
-   arrow_draw_factory(6),
-   arrow_onmiss_factory(1,quickfxcolors[6]),
-   true
+  local _a=getbowattack(_actor,1,6)
+  _a.knockback=true
   add(attacks,_a)
   if _actor.skill_hit then
    for _i=0,.875,.125 do
     if _i != _a.a and rnd() < .75 then
      local _spike=getbowattack(_actor,1)
-     _spike.draw,_spike.x,_spike.y,_spike.a,_spike.durc,_spike.missile_spd,_spike.knockback=
-      arrow_draw_factory(6),
+     _spike.x,_spike.y,_spike.a,_spike.durc,_spike.missile_spd,_spike.knockback=
       _actor.x,_actor.y-2,_i,16,1.25,true
      add(attacks,_spike)
     end
@@ -748,11 +731,8 @@ bowskills={
  end,
 
  function(_actor) -- 7 - teleport
-  local _a=getbowattack(_actor,1)
-  _a.draw,_a.onmiss,_a.update=
-   arrow_draw_factory(7),
-   arrow_onmiss_factory(7),
-   bowattack_teleportupdate
+  local _a=getbowattack(_actor,1,7)
+  _a.update=bowattack_teleportupdate
   _a.wallaware=nil
   add(attacks,_a)
  end,
@@ -1068,6 +1048,7 @@ skeletonarcher={
  hp=6,maxhp=6,
  bloodcolors=split'7,7,6',
  spd=.375,
+ basecolors=split',4', -- note: arrow color
  attack=bowskills[1],
  sight=80,
  range=58,
