@@ -298,7 +298,6 @@ function addflooritem(_typ,_skill)
  add(flooritems,_flooritem)
 end
 
--- 7639
 function drawskillactionbtns_getifbtn(_itemnr,_itemskill,_skilltype)
  return _itemnr == _skilltype or
   _itemskill > 1 and _itemskill <= 7 and _itemskill == dget(_skilltype)
@@ -322,19 +321,21 @@ function drawskillactionbtns(_itemnr)
  end
 end
 
+
 -- drawing funcs
 
-frozencolors=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12'
-envenomedcolors=split'3,3,3,11,3,11,11,11,11,11,11,11,3,11,11'
+drawactor_affliccolors={
+ [2]=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12',
+ [5]=split'3,3,3,11,3,11,11,11,11,11,11,11,3,11,11',
+}
 
 function drawactor(_a)
- if _a.afflic == 2 then
-  pal(frozencolors)
- elseif _a.afflic == 5 then
-  pal(envenomedcolors)
+ local _affliccolors=drawactor_affliccolors[_a.afflic]
+ if _affliccolors then
+  pal(_affliccolors)
  end
  spr(_a.s[flr(_a.f)],_a.x-4,_a.y-(8-_a.hh),1,1,_a.sflip)
- if _a.afflic == 2 or _a.afflic == 5 then
+ if _affliccolors then
   pal()
  end
 end
