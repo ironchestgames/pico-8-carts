@@ -384,12 +384,9 @@ function getpsetfx(_x,_y,_dur,_colors,_vx,_vy,_ax,_ay)
  }
 end
 
-
 getfirefx_colors=split'15,14,14,8'
 function getfirefx(_x,_y)
- -- if rnd() > .5 then
-  return getpsetfx(_x,_y,8,getfirefx_colors,0,-.0125,0,-.0375)
- -- end
+ return getpsetfx(_x,_y,8,getfirefx_colors,0,-.0125,0,-.0375)
 end
 
 getlightningstrikefx_colors=split'7,7,10,5'
@@ -397,6 +394,14 @@ function getlightningstrikefx(_x,_y)
  if rnd() > .25 then
   return getpsetfx(_x,_y,14,getlightningstrikefx_colors,0,0,0,-.0375)
  end
+end
+
+
+-- general attack funcs
+
+function missile_update(_attack)
+ _attack.x+=cos(_attack.a)*_attack.missile_spd
+ _attack.y+=sin(_attack.a)*_attack.missile_spd
 end
 
 
@@ -441,11 +446,6 @@ function addfissure(_a,_x,_y,_lvl)
   })
 end
 
-function addvenomspit_update(_attack)
- _attack.x+=cos(_attack.a)*.75
- _attack.y+=sin(_attack.a)*.75+_attack.ay
- _attack.ay+=.125
-end
 function addvenomspit(_actor,_x,_y,_a)
  add(attacks,{
   isenemy=_actor.isenemy,
@@ -454,9 +454,12 @@ function addvenomspit(_actor,_x,_y,_a)
   afflic=5,
   hw=1,hh=1,
   durc=20,
+  missile_spd=.75,
   ay=-1,
   update=function(_attack)
-   addvenomspit_update(_attack)
+   missile_update(_attack)
+   _attack.y+=_attack.ay
+   _attack.ay+=.125
    add(fxs,getpsetfx(_attack.x,_attack.y,10,bowattack_venom_fx_colors,0,0,0,0))
   end,
   })
@@ -464,8 +467,8 @@ end
 
 function lightningfx_draw(_fx)
  for _i=2,#_fx.xs do
-  local _col=_i%3==0 and 10 or 7
-  line(_fx.xs[_i-1],_fx.ys[_i-1],_fx.xs[_i],_fx.ys[_i],rnd()>.5 and _col or 5)
+  line(_fx.xs[_i-1],_fx.ys[_i-1],_fx.xs[_i],_fx.ys[_i],
+   rnd()>.5 and (_i%3==0 and 10 or 7) or 5)
  end
 end
 function addlightningstrike(_a,_x,_y)
@@ -482,20 +485,18 @@ function addlightningstrike(_a,_x,_y)
    add(fxs,getlightningstrikefx(_x-4+rnd(8),_y-4+rnd(8)))
   end,
  })
- local _lightningfx={
-  dur=12,durc=12,
-  x=0,y=0,vx=0,vy=0,ax=0,ay=0,
- }
  local _xs,_ys,_cury={_x},{_y},_y
  while _cury > 0 do
   add(_xs,_x-6+rnd(12))
   _cury=mid(0,_cury-(4+rnd(8)),_y)
   add(_ys,_cury)
  end
- _lightningfx.xs=_xs
- _lightningfx.ys=_ys
- _lightningfx.draw=lightningfx_draw
- add(fxs,_lightningfx)
+ add(fxs,{
+  dur=12,durc=12,
+  x=0,y=0,vx=0,vy=0,ax=0,ay=0,
+  xs=_xs,ys=_ys,
+  draw=lightningfx_draw,
+ })
 end
 
 addspikes_playercolors=split'0,7,7,7,7,7,7,7,7,7,7,7,7,0'
@@ -517,16 +518,9 @@ function addspikes(_a,_lvl,_s,_colors,_x,_y)
  })
 end
 
+
 -- sword attacks
 
---[[
-1 - bruised
-2 - frozen
-3 - burning
-4 - stunned
-5 - envenomed
-6 - confused
---]]
 affliccolors=split'2,12,14,10,3,9'
 
 quickfxcolors={
@@ -540,13 +534,13 @@ quickfxcolors={
  split'7,7,11,12', -- teleport
 }
 
-function getswordattack(_actor,_afflic,_damagetype)
+function getswordattack(_actor,_afflic,_quickfxcolori)
  local _x,_y=_actor.x+cos(_actor.a)*6,_actor.y-1+sin(_actor.a)*6
  add(fxs,getfx(
-   240+atodirections(_actor.a)*8,
-   _x,_y,
-   12,
-   quickfxcolors[_damagetype or _afflic]))
+  240+atodirections(_actor.a)*8,
+  _x,_y,
+  12,
+  quickfxcolors[_quickfxcolori or _afflic]))
  return {
   isenemy=_actor.isenemy,
   x=_x,y=_y,
@@ -557,10 +551,10 @@ function getswordattack(_actor,_afflic,_damagetype)
  },_x,_y
 end
 
+-- 7570
 swordskills={
  function (_actor) -- 1 - bruise
-  local _a=getswordattack(_actor,1)
-  add(attacks,_a)
+  add(attacks,getswordattack(_actor,1))
  end,
 
  function (_actor) -- 2 - freeze/icewall
@@ -582,16 +576,14 @@ swordskills={
  end,
 
  function (_actor) -- 4 - stun/lightning strike
-  local _a=getswordattack(_actor,4)
-  add(attacks,_a)
+  add(attacks,getswordattack(_actor,4))
   if _actor.skill_hit then
    addlightningstrike(_actor,8+rnd(112),8+rnd(112))
   end
  end,
 
  function (_actor) -- 5 - venom/venomspit
-  local _a=getswordattack(_actor,5)
-  add(attacks,_a)
+  add(attacks,getswordattack(_actor,5))
   if _actor.skill_hit then
    addvenomspit(_actor,_actor.x,_actor.y,rnd())
   end
@@ -610,6 +602,7 @@ swordskills={
   local _a=getswordattack(_actor,1,7)
   _a.onhit=function(_attack,_enemy)
    addteleportfx(208,_actor.x,_actor.y-3)
+   -- todo: add safe teleport?
    local _a=rnd()
    _actor.x=_enemy.x+cos(_a)*6
    _actor.y=_enemy.y+sin(_a)*6
@@ -629,11 +622,6 @@ end
 
 
 -- bow attacks
-
-function missile_update(_attack)
- _attack.x+=cos(_attack.a)*_attack.missile_spd
- _attack.y+=sin(_attack.a)*_attack.missile_spd
-end
 
 function bowattack_teleportupdate(_attack)
  if isinsidewall(_attack) then
