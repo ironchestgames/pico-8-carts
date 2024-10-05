@@ -446,25 +446,6 @@ function addfissure(_a,_x,_y,_lvl)
   })
 end
 
-function addvenomspit(_actor,_x,_y,_a)
- add(attacks,{
-  isenemy=_actor.isenemy,
-  x=_x,y=_y,
-  a=_a,
-  afflic=5,
-  hw=1,hh=1,
-  durc=20,
-  missile_spd=.75,
-  ay=-1,
-  update=function(_attack)
-   missile_update(_attack)
-   _attack.y+=_attack.ay
-   _attack.ay+=.125
-   add(fxs,getpsetfx(_attack.x,_attack.y,10,bowattack_venom_fx_colors,0,0,0,0))
-  end,
-  })
-end
-
 function lightningfx_draw(_fx)
  for _i=2,#_fx.xs do
   line(_fx.xs[_i-1],_fx.ys[_i-1],_fx.xs[_i],_fx.ys[_i],
@@ -499,16 +480,15 @@ function addlightningstrike(_a,_x,_y)
  })
 end
 
-addspikes_playercolors=split'0,7,7,7,7,7,7,7,7,7,7,7,7,0'
-addspikes_enemycolors=split'0,4,4,4,4,4,4,4,4,4,4,4,4,0'
-function addspikes(_a,_lvl,_s,_colors,_x,_y)
+addvenomspikes_colors=split'0,11,11,11,11,11,11,11,11,11,11,11,11,0'
+function addvenomspikes(_a,_lvl,_x,_y)
  local _durc=_lvl*45
- local _fx=getfx(_s,_x,_y,_durc,_colors)
+ local _fx=getfx(238,_x,_y,_durc,addvenomspikes_colors)
  add(fxs,_fx)
  add(attacks,{
   isenemy=_a.isenemy,
   x=_x,y=_y,
-  afflic=1,
+  afflic=5,
   knockback=true,
   hw=4,hh=4,
   durc=_durc,
@@ -530,7 +510,7 @@ quickfxcolors={
  split'4,4,10,10,10,7', -- stun/lightning
  split'3,3,3,11,11,10', -- venom
 
- split'7,7,13,2', -- spikes
+ nil, -- todo
  split'7,7,11,12', -- teleport
 }
 
@@ -548,7 +528,7 @@ function getswordattack(_actor,_afflic,_quickfxcolori)
   afflic=_afflic,
   hw=4,hh=4,
   durc=2,
- },_x,_y
+ }
 end
 
 swordskills={
@@ -557,7 +537,8 @@ swordskills={
  end,
 
  function (_actor) -- 2 - freeze/icewall
-  local _a,_x,_y=getswordattack(_actor,2)
+  local _a=getswordattack(_actor,2)
+  local _x,_y=_a.x,_a.y
   _a.onmiss=function(_attack)
    if _actor.swordskill_level then
     addicewall(_attack,_x,_y,_actor.swordskill_level)
@@ -567,7 +548,8 @@ swordskills={
  end,
 
  function (_actor) -- 3 - fire/fissure
-  local _a,_x,_y=getswordattack(_actor,3)
+  local _a=getswordattack(_actor,3)
+  local _x,_y=_a.x,_a.y
   _a.onmiss=function(_attack)
    addfissure(_attack,_x,_y,_actor.swordskill_level or 7)
   end
@@ -581,19 +563,17 @@ swordskills={
   end
  end,
 
- function (_actor) -- 5 - venom/venomspit
-  add(attacks,getswordattack(_actor,5))
-  if _actor.skill_hit then
-   addvenomspit(_actor,_actor.x,_actor.y,rnd())
+ function (_actor) -- 5 - venom/spikes
+  local _a=getswordattack(_actor,5)
+  _a.onmiss=function(_attack)
+   addvenomspikes(_attack,_actor.swordskill_level,_attack.x,_attack.y)
   end
+  add(attacks,_a)
  end,
 
  function (_actor) -- 6 - knockback/spikes
   local _a=getswordattack(_actor,1,6)
-  _a.knockback=true
-  _a.onmiss=function(_attack)
-   addspikes(_attack,_actor.swordskill_level,238,addspikes_playercolors,_attack.x,_attack.y)
-  end
+  -- _a.knockback=true
   add(attacks,_a)
  end,
 
@@ -613,8 +593,18 @@ swordskills={
 
 -- enemy melee attacks
 
-function swordattack_stunandknockback(_actor)
+function enemyattack_stunandknockback(_actor)
  local _a=getswordattack(_actor,4)
+ _a.knockback=true
+ add(attacks,_a)
+end
+
+function enemyattack_freeze(_actor)
+ add(attacks,getswordattack(_actor,2))
+end
+
+function enemyattack_venomandknockback(_actor)
+ local _a=getswordattack(_actor,5)
  _a.knockback=true
  add(attacks,_a)
 end
@@ -684,32 +674,10 @@ bowskills={
   add(attacks,_a)
  end,
 
- function (_actor) -- 5 - venom
+ function (_actor) -- 5 - venom/spikes
   local _a=getbowattack(_actor,5)
-  _a.spit_c=0
-  _a.update=function(_attack)
-   _attack.spit_c+=1
-   _actor.bowskill_level=10
-   if _attack.spit_c >= max(16-_actor.bowskill_level,4) then
-    local _durc=_actor.bowskill_level*2
-    add(attacks,{
-     isenemy=_actor.isenemy,
-     x=_attack.x,y=_attack.y,
-     afflic=5,
-     hw=5,hh=5,
-     missile_spd=.375,
-     a=rnd(),
-     update=missile_update,
-     durc=_durc,
-     draw=function(_attack)
-      if rnd() < .5 then
-       circfill(_attack.x,_attack.y,5*mid(1,_attack.durc/_durc*2,.5),3)
-      end
-     end,
-     })
-    _attack.spit_c=0
-   end
-   missile_update(_attack)
+  _a.onmiss=function(_attack)
+   addvenomspikes(_attack,_actor.bowskill_level,_attack.x,_attack.y)
   end
   add(attacks,_a)
  end,
@@ -749,12 +717,10 @@ end
 function stonethrow(_actor)
  local _a=getbowattack(_actor,_actor.stonethrow_afflic)
  _a.draw,
- _a.onmiss,
  _a.knockback,
  _a.missile_spd,
  _a.hh,_a.hw=
   stonethrow_draw,
-  arrow_onmiss_factory(1),
   true,
   1.5,
   3,3
@@ -768,10 +734,6 @@ function fireballthrow_update(_attack)
  add(fxs,getpsetfx(_attack.x,_attack.y,6,fireballthrow_update_colors,0,0,0,0))
 end
 
-function fireballthrow_draw(_attack)
- pset(_attack.x,_attack.y,15)
-end
-
 function fireballthrow_onmiss(_attack)
  addfissure(_attack,_attack.x,_attack.y,5)
 end
@@ -779,12 +741,10 @@ end
 function fireballthrow(_actor)
  local _a=getbowattack(_actor,3)
  _a.update,
- _a.draw,
  _a.onmiss,
  _a.missile_spd,
  _a.hh,_a.hw=
   fireballthrow_update,
-  fireballthrow_draw,
   fireballthrow_onmiss,
   1.25,
   1.5,1.5
@@ -792,24 +752,18 @@ function fireballthrow(_actor)
  add(attacks,_a)
 end
 
-bowattack_venom_fx_colors=split'10,11,11,3,5'
-function bowattack_venom_update(_attack)
+venomspit_attack_fx_colors=split'10,11,11,3,5'
+function venomspit_attack_update(_attack)
  missile_update(_attack)
- add(fxs,getpsetfx(_attack.x,_attack.y,6,bowattack_venom_fx_colors,0,0,0,0))
+ add(fxs,getpsetfx(_attack.x,_attack.y,6,venomspit_attack_fx_colors,0,0,0,0))
 end
 
-function bowattack_venom_draw(_attack)
- pset(_attack.x,_attack.y,10)
-end
-
-function bowattack_venom(_actor)
+function venomspit_attack(_actor)
  local _a=getbowattack(_actor,5)
  _a.update,
- _a.draw,
  _a.missile_spd,
  _a.hh,_a.hw=
-  bowattack_venom_update,
-  bowattack_venom_draw,
+  venomspit_attack_update,
   1.25,
   1.5,1.5
 
@@ -853,10 +807,6 @@ fireboltattack=boltskillfactory(3,fireballthrow_update_colors)
 venomboltattack=boltskillfactory(5,split'10,11,11,3')
 
 enemyattack_confusionball=boltskillfactory(6,split'9,9,4,2')
-
-function enemy_druidspikeattack(_a)
- addspikes(_a,5,239,addspikes_enemycolors,getrandomfloorpos())
-end
 
 function enemy_lightningstrikeattack(_a)
  addlightningstrike(_a,avatar.x,avatar.y)
@@ -938,7 +888,7 @@ staffskills={
   _a.staffskill_level=8
   if _a.staffattack_c >= 56-_a.staffskill_level*3 then
    addcastingfx(split'7,7,6,2')
-   addspikes(_a,min(_a.staffskill_level*.5,3),238,addspikes_playercolors,getrandomfloorpos())
+   addvenomspikes(_a,min(_a.staffskill_level*.5,3),getrandomfloorpos())
    _a.staffattack_c=0
   end
  end,
@@ -1056,7 +1006,7 @@ skeletonarcher={
 
 enemytypes={
 
- -- -- ice orcs
+ -- ice orcs
  {
   { -- ice orc stonethrower
    s=split'48,49,50,51',
@@ -1073,7 +1023,7 @@ enemytypes={
    s=split'52,53,54,55',
    maxhp=16,
    spd=.25,
-   attack=swordskills[2],
+   attack=enemyattack_freeze,
    hw=3,hh=3,
   },
 
@@ -1091,7 +1041,7 @@ enemytypes={
    s=split'60,61,62,63',
    maxhp=16,
    spd=.25,
-   attack=swordattack_stunandknockback,
+   attack=enemyattack_stunandknockback,
    hw=3,hh=3,
   },
  },
@@ -1102,7 +1052,7 @@ enemytypes={
    s=split'68,69,70,71',
    maxhp=10,
    spd=.25,
-   attack=swordattack_stunandknockback,
+   attack=enemyattack_stunandknockback,
    hw=3,hh=3,
   },
 
@@ -1120,7 +1070,7 @@ enemytypes={
    s=split'72,73,74,75',
    maxhp=24,
    spd=.5,
-   attack=swordattack_stunandknockback,
+   attack=enemyattack_stunandknockback,
    hw=3,hh=3,
    sight=56,
    range=10,
@@ -1131,6 +1081,7 @@ enemytypes={
    s=split'76,77,78,79',
    maxhp=6,
    spd=.5,
+   basecolors=split',14', -- note: arrow color
    attack=fireballthrow,
    hw=1.5,hh=1.5,
    sight=96,
@@ -1144,7 +1095,8 @@ enemytypes={
    s=split'80,81,82,83',
    maxhp=6,
    spd=.5,
-   attack=bowattack_venom,
+   basecolors=split',11', -- note: arrow color
+   attack=venomspit_attack,
    sight=80,
    range=58,
    hw=3,
@@ -1154,18 +1106,20 @@ enemytypes={
    s=split'84,85,86,87',
    maxhp=16,
    spd=.375,
-   attack=swordskills[5],
+   attack=enemyattack_venomandknockback,
    hw=3,
   },
 
   { -- poison druid
    s=split'88,89,90,91',
    maxhp=20,
-   spd=.25,
+   spd=.375,
    attacks={
-    enemy_druidspikeattack,
-    fireballthrow,
-    bowattack_venom,
+    function(_a)
+     addvenomspikes(_a,5,getrandomfloorpos())
+    end,
+    venomboltattack,
+    venomboltattack,
    },
    cur_attack=1,
    attack=enemy_rollingattacks,
@@ -1178,7 +1132,7 @@ enemytypes={
    s=split'92,93,94,95',
    maxhp=16,
    spd=.25,
-   attack=swordskills[2],
+   attack=enemyattack_freeze,
    hw=3,
   },
  },
@@ -1222,7 +1176,7 @@ enemytypes={
    s=split'108,109,110,111',
    maxhp=4,
    spd=.75,
-   attack=swordskills[5],
+   attack=enemyattack_venomandknockback,
   },
  },
 
@@ -1250,6 +1204,7 @@ enemytypes={
      s=split'116,117,118,119',
      hp=2,maxhp=2,
      spd=.5,
+     basecolors=split',11', -- note: arrow color
      attack=fireballthrow,
      hw=1.5,hh=1.5,
      sight=96,
@@ -1408,8 +1363,8 @@ function mapinit()
   end
  end
 
- local _enemycs=split'3,4,5,4,6,7,5,8,12,4,6,6,4,6,6'
- -- local _enemycs=split'1,2,3,1,2,3,1,2,3,1,2,3,1,2,3'
+ -- local _enemycs=split'3,4,5,4,6,7,5,8,12,4,6,6,4,6,6'
+ local _enemycs=split'1,2,3,1,2,3,1,2,3,1,2,3,1,2,3'
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,steps,angles=
   avatarx,avatary,0,_enemycs[level] or 0,
@@ -2261,13 +2216,13 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000222222202222222022222220222222202222222022222220111111100000000000000000000000000000000000000000000000000000000000000000
-0000000022272220222e22202ddddd2022222b2022222220222277201176d1100000000000000000000000000000000000000000000000000000000000000000
-0000000022277220222ee220222722202222b32022272220222b772017776d100000000000000000000000000000000000000000000000000000000000000000
-0000000022777c2022eee220222aa220292723202727222022cbb2201176d1100000000000000000000000000000000000000000000000000000000000000000
-0000000022777c2022efee2022227220229222202726272027cc22201176d1100000000000000000000000000000000000000000000000000000000000000000
-000000002777cc202eeffe20222272202429222026262620277222201176d1100000000000000000000000000000000000000000000000000000000000000000
-00000000222222202222222022222220222222202222222022222220111111100000000000000000000000000000000000000000000000000000000000000000
+00000000222222202222222022222220222222202222222022222220111111100000000000000000000000002222222000000000000000000000000000000000
+0000000022272220222e22202ddddd202222222022222220222277201176d11000000000000000000000000022222b2000000000000000000000000000000000
+0000000022277220222ee22022272220222b222022272220222b772017776d100000000000000000000000002222b32000000000000000000000000000000000
+0000000022777c2022eee220222aa2202b2b22202727222022cbb2201176d1100000000000000000000000002927232000000000000000000000000000000000
+0000000022777c2022efee20222272202b232b202726272027cc22201176d1100000000000000000000000002292222000000000000000000000000000000000
+000000002777cc202eeffe20222272202323232026262620277222201176d1100000000000000000000000002429222000000000000000000000000000000000
+00000000222222202222222022222220222222202222222022222220111111100000000000000000000000002222222000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -2285,17 +2240,19 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 00011100001111010000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00001000011111010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00010100001001010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00005000000050000000500000000000000000000000700000051500066666600000000000000000000000000000000000000000000020000100000001000000
-0000550000005500000055000000000000000000000777000055120066666666000000000e8888000f9999000e88999000000000000022000601001002010010
-00051500000575000005050000011000000000000007717005551110d666666d00000000e8111880f9191990e811919900ddd100000282000006006000020020
-00055500000555000005550000111100000000000077177055551111d11611dd000110008818182099919940881819940dd1dd10000222001006000010020000
-00515500005755000050550000111100000010000077177055500111d11611dd000110008811122099191440881191440d1d1d10002822006000010020000100
-0055550000555500005555000001100000000000077777775502201166d1d660000000000222220004444400022244400dd1dd10002222000010060000100200
-005515500055755000550550000000000000000077177171002222000d6d6d00000000000000000000000000000000000dd1dd10002282200060060100200201
-0055555000555550005555500000000000000000717717110222222006060600000000000000000000000000000000000ddddd10002222200000000600000002
+00005000000050000000500000000000000000000000700000051500066666600000000000000000000000000000000000000000000020000100000000000000
+0000550000005500000055000000000000000000000777000055120066666666000000000e8888000f9999000e88999000000000000022000301001000000000
+00051500000575000005050000011000000000000007717005551110d666666d00000000e8111880f9191990e811919900ddd100000282000003003000000000
+00055500000555000005550000111100000000000077177055551111d11611dd000110008818182099919940881819940dd1dd10000222001003000000000000
+00515500005755000050550000111100000010000077177055500111d11611dd000110008811122099191440881191440d1d1d10002822003000010000000000
+0055550000555500005555000001100000000000077777775502201166d1d660000000000222220004444400022244400dd1dd10002222000010030000000000
+005515500055755000550550000000000000000077177171002222000d6d6d00000000000000000000000000000000000dd1dd10002282200030030100000000
+0055555000555550005555500000000000000000717717110222222006060600000000000000000000000000000000000ddddd10002222200000000300000000
 00010000000000000000000000000000000001000010000000000000000001000000000000000000000000000000000000000000000000000000000000000000
 00001000000000000000000000000000000010000010000000000000000001000000000000000000000000000000000000000000000000000000000000000000
 00001100111100000000000000001111000110000011000010000001000011000000000000000000000000000000000000000000000000000000000000000000
 00001100001110000011110000011100000110000011110001111110001111000000000000001000000010000001000000000000000010000000100000010000
 00001100000111000111111000111000000110000001110000111100001110000000110000010000000010000000100000001100000100000000100000001000
 00011000000110001000000100011000000011000000100000000000000100000000000000000000000000000000000000000000000000000000000000000000
+__sfx__
+0008000002050020500205003050040500505005050060500705008050090500a0500b0500c0500d0500d0500f050100501105000000000000000000000000000000000000000000000000000000000000000000
