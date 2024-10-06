@@ -2123,7 +2123,7 @@ function _draw()
  end
 
  if warpstone.istouching then
-  print('\f7\#0🅾️✽',mid(0,warpstone.x-7,110),warpstone.y+6) -- todo: calc needed?
+  print('\f7\#0🅾️✽',warpstone.x-7,warpstone.y+6)
  end
 
  -- draw inventory
