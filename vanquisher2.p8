@@ -1382,8 +1382,8 @@ function mapinit()
   end
  end
 
- -- local _enemycs=split'3,4,5,4,6,7,5,8,12,4,6,6,4,6,6'
- local _enemycs=split'1,2,3,1,2,3,1,2,3,1,2,3,1,2,3'
+ local _enemycs=split'3,4,5,4,6,7,5,8,12,4,6,6,4,6,6'
+ -- local _enemycs=split'1,2,3,1,2,3,1,2,3,1,2,3,1,2,3'
  local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
  local curx,cury,a,enemy_c,steps,angles=
   avatarx,avatary,0,_enemycs[level] or 0,
@@ -1705,10 +1705,6 @@ function _update60()
    -- decisiondebug('moving, '.._enemy.moving_c)
    _enemy.walking=true
    _enemy.a+=rnd(.01)-.005
-   _enemy.moving_c-=1
-   if _enemy.moving_c <= 0 then
-    _enemy.moving_c=nil
-   end
 
   elseif _enemy.wallcollisiondx == nil and _haslostoavatar and
     (_disttoavatar < _enemy.range*.375 or
@@ -1785,6 +1781,14 @@ function _update60()
  -- update actors
  for _a in all(actors) do
   _a.a%=1 -- note: normalise angle
+
+  -- update enemy is moving
+  if _a.moving_c then
+   _a.moving_c-=1
+   if _a.moving_c <= 0 then
+    _a.moving_c=nil
+   end
+  end
 
   -- set spdfactor
   if _a.afflic == 3 then
