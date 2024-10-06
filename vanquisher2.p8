@@ -74,6 +74,14 @@ function debug(s)
  printh(tostr(s),'debug',false)
 end
 
+-- _decisiondebug_laststr=''
+-- function decisiondebug(_str)
+--  if _str != _decisiondebug_laststr then
+--   _decisiondebug_laststr=_str
+--   debug(t()..', '.._str)
+--  end
+-- end
+
 cartdata'ironchestgames_vvoe2_v1_dev1'
 
 -- debug: reset
@@ -171,13 +179,13 @@ function collideaabbs(_func,_aabb,_other,_dx,_dy)
 
  local _collidedwith=_func(collideaabbs_aabb,_other)
  if _collidedwith then
-  _dx=(0.1+_collidedwith.hw-abs(_aabb.x-_collidedwith.x))*-_sgndx
+  _dx=(.0001+_collidedwith.hw-abs(_aabb.x-_collidedwith.x))*-_sgndx
  end
 
  collideaabbs_aabb.x,collideaabbs_aabb.y=_aabb.x,_aabb.y+_dy
  _collidedwith=_func(collideaabbs_aabb,_other)
  if _collidedwith then
-  _dy=(0.1+_collidedwith.hh-abs(_aabb.y-_collidedwith.y))*-_sgndy
+  _dy=(.0001+_collidedwith.hh-abs(_aabb.y-_collidedwith.y))*-_sgndy
  end
 
  return _dx,_dy
@@ -286,10 +294,6 @@ function drawactor(_a)
  if _affliccolors then
   pal()
  end
-end
-
-function getsflip(_angle)
- return _angle >= .375 and _angle <= .625
 end
 
 
@@ -1337,7 +1341,7 @@ function setupavatar()
   hp=5,
   maxhp=5,
 
-  state_c=0,
+  attackstate_c=0,
   draw=function(_a)
    pal(_a.basecolors)
    drawactor(_a)
@@ -1553,6 +1557,8 @@ function _update60()
  -- todo: the filtering does not seem to work properly!
  local _btnmask=band(btn(),0b1111) -- note: filter out o/x buttons from dpad input
  local _angle=btnmasktoa[_btnmask]
+
+ avatar.spdfactor=1
  if avatar.afflic == 6 then
   _angle=confusedbtnmasktoa[_btnmask]
   if avatar.walking then
@@ -1576,9 +1582,9 @@ function _update60()
  
  if avatar.afflic != 2 and _angle and type(_angle) == 'number' then
   avatar.a=_angle
-  avatar.walking=avatar.state != 'readying' and avatar.state != 'striking'
+  avatar.walking=avatar.attackstate != 'readying' and avatar.attackstate != 'striking'
 
-  if avatar.state != 'striking' then
+  if avatar.attackstate != 'striking' then
    if _angle >= .375 and _angle <= .625 then
     avatar.sflip=true
    elseif _angle >= .875 or _angle <= .125 then
@@ -1604,26 +1610,26 @@ function _update60()
     avatar.staffdx+=norm(cos(avatar.a))
     avatar.staffdy+=norm(sin(avatar.a))
    end
-   avatar.state='readying'
-   avatar.state_c=1
+   avatar.attackstate='readying'
+   avatar.attackstate_c=1
    avatar.s=avatar.ss[3]
    avatar.attack=function() end
    avatar.staffattack(avatar)
 
   elseif btnp(4) then
-   avatar.state='readying'
-   avatar.state_c=6
+   avatar.attackstate='readying'
+   avatar.attackstate_c=6
    avatar.s=avatar.ss[1]
    avatar.attack=avatar.swordattack
   elseif btn(5) then
    avatar.bow_c+=2
-   avatar.state='readying'
-   avatar.state_c=1
+   avatar.attackstate='readying'
+   avatar.attackstate_c=1
    avatar.s=avatar.ss[2]
    avatar.attack=avatar.bowattack
   end
 
-  if avatar.state == 'readying' and avatar.state_c <= 0 then
+  if avatar.attackstate == 'readying' and avatar.attackstate_c <= 0 then
    avatar.skill_hit=nil
    avatar.skill_c+=1
    local _skill_level=avatar.swordskill_level
@@ -1634,8 +1640,8 @@ function _update60()
     avatar.skill_hit=true
     avatar.skill_c=0
    end
-   avatar.state='striking'
-   avatar.state_c=28
+   avatar.attackstate='striking'
+   avatar.attackstate_c=28
    avatar.attack(avatar)
 
    -- teleport
@@ -1648,8 +1654,8 @@ function _update60()
 
    avatar.bow_c=0
    avatar.iscasting=nil
-  elseif avatar.state_c <= 0 then
-   avatar.state=nil
+  elseif avatar.attackstate_c <= 0 then
+   avatar.attackstate=nil
   end
  end
 
@@ -1660,6 +1666,7 @@ function _update60()
  end
  local _enemy=actors[update60_curenemyi]
  if _enemy and _enemy.isenemy then
+  _enemy.spdfactor=1
   local _disttoavatar,_haslostoavatar=
    dist(_enemy.x,_enemy.y,avatar.x,avatar.y),
    haslos(_enemy.x,_enemy.y,avatar.x,avatar.y)
@@ -1669,59 +1676,84 @@ function _update60()
   end
 
   if _enemy.afflic == 2 then
+   -- decisiondebug('frozen, break free!')
    -- note: frozen, do nothing
 
-  elseif _enemy.afflic == 3 and _enemy.state == nil then
+  elseif _enemy.afflic == 3 and _enemy.attackstate == nil then
+   -- decisiondebug('on fire, run around!')
    _enemy.walking=true
    _enemy.a+=rnd(.01)-.005
    if rnd() < .05 then
     _enemy.a+=.5
    end
 
-  elseif _enemy.state then
+  elseif _enemy.attackstate then
+   -- decisiondebug('attacking: '.._enemy.attackstate)
    _enemy.walking=nil
-   if _enemy.state == 'readying' and _enemy.state_c <= 0 then
-    _enemy.state='striking'
-    _enemy.state_c=40
+   if _enemy.attackstate == 'readying' and _enemy.attackstate_c <= 0 then
+    _enemy.attackstate='striking'
+    _enemy.attackstate_c=40
 
     _enemy.attack(_enemy)
    else
-    if _enemy.state_c <= 0 then
-     _enemy.state=nil
+    if _enemy.attackstate_c <= 0 then
+     _enemy.attackstate=nil
     end
    end
 
-  elseif _haslostoavatar and
-    (_disttoavatar < _enemy.range*.375 and
-    not _enemy.wallcollisiondx or _enemy.afflic == 7) then
-   -- debug('run away from avatar')
+  elseif _enemy.wallcollisiondx == nil and _enemy.moving_c then
+   -- decisiondebug('moving, '.._enemy.moving_c)
+   _enemy.walking=true
+   _enemy.a+=rnd(.01)-.005
+   _enemy.moving_c-=1
+   if _enemy.moving_c <= 0 then
+    _enemy.moving_c=nil
+   end
+
+  elseif _enemy.wallcollisiondx == nil and _haslostoavatar and
+    (_disttoavatar < _enemy.range*.375 or
+    (_enemy.afflic == 5 and _disttoavatar < 18) or
+    _enemy.afflic == 7) then
+   -- decisiondebug('run away from avatar')
    _enemy.walking=true
    _enemy.targetx,_enemy.targety=avatar.x,avatar.y
    _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)+.5
+   _enemy.moving_c=30
 
   elseif _haslostoavatar and _disttoavatar < _enemy.range then
-   -- debug('attack avatar')
+   -- decisiondebug('attack avatar')
 
    if t()-update60_enemyattackts > .375 then
     _enemy.targetx,_enemy.targety=avatar.x,avatar.y
     _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
 
-    if not _enemy.state then
-     _enemy.state='readying'
-     _enemy.state_c=36
+    if not _enemy.attackstate then
+     _enemy.attackstate='readying'
+     _enemy.attackstate_c=36
     end
 
     update60_enemyattackts=t()
    end
 
   elseif _enemy.afflic == 5 then
+   -- decisiondebug('envenomed, stand still!')
    -- note: envenomed, stand still to heal
    _enemy.walking=nil
+
+  elseif _enemy.wallcollisiondx or _enemy.wallcollisiondy then
+   -- decisiondebug('move out of wall collision')
+   _enemy.walking=true
+   if _enemy.afflic != 4 then
+    _enemy.a+=rnd()
+    _enemy.targetx=nil
+    _enemy.moving_c=45
+   end
    
   elseif _haslostoavatar and
     _disttoavatar < _enemy.sight and
-    _disttoavatar > _enemy.range then
-   -- debug('move towards avatar')
+    _disttoavatar > _enemy.range and not 
+    _enemy.moving_c then
+   -- decisiondebug('move towards avatar')
    _enemy.walking=true
    _enemy.targetx,_enemy.targety=avatar.x,avatar.y
    _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
@@ -1729,16 +1761,8 @@ function _update60()
     _enemy.a+=.5
    end
 
-  elseif _enemy.wallcollisiondx or _enemy.wallcollisiondy then
-   -- debug('move out of wall collision')
-   _enemy.walking=true
-   if _enemy.afflic != 4 then
-    _enemy.a+=rnd()
-    _enemy.targetx=nil
-   end
-
-  elseif _enemy.targetx then
-   -- debug('move towards target')
+  elseif _enemy.targetx and not _enemy.moving_c then
+   -- decisiondebug('move towards target')
    _enemy.walking=true
    _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
    local _disttotarget=dist(_enemy.x,_enemy.y,_enemy.targetx,_enemy.targety)
@@ -1747,18 +1771,22 @@ function _update60()
    end
 
   else -- roam
-   -- debug('roam')
+   -- decisiondebug('roam')
    _enemy.walking=true
    _enemy.a+=rnd(.01)-.005
+  end
+
+  if (_enemy.afflic == 1 or _enemy.afflic == nil) and
+   not _enemy.targetx then
    _enemy.spdfactor=.25
   end
  end
 
  -- update actors
  for _a in all(actors) do
+  _a.a%=1 -- note: normalise angle
 
   -- set spdfactor
-  _a.spdfactor=1
   if _a.afflic == 3 then
    _a.spdfactor=1.375
   elseif _a.afflic == 4 or _a.afflic == 5 then
@@ -1770,7 +1798,7 @@ function _update60()
 
   if _a.walking and _a.afflic != 2 then
    -- set sflip
-   _a.sflip=getsflip(_a.a)
+   _a.sflip=_a.a >= .2656 and _a.a <= .7344
 
    -- set walk frame
    _a.f+=_spdfactor*.375
@@ -1790,10 +1818,10 @@ function _update60()
    _a.f=1
   end
 
-  -- update state
-  if _a.state then
-   _dx,_dy,_a.f=0,0,_a.state == 'readying' and 3 or 4
-   _a.state_c-=1
+  -- update attackstate
+  if _a.attackstate then
+   _dx,_dy,_a.f=0,0,_a.attackstate == 'readying' and 3 or 4
+   _a.attackstate_c-=1
   end
 
   -- update afflictions
@@ -1973,10 +2001,10 @@ function _update60()
   if level > 0 and walls[warpstone.wy][warpstone.wx] != 225 then
    local _typ=rnd(split'6,6,6,7,7,8,8,9,10,11,12,13,14,15,16')
    if level%3 == 2 then
-    addflooritem(_typ,rnd(split'1,2,3,4,5,6,7')) -- dupe: item drop
+    addflooritem(_typ,rnd(split'1,2,3,4,5,6,7,8')) -- dupe: item drop
    elseif level%3 == 0 then
-    addflooritem(_typ,rnd(split'1,2,3,4,5,6,7')) -- dupe: item drop
-    addflooritem(getworld(),rnd(split'2,3,4,5,6,7'))
+    addflooritem(_typ,rnd(split'1,2,3,4,5,6,7,8')) -- dupe: item drop
+    addflooritem(getworld(),rnd(split'2,3,4,5,6,7,8'))
    end
   end
 
