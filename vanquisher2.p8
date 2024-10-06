@@ -939,7 +939,7 @@ function enemy_summonstone(_a)
    if rnd() < .25 then
     _summonee=_a.summonees[2]
    end
-   add(actors,lmerge(getenemybase(_a.x,_a.y),_summonee))
+   addenemy(_a.x,_a.y,_summonee)
   end
  end
  drawactor(_a)
@@ -981,87 +981,43 @@ end
 
 
 -->8
--- enemy types
-
-function getenemybase(_x,_y)
- return {
-  -- need to haves:
-  -- s=split'48,49,50,51',
-  -- basecolors=split'12,5,13,2,7',
-  -- maxhp=6,
-  -- spd=.375
-  -- attack=stonethrow,
-
-  -- defaults
-  hw=2,hh=2,
-  sight=64,
-  range=8,
-  bow_c=999,
-  bloodcolors=split'8,8,2',
-  ondeath=enemyondeath,
-
-  -- internals
-  x=_x,y=_y,
-  a=0,
-  dx=0,dy=0,
-  f=1,
-  isenemy=true,
-  walking=true,
-  spdfactor=1,
-  draw=drawactor,
- }
-end
+-- enemy classes
 
 skeletonarcher={
  s=split'100,101,102,103',
- hp=6,maxhp=6,
  bloodcolors=split'7,7,6',
- spd=.375,
  basecolors=split',4', -- note: arrow color
  attack=bowskills[1],
- sight=80,
- range=58,
+ conf='maxhp=6,hp=6,spd=.375,sight=80,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
 }
 
-enemytypes={
+enemyclasses={
 
  -- ice orcs
  {
   { -- ice orc stonethrower
    s=split'48,49,50,51',
-   maxhp=12,
-   spd=.375,
    attack=stonethrow,
-   stonethrow_afflic=1,
-   sight=80,
-   range=58,
-   hh=3,
+   conf='maxhp=12,hp=12,spd=.375,sight=80,range=58,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=1,bow_c=999',
   },
 
   { -- big ice orc
    s=split'52,53,54,55',
-   maxhp=16,
-   spd=.25,
    attack=enemyattack_freeze,
-   hw=3,hh=3,
+   conf='maxhp=16,hp=16,spd=.25,sight=64,range=8,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- ice orc caster
    s=split'56,57,58,59',
-   maxhp=20,
-   spd=.25,
    attack=iceboltattack,
-   sight=90,
-   range=64,
    ondeath=bossondeath,
+   conf='maxhp=20,hp=20,spd=.25,sight=90,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- bear (stun)
    s=split'60,61,62,63',
-   maxhp=16,
-   spd=.25,
    attack=enemyattack_stunandknockback,
-   hw=3,hh=3,
+   conf='maxhp=16,hp=16,spd=.25,sight=64,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 
@@ -1069,61 +1025,42 @@ enemytypes={
  {
   { -- troll w club
    s=split'68,69,70,71',
-   maxhp=10,
-   spd=.25,
    attack=enemyattack_stunandknockback,
-   hw=3,hh=3,
    ondeath=function(_actor)
-    add(actors,lmerge(getenemybase(_actor.x,_actor.y),{
+    addenemy(_actor.x,_actor.y,{
      s=split'156,157,158,159',
-     hp=4,maxhp=4,
-     spd=.375,
      attack=enemyattack_stunandknockback,
-    }))
+     conf='maxhp=4,hp=4,spd=.375,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+    })
    end,
+   conf='maxhp=10,hp=10,spd=.25,sight=64,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- troll stonethrower (stun)
    s=split'64,65,66,67',
-   maxhp=10,
-   spd=.375,
    attack=stonethrow,
-   stonethrow_afflic=4,
-   sight=80,
-   range=58,
    ondeath=function(_actor)
-    add(actors,lmerge(getenemybase(_actor.x,_actor.y),{
+    addenemy(_actor.x,_actor.y,{
      s=split'140,141,142,143',
-     hp=4,maxhp=4,
-     spd=.375,
      attack=stonethrow,
-     stonethrow_afflic=4,
-     sight=80,
-     range=58,
-    }))
+     conf='maxhp=4,hp=4,spd=.375,sight=80,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=4,,bow_c=999',
+    })
    end,
+   conf='maxhp=10,hp=10,spd=.375,sight=80,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=4',
   },
 
   { -- fire troll champion
    s=split'72,73,74,75',
-   maxhp=24,
-   spd=.5,
    attack=enemyattack_stunandknockback,
-   hw=3,hh=3,
-   sight=56,
-   range=10,
    ondeath=bossondeath,
+   conf='maxhp=24,hp=24,spd=.5,sight=56,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- fireball thrower
    s=split'76,77,78,79',
-   maxhp=6,
-   spd=.5,
-   basecolors=split',14', -- note: arrow color
    attack=fireballthrow,
-   hw=1.5,hh=1.5,
-   sight=96,
-   range=48,
+   basecolors=split',14', -- note: arrow color
+   conf='maxhp=6,hp=6,spd=.5,sight=96,range=48,hw=1.5,hh=1.5,dx=0,dy=0,f=1,spdfactor=1,,bow_c=999',
   },
  },
 
@@ -1131,27 +1068,19 @@ enemytypes={
  {
   { -- venom spitting snake
    s=split'80,81,82,83',
-   maxhp=6,
-   spd=.5,
    basecolors=split',11', -- note: arrow color
    attack=venomspit_attack,
-   sight=80,
-   range=58,
-   hw=3,
+   conf='maxhp=6,hp=6,spd=.5,sight=80,range=58,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1,,bow_c=999',
   },
 
   { -- venomspike-tailed lizard
    s=split'84,85,86,87',
-   maxhp=16,
-   spd=.375,
    attack=enemyattack_venomandknockback,
-   hw=3,
+   conf='maxhp=16,hp=16,spd=.375,sight=64,range=8,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- poison druid
    s=split'88,89,90,91',
-   maxhp=20,
-   spd=.375,
    attacks={
     function(_a)
      addvenomspikes(_a,5,getrandomfloorpos())
@@ -1159,19 +1088,15 @@ enemytypes={
     venomboltattack,
     venomboltattack,
    },
-   cur_attack=1,
    attack=enemy_rollingattacks,
-   sight=90,
-   range=64,
    ondeath=bossondeath,
+   conf='maxhp=20,hp=20,spd=.375,sight=90,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1',
   },
 
   { -- ice vulture
    s=split'92,93,94,95',
-   maxhp=16,
-   spd=.25,
    attack=enemyattack_freeze,
-   hw=3,
+   conf='maxhp=16,hp=16,spd=.25,sight=64,range=8,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 
@@ -1181,40 +1106,33 @@ enemytypes={
 
   { -- skeleton summoning gravestone
    s=split'236,236,236,236',
-   maxhp=32,
    bloodcolors=split'13,13,5',
-   spd=0,
    attack=function() end,
    draw=enemy_summonstone,
-   summoningc=0,
    summonees={
     { -- skeleton knight
      s=split'96,97,98,99',
-     hp=10,maxhp=10,
      bloodcolors=split'7,7,6',
-     spd=.25,
      attack=swordskills[1],
+     conf='maxhp=10,hp=10,spd=.25,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
     },
     skeletonarcher,
    },
+   conf='maxhp=32,hp=32,spd=0,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=0',
   },
 
   { -- skeleton queen
    s=split'104,105,106,107',
-   maxhp=20,
    bloodcolors=split'7,7,6',
-   spd=.125,
    attack=enemyattack_confusionball,
-   sight=90,
-   range=64,
    ondeath=bossondeath,
+   conf='maxhp=20,hp=20,spd=.25,sight=90,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- venomous bat
    s=split'108,109,110,111',
-   maxhp=4,
-   spd=.75,
    attack=enemyattack_venomandknockback,
+   conf='maxhp=6,hp=6,spd=.75,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 
@@ -1222,49 +1140,35 @@ enemytypes={
  {
   { -- big devil
    s=split'112,113,114,115',
-   maxhp=12,
-   spd=.5,
    attack=swordskills[3],
-   hw=3,hh=3,
    bloodcolors=split'9,9,4',
+   conf='maxhp=12,hp=12,spd=.5,sight=64,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- evil warpstone
    s=split'237,237,237,237',
-   maxhp=42,
    bloodcolors=split'2,2,1',
-   spd=0,
    attack=function() end,
    draw=enemy_summonstone,
-   summoningc=140,
    summonees={
     { -- devil thrower
      s=split'116,117,118,119',
-     hp=2,maxhp=2,
-     spd=.5,
      basecolors=split',11', -- note: arrow color
      attack=fireballthrow,
-     hw=1.5,hh=1.5,
-     sight=96,
-     range=48,
      bloodcolors=split'9,9,4',
+     conf='maxhp=2,hp=2,spd=.5,sight=96,range=48,hw=1.5,hh=1.5,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
     },
     { -- devil fighter
      s=split'120,121,122,123',
-     hp=4,maxhp=4,
      bloodcolors=split'9,9,4',
-     spd=.375,
      attack=swordskills[3],
+     conf='maxhp=4,hp=4,spd=.375,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
     },
    },
+   conf='maxhp=42,hp=42,spd=0,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=140',
   },
 
   { -- the evil
-   maxhp=52,
-   spd=.25,
-   hw=3,hh=4,
-   sight=128,
-   range=86,
    bloodcolors=split'9,9,4',
    ondeath=lastbossondeath,
    attacks={
@@ -1277,7 +1181,6 @@ enemytypes={
     fireboltattack,
     lastboss_teleport,
    },
-   cur_attack=1,
    attack=enemy_rollingattacks,
    attack_colors=split'8,12,8,11,8,10,8,7',
    draw=function(_a)
@@ -1285,19 +1188,18 @@ enemytypes={
     sspr(flr(_a.f-1)*15,65,15,18,_a.x-7.5,_a.y-12,15,18,_a.sflip)
     pal()
    end,
+   conf='maxhp=52,hp=52,spd=.25,sight=128,range=86,hw=3,hh=4,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1',
   },
   
   { -- devil confusor
    s=split'124,125,126,127',
-   maxhp=8,
    bloodcolors=split'9,9,4',
-   spd=.25,
    attack=enemyattack_confusionball,
-   sight=90,
-   range=64,
+   conf='maxhp=8,hp=8,spd=.25,sight=90,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 }
+
 
 -->8
 -- avatar
@@ -1356,7 +1258,7 @@ function setupavatar()
   f=1,
   spd=.5,
   spdfactor=1,
-  sflip=nil, -- todo: remove for token hunt
+  -- sflip=nil,
   hp=5,
   maxhp=5,
 
@@ -1391,9 +1293,35 @@ function getworld()
  return level == 0 and 1 or flr(level/3.0005)+1
 end
 
+function addenemy(_x,_y,_enemyclass)
+ for _attrib in all(split(_enemyclass.conf)) do
+  local _attribparts=split(_attrib,'=')
+  _enemyclass[_attribparts[1]]=_attribparts[2]
+ end
+ add(actors,lmerge({
+  -- ex: conf='maxhp=10,hp=10,spd=.375,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1'
+
+  -- need to haves:
+  -- s=split'48,49,50,51',
+  -- basecolors=split'12,5,13,2,7',
+  -- attack=myenemyattackfunc,
+  -- conf='maxhp=6,hp=6,spd=.375',
+
+  -- defaults
+  bloodcolors=split'8,8,2',
+  ondeath=enemyondeath,
+
+  -- internals
+  x=_x,y=_y,
+  a=rnd(),
+  isenemy=true,
+  walking=true,
+  draw=drawactor,
+ },_enemyclass))
+end
+
 function mapinit()
- deathts=nil
- walls,dynwalls,actors,attacks,fxs,flooritems={},{},{},{},{},{}
+ walls,dynwalls,actors,attacks,fxs,flooritems,deathts={},{},{},{},{},{} -- note: deathts is set to nil
  for _y=0,15 do
   walls[_y]={}
   for _x=0,15 do
@@ -1401,9 +1329,9 @@ function mapinit()
   end
  end
 
- local _enemycs=split'3,4,5,4,6,7,5,8,12,4,6,6,4,6,6'
- -- local _enemycs=split'1,2,3,1,2,3,1,2,3,1,2,3,1,2,3'
- local avatarx,avatary=flr(avatar.x/8),flr(avatar.y/8)
+ local avatarx,avatary,_enemycs=flr(avatar.x/8),flr(avatar.y/8),
+  split'3,4,5,4,6,7,5,8,12,4,6,6,4,6,6'
+ -- _enemycs=split'1,2,3,1,2,3,1,2,3,1,2,3,1,2,3'
  local curx,cury,a,enemy_c,steps,angles=
   avatarx,avatary,0,_enemycs[level] or 0,
   split'440,600,420,600,450'[getworld()],
@@ -1439,14 +1367,11 @@ function mapinit()
   elseif _i % 3 == 0 or rnd() < .1 then
    _enemytype=2
   end
-  local _enemy=lmerge(getenemybase(_x,_y),enemytypes[getworld()][_enemytype])
-  _enemy.hp=_enemy.maxhp
-  add(actors,_enemy)
+  -- here
+  addenemy(_x,_y,enemyclasses[getworld()][_enemytype])
 
   if _extraenemyc > 0 then
-   local _enemy=lmerge(getenemybase(_x,_y),enemytypes[getworld()][4])
-   _enemy.hp=_enemy.maxhp
-   add(actors,_enemy)
+   addenemy(_x,_y,enemyclasses[getworld()][4])
    _extraenemyc-=1
   end
  end
