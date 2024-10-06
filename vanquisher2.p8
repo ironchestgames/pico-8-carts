@@ -151,10 +151,7 @@ isinsidewall_wallabb={hw=4,hh=4}
 function isinsidewall(_aabb)
  local _mapx,_mapy=flr(_aabb.x/8),flr(_aabb.y/8)
  if walls[_mapy][_mapx] != 0 then
-  isinsidewall_wallabb.x,
-  isinsidewall_wallabb.y=
-   _mapx*8+4,
-   _mapy*8+4
+  isinsidewall_wallabb.x,isinsidewall_wallabb.y=_mapx*8+4,_mapy*8+4
   return isinsidewall_wallabb
  end
 
@@ -168,14 +165,10 @@ end
 collideaabbs_aabb={}
 function collideaabbs(_func,_aabb,_other,_dx,_dy)
  local _sgndx,_sgndy=sgn(_dx),sgn(_dy)
- collideaabbs_aabb.x,
- collideaabbs_aabb.y,
- collideaabbs_aabb.hw,
- collideaabbs_aabb.hh=
-  _aabb.x+_dx,
-  _aabb.y,
-  _aabb.hw,
-  _aabb.hh
+ collideaabbs_aabb.x,collideaabbs_aabb.y,
+ collideaabbs_aabb.hw,collideaabbs_aabb.hh=
+  _aabb.x+_dx,_aabb.y,
+  _aabb.hw,_aabb.hh
 
  local _collidedwith=_func(collideaabbs_aabb,_other)
  if _collidedwith then
@@ -186,6 +179,20 @@ function collideaabbs(_func,_aabb,_other,_dx,_dy)
  _collidedwith=_func(collideaabbs_aabb,_other)
  if _collidedwith then
   _dy=(.0001+_collidedwith.hh-abs(_aabb.y-_collidedwith.y))*-_sgndy
+ end
+
+ if _aabb.topy then
+  collideaabbs_aabb.x,collideaabbs_aabb.y=_aabb.x+_dx,_aabb.topy
+  _collidedwith=_func(collideaabbs_aabb,_other)
+  if _collidedwith then
+   _dx=(.0001+_collidedwith.hw-abs(_aabb.x-_collidedwith.x))*-_sgndx
+  end
+
+  collideaabbs_aabb.x,collideaabbs_aabb.y=_aabb.x,_aabb.topy+_dy
+  _collidedwith=_func(collideaabbs_aabb,_other)
+  if _collidedwith then
+   _dy=(.0001+_collidedwith.hh-abs(_aabb.topy-_collidedwith.y))*-_sgndy
+  end
  end
 
  return _dx,_dy
@@ -605,7 +612,7 @@ function getbowattack(_actor,_afflic,_itemcolorsi)
  return {
   isenemy=_actor.isenemy,
   x=flr(_actor.x+cos(_actor.a)*2),
-  y=flr(_actor.y+sin(_actor.a)*2),
+  y=flr(_actor.y-2+sin(_actor.a)*2),
   a=_actor.a,
   afflic=_afflic,
   hw=2,hh=2,
@@ -1818,7 +1825,9 @@ function _update60()
    _dx,_dy=_dx+cos(_a.knockbackangle)*6,_dy+sin(_a.knockbackangle)*6
    _a.knockbackangle=nil
   end
+
   -- movement check against walls
+  _a.topy=_a.y-2
   local _postcolldx,_postcolldy=collideaabbs(isinsidewall,_a,nil,_dx,_dy)
   _a.wallcollisiondx,_a.wallcollisiondy=nil
   if _postcolldx != _dx or _postcolldy != _dy then
