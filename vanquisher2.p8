@@ -302,14 +302,14 @@ end
 
 itemcolors={
  [0]=split'1,1,1,1', -- (none)
- split'4,5,2,1', -- 1 - mundane
- split'7,12,13,1', -- 2 - ice/icewall
+ split'6,4,2,1', -- 1 - mundane
+ split'7,6,12,13', -- 2 - ice/icewall
  split'15,14,8,2', -- 3 - fire/fissure
  split'7,10,6,13', -- 4 - stun/lightning
- split'10,11,3,5', -- 5 - venom/spikes
+ split'11,4,5,2', -- 5 - venom/spikes
  split'14,8,4,2', -- 6 - healing/leeching
- split'7,7,15,6', -- 7 - holy/revive
- split'7,11,12,3', -- 8 - teleportation
+ split'7,7,15,9', -- 7 - holy/revive
+ split'7,11,12,4', -- 8 - teleportation
 }
 
 function addflooritem(_typ,_skill)
@@ -604,8 +604,8 @@ end
 function getbowattack(_actor,_afflic,_itemcolorsi)
  return {
   isenemy=_actor.isenemy,
-  x=flr(_actor.x+cos(_actor.a)*6),
-  y=flr(_actor.y-1+sin(_actor.a)*6),
+  x=flr(_actor.x+cos(_actor.a)*2),
+  y=flr(_actor.y+sin(_actor.a)*2),
   a=_actor.a,
   afflic=_afflic,
   hw=2,hh=2,
@@ -1333,7 +1333,7 @@ function mapinit()
   split'3,4,5,4,6,7,5,8,12,4,6,6,4,6,6'
  -- _enemycs=split'1,2,3,1,2,3,1,2,3,1,2,3,1,2,3'
  local curx,cury,a,enemy_c,steps,angles=
-  avatarx,avatary,0,_enemycs[level] or 0,
+  avatarx,avatary,0,(_enemycs[level] or 0)+dget(62),
   split'440,600,420,600,450'[getworld()],
   ({split'0,0.25,-0.25',split'0,0,0,0.25,-0.25',split'0,0,0,0,0,0,0,0.5,0.5,0.25,-0.25',
   split'0,0,0,0,0,0,0,0,0,0.25',split'0,0,0.25'})[getworld()]
@@ -1559,7 +1559,9 @@ function _update60()
    avatar.s=avatar.ss[3]
    avatar.attack=function() end
    avatar.staffattack(avatar)
-   avatar.hp-=.0096
+   if avatar.staffattack != staffskills[1] then
+    avatar.hp-=.0096
+   end
 
   elseif btnp(4) then
    avatar.attackstate='readying'
