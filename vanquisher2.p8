@@ -1615,6 +1615,7 @@ function _update60()
    avatar.s=avatar.ss[3]
    avatar.attack=function() end
    avatar.staffattack(avatar)
+   avatar.hp-=.0096
 
   elseif btnp(4) then
    avatar.attackstate='readying'
