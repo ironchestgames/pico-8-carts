@@ -99,16 +99,16 @@ function norm(n)
  return n == 0 and 0 or sgn(n)
 end
 
-function tconcat(_t1,_t2)
- local _t={}
- for _i in all(_t1) do
-  add(_t,_i)
- end
- for _i in all(_t2) do
-  add(_t,_i)
- end
- return _t
-end
+-- function tconcat(_t1,_t2)
+--  local _t={}
+--  for _i in all(_t1) do
+--   add(_t,_i)
+--  end
+--  for _i in all(_t2) do
+--   add(_t,_i)
+--  end
+--  return _t
+-- end
 
 function lmerge(_t1,_t2)
  for _k,_v in pairs(_t2) do
@@ -410,7 +410,9 @@ function addicewall(_a,_x,_y,_lvl)
   hw=4,hh=4,
  }
  add(dynwalls,_dw)
- add(fxs,getfx(229,_dw.x,_dw.y,_durc,addicewall_colors))
+ local _fx=getfx(229,_dw.x,_dw.y,_durc,addicewall_colors)
+ _fx.isfloor=true
+ add(fxs,_fx)
  add(attacks,{
   x=1,y=1,
   durc=_durc,
@@ -480,6 +482,7 @@ addvenomspikes_colors=split'0,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,0'
 function addvenomspikes(_a,_lvl,_x,_y)
  local _durc=_lvl*45
  local _fx=getfx(238,_x,_y,_durc,addvenomspikes_colors)
+ _fx.isfloor=true
  add(fxs,_fx)
  add(attacks,{
   isenemy=_a.isenemy,
@@ -880,6 +883,7 @@ function boltskillfactory(_afflic,_colors)
    missile_spd=1,
    update=function(_attack)
     missile_update(_attack)
+    -- todo: tokenhunt?
     add(fxs,getpsetfx(_attack.x,_attack.y,rnd(6),_colors,0,0,0,0))
     add(fxs,getpsetfx(_attack.x,_attack.y+1,rnd(6),_colors,0,0,0,0))
     add(fxs,getpsetfx(_attack.x+1,_attack.y+1,rnd(6),_colors,0,0,0,0))
@@ -1856,7 +1860,6 @@ function _update60()
   end
 
   if _a.bleeding then
-
    add(fxs,getpsetfx(
     _a.x,_a.y,
     3+flrrnd(2),
@@ -1864,12 +1867,14 @@ function _update60()
     0,0,
     0,.075,0,0))
    if rnd() < .025 then
-    add(fxs,getpsetfx(
+    local _fx=getpsetfx(
      _a.x,
      _a.y,
      110,
      {_a.bloodcolors[3]},
-     0,0,0,0))
+     0,0,0,0)
+    _fx.isfloor=true
+    add(fxs,_fx)
    end
   end
  end
@@ -1944,7 +1949,7 @@ function _update60()
      add(actors,_a)
      _a.hp=_a.maxhp
      _a.x,_a.y=getrandomfloorpos()
-     add(fxs,getfx(210,_a.x,_a.y,240,split'7,6,13,1',0,-.125))
+     add(fxs,getfx(210,_a.x,_a.y,240,itemcolors[7],0,-.125))
      for _i=1,10 do
       add(attacks,{
        x=64,y=64,
@@ -1983,7 +1988,7 @@ function _update60()
   end
 
   if rnd() < .125 then
-   add(fxs,getpsetfx(warpstone.x-2+rnd(4),warpstone.y+3-rnd(5),30,split'12,3,1',0,0,0,-.0125))
+   add(fxs,getpsetfx(warpstone.x-2+rnd(4),warpstone.y+3-rnd(5),30,split'12,12,3,1',0,0,0,-.0125))
   end
  end
 
@@ -2092,30 +2097,41 @@ function _draw()
  end
 
  -- draw things in scene
- local _things=tconcat(actors,fxs)
- sortony(_things)
- for _thing in all(_things) do
-  _thing.draw(_thing)
+ -- local _things=tconcat(actors,fxs)
+ -- sortony(_things)
+ -- for _thing in all(_things) do
+ --  _thing.draw(_thing)
+ -- end
+
+ -- draw floor fxs
+ sortony(fxs)
+ for _fx in all(fxs) do
+  if _fx.isfloor then
+   _fx.draw(_fx)
+  end
  end
 
  -- draw actors
- -- sortony(actors)
 
  -- local _iscollide=isaabbscolliding(avatar,warpstone)
 
- -- for _a in all(actors) do
- --  _a.draw(_a)
+ sortony(actors)
+ for _a in all(actors) do
+  _a.draw(_a)
 
+ -- debug draw actors
  --  rect(_a.x-_a.hw,_a.y-_a.hh,_a.x+_a.hw,_a.y+_a.hh,_iscollide and 8 or 12)
  --  pset(_a.x,_a.y,7)
  --  pset(_a.x,_a.y+_a.hh,9)
- -- end
+ end
 
- -- draw fxs
- -- sortony(fxs)
- -- for _fx in all(fxs) do
- --  _fx.draw(_fx)
- -- end
+ -- draw top fxs
+ -- note: fxs already sorted above
+ for _fx in all(fxs) do
+  if not _fx.isfloor then
+   _fx.draw(_fx)
+  end
+ end
 
  -- debug draw dynwalls
  -- for _dw in all(dynwalls) do
