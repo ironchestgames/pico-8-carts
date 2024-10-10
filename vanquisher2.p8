@@ -1060,34 +1060,20 @@ enemyclasses={
   { -- troll w club
    s=split'68,69,70,71',
    attack=enemyattack_stunandknockback,
-   -- ondeath=function(_actor)
-   --  addenemy(_actor.x,_actor.y,{
-   --   s=split'156,157,158,159',
-   --   attack=enemyattack_stunandknockback,
-   --   conf='maxhp=4,hp=4,spd=.375,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
-   --  })
-   -- end,
-   conf='maxhp=10,hp=10,spd=.25,sight=64,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=10,hp=10,spd=.375,sight=96,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- troll stonethrower (stun)
    s=split'64,65,66,67',
    attack=stonethrow,
-   -- ondeath=function(_actor)
-   --  addenemy(_actor.x,_actor.y,{
-   --   s=split'140,141,142,143',
-   --   attack=stonethrow,
-   --   conf='maxhp=4,hp=4,spd=.375,sight=80,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=4,,bow_c=999',
-   --  })
-   -- end,
-   conf='maxhp=10,hp=10,spd=.375,sight=80,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=4,bow_c=999',
+   conf='maxhp=10,hp=10,spd=.25,sight=96,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=4,bow_c=999',
   },
 
   { -- fire troll champion
    s=split'72,73,74,75',
    attack=enemyattack_stunandknockback,
    ondeath=bossondeath,
-   conf='maxhp=24,hp=24,spd=.5,sight=56,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=24,hp=24,spd=.5,sight=96,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- fireball thrower
@@ -1876,7 +1862,6 @@ function _update60()
   end
 
   -- movement check against walls
-  -- _a.topy=_a.y
   _a.topy=_a.y-2
   local _postcolldx,_postcolldy=collideaabbs(isinsidewall,_a,nil,_dx,_dy)
   _a.wallcollisiondx,_a.wallcollisiondy=nil
