@@ -98,6 +98,7 @@ cartdata'ironchestgames_vvoe2_v1_dev1'
 -- dset(63,0) -- last level cleared
 
 poke(0x5f5c, -1) -- set auto-repeat delay for btnp to none
+poke(0x5f36,0x2) -- allow circ & circfill w even diameter
 
 btnmasktoa=split'0.5,0,,0.25,0.375,0.125,,0.75,0.625,0.875'
 confusedbtnmasktoa=split'0,0.5,,0.75,0.875,0.625,,0.25,0.125,0.375'
@@ -201,6 +202,7 @@ function detectandresolvehit(_attack,_actor)
 
   -- resolve
  if _dx != 0 or _dy != 0 then
+  sfx(5)
   _actor.afflic=_attack.afflic
   _actor.hp-=1
 
@@ -208,7 +210,7 @@ function detectandresolvehit(_attack,_actor)
    _attack.onhit(_attack,_actor)
   end
 
-  del(attacks,_attack)
+  _attack.durc=0
   add(fxs,getfx(227,_attack.x,_attack.y,8,detectandresolvehit_fxcolors))
 
   if _attack.knockback then
@@ -223,8 +225,8 @@ function detectandresolvehit(_attack,_actor)
    for _i=1,flr(_actor.maxhp-_actor.hp) do
     add(fxs,getfx(
      _s,
-     _attack.x-_attack.hw+flrrnd(4),
-     _attack.y-_attack.hh+flrrnd(4),
+     _actor.x-_actor.hw+flrrnd(4),
+     _actor.y-_actor.hh+flrrnd(4),
      16+flrrnd(5),
      _actor.bloodcolors,
      cos(_attack.a)*.5,
@@ -386,8 +388,19 @@ function getpsetfx(_x,_y,_dur,_colors,_vx,_vy,_ax,_ay)
  }
 end
 
+getfirefx_draw_r=split'1,1,1,1,1,2,2,2,2.5,2.5,2.5,2,2,1,1,1,1,1'
+function getfirefx_draw(_fx)
+ circfill(_fx.x,_fx.y,getfirefx_draw_r[_fx.durc],drawfx_getfxcolor(_fx))
+end
 function getfirefx(_x,_y)
- return getpsetfx(_x,_y,11,itemcolors[3],0,-.0125,0,-.0375)
+ return {
+  x=_x,y=_y,
+  dur=16,durc=16,
+  colors=itemcolors[3],
+  vx=0,vy=0,
+  ax=0,ay=-.075,
+  draw=getfirefx_draw,
+ }
 end
 
 getlightningstrikefx_colors=split'7,7,10,5'
@@ -444,8 +457,9 @@ function addfissure(_a,_x,_y,_lvl)
    end
   end,
   update=function(_attack)
-   if rnd() < .5 then
-    add(fxs,getfirefx(_x-_lvl+rnd(_lvl*2),_y-_lvl+rnd(_lvl*2)))
+   if _attack.durc % 4 == 0 then
+    local _myr=_lvl*.5
+    add(fxs,getfirefx(_x-_myr+rnd(_myr*2),_y-_myr+rnd(_myr*2)))
    end
   end,
   })
@@ -534,9 +548,6 @@ swordskills={
  function (_actor) -- 1 - bruise
   if rnd() < .625 then
    addbruisingswordattack(_actor)
-  else
-   _actor.f=3
-   sfx(2)
   end
  end,
 
@@ -592,16 +603,19 @@ swordskills={
   local _a=getswordattack(_actor,8)
   _a.onhit=function(_attack,_enemy)
    addteleportfx(208,_actor.x,_actor.y-3)
-   -- todo: add safe teleport?
-   local _a=rnd()
-   _actor.x=_enemy.x+cos(_a)*6
-   _actor.y=_enemy.y+sin(_a)*6
+   _actor.x,_actor.y=getnewxyfroma(_enemy.x,_enemy.y,rnd(),6)
+   while isinsidewall(_actor) do
+    _actor.x,_actor.y=getnewxyfroma(_enemy.x,_enemy.y,rnd(),6)
+   end
    addteleportfx(208,_actor.x,_actor.y-3)
   end
   add(attacks,_a)
  end,
-
 }
+
+function getnewxyfroma(_x,_y,_a,_d)
+ return _x+cos(_a)*_d,_y+sin(_a)*_d
+end
 
 
 -->8
@@ -609,7 +623,7 @@ swordskills={
 
 function bowattack_teleportupdate(_attack)
  if isinsidewall(_attack) then
-  add(fxs,getpsetfx(_attack.x,_attack.y,10,teleport_colors,0,0,0,0))
+  add(fxs,getpsetfx(_attack.x,_attack.y,10,itemcolors[8],0,0,0,0))
  end
  missile_update(_attack)
 end
@@ -644,15 +658,11 @@ end
 bowskills={
  function (_actor) -- 1 - bruise
   if rnd() < .75 then
-   sfx(4)
    addbruisingbowattack(_actor)
-  else
-   sfx(2)
   end
  end,
 
  function (_actor) -- 2 - icewall
-  sfx(4)
   local _a=getbowattack(_actor,2)
   local _onmiss=_a.onmiss
   _a.onmiss=function(_attack)
@@ -765,7 +775,7 @@ staffskills={
   _a.staffattack_c+=1
   if _a.staffattack_c >= 32-_a.staffskill_level then
    addcastingfx()
-   addfissure(_a,_a.x+_a.staffdx-8+rnd(16),_a.y+_a.staffdy-8+rnd(16),_a.staffskill_level)
+   addfissure(_a,_a.x+_a.staffdx,_a.y+_a.staffdy,_a.staffskill_level)
    _a.staffattack_c=0
   end
   addcastingmarkerfx()
@@ -830,6 +840,7 @@ function stonethrow_draw(_attack)
  pal()
 end
 function stonethrow(_actor)
+ sfx(4)
  local _a=getbowattack(_actor,_actor.stonethrow_afflic)
  _a.draw,
  _a.knockback,
@@ -1474,9 +1485,6 @@ function _update60()
    deathts=t()+2
   end
   return -- dead
- elseif avatar.hp < avatar.maxhp and avatar.hp*.25 < t()-update60_hurtsfxts then
-  sfx(1)
-  update60_hurtsfxts=t()
  end
 
  -- warping
@@ -1487,6 +1495,11 @@ function _update60()
    avatar.afflic=nil
   end
   return
+ end
+
+ if avatar.hp < avatar.maxhp and avatar.hp*.25 < t()-update60_hurtsfxts then
+  sfx(1)
+  update60_hurtsfxts=t()
  end
 
  if warpstone.iswarping then
@@ -1538,6 +1551,10 @@ function _update60()
  -- todo: the filtering does not seem to work properly!
  local _btnmask=band(btn(),0b1111) -- note: filter out o/x buttons from dpad input
  local _angle=btnmasktoa[_btnmask]
+
+ if isinsidewall(avatar) then
+  avatar.hp-=.125
+ end
 
  avatar.spdfactor=1
  if avatar.afflic == 6 then
@@ -1631,8 +1648,8 @@ function _update60()
    -- teleport
    if avatar.iscasting and avatar.staffattack == staffskills[8] then
     addteleportfx(208,avatar.x,avatar.y-3)
-    avatar.x+=avatar.staffdx
-    avatar.y+=avatar.staffdy
+    avatar.x=mid(8,avatar.x+avatar.staffdx,120)
+    avatar.y=mid(8,avatar.y+avatar.staffdy,120)
     addteleportfx(208,avatar.x,avatar.y-3)
    end
 
@@ -1827,7 +1844,10 @@ function _update60()
    else
     _a.hp+=.025
    end
-   add(fxs,getfirefx(_a.x-2+rnd(4),_a.y-3+rnd(3)))
+
+   if rnd() < .5 then
+    add(fxs,getfirefx(_a.x-2+rnd(4),_a.y-3+rnd(3)))
+   end
   elseif _a.afflic == 4 then
    if _a.wallcollisiondx then
     _a.hp+=.05
@@ -1856,6 +1876,7 @@ function _update60()
   end
 
   -- movement check against walls
+  -- _a.topy=_a.y
   _a.topy=_a.y-2
   local _postcolldx,_postcolldy=collideaabbs(isinsidewall,_a,nil,_dx,_dy)
   _a.wallcollisiondx,_a.wallcollisiondy=nil
@@ -1865,10 +1886,8 @@ function _update60()
   _dx,_dy=_postcolldx,_postcolldy
 
   -- move
-  -- _a.x=mid(0,_a.x+_dx,128) -- todo: add this when adding wallwarping
-  -- _a.y=mid(0,_a.y+_dy,128)
-  _a.x+=_dx
-  _a.y+=_dy
+  _a.x=mid(8,_a.x+_dx,120)
+  _a.y=mid(8,_a.y+_dy,120)
 
   -- add bleeding
   if _a.isenemy and _a.bleeding == nil and _a.hp/_a.maxhp < .5 then
@@ -1912,6 +1931,7 @@ function _update60()
   end
 
   if _a.durc <= 0 then
+   sfx(5) -- note: idk, always a blop is annoying
    if _a.onmiss then
     _a.onmiss(_a)
    end
@@ -2442,14 +2462,14 @@ __label__
 
 __sfx__
 08070000007200372006730097300c7300f7401274006720097200c7300f7301274015740187400f7201273015730187401b7401e74021740187401b7201e7302173024740277402a7402a700000000000000000
-900700000176009700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+900700000172009700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000400000e0100801013000100000a0000300000000000000c0000a00009000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00010000143201431015310163101731017310193101a3101b3101b3101b0001800015000130000d0000a0000a000020001400012000110000f0000c0000a0000900005000040000400000000000000000000000
-000100001a5101a5101951018510175101751015510145101351011510105100d5100d51014000120000f0000d0000a0000700005000010000000007000050000000006000020000100000000000000000000000
+9303000026614156101461518500175001750015500145001350011500105000d5000d50014000120000f0000d0000a0000700005000010000000007000050000000006000020000100000000000000000000000
+9302000015610156151950018500175001750015500145001350011500105000d5000d50014000120000f0000d0000a0000700005000010000000007000050000000006000020000100000000000000000000000
+9102000026624156201462018500175001750015500145001350011500105000d5000d50014000120000f0000d0000a0000700005000010000000007000050000000006000020000100000000000000000000000
+910200001950018500175001750015500145001350011500105000d5000d50014000120000f0000d0000a00007000050000100000000070000500000000060000200001000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-012c00001a7301a7321a7351c91002750027521d7351a7301c7321c7321c7350d720157321573501750017521a7301a7321a7350000002750027521d7321a7301c7321c735000001d73015732157350000013735
+0001000003610056100761009610106100f6001260000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 012c000013730137351800015734167311673518734187351a7341a7321a735000000d91200000000000000013730137351800015734167311673518734187351a7341a7351c7341c73019732197321973500000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
