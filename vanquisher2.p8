@@ -120,10 +120,10 @@ cartdata'ironchestgames_vvoe2_v1_dev1'
 
 -- dset(6,8)
 -- dset(7,8)
--- dset(8,8)
+-- dset(8,5)
 -- dset(9,8)
 
-poke(0x5f5c, -1) -- set auto-repeat delay for btnp to none
+poke(0x5f5c,-1) -- set auto-repeat delay for btnp to none
 poke(0x5f36,0x2) -- allow circ & circfill w even diameter
 
 btnmasktoa=split'0.5,0,,0.25,0.375,0.125,,0.75,0.625,0.875'
@@ -1664,8 +1664,9 @@ function _update60()
     avatar.staffdx,avatar.staffdy=0,0
    end
    if _angle then
-    avatar.staffdx+=norm(cos(avatar.a))
-    avatar.staffdy+=norm(sin(avatar.a))
+    local _staffdspd=min(.25+avatar.staffskill_level*.125,1.5)
+    avatar.staffdx+=norm(cos(avatar.a))*_staffdspd
+    avatar.staffdy+=norm(sin(avatar.a))*_staffdspd
    end
    avatar.attackstate='readying'
    avatar.attackstate_c=1
