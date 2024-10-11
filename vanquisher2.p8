@@ -10,10 +10,27 @@ todo:
 
  - add sfxs
 
- - try dimensions skill
-sword: teleport enemy away, higher skill further away -or- reflect missiles, the higher skill the higher accuracy
-bow: arrow split in perpendicular arrows, more splits with higher skill
-staff: create an incasing room from the avatar and out, create it when released
+ - skills could table lookup for skill increase for more and faster control
+
+ - dimensions skill?
+ sword: teleport enemy away, higher skill further away
+ bow: arrow split in perpendicular arrows, more splits with higher skill
+ staff: create an incasing room from the avatar and out, create it when released
+
+ - reflect skill?
+ sword: reflect missiles with varying accuracy
+ bow: create a mirror cube that reflect missiles with varying accuracy
+ staff: reflect missiles with varying accuracy
+
+ - haste skill?
+ sword: gain haste on hit
+ bow: gain haste on hit
+ staff: gain haste
+
+ - shadow skill? (enemy sight is greatly reduced, higher skill the more hits until it goes back)
+ sword: gain shadow attacks on hit, ceiling is skill level
+ bow: gain shadow attacks on hit, ceiling is skill level
+ staff: gain shadow, skill level is speed and ceiling
 
  - make all afflictions with mundane attacks be larger index than the other ones
 
@@ -70,6 +87,10 @@ button mask:
 -- [0x0009]=0.625, -- left/down
 -- [0x000a]=0.875, -- down/right
 
+known bugs:
+- music continues to play if you die on house level
+- 
+
 --]]
 
 
@@ -91,8 +112,8 @@ end
 cartdata'ironchestgames_vvoe2_v1_dev1'
 
 -- debug: reset
--- for _i=1,16 do -- inventory
---  dset(_i,0)
+-- for _i=6,12 do -- inventory
+--   dset(_i,2)
 -- end
 -- dset(62,0) -- evil kills
 -- dset(63,0) -- last level cleared
@@ -113,17 +134,6 @@ end
 function norm(n)
  return n == 0 and 0 or sgn(n)
 end
-
--- function tconcat(_t1,_t2)
---  local _t={}
---  for _i in all(_t1) do
---   add(_t,_i)
---  end
---  for _i in all(_t2) do
---   add(_t,_i)
---  end
---  return _t
--- end
 
 function lmerge(_t1,_t2)
  for _k,_v in pairs(_t2) do
@@ -159,37 +169,41 @@ function isinsidewall(_aabb)
  local _mapx,_mapy=flr(_aabb.x/8),flr(_aabb.y/8)
  if walls[_mapy][_mapx] != 0 then
   isinsidewall_wallabb.x,isinsidewall_wallabb.y=_mapx*8+4,_mapy*8+4
-  return isinsidewall_wallabb
+  return isinsidewall_wallabb,_aabb.y
+ end
+
+ if _aabb.topy then
+  _mapx,_mapy=flr(_aabb.x/8),flr(_aabb.topy/8)
+  if walls[_mapy][_mapx] != 0 then
+   isinsidewall_wallabb.x,isinsidewall_wallabb.y=_mapx*8+4,_mapy*8+4
+   return isinsidewall_wallabb,_aabb.topy
+  end
  end
 
  for _dw in all(dynwalls) do
-  if ismiddleinsideaabb(_aabb,_dw) then
+  if ismiddleinsideaabb(_aabb,_dw) then -- todo: add check for topy
    return _dw
   end
  end
 end
 
 collideaabbs_aabb={}
-collideaabbs_ys={}
 function collideaabbs(_func,_aabb,_other,_dx,_dy)
  local _sgndx,_sgndy=sgn(_dx),sgn(_dy)
- collideaabbs_ys[1],collideaabbs_ys[2],
- collideaabbs_aabb.hw,collideaabbs_aabb.hh=
-  _aabb.y,_aabb.topy,
-  _aabb.hw,_aabb.hh
+ collideaabbs_aabb.hw,collideaabbs_aabb.hh=_aabb.hw,_aabb.hh
 
- for _,_y in ipairs(collideaabbs_ys) do
-  collideaabbs_aabb.x,collideaabbs_aabb.y=_aabb.x+_dx,_y
-  local _collidedwith=_func(collideaabbs_aabb,_other)
-  if _collidedwith then
-   _dx=(.0001+_collidedwith.hw-abs(_aabb.x-_collidedwith.x))*-_sgndx
-  end
+ collideaabbs_aabb.x,collideaabbs_aabb.y,collideaabbs_aabb.topy=
+  _aabb.x+_dx,_aabb.y,_aabb.topy
+ local _collidedwith=_func(collideaabbs_aabb,_other)
+ if _collidedwith then
+  _dx=(.0001+_collidedwith.hw-abs(_aabb.x-_collidedwith.x))*-_sgndx
+ end
 
-  collideaabbs_aabb.x,collideaabbs_aabb.y=_aabb.x,_y+_dy
-  _collidedwith=_func(collideaabbs_aabb,_other)
-  if _collidedwith then
-   _dy=(.0001+_collidedwith.hh-abs(_y-_collidedwith.y))*-_sgndy
-  end
+ collideaabbs_aabb.x,collideaabbs_aabb.y,collideaabbs_aabb.topy=
+  _aabb.x,_aabb.y+_dy,_aabb.topy and _aabb.topy+_dy or nil
+ _collidedwith,_aabby=_func(collideaabbs_aabb,_other)
+ if _collidedwith then
+  _dy=(.0001+_collidedwith.hh-abs((_aabby or _aabb.y)-_collidedwith.y))*-_sgndy
  end
 
  return _dx,_dy
@@ -238,6 +252,15 @@ function detectandresolvehit(_attack,_actor)
  end
 end
 
+function isaabbscollidingwith(_aabb,_collection)
+ for _item in all(_collection) do
+  local _dx,_dy=collideaabbs(isaabbscolliding,_aabb,_item,0,0)
+  if _dx != 0 or _dy != 0 then
+   return _item
+  end
+ end
+end
+
 
 -- geometry
 
@@ -274,9 +297,10 @@ function haslos(_x1,_y1,_x2,_y2)
 end
 
 function getrandomfloorpos()
- local _x,_y=1,1
- while walls[flr(_y/8)][flr(_x/8)] != 0 do
-  _x,_y=rnd(120),rnd(120)
+ ::randomfloorpos::
+ local _x,_y=rnd(120),rnd(120)
+ if walls[flr(_y/8)][flr(_x/8)] != 0 then
+  goto randomfloorpos
  end
  -- todo: add dynwalls?
  return _x,_y
@@ -411,7 +435,7 @@ function getlightningstrikefx(_x,_y)
 end
 
 function addteleportfx(_s,_x,_y)
- add(fxs,getfx(_s,_x,_y,15,itemcolors[8]))
+ add(fxs,getfx(_s,_x,_y,10,itemcolors[8]))
 end
 
 
@@ -424,23 +448,27 @@ function missile_update(_attack)
 end
 
 addicewall_colors=split'6,6,6,6,6,6,13'
-function addicewall(_a,_x,_y,_lvl)
+function addicewall(_x,_y,_lvl)
  local _durc,_dw=_lvl*12,{
-  x=_x+cos(_a.a)*6,y=_y+sin(_a.a)*6,
+  x=_x,y=_y,
   hw=4,hh=4,
  }
- add(dynwalls,_dw)
- local _fx=getfx(229,_dw.x,_dw.y,_durc,addicewall_colors)
- _fx.isfloor=true
- add(fxs,_fx)
- add(attacks,{
-  x=1,y=1,
-  durc=_durc,
-  hw=0,hh=0,
-  onmiss=function()
-   del(dynwalls,_dw)
-  end
-  })
+ if isaabbscollidingwith(_dw,actors) == nil and
+   isaabbscollidingwith(_dw,dynwalls) == nil then
+  add(dynwalls,_dw)
+  local _fx=getfx(229,_dw.x,_dw.y,_durc,addicewall_colors)
+  _fx.isfloor=true
+  add(fxs,_fx)
+  add(attacks,{
+   x=1,y=1,
+   durc=_durc,
+   hw=0,hh=0,
+   onmiss=function()
+    del(dynwalls,_dw)
+   end
+   })
+  return true
+ end
 end
 
 function addfissure(_a,_x,_y,_lvl)
@@ -450,7 +478,7 @@ function addfissure(_a,_x,_y,_lvl)
   x=_x,y=_y,
   afflic=3,
   hw=_lvl,hh=_lvl,
-  durc=80,
+  durc=45,
   draw=function(_attack)
    if rnd() < .5 then
     circfill(_x,_y,_lvl,2)
@@ -471,9 +499,10 @@ function lightningfx_draw(_fx)
    rnd()>.5 and (_i%3==0 and 10 or 7) or 5)
  end
 end
-function addlightningstrike(_a,_x,_y)
+function addlightningstrike(_actor,_x,_y)
  add(attacks,{
-  isenemy=_a.isenemy,
+  isenemy=_actor.isenemy,
+  islightning=true,
   x=_x,y=_y,
   afflic=4,
   hw=8,hh=8,
@@ -487,12 +516,12 @@ function addlightningstrike(_a,_x,_y)
  })
  local _xs,_ys,_cury={_x},{_y},_y
  while _cury > 0 do
-  add(_xs,_x-6+rnd(12))
+  add(_xs,_x-10+rnd(8))
   _cury=mid(0,_cury-(4+rnd(8)),_y)
   add(_ys,_cury)
  end
  add(fxs,{
-  dur=12,durc=12,
+  dur=10,durc=10,
   x=0,y=0,vx=0,vy=0,ax=0,ay=0,
   xs=_xs,ys=_ys,
   draw=lightningfx_draw,
@@ -529,7 +558,7 @@ function getswordattack(_actor,_afflic)
   240+atodirections(_actor.a)*8,
   _x,_y,
   12,
-  _actor.isenemy and itemcolors[_afflic] or itemcolors[dget(6)]))
+  itemcolors[_afflic]))
  return {
   isenemy=_actor.isenemy,
   x=_x,y=_y,
@@ -544,6 +573,22 @@ function addbruisingswordattack(_actor)
  add(attacks,getswordattack(_actor,1))
 end
 
+function addavatarlightningattack(_level)
+ for _fx in all(fxs) do
+   if _fx.colors == getlightningstrikefx_colors then
+    del(fxs,_fx)
+   end
+  end
+  for _attack in all(attacks) do
+   if _attack.islightning and not _attack.isenemy then
+    del(attacks,_attack)
+   end
+  end
+  for _i=1,flr(_level/2) do
+   addlightningstrike(avatar,8+rnd(120),8+rnd(120))
+  end
+end
+
 swordskills={
  function (_actor) -- 1 - bruise
   if rnd() < .625 then
@@ -552,14 +597,11 @@ swordskills={
  end,
 
  function (_actor) -- 2 - freeze/icewall
-  local _a=getswordattack(_actor,2)
-  local _x,_y=_a.x,_a.y
-  _a.onmiss=function(_attack)
-   if _actor.swordskill_level then
-    addicewall(_attack,_x,_y,_actor.swordskill_level)
-   end
+  local _attack=getswordattack(_actor,2)
+  local _x,_y=_attack.x,_attack.y
+  if not addicewall(_x+cos(_attack.a)*6,_y+sin(_attack.a)*6,_actor.swordskill_level or 7) then
+   add(attacks,_attack)
   end
-  add(attacks,_a)
  end,
 
  function (_actor) -- 3 - fire/fissure
@@ -573,9 +615,7 @@ swordskills={
 
  function (_actor) -- 4 - stun/lightning strike
   add(attacks,getswordattack(_actor,4))
-  if _actor.skill_hit then
-   addlightningstrike(_actor,8+rnd(112),8+rnd(112))
-  end
+  addavatarlightningattack(_actor.swordskill_level)
  end,
 
  function (_actor) -- 5 - venom/spikes
@@ -602,19 +642,23 @@ swordskills={
  function (_actor) -- 8 - teleport
   local _a=getswordattack(_actor,8)
   _a.onhit=function(_attack,_enemy)
-   addteleportfx(208,_actor.x,_actor.y-3)
-   _actor.x,_actor.y=getnewxyfroma(_enemy.x,_enemy.y,rnd(),6)
-   while isinsidewall(_actor) do
-    _actor.x,_actor.y=getnewxyfroma(_enemy.x,_enemy.y,rnd(),6)
+   if _actor.skill_hit then
+    addteleportfx(208,_actor.x,_actor.y-3)
+    ::newteleport::
+    _actor.x,_actor.y,_actor.topy=getnewxyfroma(_enemy.x,_enemy.y,rnd(),6)
+    if isinsidewall(_actor) then
+     goto newteleport
+    end
+    addteleportfx(208,_actor.x,_actor.y-3)
    end
-   addteleportfx(208,_actor.x,_actor.y-3)
   end
   add(attacks,_a)
  end,
 }
 
 function getnewxyfroma(_x,_y,_a,_d)
- return _x+cos(_a)*_d,_y+sin(_a)*_d
+ local _newy=_y+sin(_a)*_d
+ return _x+cos(_a)*_d,_y,_y-2
 end
 
 
@@ -666,10 +710,9 @@ bowskills={
   local _a=getbowattack(_actor,2)
   local _onmiss=_a.onmiss
   _a.onmiss=function(_attack)
-   if _actor.bowskill_level then
-    addicewall(_attack,_attack.x,_attack.y,_actor.bowskill_level)
+   if not addicewall(_attack.x,_attack.y,_actor.bowskill_level) then
+    _onmiss(_attack)
    end
-   _onmiss(_attack)
   end
   add(attacks,_a)
  end,
@@ -685,8 +728,8 @@ bowskills={
  end,
 
  function (_actor) -- 4 - stun/lightning
-  local _a=getbowattack(_actor,4)
-  add(attacks,_a)
+  add(attacks,getbowattack(_actor,4))
+  addavatarlightningattack(_actor.bowskill_level)
  end,
 
  function (_actor) -- 5 - venom/spikes
@@ -762,32 +805,39 @@ staffskills={
   end
  end,
 
- function (_a) -- 2 - ice
-  _a.staffattack_c+=1
-  if _a.staffattack_c >= 32 then
+ function (_actor) -- 2 - ice
+  _actor.staffattack_c+=1
+  if _actor.staffattack_c >= 24 then
    addcastingfx()
-   iceboltattack(_a)
-   _a.staffattack_c=0
+   for _i=0,1,.125 do
+    local _x,_y=_actor.x+cos(_i)*12,_actor.y+sin(_i)*12
+    if not addicewall(_x,_y,_actor.staffskill_level) then
+     add(attacks,{
+      x=_x,y=_y,
+      durc=2,
+      hw=3,hh=3,
+      afflic=2,
+      })
+    end
+   end
+   _actor.staffattack_c=0
   end
  end,
 
  function (_a) -- 3 - fire
-  _a.staffattack_c+=1
-  if _a.staffattack_c >= 32-_a.staffskill_level then
+  if rnd() < .25 then
    addcastingfx()
-   addfissure(_a,_a.x+_a.staffdx,_a.y+_a.staffdy,_a.staffskill_level)
-   _a.staffattack_c=0
+   addfissure(_a,-4+rnd(8)+_a.x+_a.staffdx,-4+rnd(8)+_a.y+_a.staffdy,_a.staffskill_level)
   end
   addcastingmarkerfx()
  end,
 
- function (_a) -- 4 - lightning
-  _a.staffattack_c+=1
-  _a.staffskill_level=8
-  if _a.staffattack_c >= 50-_a.staffskill_level*3 then
+ function (_actor) -- 4 - lightning
+  _actor.staffattack_c+=1
+  if _actor.staffattack_c >= 12 then
    addcastingfx()
-   addlightningstrike(_a,8+rnd(112),8+rnd(112))
-   _a.staffattack_c=0
+   addavatarlightningattack(_actor.staffskill_level)
+   _actor.staffattack_c=0
   end
  end,
 
@@ -980,12 +1030,14 @@ function enemy_summonstone(_a)
 end
 
 function enemyondeath(_actor)
+ sfx(7)
  for _i=-2,3 do
   add(fxs,getfx(rnd(split'228,232,249,251'),_actor.x+_i,_actor.y,14,_actor.bloodcolors,0,-.125,0,rnd(.0625)))
  end
 end
 
 function bossondeath(_actor)
+ sfx(6)
  for _i=0,.875,.125 do
   local _vx,_vy=cos(_i),sin(_i)
   add(fxs,getfx(227,_actor.x,_actor.y,40,_actor.bloodcolors,_vx,_vy,_vx*-.025,_vy*-.025))
@@ -994,6 +1046,7 @@ end
 
 function lastbossondeath(_actor)
  bossondeath(_actor)
+ sfx(10)
  -- todo: token hunt, specialise for last boss only
  local _sgetystart,_sgetyend,_sgetxstart,_sgetxend=81,64,60,74
  local _xoff=(_sgetxend-_sgetxstart)/2
@@ -1037,7 +1090,7 @@ enemyclasses={
 
   { -- big ice orc
    s=split'52,53,54,55',
-   attack=enemyattack_freeze,
+   attack=swordskills[2],
    conf='maxhp=16,hp=16,spd=.25,sight=64,range=8,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
@@ -1993,11 +2046,13 @@ function _update60()
  -- update warpstone
  if _enemycount == 0 then
   if level > 0 and walls[warpstone.wy][warpstone.wx] != 225 then
-   local _typ=rnd(split'6,6,6,7,7,8,8,9,10,11,12,13,14,15,16')
+   local _skills,_types=split'1,2,3,4,5,6,7,8',
+    split'6,6,6,7,7,8,8,9,10,11,12,13,14,15,16'
+   addflooritem(rnd(_types),rnd(_skills))
    if level%3 == 2 then
-    addflooritem(_typ,rnd(split'1,2,3,4,5,6,7,8')) -- dupe: item drop
-   elseif level%3 == 0 then
-    addflooritem(_typ,rnd(split'1,2,3,4,5,6,7,8')) -- dupe: item drop
+    addflooritem(rnd(_types),rnd(_skills))
+   end
+   if level%3 == 0 then
     addflooritem(getworld(),rnd(split'2,3,4,5,6,7,8'))
    end
   end
@@ -2118,13 +2173,6 @@ function _draw()
   end
  end
 
- -- draw things in scene
- -- local _things=tconcat(actors,fxs)
- -- sortony(_things)
- -- for _thing in all(_things) do
- --  _thing.draw(_thing)
- -- end
-
  -- draw floor fxs
  sortony(fxs)
  for _fx in all(fxs) do
@@ -2134,9 +2182,6 @@ function _draw()
  end
 
  -- draw actors
-
- -- local _iscollide=isaabbscolliding(avatar,warpstone)
-
  sortony(actors)
  for _a in all(actors) do
   _a.draw(_a)
@@ -2208,17 +2253,17 @@ ddd5d5d0ddd5d5d00d5d5d0000d666d00055511000555110000551005515551511111111dd1ddd1d
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 02203000003330000012000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 01304000030004000321300000112000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300000000000
-02203000030040000300400001122200000000000000000000001100000000000000020000000200000000000000020000003000000030000066630000000030
-03220300001200000044000000233000000050100000501000005700000050000000502000005020000052000000502000005300000053000067563000005030
-00330400002200000000000000030000004477100044771000447000004477110006772000067720000777200007772000077730000777300006770300077730
-00000000000000000000000000000000004476000044760000447000064470000006720000067200000672000006702000067603000676030000700000067630
-00000000000000000000000000000000000868000006860000686800666808000008680000068000000868000008680000086800000686000008080000686830
+02203000030040000300400001122200000000000000000000001100066000000000020000000200000000000000020000003000000030000066630000000030
+03220300001200000044000000233000000050100000501000005700006650000000502000005020000052000000502000005300000053000067563000005030
+00330400002200000000000000030000004477100044771000447000004477110006772000067720000677200007772000077730000777300006770300077730
+00000000000000000000000000000000004476000044760006447000004470000006720000067200000672000066702000067603000676030000700000067630
+00000000000000000000000000000000000868000006860006680800000808000008680000068000000868000668080000086800000686000008080000686830
 0000000000000000dd0000000000000000ccc00000ccc00000ccc00000ccc0000000000000000000000000702000000200000000000000005502424000000000
-000cc000000cc000cdc00000000000000dccc0000dccc00000ccc00000ccc0000000070000000700000000d02222272200000000000000002522444500000000
-0c5cc0000c5cc000cc5cc0000000cc005dccc0005dccc00055ccccc005ccc5cc000ccd00000ccd00000cc0d022222d2002222200022222002222444402220000
-cdd55000cdd55000005cc0000005cc005d5555005d55550055555cc0555555cc000ccd00000ccd000c0cc0c0022ccd2022224240222242400222222022222000
+000cc000000cc000cdc000000000000002ccc00002ccc00000ccc00000ccc0000000070000000700000000d02222272200000000000000002522444500000000
+0c5cc0000c5cc000cc5cc0000000cc0052ccc00052ccc00055ccccc005ccc5cc000ccd00000ccd00000cc0d022222d2002222200022222002222444402220000
+cdd55000cdd55000005cc0000005cc00525555005255550055555cc0555555cc000ccd00000ccd000c0cc0c0022ccd2022224240222242400222222022222000
 ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00025555d0002ccd0022224445222244450224225522242400
-00500500000550000055550000555000cc555cc0cc555cc0ccdddd0055ccdddd00255c0000255c00022552d000055c0022224444222244442244200522244450
+00500500000550000055550000555000cc555cc0cc555cc0cc22220055cc222200255c0000255c00022552d000055c0022224444222244442244200522244450
 0050050000050000005005000550500055555000555550005555500055555000002c5d00002c5d0002255200000c5d0022222220222222202242000052255445
 050005000005000005000500000050005000500005500000500050005000500002255d0022255d000225520000055d0025025050025255002502500000055055
 00000000000000000000000000000000000000000000000000000000000000000002220000022200040222000002220400000000000000000000000000000000
@@ -2278,8 +2323,8 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000222222202222222022222220222222202222222022222220222222200000000000000000000000000000000000000000000000000000000000000000
-0000000022272220222e22202ddddd20222222202e828820227f9220222277200000000000000000000000000000000000000000000000000000000000000000
-0000000022277220222ee22022272220222b2220288888202777f920222b77200000000000000000000000000000000000000000000000000000000000000000
+0000000022272220222e22202ddddd20222222202fe2e820227f9220222277200000000000000000000000000000000000000000000000000000000000000000
+0000000022277220222ee22022272220222b22202e8888202777f920222b77200000000000000000000000000000000000000000000000000000000000000000
 0000000022777c2022eee220222aa2202b2b222028888820227f922022cbb2200000000000000000000000000000000000000000000000000000000000000000
 0000000022777c2022efee20222272202b232b2022888220227f922027cc22200000000000000000000000000000000000000000000000000000000000000000
 000000002777cc202eeffe20222272202323232022282220227f9220277222200000000000000000000000000000000000000000000000000000000000000000
@@ -2452,11 +2497,11 @@ __sfx__
 9303000026614156101461518500175001750015500145001350011500105000d5000d50014000120000f0000d0000a0000700005000010000000007000050000000006000020000100000000000000000000000
 9302000015610156151950018500175001750015500145001350011500105000d5000d50014000120000f0000d0000a0000700005000010000000007000050000000006000020000100000000000000000000000
 9102000026624156201462018500175001750015500145001350011500105000d5000d50014000120000f0000d0000a0000700005000010000000007000050000000006000020000100000000000000000000000
-910200001950018500175001750015500145001350011500105000d5000d50014000120000f0000d0000a00007000050000100000000070000500000000060000200001000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+91120000104431c4331c4231c41315400144000d4000d40014400124000f4000d4000540001400004000740005400004000140000400004000040000400004000040000400004000040000400004000040000400
+911200001042315400144000d4000d40014400124000f4000d4000540001400004000740005400004000140000400004000040000400004000040000400004000040000400004000040000400000000000000000
 0001000003610056100761009610106100f6001260000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 012c000013730137351800015734167311673518734187351a7341a7321a735000000d91200000000000000013730137351800015734167311673518734187351a7341a7351c7341c73019732197321973500000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+2312000000600006000060000600006000060000600006000c6140d6110e621106210f6211163112631136311564116641186411a6311c6311d6211e6111f61311611106110e6110c61500000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 192c000026715000000e71500000027250000029715267102871228715000000d7102172221725017100172226715000000e7150000002725000002971526710287122871500000297152171221715017101f715
 012c00001f7150000018000217152271122715007250c715267142671226715000000d912157150e715097151f7150000018000217142271122715007250c7152671501715287150171525712257150000001715
