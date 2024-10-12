@@ -17,7 +17,7 @@ todo:
 
  - reflect skill?
  sword: reflect missiles with varying accuracy
- bow: create a mirror cube that reflect missiles with varying accuracy
+ bow: arrows bounce on walls
  staff: reflect missiles with varying accuracy
 
  - haste skill?
@@ -159,6 +159,9 @@ end
 -- collision funcs
 
 function ismiddleinsideaabb(_a,_b)
+ if _a.topy then
+  return _a.x > _b.x-_b.hw and _a.x < _b.x+_b.hw and _a.topy > _b.y-_b.hh and _a.topy < _b.y+_b.hh
+ end
  return _a.x > _b.x-_b.hw and _a.x < _b.x+_b.hw and _a.y > _b.y-_b.hh and _a.y < _b.y+_b.hh
 end
 
@@ -184,7 +187,7 @@ function isinsidewall(_aabb)
  end
 
  for _dw in all(dynwalls) do
-  if ismiddleinsideaabb(_aabb,_dw) then -- todo: add check for topy
+  if ismiddleinsideaabb(_aabb,_dw) then
    return _dw
   end
  end
@@ -503,9 +506,10 @@ function addfissure(_a,_x,_y,_lvl)
 end
 
 function lightningfx_draw(_fx)
+ local _rnd=rnd()
  for _i=2,#_fx.xs do
   line(_fx.xs[_i-1],_fx.ys[_i-1],_fx.xs[_i],_fx.ys[_i],
-   rnd()>.5 and (_i%3==0 and 10 or 7) or 5)
+   _rnd > .5 and (_i%3 == 0 and 10 or 7) or 5)
  end
 end
 function addlightningstrike(_actor,_x,_y)
@@ -612,17 +616,18 @@ swordskills={
 
  function (_actor) -- 2 - freeze/icewall
   local _attack=getswordattack(_actor,2)
-  local _x,_y=_attack.x,_attack.y
-  if not addicewall(_x+cos(_attack.a)*6,_y+sin(_attack.a)*6,_actor.swordskill_level or 7) then
+  if not addicewall(
+    _attack.x+cos(_attack.a)*6,
+    _attack.y+sin(_attack.a)*6,
+    _actor.swordskill_level or 7) then
    add(attacks,_attack)
   end
  end,
 
  function (_actor) -- 3 - fire/fissure
   local _a=getswordattack(_actor,3)
-  local _x,_y=_a.x,_a.y
   _a.onmiss=function(_attack)
-   addfissure(_attack,_x,_y,_actor.swordskill_level or 7)
+   addfissure(_attack,_a.x,_a.y,_actor.swordskill_level or 7)
   end
   add(attacks,_a)
  end,
@@ -642,7 +647,6 @@ swordskills={
 
  function (_actor) -- 6 - healing/leeching
   local _a=getswordattack(_actor,6)
-  _actor.swordskill_level=12
   _a.onhit=function()
    _actor.hp+=0.0312*_actor.swordskill_level*.75
    addcastingfx(itemcolors[6])
@@ -674,7 +678,7 @@ swordskills={
 
 function getnewxyfroma(_x,_y,_a,_d)
  local _newy=_y+sin(_a)*_d
- return _x+cos(_a)*_d,_y,_y-2
+ return _x+cos(_a)*_d,_newy,_newy-2
 end
 
 
@@ -689,6 +693,10 @@ function bowattack_teleportupdate(_attack)
 end
 
 function getbowattack(_actor,_afflic,_itemcolorsi)
+ local _onmiss=function(_attack)
+  sfx(5)
+  add(fxs,getfx(227,_attack.x,_attack.y,6,itemcolors[_itemcolorsi or _afflic]))
+ end
  return {
   isenemy=_actor.isenemy,
   x=flr(_actor.x+cos(_actor.a)*2),
@@ -700,20 +708,17 @@ function getbowattack(_actor,_afflic,_itemcolorsi)
   wallaware=true,
   missile_spd=2,
   update=missile_update,
-  onmiss=function(_attack)
-   sfx(5)
-   add(fxs,getfx(227,_attack.x,_attack.y,6,itemcolors[_itemcolorsi or _afflic]))
-  end,
+  onmiss=_onmiss,
   draw=function(_attack)
    pal(1,_actor.basecolors[2])
    spr(248+atodirections(_attack.a)*8,_attack.x-4,_attack.y-4)
    pal()
   end,
- }
+ },_onmiss
 end
 
 function addbruisingbowattack(_actor)
- add(attacks,getbowattack(_actor,1))
+ add(attacks,(getbowattack(_actor,1)))
 end
 
 bowskills={
@@ -724,8 +729,7 @@ bowskills={
  end,
 
  function (_actor) -- 2 - icewall
-  local _a=getbowattack(_actor,2)
-  local _onmiss=_a.onmiss
+  local _a,_onmiss=getbowattack(_actor,2)
   _a.onmiss=function(_attack)
    if not addicewall(_attack.x,_attack.y,_actor.bowskill_level) then
     _onmiss(_attack)
@@ -735,8 +739,7 @@ bowskills={
  end,
 
  function (_actor) -- 3 - fire fissure
-  local _a=getbowattack(_actor,3)
-  local _onmiss=_a.onmiss
+  local _a,_onmiss=getbowattack(_actor,3)
   _a.onmiss=function(_attack)
    _onmiss(_attack)
    addfissure(_attack,_attack.x,_attack.y,_actor.bowskill_level)
@@ -745,8 +748,12 @@ bowskills={
  end,
 
  function (_actor) -- 4 - stun/lightning
-  add(attacks,getbowattack(_actor,4))
-  addavatarlightningattack(_actor.bowskill_level)
+  local _a,_onmiss=getbowattack(_actor,4)
+  _a.onmiss=function(_attack)
+   addavatarlightningattack(_actor.bowskill_level)
+   _onmiss(_attack)
+  end
+  add(attacks,_a)
  end,
 
  function (_actor) -- 5 - venom/spikes
@@ -783,13 +790,12 @@ bowskills={
  end,
 
  function (_actor) -- 7 - holy/revive
-  add(attacks,getbowattack(_actor,7))
+  add(attacks,(getbowattack(_actor,7)))
  end,
 
  function(_actor) -- 8 - teleport
   local _a=getbowattack(_actor,1,8)
-  _a.update=bowattack_teleportupdate
-  _a.wallaware=nil
+  _a.update,_a.wallaware=bowattack_teleportupdate
   add(attacks,_a)
  end,
 }
@@ -816,6 +822,15 @@ function addcastingmarkerfx()
   5,
   itemcolors[dget(8)],
   .5-rnd(1),.5-rnd(1),0,0))
+end
+
+function staffhealing(_actor)
+ _actor.staffattack_c+=1
+ if _actor.staffattack_c >= 56-_actor.staffskill_level*3 then
+  addcastingfx()
+  _actor.hp+=0.5
+  _actor.staffattack_c=0
+ end
 end
 
 staffskills={
@@ -874,23 +889,9 @@ staffskills={
   addcastingmarkerfx()
  end,
 
- function (_actor) -- 6 - healing
-  _actor.staffattack_c+=1
-  if _actor.staffattack_c >= 56-_actor.staffskill_level*3 then
-   addcastingfx()
-   _actor.hp+=0.5
-   _actor.staffattack_c=0
-  end
- end,
+ staffhealing, -- 6 - healing
 
- function (_actor) -- 7 - holy/revive
-  _actor.staffattack_c+=1
-  if _actor.staffattack_c >= 56-_actor.staffskill_level*3 then
-   addcastingfx()
-   _actor.hp+=0.5
-   _actor.staffattack_c=0
-  end
- end,
+ staffhealing, -- 7 - holy/revive
 
  function (_a) -- 8 - teleport
   _a.staffattack_c+=1
@@ -907,9 +908,7 @@ staffskills={
 -- enemy attacks
 
 function stonethrow_draw(_attack)
- pal(1,13)
- spr(232,_attack.x-4,_attack.y-4)
- pal()
+ spr(212,_attack.x-4,_attack.y-4)
 end
 function stonethrow(_actor)
  sfx(4)
@@ -994,11 +993,9 @@ function boltskillfactory(_afflic,_colors)
    missile_spd=1,
    update=function(_attack)
     missile_update(_attack)
-    -- todo: tokenhunt?
-    add(fxs,getpsetfx(_attack.x,_attack.y,rnd(6),_colors,0,0,0,0))
-    add(fxs,getpsetfx(_attack.x,_attack.y+1,rnd(6),_colors,0,0,0,0))
-    add(fxs,getpsetfx(_attack.x+1,_attack.y+1,rnd(6),_colors,0,0,0,0))
-    add(fxs,getpsetfx(_attack.x+1,_attack.y,rnd(6),_colors,0,0,0,0))
+    for _i=0,3 do
+     add(fxs,getpsetfx(_attack.x+_i%2,_attack.y+flr(_i/2),rnd(6),_colors,0,0,0,0))
+    end
    end,
    onmiss=function(_attack)
     sfx(5)
@@ -1011,10 +1008,14 @@ function boltskillfactory(_afflic,_colors)
  end
 end
 
-iceboltattack=boltskillfactory(2,itemcolors[2])
-fireboltattack=boltskillfactory(3,itemcolors[3])
-venomboltattack=boltskillfactory(5,itemcolors[5])
-enemyattack_confusionball=boltskillfactory(6,split'9,9,4,2')
+iceboltattack,
+fireboltattack,
+venomboltattack,
+enemyattack_confusionball=
+ boltskillfactory(2,itemcolors[2]),
+ boltskillfactory(3,itemcolors[3]),
+ boltskillfactory(5,itemcolors[5]),
+ boltskillfactory(6,split'9,9,4,2')
 
 function enemy_lightningstrikeattack(_a)
  addlightningstrike(_a,avatar.x,avatar.y)
@@ -1044,12 +1045,8 @@ function enemy_summonstone(_a)
   _a.summoningc+=1
   if #actors < 16 and _a.summoningc > 300 then
    _a.summoningc=0
-   local _summonee=_a.summonees[1]
-   if rnd() < .25 then
-    _summonee=_a.summonees[2]
-   end
    sfx(23)
-   addenemy(_a.x,_a.y,_summonee)
+   addenemy(_a.x,_a.y,rnd() < .25 and _a.summonees[2] or _a.summonees[1])
   end
  end
  drawactor(_a)
@@ -1073,15 +1070,17 @@ end
 function lastbossondeath(_actor)
  bossondeath(_actor)
  sfx(10)
- -- todo: token hunt, specialise for last boss only
- local _sgetystart,_sgetyend,_sgetxstart,_sgetxend=89,72,60,74
- local _xoff=(_sgetxend-_sgetxstart)/2
- for _y=_sgetyend-_sgetystart,0 do
-  for _x=0,_sgetxend-_sgetxstart do
-   local _col=sget(_sgetxstart+_x,_sgetystart+_y)
+ -- local _sgetystart,_sgetyend,_sgetxstart,_sgetxend=89,72,60,74
+ -- local _xoff=(_sgetxend-_sgetxstart)/2
+ -- for _y=_sgetyend-_sgetystart,0 do
+ --  for _x=0,_sgetxend-_sgetxstart do
+ --   local _col=sget(_sgetxstart+_x,_sgetystart+_y)
+ for _y=-17,0 do
+  for _x=0,14 do
+   local _col=sget(60+_x,89+_y)
    if _col != 0 then
     add(fxs,getpsetfx(
-     _actor.x-_xoff+_x,
+     _actor.x-7+_x,
      _actor.y+_y,
      200+rnd(60),
      {_col,_col,_col,1},
@@ -1091,7 +1090,6 @@ function lastbossondeath(_actor)
   end
  end
 end
-
 
 -->8
 -- enemy classes
@@ -1304,25 +1302,28 @@ enemyclasses={
 -- avatar
 
 if dget(6) == 0 then -- note: first session
- dset(6,1)
- dset(7,1)
- dset(8,1)
- dset(9,1)
+ for _i=6,9 do
+  dset(_i,1)
+ end
 end
 
 function recalcskills()
- avatar.swordskill_level,avatar.bowskill_level,avatar.staffskill_level=0,0,0
- avatar.reviveitems={}
+ avatar.reviveitems,
+ avatar.swordskill_level,
+ avatar.bowskill_level,
+ avatar.staffskill_level=
+  {},0,0,0
  for _typ=1,16 do
   local _skill=dget(_typ)
-  if _skill%10 == dget(6)%10 then
-   avatar.swordskill_level+=ceil(_skill/10)
+  local _skillwoepic,_skill_lvl=_skill%10,ceil(_skill/10)
+  if _skillwoepic == dget(6)%10 then
+   avatar.swordskill_level+=_skill_lvl
   end
-  if _skill%10 == dget(7)%10 then
-   avatar.bowskill_level+=ceil(_skill/10)
+  if _skillwoepic == dget(7)%10 then
+   avatar.bowskill_level+=_skill_lvl
   end
-  if _skill%10 == dget(8)%10 then
-   avatar.staffskill_level+=ceil(_skill/10)
+  if _skillwoepic == dget(8)%10 then
+   avatar.staffskill_level+=_skill_lvl
   end
 
   if _skill == 7 then
@@ -1330,7 +1331,7 @@ function recalcskills()
   end
  end
 
- avatar.basecolors=split',,,,15,0,2,4' -- note: should never have no sword, bow, staff, or shield
+ avatar.basecolors=split',,,,15,0,2,4' -- note: empty first few because will always have 4 basic items (sword, bow, staff, shield)
  local _itemtoskillcolor=split'1,2,2,2,1,4,3,3'
  for _i=1,8 do
   local _skill=dget(5+_i) -- note: offset to sword (6)
@@ -1339,9 +1340,12 @@ function recalcskills()
   end
  end
 
- avatar.swordattack=swordskills[dget(6)%10]
- avatar.bowattack=bowskills[dget(7)%10]
- avatar.staffattack=staffskills[dget(8)%10]
+ avatar.swordattack,
+ avatar.bowattack,
+ avatar.staffattack=
+  swordskills[dget(6)%10],
+  bowskills[dget(7)%10],
+  staffskills[dget(8)%10]
 end
 
 function setupavatar()
@@ -1422,10 +1426,7 @@ end
 function mapinit()
  walls,dynwalls,actors,attacks,fxs,flooritems,deathts={},{},{},{},{},{} -- note: deathts is set to nil
  for _y=0,15 do
-  walls[_y]={}
-  for _x=0,15 do
-   walls[_y][_x]=1
-  end
+  walls[_y]={[0]=1,unpack(split'1,1,1,1,1,1,1,1,1,1,1,1,1,1,1')}
  end
 
  local avatarx,avatary,_enemycs=flr(avatar.x/8),flr(avatar.y/8),
@@ -1455,9 +1456,10 @@ function mapinit()
  -- setup enemies
  local _extraenemyc=ceil(dget(62)/2)
  for _i=1,enemy_c do
-  local _x,_y=0,0
-  while walls[_y][_x] != 0 do
-   _x,_y=flrrnd(15),flrrnd(15)
+  ::setupenemies::
+  local _x,_y=flrrnd(15),flrrnd(15)
+  if walls[_y][_x] != 0 do
+   goto setupenemies
   end
   _x,_y=_x*8+4,_y*8+4
   local _enemytype=1
@@ -1478,7 +1480,7 @@ function mapinit()
  -- add warpstone
  warpstone={x=curx*8,y=cury*8,hw=6,hh=8,wx=curx,wy=cury,draw=function()
   spr(226,warpstone.x-4,warpstone.y-4)
-  end}
+ end}
  add(actors,warpstone)
 
  -- populate actors
@@ -1506,9 +1508,7 @@ function mapinit()
  del(actors,warpstone)
  walls[cury][curx]=224
 
- avatar.iswarping=true
- avatar.afflic=2
- avatar.hp=.0125
+ avatar.iswarping,avatar.afflic,avatar.hp=true,2,.0125
 
  if level == 0 then
   music(0)
@@ -1529,9 +1529,7 @@ end
 
 -- system update
 
-update60_hurtsfxts=0
-update60_curenemyi=1
-update60_enemyattackts=0
+update60_hurtsfxts,update60_curenemyi,update60_enemyattackts=0,1,0
 function _update60()
 
  -- dead
@@ -1542,10 +1540,9 @@ function _update60()
  end
 
  if avatar.hp <= 0 then
-  sfx(-1,0)
-  sfx(-1,1)
-  sfx(-1,2)
-  sfx(-1,3)
+  for _i=0,3 do
+   sfx(-1,_i)
+  end
   if deathts == nil then
    deathts=t()+2
   end
@@ -1556,8 +1553,7 @@ function _update60()
  if avatar.iswarping then
   avatar.hp+=.05
   if avatar.hp >= avatar.maxhp then
-   avatar.iswarping=nil
-   avatar.afflic=nil
+   avatar.iswarping,avatar.afflic=nil
   end
   return
  end
@@ -1645,8 +1641,9 @@ function _update60()
  end
  
  if avatar.afflic != 2 and _angle and type(_angle) == 'number' then
-  avatar.a=_angle
-  avatar.walking=avatar.attackstate != 'readying' and avatar.attackstate != 'striking'
+  avatar.a,avatar.walking=
+   _angle,
+   avatar.attackstate != 'readying' and avatar.attackstate != 'striking'
 
   if avatar.attackstate != 'striking' then
    if _angle >= .375 and _angle <= .625 then
@@ -1667,34 +1664,45 @@ function _update60()
 
   if btn(4) and btn(5) then
    if avatar.iscasting != true then
-    avatar.iscasting=true
-    avatar.staffdx,avatar.staffdy=0,0
+    avatar.iscasting,avatar.staffdx,avatar.staffdy=true,0,0
    end
    if _angle then
     local _staffdspd=min(.25+avatar.staffskill_level*.125,1.5)
     avatar.staffdx+=norm(cos(avatar.a))*_staffdspd
     avatar.staffdy+=norm(sin(avatar.a))*_staffdspd
    end
-   avatar.attackstate='readying'
-   avatar.attackstate_c=1
-   avatar.s=avatar.ss[3]
-   avatar.attack=function() end
+   avatar.attackstate,
+   avatar.attackstate_c,
+   avatar.s,
+   avatar.attack=
+    'readying',
+    1,
+    avatar.ss[3],
+    function() end
    avatar.staffattack(avatar)
    if avatar.staffattack != staffskills[1] then
     avatar.hp-=.0096
    end
 
   elseif btnp(4) then
-   avatar.attackstate='readying'
-   avatar.attackstate_c=6
-   avatar.s=avatar.ss[1]
-   avatar.attack=avatar.swordattack
+   avatar.attackstate,
+   avatar.attackstate_c,
+   avatar.s,
+   avatar.attack=
+    'readying',
+    6,
+    avatar.ss[1],
+    avatar.swordattack
   elseif btn(5) then
    avatar.bow_c+=2
-   avatar.attackstate='readying'
-   avatar.attackstate_c=1
-   avatar.s=avatar.ss[2]
-   avatar.attack=avatar.bowattack
+   avatar.attackstate,
+   avatar.attackstate_c,
+   avatar.s,
+   avatar.attack=
+    'readying',
+    1,
+    avatar.ss[2],
+    avatar.bowattack
   end
 
   if avatar.attackstate == 'readying' and avatar.attackstate_c <= 0 then
@@ -1705,24 +1713,25 @@ function _update60()
     _skill_level=avatar.bowskill_level
    end
    if avatar.skill_c%flr(19/_skill_level) == 0 then
-    avatar.skill_hit=true
-    avatar.skill_c=0
+    avatar.skill_hit,avatar.skill_c=true,0
    end
-   avatar.attackstate='striking'
-   avatar.attackstate_c=28
+   avatar.attackstate,avatar.attackstate_c='striking',28
    avatar.attack(avatar)
 
    -- teleport
    if avatar.iscasting and avatar.staffattack == staffskills[8] then
-    sfx(19)
-    addteleportfx(208,avatar.x,avatar.y-3)
-    avatar.x=mid(8,avatar.x+avatar.staffdx,120)
-    avatar.y=mid(8,avatar.y+avatar.staffdy,120)
-    addteleportfx(208,avatar.x,avatar.y-3)
+    local _x,_y=mid(8,avatar.x+avatar.staffdx,120),mid(10,avatar.y+avatar.staffdy,120)
+    if isinsidewall({x=_x,y=_y,topy=_y-2,hw=avatar.hw,hh=avatar.hh},nil,0,0) then
+     sfx(2)
+    else
+     sfx(19)
+     addteleportfx(208,avatar.x,avatar.y)
+     avatar.x,avatar.y=_x,_y
+     addteleportfx(208,avatar.x,avatar.y)
+    end
    end
 
-   avatar.bow_c=0
-   avatar.iscasting=nil
+   avatar.bow_c,avatar.iscasting=0
   elseif avatar.attackstate_c <= 0 then
    avatar.attackstate=nil
   end
@@ -1760,8 +1769,7 @@ function _update60()
    -- decisiondebug('attacking: '.._enemy.attackstate)
    _enemy.walking=nil
    if _enemy.attackstate == 'readying' and _enemy.attackstate_c <= 0 then
-    _enemy.attackstate='striking'
-    _enemy.attackstate_c=40
+    _enemy.attackstate,_enemy.attackstate_c='striking',40
 
     _enemy.attack(_enemy)
    else
@@ -1780,8 +1788,7 @@ function _update60()
     (_enemy.afflic == 5 and _disttoavatar < 18) or
     _enemy.afflic == 7) then
    -- decisiondebug('run away from avatar')
-   _enemy.walking=true
-   _enemy.targetx,_enemy.targety=avatar.x,avatar.y
+   _enemy.walking,_enemy.targetx,_enemy.targety=true,avatar.x,avatar.y
    _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)+.5
    _enemy.moving_c=30
 
@@ -1793,8 +1800,7 @@ function _update60()
     _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
 
     if not _enemy.attackstate then
-     _enemy.attackstate='readying'
-     _enemy.attackstate_c=36
+     _enemy.attackstate,_enemy.attackstate_c='readying',36
     end
 
     update60_enemyattackts=t()
@@ -1810,8 +1816,7 @@ function _update60()
    _enemy.walking=true
    if _enemy.afflic != 4 then
     _enemy.a+=rnd()
-    _enemy.targetx=nil
-    _enemy.moving_c=45
+    _enemy.moving_c,_enemy.targetx=45
    end
    
   elseif _haslostoavatar and
@@ -1819,8 +1824,7 @@ function _update60()
     _disttoavatar > _enemy.range and not 
     _enemy.moving_c then
    -- decisiondebug('move towards avatar')
-   _enemy.walking=true
-   _enemy.targetx,_enemy.targety=avatar.x,avatar.y
+   _enemy.walking,_enemy.targetx,_enemy.targety=true,avatar.x,avatar.y
    _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
    if _disttoavatar < 6 then
     _enemy.a+=.5
@@ -1828,8 +1832,7 @@ function _update60()
 
   elseif _enemy.targetx and not _enemy.moving_c then
    -- decisiondebug('move towards target')
-   _enemy.walking=true
-   _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
+   _enemy.walking,_enemy.a=true,atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
    local _disttotarget=dist(_enemy.x,_enemy.y,_enemy.targetx,_enemy.targety)
    if _disttotarget < 4 then
     _enemy.targetx=nil
@@ -1933,7 +1936,11 @@ function _update60()
    end
   elseif _a.afflic == 7 then
    add(fxs,getpsetfx(_a.x-2+rnd(4),_a.y-5+rnd(3),11,itemcolors[7],0,-.0125,0,-.0375))
-   _a.hp+=.025
+   if _dx == 0 and _dy == 0 then
+    _a.hp-=.0125
+   else
+    _a.hp+=.025
+   end
   else -- catch all (other afflictions)
    _a.hp+=.0078
   end
@@ -2076,18 +2083,20 @@ function _update60()
  if _enemycount == 0 then
   if level > 0 and walls[warpstone.wy][warpstone.wx] != 225 then
    sfx(14)
-   local _skills,_types=split'1,2,3,4,5,6,7,8',
-    split'6,6,6,7,7,8,8,9,10,11,12,13,14,15,16'
-   if dget(62) > 1 and rnd() < .125 then
-    _skills=split'12,13,14,15,16,17,18'
+   function getrndskill(_nonepicskills)
+    return rnd(
+     dget(62) > 1 and rnd() < .125 and
+     split'12,13,14,15,16,17,18' or _nonepicskills)
    end
+   local _skills,_types=
+    split'1,2,3,4,5,6,7,8',
+    split'6,6,6,7,7,8,8,9,10,11,12,13,14,15,16'
    addflooritem(rnd(_types),rnd(_skills))
    if level%3 == 2 then
-    addflooritem(rnd(_types),rnd(_skills))
+    addflooritem(rnd(_types),getrndskill(_skills))
    end
    if level%3 == 0 then
-    addflooritem(getworld(),
-     rnd(split'2,3,4,5,6,7,8')+(dget(62) > 1 and rnd() < .125 and 10 or 0))
+    addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,8'))
    end
   end
 
@@ -2373,13 +2382,13 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 00000000222222202222222022222220222222202222222022222220222222200000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000110010000000022222220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040040000
-0000000000011001000010002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004dd40000
-0000000000111101000111002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ddd0000
-0000000000111111000010002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ddd0000
-00001000001111010000100020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000500000
-00011100001111010000100020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00001000011111010000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00010100001001010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000100000011001000010002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004dd40000
+0001110000111101000111002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ddd0000
+00001000001111110000100020000000000dd000000000000000000000000000000000000000000000000000000000000000000000000000000000000ddd0000
+00010100001111010000100020000000000dd0000000000000000000000000000000000000000000000000000000000000000000000000000000000000500000
+00000000001111010000100020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000011111010000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000001001010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00005000000050000000500000000000000000000000700000051500066666600000000000000000000000000000000000000000000020000100000000000000
 0000550000005500000055000000000000000000000777000055120066666666000000000e8888000f9999000e88999000ddd100000022000301001000042000
 00051500000575000005050000011000000000000007717005551110d666666d00000000e8111880f9191990e81191990dd1dd10000282000003003000666d00
@@ -2527,7 +2536,7 @@ __label__
 __sfx__
 08070000007200372006730097300c7300f7401274006720097200c7300f7301274015740187400f7201273015730187401b7401e74021740187401b7201e7302173024740277402a7402a700000000000000000
 900700000173009700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000400000e0100801013000100000a0000300000000000000c0000a00009000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000400000e0200802013000100000a0000300000000000000c0000a00009000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 9303000026634156301462518500175001750015500145001350011500105000d5000d50014000120000f0000d0000a0000700005000010000000007000050000000006000020000100000000000000000000000
 9202000015640156351950018500175001750015500145001350011500105000d5000d50014000120000f0000d0000a0000700005000010000000007000050000000006000020000100000000000000000000000
 9102000026624156201462018500175001750015500145001350011500105000d5000d50014000120000f0000d0000a0000700005000010000000007000050000000006000020000100000000000000000000000
