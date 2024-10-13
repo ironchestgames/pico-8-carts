@@ -107,11 +107,11 @@ end
 cartdata'ironchestgames_vvoe2_v1_dev1'
 
 -- debug: reset
-for _i=1,16 do -- inventory
-  dset(_i,0)
-end
-dset(62,0) -- evil kills
-dset(63,0) -- last level cleared
+-- for _i=1,16 do -- inventory
+--   dset(_i,0)
+-- end
+-- dset(62,0) -- evil kills
+-- dset(63,0) -- last level cleared
 
 -- dset(6,8)
 -- dset(7,8)
@@ -616,11 +616,7 @@ function addavatarlightningattack(_level)
 end
 
 swordskills={
- function (_actor) -- 1 - bruise
-  if rnd() < .625 then
-   addbruisingswordattack(_actor)
-  end
- end,
+ addbruisingswordattack, -- 1 - bruise
 
  function (_actor) -- 2 - freeze/icewall
   local _attack=getswordattack(_actor,2)
@@ -737,9 +733,7 @@ end
 
 bowskills={
  function (_actor) -- 1 - bruise
-  if rnd() < .75 then
-   addbruisingbowattack(_actor)
-  end
+  addbruisingbowattack(_actor)
  end,
 
  function (_actor) -- 2 - icewall
