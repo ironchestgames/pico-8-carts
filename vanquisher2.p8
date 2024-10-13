@@ -18,9 +18,10 @@ todo:
  - reflect skill?
  sword: reflect missiles with varying accuracy
  bow: arrows bounce on walls
- staff: reflect missiles with varying accuracy
+ staff: reflect missiles with varying accuracy -or- a growing orb that reflects
+        but decreases when hit, growth rate is bound to skill level
 
- - haste skill?
+ - haste skill? (run 50% faster, a haste_c goes down, +skillevel*hasteconstant to haste counter
  sword: gain haste on hit
  bow: gain haste on hit
  staff: gain haste
@@ -29,9 +30,6 @@ todo:
  sword: gain shadow attacks on hit, ceiling is skill level
  bow: gain shadow attacks on hit, ceiling is skill level
  staff: gain shadow, skill level is speed and ceiling
-
- - make all afflictions with mundane attacks be larger index than the other ones,
-   this would be to prepare for passive skills
 
  - change the evils fireballs to be venomfireballs!
 
@@ -109,11 +107,11 @@ end
 cartdata'ironchestgames_vvoe2_v1_dev1'
 
 -- debug: reset
--- for _i=1,16 do -- inventory
---   dset(_i,0)
--- end
--- dset(62,0) -- evil kills
--- dset(63,0) -- last level cleared
+for _i=1,16 do -- inventory
+  dset(_i,0)
+end
+dset(62,0) -- evil kills
+dset(63,0) -- last level cleared
 
 -- dset(6,8)
 -- dset(7,8)
@@ -344,6 +342,7 @@ itemcolors={
  split'14,8,4,2', -- 6 - healing/leeching
  split'7,7,15,9', -- 7 - holy/revive
  split'7,11,12,3', -- 8 - teleportation
+ split'7,6,13,2', -- 9 - deflection
 }
 
 function addflooritem(_typ,_skill)
@@ -564,6 +563,16 @@ function addvenomspikes(_a,_lvl,_x,_y)
  })
 end
 
+function deflectattack(_attack)
+ for _other in all(attacks) do
+  local _dx,_dy=collideaabbs(isaabbscolliding,_attack,_other,0,0)
+  if _other.isenemy and (_dx != 0 or _dy != 0) then
+   sfx(25)
+   _other.a-=.5
+   _other.isenemy=nil
+  end
+ end
+end
 
 -->8
 -- sword attacks
@@ -673,6 +682,12 @@ swordskills={
   end
   add(attacks,_a)
  end,
+
+ function (_actor) -- 9 - deflect
+  local _a=getswordattack(_actor,9,1)
+  _a.durc,_a.update=6,deflectattack
+  add(attacks,_a)
+ end,
 }
 
 function getnewxyfroma(_x,_y,_a,_d)
@@ -740,8 +755,8 @@ bowskills={
  function (_actor) -- 3 - fire fissure
   local _a,_onmiss=getbowattack(_actor,3)
   _a.onmiss=function(_attack)
-   _onmiss(_attack)
    addfissure(_attack,_attack.x,_attack.y,_actor.bowskill_level)
+   _onmiss(_attack)
   end
   add(attacks,_a)
  end,
@@ -797,6 +812,12 @@ bowskills={
   _a.update,_a.wallaware=bowattack_teleportupdate
   add(attacks,_a)
  end,
+
+ function(_actor) -- 9 - deflect
+  local _a=getbowattack(_actor,1,9)
+  _a.bounce=true
+  add(attacks,_a)
+ end,
 }
 
 
@@ -809,7 +830,7 @@ function addcastingfx(_colors)
     avatar.x+_i,
     avatar.y+1,
     12+rnd(8),
-    _colors or itemcolors[dget(8)],
+    _colors or itemcolors[dget(8)%10],
     0,-.375,0,0))
  end
 end
@@ -819,7 +840,7 @@ function addcastingmarkerfx()
   avatar.x+avatar.staffdx,
   avatar.y+avatar.staffdy,
   5,
-  itemcolors[dget(8)],
+  itemcolors[dget(8)%10],
   .5-rnd(1),.5-rnd(1),0,0))
 end
 
@@ -830,6 +851,31 @@ function staffhealing(_actor)
   _actor.hp+=0.5
   _actor.staffattack_c=0
  end
+end
+
+function deflectstaffattack(_durc,_onmiss)
+ local _size=3+avatar.staffattack_c*avatar.staffskill_level*.0078
+ sfx(27)
+ add(attacks,{
+  x=avatar.x,y=avatar.y,
+  hw=_size,hh=_size,
+  durc=_durc,
+  update=deflectattack,
+  onmiss=_onmiss,
+  })
+ add(fxs,{
+  x=avatar.x,y=avatar.y,
+  dur=_durc,durc=_durc,
+  vx=0,vy=0,ax=0,ay=0,
+  draw=function(_fx)
+   circ(_fx.x,_fx.y-2,_size,6)
+   fillp(rnd(32768))
+   if rnd() < .5 then
+    circfill(_fx.x,_fx.y-2,_size,13)
+   end
+   fillp()
+  end,
+  })
 end
 
 staffskills={
@@ -900,8 +946,16 @@ staffskills={
   end
   addcastingmarkerfx()
  end,
-}
 
+ function (_actor) -- 9 - deflect
+  _actor.staffattack_c+=1
+  _actor.staffskill_level=16
+  if _actor.staffattack_c%16 == 1 then
+   deflectstaffattack(16)
+   addcastingfx()
+  end
+ end,
+}
 
 -->8
 -- enemy attacks
@@ -1663,7 +1717,7 @@ function _update60()
 
   if btn(4) and btn(5) then
    if avatar.iscasting != true then
-    avatar.iscasting,avatar.staffdx,avatar.staffdy=true,0,0
+    avatar.iscasting,avatar.staffdx,avatar.staffdy,avatar.staffattack_c=true,0,0,0
    end
    if _angle then
     local _staffdspd=min(.25+avatar.staffskill_level*.125,1.5)
@@ -1693,15 +1747,16 @@ function _update60()
     avatar.ss[1],
     avatar.swordattack
   elseif btn(5) then
-   avatar.bow_c+=2
    avatar.attackstate,
    avatar.attackstate_c,
    avatar.s,
-   avatar.attack=
+   avatar.attack,
+   avatar.bow_c=
     'readying',
     1,
     avatar.ss[2],
-    avatar.bowattack
+    avatar.bowattack,
+    min(avatar.bow_c+2,120)
   end
 
   if avatar.attackstate == 'readying' and avatar.attackstate_c <= 0 then
@@ -1718,15 +1773,19 @@ function _update60()
    avatar.attack(avatar)
 
    -- teleport
-   if avatar.iscasting and avatar.staffattack == staffskills[8] then
-    local _x,_y=mid(8,avatar.x+avatar.staffdx,120),mid(10,avatar.y+avatar.staffdy,120)
-    if isinsidewall({x=_x,y=_y,topy=_y-2,hw=avatar.hw,hh=avatar.hh},nil,0,0) then
-     sfx(2)
-    else
-     sfx(19)
-     addteleportfx(208,avatar.x,avatar.y)
-     avatar.x,avatar.y=_x,_y
-     addteleportfx(208,avatar.x,avatar.y)
+   if avatar.iscasting then
+    if avatar.staffattack == staffskills[8] then
+     local _x,_y=mid(8,avatar.x+avatar.staffdx,120),mid(10,avatar.y+avatar.staffdy,120)
+     if isinsidewall({x=_x,y=_y,topy=_y-2,hw=avatar.hw,hh=avatar.hh},nil,0,0) then
+      sfx(2)
+     else
+      sfx(19)
+      addteleportfx(208,avatar.x,avatar.y)
+      avatar.x,avatar.y=_x,_y
+      addteleportfx(208,avatar.x,avatar.y)
+     end
+    elseif avatar.staffattack == staffskills[9] then
+     deflectstaffattack(avatar.staffskill_level*16,function() sfx(27) end)
     end
    end
 
@@ -1997,9 +2056,21 @@ function _update60()
   end
 
   if _a.wallaware then
-   local _postcolldx,_postcolldy=collideaabbs(isinsidewall,_a,nil,0,0)
-   if _postcolldx != 0 or _postcolldy != 0 then
-    _a.wallcollision,_a.durc=true,0
+   local _dx,_dy=cos(_a.a)*_a.missile_spd,sin(_a.a)*_a.missile_spd
+   local _postcolldx,_postcolldy=collideaabbs(isinsidewall,_a,nil,_dx,_dy)
+   if _postcolldx != _dx or _postcolldy != _dy then
+    if _a.bounce then
+     sfx(25)
+     if _postcolldx != _dx then
+      _dx=-_dx
+     end
+     if _postcolldy != _dy then
+      _dy=-_dy
+     end
+     _a.a=atan2(_dx,_dy)
+    else
+     _a.wallcollision,_a.durc=true,0
+    end
    end
   end
 
@@ -2087,14 +2158,14 @@ function _update60()
      split'12,13,14,15,16,17,18' or _nonepicskills)
    end
    local _skills,_types=
-    split'1,2,3,4,5,6,7,8',
+    split'1,2,3,4,5,6,7,8,9',
     split'6,6,6,7,7,8,8,9,10,11,12,13,14,15,16'
    addflooritem(rnd(_types),rnd(_skills))
    if level%3 == 2 then
     addflooritem(rnd(_types),getrndskill(_skills))
    end
    if level%3 == 0 then
-    addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,8'))
+    addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,8,9'))
    end
   end
 
@@ -2371,13 +2442,13 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000222222202222222022222220222222202222222022222220222222200000000000000000000000000000000000000000000000000000000000000000
-0000000022272220222e22202ddddd20222222202fe2e820227f9220222277200000000000000000000000000000000000000000000000000000000000000000
-0000000022277220222ee22022272220222b22202e8888202777f920222b77200000000000000000000000000000000000000000000000000000000000000000
-0000000022777c2022eee220222aa2202b2b222028888820227f922022cbb2200000000000000000000000000000000000000000000000000000000000000000
-0000000022777c2022efee20222272202b232b2022888220227f922027cc22200000000000000000000000000000000000000000000000000000000000000000
-000000002777cc202eeffe20222272202323232022282220227f9220277222200000000000000000000000000000000000000000000000000000000000000000
-00000000222222202222222022222220222222202222222022222220222222200000000000000000000000000000000000000000000000000000000000000000
+00000000222222202222222022222220222222202222222022222220222222202222222000000000000000000000000000000000000000000000000000000000
+0000000022272220222e22202ddddd20222222202fe2e820227f9220222277202676672000000000000000000000000000000000000000000000000000000000
+0000000022277220222ee22022272220222b22202e8888202777f920222b77202676672000000000000000000000000000000000000000000000000000000000
+0000000022777c2022eee220222aa2202b2b222028888820227f922022cbb2202776772000000000000000000000000000000000000000000000000000000000
+0000000022777c2022efee20222272202b232b2022888220227f922027cc22202766762000000000000000000000000000000000000000000000000000000000
+000000002777cc202eeffe20222272202323232022282220227f9220277222202766762000000000000000000000000000000000000000000000000000000000
+00000000222222202222222022222220222222202222222022222220222222202222222000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000110010000000022222220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040040000
 0000100000011001000010002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004dd40000
@@ -2557,9 +2628,9 @@ __sfx__
 490600000422210620106250000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0503000023024180200d0201502000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 010a00002401528015000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000100003c11000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
+000a00001d4111d4151f4141840424400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000000000000
+b82400001f62412615006000060000600006000060000600006000060000600006000060000600006000060000600006000060000600006000060000600006000060000600006000060000600006000060000600
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
