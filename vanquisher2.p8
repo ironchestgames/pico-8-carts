@@ -1331,11 +1331,11 @@ function recalcskills()
  end
 
  avatar.basecolors=split',,,,15,0,2,4' -- note: empty first few because will always have 4 basic items (sword, bow, staff, shield)
- local _itemtoskillcolor=split'1,2,2,2,1,4,3,3'
  for _i=1,8 do
   local _skill=dget(5+_i) -- note: offset to sword (6)
   if _skill != 0 then
-   avatar.basecolors[_i]=itemcolors[_skill%10][_itemtoskillcolor[_i]]
+   -- note: split'1,2,2,2,1,4,3,3' is itemtoskillcolor
+   avatar.basecolors[_i]=itemcolors[_skill%10][split'1,2,2,2,1,4,3,3'[_i]]
   end
  end
 
@@ -1352,6 +1352,7 @@ function setupavatar()
   x=68,y=60,
   a=0,
   hw=1,hh=1,
+  s=split'52,53,54,55', -- swordsman
   ss={
    split'52,53,54,55', -- swordsman
    split'56,57,58,59', -- ranger
@@ -1379,7 +1380,6 @@ function setupavatar()
   staffdx=0,
   staffdy=0,
  }
- avatar.s=avatar.ss[1]
 
  recalcskills()
 end
@@ -1467,7 +1467,7 @@ function mapinit()
   elseif _i % 3 == 0 or rnd() < .1 then
    _enemytype=2
   end
-  -- here
+
   addenemy(_x,_y,enemyclasses[getworld()][_enemytype])
 
   if _extraenemyc > 0 then
