@@ -30,9 +30,8 @@ todo:
  bow: gain shadow attacks on hit, ceiling is skill level
  staff: gain shadow, skill level is speed and ceiling
 
- - make all afflictions with mundane attacks be larger index than the other ones
-
- - add level 2 items!
+ - make all afflictions with mundane attacks be larger index than the other ones,
+   this would be to prepare for passive skills
 
  - change the evils fireballs to be venomfireballs!
 
@@ -2059,7 +2058,6 @@ function _update60()
      recalcskills()
      add(actors,_a)
      _a.hp=_a.maxhp
-     _a.x,_a.y=getrandomfloorpos()
      add(fxs,getfx(210,_a.x,_a.y,240,itemcolors[7],0,-.125))
      for _i=1,10 do
       add(attacks,{
