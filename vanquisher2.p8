@@ -448,6 +448,10 @@ function addteleportfx(_s,_x,_y)
  add(fxs,getfx(_s,_x,_y,10,itemcolors[8]))
 end
 
+function addholyfx(_x,_y)
+ add(fxs,getpsetfx(_x,_y,11,itemcolors[7],0,-.0125,0,-.0375))
+end
+
 
 -->8
 -- attack funcs
@@ -933,7 +937,28 @@ staffskills={
 
  staffhealing, -- 6 - healing
 
- staffhealing, -- 7 - holy/revive
+ function (_actor) -- 7 - holy/revive
+  _actor.staffattack_c+=1
+  _actor.staffskill_level=1
+  if _actor.staffattack_c >= 24 then
+   local _size=4+_actor.staffskill_level
+   add(attacks,{
+    x=avatar.x,y=avatar.y,
+    hw=_size,hh=_size,
+    dur=15,durc=15,
+    afflic=7,
+    colors=itemcolors[7],
+    draw=function(_attack)
+     fillp(rnd(32767))
+     circ(_attack.x,_attack.y,_size,drawfx_getfxcolor(_attack))
+     fillp()
+     addholyfx(_attack.x-_size+rnd(_size*2),_attack.y-_size+rnd(_size*2))
+    end,
+   })
+   addcastingfx()
+   _actor.staffattack_c=0
+  end
+ end,
 
  function (_a) -- 8 - teleport
   _a.staffattack_c+=1
@@ -1979,6 +2004,7 @@ function _update60()
     _a.hp+=.025
    end
   elseif _a.afflic == 7 then
+   -- todo: use addholyfx
    add(fxs,getpsetfx(_a.x-2+rnd(4),_a.y-5+rnd(3),11,itemcolors[7],0,-.0125,0,-.0375))
    if _dx == 0 and _dy == 0 then
     _a.hp-=.0125
