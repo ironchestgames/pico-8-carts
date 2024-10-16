@@ -526,6 +526,7 @@ function addlightningstrike(_actor,_x,_y)
   afflic=4,
   hw=8,hh=8,
   durc=12,
+  a=0, -- note: needed for deflect
   draw=function()
    circfill(_x,_y,5,5)
   end,
@@ -857,18 +858,13 @@ end
 function deflectstaffattack(_durc,_onmiss)
  local _size=3+avatar.staffattack_c*avatar.staffskill_level*.0078
  sfx(27)
- add(attacks,{
-  x=avatar.x,y=avatar.y,
-  hw=_size,hh=_size,
-  durc=_durc,
-  update=deflectattack,
-  onmiss=_onmiss,
-  })
  add(fxs,{
   x=avatar.x,y=avatar.y,
+  hw=_size, -- note: for deflectattack
   dur=_durc,durc=_durc,
   vx=0,vy=0,ax=0,ay=0,
   draw=function(_fx)
+   deflectattack(_fx)
    circ(_fx.x,_fx.y-2,_size,6)
    fillp(rnd(32768))
    if rnd() < .5 then
@@ -939,7 +935,6 @@ staffskills={
 
  function (_actor) -- 7 - holy/revive
   _actor.staffattack_c+=1
-  _actor.staffskill_level=1
   if _actor.staffattack_c >= 24 then
    local _size=4+_actor.staffskill_level
    add(attacks,{
@@ -1380,7 +1375,7 @@ function recalcskills()
    avatar.staffskill_level+=_skill_lvl
   end
 
-  if _skill == 7 then
+  if _skillwoepic == 7 then
    add(avatar.reviveitems,_typ)
   end
  end
