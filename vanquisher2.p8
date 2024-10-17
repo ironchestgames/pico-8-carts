@@ -15,12 +15,6 @@ todo:
  bow: arrow split in perpendicular arrows, more splits with higher skill
  staff: create an incasing room from the avatar and out, create it when released
 
- - reflect skill?
- sword: reflect missiles with varying accuracy
- bow: arrows bounce on walls
- staff: reflect missiles with varying accuracy -or- a growing orb that reflects
-        but decreases when hit, growth rate is bound to skill level
-
  - haste skill? (run 50% faster, a haste_c goes down, +skillevel*hasteconstant to haste counter
  sword: gain haste on hit
  bow: gain haste on hit
@@ -104,7 +98,7 @@ end
 --  end
 -- end
 
-cartdata'ironchestgames_vvoe2_v1_dev1'
+cartdata'ironchestgames_vvoe2_v1_dev2'
 
 -- debug: reset
 -- for _i=1,16 do -- inventory
@@ -316,7 +310,7 @@ end
 -- drawing funcs
 
 drawactor_affliccolors={
- [2]=split'12,12,12,12,12,12,12,12,12,12,12,12,12,12,12',
+ [2]=split'12,12,12,7,12,7,7,7,7,7,7,7,12,7,7',
  [5]=split'3,3,3,11,3,11,11,11,11,11,11,11,3,11,11',
  [7]=split'6,6,6,15,6,15,15,15,15,15,15,15,6,15,15',
 }
@@ -374,7 +368,7 @@ function drawskillactionbtns(_itemnr)
  if _itemskill > 10 then
   spr(211,_x-2,_y-10)
  end
- spr(191+_itemskill%10,_x,_y-8)
+ spr(192+_itemskill%10,_x,_y-8)
 
  for _i=6,8 do
   if drawskillactionbtns_getifbtn(_itemnr,_itemskill%10,_i) then
@@ -526,7 +520,6 @@ function addlightningstrike(_actor,_x,_y)
   afflic=4,
   hw=8,hh=8,
   durc=12,
-  a=0, -- note: needed for deflect
   draw=function()
    circfill(_x,_y,5,5)
   end,
@@ -575,7 +568,9 @@ function deflectattack(_attack)
  for _other in all(attacks) do
   if _other.isenemy and dist(_attack.x,_attack.y,_other.x,_other.y) < _attack.hw then
    sfx(25)
-   _other.a-=.5
+   if _other.a then
+    _other.a-=.5
+   end
    _other.isenemy=nil
   end
  end
@@ -877,7 +872,6 @@ end
 
 staffskills={
  function (_actor) -- 1 - bruise
-  _actor.staffattack_c+=1
   if _actor.staffattack_c >= 16 then
    _actor.staffattack_c=0
    addbruisingswordattack(_actor)
@@ -885,7 +879,6 @@ staffskills={
  end,
 
  function (_actor) -- 2 - ice
-  _actor.staffattack_c+=1
   if _actor.staffattack_c >= 24 then
    addcastingfx()
    for _i=0,1,.125 do
@@ -903,25 +896,22 @@ staffskills={
   end
  end,
 
- function (_a) -- 3 - fire
+ function (_actor) -- 3 - fire
   if rnd() < .25 then
    addcastingfx()
-   addfissure(_a,-4+rnd(8)+_a.x+_a.staffdx,-4+rnd(8)+_a.y+_a.staffdy,_a.staffskill_level)
+   addfissure(_actor,-4+rnd(8)+_actor.x+_actor.staffdx,-4+rnd(8)+_actor.y+_actor.staffdy,_actor.staffskill_level)
   end
   addcastingmarkerfx()
  end,
 
  function (_actor) -- 4 - lightning
-  _actor.staffattack_c+=1
-  if _actor.staffattack_c >= 12 then
+  if _actor.staffattack_c%16 == 1 then
    addcastingfx()
-   addavatarlightningattack(_actor.staffskill_level)
-   _actor.staffattack_c=0
+   addavatarlightningattack(_actor.staffskill_level+1)
   end
  end,
 
  function (_actor) -- 5 - venomspikes
-  _actor.staffattack_c+=1
   if  _actor.staffattack_c >= 16 then
    addcastingfx()
    addvenomspikes(_actor,min(_actor.staffskill_level*.5,3),
@@ -934,7 +924,6 @@ staffskills={
  staffhealing, -- 6 - healing
 
  function (_actor) -- 7 - holy/revive
-  _actor.staffattack_c+=1
   if _actor.staffattack_c >= 24 then
    local _size=4+_actor.staffskill_level
    add(attacks,{
@@ -955,17 +944,15 @@ staffskills={
   end
  end,
 
- function (_a) -- 8 - teleport
-  _a.staffattack_c+=1
-  if _a.staffattack_c >= 16 then
+ function (_actor) -- 8 - teleport
+  if _actor.staffattack_c >= 16 then
    addcastingfx()
-   _a.staffattack_c=0
+   _actor.staffattack_c=0
   end
   addcastingmarkerfx()
  end,
 
  function (_actor) -- 9 - deflect
-  _actor.staffattack_c+=1
   _actor.staffskill_level=16
   if _actor.staffattack_c%16 == 1 then
    deflectstaffattack(16)
@@ -1138,6 +1125,7 @@ function bossondeath(_actor)
 end
 
 function lastbossondeath(_actor)
+ dset(62,dget(62)+1)
  bossondeath(_actor)
  sfx(10)
  -- local _sgetystart,_sgetyend,_sgetxstart,_sgetxend=89,72,60,74
@@ -1629,7 +1617,6 @@ function _update60()
   end
   if level == 15 then
    if btnp(2) then
-    dset(62,dget(62)+1) -- note: exploitable
     dset(63,0)
     level=0
     mapinit()
@@ -1734,6 +1721,8 @@ function _update60()
     1,
     avatar.ss[3],
     function() end
+
+   avatar.staffattack_c+=1
    avatar.staffattack(avatar)
    if avatar.staffattack != staffskills[1] then
     avatar.hp-=.0096
@@ -2252,6 +2241,14 @@ function _draw()
   end
  end
 
+  -- draw floor fxs
+ sortony(fxs)
+ for _fx in all(fxs) do
+  if _fx.isfloor then
+   _fx.draw(_fx)
+  end
+ end
+
  -- draw walls
  if level == 0 then
   pal(13,3)
@@ -2288,14 +2285,6 @@ function _draw()
   pal()
   if avatar.touchingitem == _item then
    ?'\f1\#0🅾️',_item.x-4,_item.y-10
-  end
- end
-
- -- draw floor fxs
- sortony(fxs)
- for _fx in all(fxs) do
-  if _fx.isfloor then
-   _fx.draw(_fx)
   end
  end
 
@@ -2448,13 +2437,13 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000888e0000888e00000800000008000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000800000008000000088ee
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080800000080000008080000080800
-00000000222222202222222022222220222222202222222022222220222222202222222000000000000000000000000000000000000000000000000000000000
-0000000022272220222e22202ddddd20222222202fe2e820227f9220222277202676672000000000000000000000000000000000000000000000000000000000
-0000000022277220222ee22022272220222b22202e8888202777f920222b77202676672000000000000000000000000000000000000000000000000000000000
-0000000022777c2022eee220222aa2202b2b222028888820227f922022cbb2202776772000000000000000000000000000000000000000000000000000000000
-0000000022777c2022efee20222272202b232b2022888220227f922027cc22202766762000000000000000000000000000000000000000000000000000000000
-000000002777cc202eeffe20222272202323232022282220227f9220277222202766762000000000000000000000000000000000000000000000000000000000
-00000000222222202222222022222220222222202222222022222220222222202222222000000000000000000000000000000000000000000000000000000000
+00000000000000002222222022222220222222202222222022222220222222202222222022222220000000000000000000000000000000000000000000000000
+000000000000000022272220222e22202ddddd20222222202fe2e820227f92202222772026766720000000000000000000000000000000000000000000000000
+000000000000000022277220222ee22022272220222b22202e8888202777f920222b772026766720000000000000000000000000000000000000000000000000
+000000000000000022777c2022eee220222aa2202b2b222028888820227f922022cbb22027767720000000000000000000000000000000000000000000000000
+000000000000000022777c2022efee20222272202b232b2022888220227f922027cc222027667620000000000000000000000000000000000000000000000000
+00000000000000002777cc202eeffe20222272202323232022282220227f92202772222027667620000000000000000000000000000000000000000000000000
+00000000000000002222222022222220222222202222222022222220222222202222222022222220000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000110010000000022222220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040040000
 0000100000011001000010002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004dd40000
