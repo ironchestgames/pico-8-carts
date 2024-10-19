@@ -107,9 +107,9 @@ cartdata'ironchestgames_vvoe2_v1_dev2'
 -- dset(62,0) -- evil kills
 -- dset(63,0) -- last level cleared
 
--- dset(14,8)
--- dset(15,8)
--- dset(16,5)
+-- dset(14,2)
+-- dset(15,2)
+-- dset(16,2)
 -- dset(6,8)
 
 poke(0x5f5c,-1) -- set auto-repeat delay for btnp to none
@@ -457,7 +457,7 @@ end
 
 addicewall_colors=split'6,6,6,6,6,6,13'
 function addicewall(_x,_y,_lvl)
- local _durc,_dw=_lvl*12,{
+ local _durc,_dw=12+_lvl*8,{
   x=_x,y=_y,
   hw=4,hh=4,
  }
