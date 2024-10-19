@@ -42,6 +42,8 @@ afflictions:
 6 - confused (only player)
 7 - holyburn (only enemies)
 
+epic items start from 20
+
 cartdata layout:
 1 - orb
 2 - skull
@@ -107,10 +109,10 @@ cartdata'ironchestgames_vvoe2_v1_dev2'
 -- dset(62,0) -- evil kills
 -- dset(63,0) -- last level cleared
 
--- dset(14,2)
--- dset(15,2)
--- dset(16,2)
--- dset(6,8)
+-- dset(14,23)
+-- dset(15,23)
+-- dset(16,23)
+-- dset(6,23)
 
 poke(0x5f5c,-1) -- set auto-repeat delay for btnp to none
 poke(0x5f36,0x2) -- allow circ & circfill w even diameter
@@ -361,17 +363,17 @@ function drawinventoryskills(_itemnr)
   split'63,75,87,99,111,63,75,87,99,111,12,24,36,12,24,36'[_itemnr],
   split'24,24,24,24,24,116,116,116,116,116,24,24,24,116,116,116'[_itemnr]
 
- pal(itemcolors[_itemskill%10])
- spr((_itemskill > 10 and 35 or 19)+_itemnr,_x,_y-19)
+ pal(itemcolors[_itemskill%20])
+ spr((_itemskill > 20 and 35 or 19)+_itemnr,_x,_y-19)
  pal()
 
- if _itemskill > 10 then
+ if _itemskill > 20 then
   spr(211,_x-2,_y-10)
  end
- spr(192+_itemskill%10,_x,_y-8)
+ spr(192+_itemskill%20,_x,_y-8)
 
  for _i=14,16 do
-  if drawinventoryskills_getifbtn(_itemnr,_itemskill%10,_i) then
+  if drawinventoryskills_getifbtn(_itemnr,_itemskill%20,_i) then
    spr(219+_i,_x,_y) -- note: sprite is offset to accomodate _i
    _y+=3
   end
@@ -851,7 +853,7 @@ function addcastingfx(_colors)
     avatar.x+_i,
     avatar.y+1,
     12+rnd(8),
-    _colors or itemcolors[dget(16)%10],
+    _colors or itemcolors[dget(16)%20],
     0,-.375,0,0))
  end
 end
@@ -861,7 +863,7 @@ function addcastingmarkerfx()
   avatar.x+avatar.staffdx,
   avatar.y+avatar.staffdy,
   5,
-  itemcolors[dget(16)%10],
+  itemcolors[dget(16)%20],
   .5-rnd(1),.5-rnd(1),0,0))
 end
 
@@ -1339,14 +1341,14 @@ function recalcskills()
   {},0,0,0
  for _typ=1,16 do
   local _skill=dget(_typ)
-  local _skillwoepic,_skill_lvl=_skill%10,ceil(_skill/10)
-  if _skillwoepic == dget(14)%10 then
+  local _skillwoepic,_skill_lvl=_skill%20,ceil(_skill/20)
+  if _skillwoepic == dget(14)%20 then
    avatar.swordskill_level+=_skill_lvl
   end
-  if _skillwoepic == dget(15)%10 then
+  if _skillwoepic == dget(15)%20 then
    avatar.bowskill_level+=_skill_lvl
   end
-  if _skillwoepic == dget(16)%10 then
+  if _skillwoepic == dget(16)%20 then
    avatar.staffskill_level+=_skill_lvl
   end
 
@@ -1360,16 +1362,16 @@ function recalcskills()
   local _skill=dget(split'14,15,16,6,7,8,9,10'[_i])
   if _skill != 0 then
    -- note: split'1,2,2,2,1,4,3,3' is itemtoskillcolor
-   avatar.basecolors[_i]=itemcolors[_skill%10][split'1,2,2,2,1,4,3,3'[_i]]
+   avatar.basecolors[_i]=itemcolors[_skill%20][split'1,2,2,2,1,4,3,3'[_i]]
   end
  end
 
  avatar.swordattack,
  avatar.bowattack,
  avatar.staffattack=
-  swordskills[dget(14)%10],
-  bowskills[dget(15)%10],
-  staffskills[dget(16)%10]
+  swordskills[dget(14)%20],
+  bowskills[dget(15)%20],
+  staffskills[dget(16)%20]
 end
 
 function setupavatar()
@@ -1707,7 +1709,7 @@ function _update60()
     avatar.staffattack
 
    avatar.staffattack_c+=1
-   local _staffskill=dget(16)%10
+   local _staffskill=dget(16)%20
    if avatar.staffattack_c%staffskills_attackintervals[_staffskill] == 1 then
     avatar.attack(avatar)
    end
@@ -2093,7 +2095,7 @@ function _update60()
     if #_a.reviveitems > 0 then
      sfx(11)
      local _reviveitem=_a.reviveitems[1]
-     dset(_reviveitem,max(1,dget(_reviveitem)-10))
+     dset(_reviveitem,max(1,dget(_reviveitem)-20))
      recalcskills()
      add(actors,_a)
      _a.hp=_a.maxhp
@@ -2252,8 +2254,8 @@ function _draw()
 
  -- draw flooritems
  for _item in all(flooritems) do
-  pal(itemcolors[_item.skill%10])
-  spr((_item.skill > 10 and 35 or 19)+_item.typ,_item.x-4,_item.y-4)
+  pal(itemcolors[_item.skill%20])
+  spr((_item.skill > 20 and 35 or 19)+_item.typ,_item.x-4,_item.y-4)
   pal()
   if avatar.touchingitem == _item then
    ?'\f1\#0🅾️',_item.x-4,_item.y-10
@@ -2406,13 +2408,13 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000888e0000888e00000800000008000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000800000008000000088ee
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080800000080000008080000080800
-00000000000000002222222022222220222222202222222022222220222222202222222022222220000000000000000000000000000000000000000000000000
-000000000000000022272220222e22202ddddd20222222202fe2e820227f92202222772022767220000000000000000000000000000000000000000000000000
-000000000000000022277220222ee22022272220222b22202e8888202777f920222b772027ddd620000000000000000000000000000000000000000000000000
-000000000000000022777c2022eee220222aa2202b2b222028888820227f922022cbb22027ddd720000000000000000000000000000000000000000000000000
-000000000000000022777c2022efee20222272202b232b2022888220227f922027cc222026ddd620000000000000000000000000000000000000000000000000
-00000000000000002777cc202eeffe20222272202323232022282220227f92202772222022766220000000000000000000000000000000000000000000000000
-00000000000000002222222022222220222222202222222022222220222222202222222022222220000000000000000000000000000000000000000000000000
+00000000000000002222222022222220222222202222222022222220222222202222222022222220111111100000000000000000000000000000000000000000
+000000000000000022272220222e22202ddddd20222222202fe2e820227f92202222772022767220171117100000000000000000000000000000000000000000
+000000000000000022277220222ee22022272220222b22202e8888202777f920222b772027ddd620116446100000000000000000000000000000000000000000
+000000000000000022777c2022eee220222aa2202b2b222028888820227f922022cbb22027ddd720111991100000000000000000000000000000000000000000
+000000000000000022777c2022efee20222272202b232b2022888220227f922027cc222026ddd620111499100000000000000000000000000000000000000000
+00000000000000002777cc202eeffe20222272202323232022282220227f92202772222022766220111144100000000000000000000000000000000000000000
+00000000000000002222222022222220222222202222222022222220222222202222222022222220111111100000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000110010000000022222220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040040000
 0000100000011001000010002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004dd40000
