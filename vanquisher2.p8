@@ -873,74 +873,64 @@ function staffhealing(_actor)
  end
 end
 
+staffskills_attackintervals=split'16,24,2,16,16,0,24,16,16'
+staffskills_castingmarker=split'0,0,1,0,1,0,0,1,0,0'
 staffskills={
  function (_actor) -- 1 - bruise
-  if _actor.staffattack_c%16 == 1 then
-   addbruisingswordattack(_actor)
-  end
+  addbruisingswordattack(_actor)
  end,
 
  function (_actor) -- 2 - ice
-  if _actor.staffattack_c%24 == 1 then
-   addcastingfx()
-   for _i=0,1,.125 do
-    local _x,_y=_actor.x+cos(_i)*12,_actor.y+sin(_i)*12
-    if not addicewall(_x,_y,_actor.staffskill_level) then
-     add(attacks,{
-      x=_x,y=_y,
-      durc=2,
-      hw=3,hh=3,
-      afflic=2,
-      })
-    end
+  addcastingfx()
+  for _i=0,1,.125 do
+   local _x,_y=_actor.x+cos(_i)*12,_actor.y+sin(_i)*12
+   if not addicewall(_x,_y,_actor.staffskill_level) then
+    add(attacks,{
+     x=_x,y=_y,
+     durc=2,
+     hw=3,hh=3,
+     afflic=2,
+     })
    end
   end
  end,
 
  function (_actor) -- 3 - fire
-  if rnd() < .25 then
+  if rnd() < .5 then
    addcastingfx()
    addfissure(_actor,-4+rnd(8)+_actor.x+_actor.staffdx,-4+rnd(8)+_actor.y+_actor.staffdy,_actor.staffskill_level)
   end
-  addcastingmarkerfx()
  end,
 
  function (_actor) -- 4 - lightning
-  if _actor.staffattack_c%16 == 1 then
-   addcastingfx()
-   addavatarlightningattack(_actor.staffskill_level+1)
-  end
+  addcastingfx()
+  addavatarlightningattack(_actor.staffskill_level+1)
  end,
 
  function (_actor) -- 5 - venomspikes
-  if  _actor.staffattack_c%16 == 1 then
-   addcastingfx()
-   addvenomspikes(_actor,min(_actor.staffskill_level*.5,3),
-    _actor.x+_actor.staffdx,_actor.y+_actor.staffdy)
-  end
-  addcastingmarkerfx()
+  addcastingfx()
+  addvenomspikes(_actor,min(_actor.staffskill_level*.5,3),
+   _actor.x+_actor.staffdx,_actor.y+_actor.staffdy)
  end,
 
  staffhealing, -- 6 - healing
 
  function (_actor) -- 7 - holy/revive
-  if _actor.staffattack_c%24 == 1 then
-   local _size=4+_actor.staffskill_level
-   add(attacks,{
-    x=avatar.x,y=avatar.y,
-    hw=_size,hh=_size,
-    dur=15,durc=15,
-    afflic=7,
-    colors=itemcolors[7],
-    draw=function(_attack)
-     fillp(rnd(32767))
-     circ(_attack.x,_attack.y,_size,drawfx_getfxcolor(_attack))
-     fillp()
-     addholyfx(_attack.x-_size+rnd(_size*2),_attack.y-_size+rnd(_size*2))
-    end,
-   })
-   addcastingfx()
-  end
+  local _size=4+_actor.staffskill_level
+  add(attacks,{
+   x=avatar.x,y=avatar.y,
+   hw=_size,hh=_size,
+   dur=15,durc=15,
+   afflic=7,
+   colors=itemcolors[7],
+   draw=function(_attack)
+    fillp(rnd(32767))
+    circ(_attack.x,_attack.y,_size,drawfx_getfxcolor(_attack))
+    fillp()
+    addholyfx(_attack.x-_size+rnd(_size*2),_attack.y-_size+rnd(_size*2))
+   end,
+  })
+  addcastingfx()
  end,
 
  function (_actor,_released) -- 8 - teleport
@@ -954,17 +944,16 @@ staffskills={
     avatar.x,avatar.y=_x,_y
     addteleportfx(208,avatar.x,avatar.y)
    end
-  elseif _actor.staffattack_c%16 == 1 then
+  else
    addcastingfx()
   end
-  addcastingmarkerfx()
  end,
 
  function (_actor,_released) -- 9 - deflect
   local _size=3+avatar.staffattack_c*avatar.staffskill_level*.0078
   if _released then
    deflectattack(avatar.x,avatar.y,_size,avatar.staffskill_level*16)
-  elseif _actor.staffattack_c%16 == 1 then
+  else
    deflectattack(avatar.x,avatar.y,_size,16)
    addcastingfx()
   end
@@ -1734,7 +1723,13 @@ function _update60()
     function() end
 
    avatar.staffattack_c+=1
-   avatar.staffattack(avatar)
+   local _staffskill=dget(16)%10
+   if avatar.staffattack_c%staffskills_attackintervals[_staffskill] == 1 then
+    avatar.staffattack(avatar)
+   end
+   if staffskills_castingmarker[_staffskill] == 1 then
+    addcastingmarkerfx()
+   end
    if avatar.staffattack != staffskills[1] then
     avatar.hp-=.0096
    end
