@@ -15,11 +15,6 @@ todo:
  bow: arrow split in perpendicular arrows, more splits with higher skill
  staff: create an incasing room from the avatar and out, create it when released
 
- - haste skill? (run 50% faster, a haste_c goes down, +skillevel*hasteconstant to haste counter
- sword: gain haste on hit
- bow: gain haste on hit
- staff: gain haste
-
  - shadow skill? (enemy sight is greatly reduced, higher skill the more hits until it goes back)
  sword: gain shadow attacks on hit, ceiling is skill level
  bow: gain shadow attacks on hit, ceiling is skill level
@@ -104,7 +99,7 @@ cartdata'ironchestgames_vvoe2_v1_dev2'
 
 -- debug: reset
 -- for _i=1,16 do -- inventory
---   dset(_i,0)
+--   dset(_i,30)
 -- end
 -- dset(62,0) -- evil kills
 -- dset(63,0) -- last level cleared
@@ -118,6 +113,7 @@ poke(0x5f5c,-1) -- set auto-repeat delay for btnp to none
 poke(0x5f36,0x2) -- allow circ & circfill w even diameter
 
 btnmasktoa=split'0.5,0,,0.25,0.375,0.125,,0.75,0.625,0.875'
+diagbtnmasktoa=split',,,,0.375,0.125,,,0.625,0.875'
 confusedbtnmasktoa=split'0,0.5,,0.75,0.875,0.625,,0.25,0.125,0.375'
 
 
@@ -342,6 +338,8 @@ itemcolors={
  split'7,7,15,9', -- 7 - holy/revive
  split'7,11,12,3', -- 8 - teleportation
  split'7,6,13,2', -- 9 - deflection
+ -- passives
+ split'10,9,4,2', -- 10 - haste
 }
 
 function addflooritem(_typ,_skill)
@@ -876,8 +874,8 @@ function staffhealing(_actor)
  end
 end
 
-staffskills_attackintervals=split'16,24,2,16,16,0,24,16,16'
-staffskills_castingmarker=split'0,0,1,0,1,0,0,1,0,0'
+staffskills_attackintervals=split'16,24,2,16,16,0,24,16,16,16'
+staffskills_castingmarker=split'0,0,1,0,1,0,0,1,0,0,0'
 staffskills={
  function (_actor) -- 1 - bruise
   addbruisingswordattack(_actor)
@@ -1333,12 +1331,23 @@ if dget(14) == 0 then -- note: first session
  dset(6,1) -- note: ...and shield
 end
 
+-- prep passive skills w mundane attacks
+for _i=10,#itemcolors do
+ swordskills[_i],
+ bowskills[_i],
+ staffskills[_i]=
+  swordskills[1],
+  bowskills[1],
+  staffskills[1]
+end
+
 function recalcskills()
  avatar.reviveitems,
  avatar.swordskill_level,
  avatar.bowskill_level,
- avatar.staffskill_level=
-  {},0,0,0
+ avatar.staffskill_level,
+ avatar.spd=
+  {},0,0,0,.5
  for _typ=1,16 do
   local _skill=dget(_typ)
   local _skillwoepic,_skill_lvl=_skill%20,ceil(_skill/20)
@@ -1354,6 +1363,10 @@ function recalcskills()
 
   if _skillwoepic == 7 then
    add(avatar.reviveitems,_typ)
+  end
+
+  if _skillwoepic == 10 then
+   avatar.spd+=.03125*(_skill == 10 and 1 or 2)
   end
  end
 
@@ -1386,8 +1399,7 @@ function setupavatar()
    split'60,61,62,63', -- caster
   },
   f=1,
-  spd=.5,
-  spdfactor=1,
+  spdfactor=1, -- note: spd is set in recalcskills
   -- sflip=nil,
   hp=5,
   maxhp=5,
@@ -1643,6 +1655,7 @@ function _update60()
  -- todo: the filtering does not seem to work properly!
  local _btnmask=band(btn(),0b1111) -- note: filter out o/x buttons from dpad input
  local _angle=btnmasktoa[_btnmask]
+ local _diagangle=diagbtnmasktoa[_btnmask]
 
  if isinsidewall(avatar) then
   avatar.hp-=.125
@@ -1909,6 +1922,10 @@ function _update60()
 
    -- calc deltas
    if _a == avatar then
+    if _diagangle != '' and _a.diagangle == '' then
+     _a.x,_a.y=flr(_a.x),flr(_a.y) -- note: fixes jiggy walk
+    end
+    _a.diagangle=_diagangle
     _dx,_dy=norm(cos(_a.a))*_spdfactor,norm(sin(_a.a))*_spdfactor
    else
     _dx,_dy=cos(_a.a)*_spdfactor,sin(_a.a)*_spdfactor
