@@ -97,15 +97,15 @@ cartdata'ironchestgames_vvoe2_v1_dev2'
 
 -- debug: reset
 -- for _i=1,16 do -- inventory
---   dset(_i,8)
+--   dset(_i,0)
 -- end
 -- dset(62,0) -- evil kills
 -- dset(63,0) -- last level cleared
 
--- dset(14,23)
--- dset(15,23)
--- dset(16,23)
--- dset(6,11)
+-- dset(14,6)
+-- dset(15,6)
+-- dset(16,6)
+-- dset(6,6)
 
 poke(0x5f5c,-1) -- set auto-repeat delay for btnp to none
 poke(0x5f36,0x2) -- allow circ & circfill w even diameter
@@ -332,10 +332,10 @@ itemcolors={
  split'15,14,8,2', -- 3 - fire/fissure
  split'7,10,6,13', -- 4 - stun/lightning
  split'11,3,5,2', -- 5 - venom/spikes
- split'14,8,4,2', -- 6 - healing/leeching
+ split'7,6,13,2', -- 6 - deflection
  split'7,7,15,9', -- 7 - holy/revive
  split'7,11,12,3', -- 8 - teleportation
- split'7,6,13,2', -- 9 - deflection
+ nil,
  -- passives
  split'10,9,4,2', -- 10 - haste
  split'6,3,5,1', -- 11 - arrow bounce
@@ -353,8 +353,8 @@ function addflooritem(_typ,_skill)
 end
 
 function drawinventoryskills_getifbtn(_itemnr,_itemskill,_skilltype)
- return _itemnr == _skilltype or
-  _itemskill > 1 and _itemskill == dget(_skilltype)
+ return  _itemnr == _skilltype or
+  (_itemskill > 1 and _itemskill < 9) and _itemskill == dget(_skilltype)
 end
 function drawinventoryskills(_itemnr)
  local _itemskill,_x,_y=dget(_itemnr),
@@ -682,13 +682,13 @@ swordskills={
   add(attacks,_a)
  end,
 
- function (_actor) -- 6 - healing/leeching
-  -- local _a=getswordattack(_actor,6)
-  -- _a.onhit=function()
-  --  _actor.hp+=0.0312*_actor.swordskill_level*.75
-  --  addcastingfx(itemcolors[6])
-  -- end
-  -- add(attacks,_a)
+ function (_actor) -- 6 - deflect
+  add(attacks,getswordattack(_actor,6,1))
+  deflectattack(
+   avatar.x+cos(avatar.a)*8,
+   avatar.y+sin(avatar.a)*8,
+   3+avatar.swordskill_level*.5,
+   16)
  end,
 
  function (_actor) -- 7 - holy/revive
@@ -710,15 +710,6 @@ swordskills={
    end
   end
   add(attacks,_a)
- end,
-
- function (_actor) -- 9 - deflect
-  add(attacks,getswordattack(_actor,9,1))
-  deflectattack(
-   avatar.x+cos(avatar.a)*8,
-   avatar.y+sin(avatar.a)*8,
-   3+avatar.swordskill_level*.5,
-   16)
  end,
 }
 
@@ -809,14 +800,16 @@ bowskills={
   add(attacks,_a)
  end,
 
- function (_actor) -- 6 - healing
-  -- local _a=getbowattack(_actor,1,6)
-  -- _a.onhit=function(_attack,_enemy)
-  --  if _enemy.hp <= 0 then
-    
-  --  end
-  -- end
-  -- add(attacks,_a)
+ function(_actor) -- 6 - deflect
+  local _a=getbowattack(_actor,1,6)
+  _a.onmiss=function(_attack)
+   deflectattack(
+    _attack.x,
+    _attack.y,
+    3+avatar.bowskill_level,
+    avatar.bowskill_level*16)
+  end
+  add(attacks,_a)
  end,
 
  function (_actor) -- 7 - holy/revive
@@ -830,18 +823,6 @@ bowskills={
    _onmiss(_a)
   end
   -- _a.update,_a.wallaware=bowattack_teleportupdate
-  add(attacks,_a)
- end,
-
- function(_actor) -- 9 - deflect
-  local _a=getbowattack(_actor,1,9)
-  _a.onmiss=function(_attack)
-   deflectattack(
-    _attack.x,
-    _attack.y,
-    3+avatar.bowskill_level,
-    avatar.bowskill_level*16)
-  end
   add(attacks,_a)
  end,
 }
@@ -870,7 +851,7 @@ function addcastingmarkerfx()
   .5-rnd(1),.5-rnd(1)))
 end
 
-staffskills_attackintervals=split'16,24,2,16,16,0,24,16,16,16,16'
+staffskills_attackintervals=split'16,24,2,16,16,16,24,16,16,16,16,16'
 staffskills_castingmarker=split'0,0,1,0,1,0,0,1,0,0,0,0'
 staffskills={
  function (_actor) -- 1 - bruise
@@ -910,8 +891,14 @@ staffskills={
    _actor.x+_actor.staffdx,_actor.y+_actor.staffdy)
  end,
 
- function (_actor) -- 6 - healing
-  -- pass
+ function (_actor,_released) -- 6 - deflect
+  local _size=3+avatar.staffattack_c*avatar.staffskill_level*.0078
+  if _released then
+   deflectattack(avatar.x,avatar.y,_size,avatar.staffskill_level*16)
+  else
+   deflectattack(avatar.x,avatar.y,_size,16)
+   addcastingfx()
+  end
  end,
 
  function (_actor) -- 7 - holy/revive
@@ -923,16 +910,6 @@ staffskills={
    local _x,_y=mid(8,avatar.x+avatar.staffdx,120),mid(10,avatar.y+avatar.staffdy,120)
    teleportavatar(_x,_y)
   else
-   addcastingfx()
-  end
- end,
-
- function (_actor,_released) -- 9 - deflect
-  local _size=3+avatar.staffattack_c*avatar.staffskill_level*.0078
-  if _released then
-   deflectattack(avatar.x,avatar.y,_size,avatar.staffskill_level*16)
-  else
-   deflectattack(avatar.x,avatar.y,_size,16)
    addcastingfx()
   end
  end,
@@ -2167,17 +2144,17 @@ function _update60()
    sfx(14)
    function getrndskill(_nonepicskills)
     return rnd(rnd() < dget(62)*.0625 and
-     split'12,13,14,15,16,17,18' or _nonepicskills)
+     split'12,13,14,15,16,17,18,30,31,32' or _nonepicskills)
    end
    local _skills,_types=
-    split'1,2,3,4,5,6,7,8,9,10,11',
+    split'1,2,3,4,5,6,7,8,10,11,12',
     split'6,7,8,9,10,11,12,13,14,14,14,15,15,15,16,16,16'
    addflooritem(rnd(_types),rnd(_skills))
    if level%3 == 2 then
     addflooritem(rnd(_types),getrndskill(_skills))
    end
    if level%3 == 0 then
-    addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,8,9,10,11'))
+    addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,8,10,11,12'))
    end
   end
 
@@ -2451,13 +2428,13 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000888e0000888e00000800000008000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000800000008000000088ee
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080800000080000008080000080800
-00000000000000002222222022222220222222202222222022222220222222202222222022222220111111101111111011111110000000000000000000000000
-000000000000000022272220222e22202ddddd20222222202fe2e820227f92202222772022767220171117101711551011442110000000000000000000000000
-000000000000000022277220222ee22022272220222b22202e8888202777f920222b772027ddd62011644610116155101666dd10000000000000000000000000
-000000000000000022777c2022eee220222aa2202b2b222028888820227f922022cbb22027ddd72011199110111d551011ddd110000000000000000000000000
-000000000000000022777c2022efee20222272202b232b2022888220227f922027cc222026ddd6201114991011d1551016888d10000000000000000000000000
-00000000000000002777cc202eeffe20222272202323232022282220227f9220277222202276622011114410151155101ddddd10000000000000000000000000
-00000000000000002222222022222220222222202222222022222220222222202222222022222220111111101111111011111110000000000000000000000000
+00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110000000000000000000000000
+000000000000000022272220222e22202ddddd202222222022767220227f92202222772000000000171117101711221011442110000000000000000000000000
+000000000000000022277220222ee22022272220222b222027ddd6202777f920222b77200000000011644610116122101666dd10000000000000000000000000
+000000000000000022777c2022eee220222aa2202b2b222027ddd720227f922022cbb2200000000011199110111d221011ddd110000000000000000000000000
+000000000000000022777c2022efee20222272202b232b2026ddd620227f922027cc2220000000001114991011d1221016888d10000000000000000000000000
+00000000000000002777cc202eeffe20222272202323232022766220227f9220277222200000000011114410151122101ddddd10000000000000000000000000
+00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000110010000000022222220000000001111111000000000000000000000000000000000000000000000000000000000000000000000000040040000
 0000100000011001000010002000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000004dd40000
