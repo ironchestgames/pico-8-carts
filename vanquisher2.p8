@@ -916,21 +916,7 @@ staffskills={
  staffhealing, -- 6 - healing
 
  function (_actor) -- 7 - holy/revive
-  local _size=4+_actor.staffskill_level
-  add(attacks,{
-   x=avatar.x,y=avatar.y,
-   hw=_size,hh=_size,
-   dur=15,durc=15,
-   afflic=7,
-   colors=itemcolors[7],
-   draw=function(_attack)
-    fillp(rnd(32767))
-    circ(_attack.x,_attack.y,_size,drawfx_getfxcolor(_attack))
-    fillp()
-    addholyfx(_attack.x-_size+rnd(_size*2),_attack.y-_size+rnd(_size*2))
-   end,
-  })
-  addcastingfx()
+  add(attacks,getswordattack(_actor,7))
  end,
 
  function (_actor,_released) -- 8 - teleport
@@ -2105,7 +2091,8 @@ function _update60()
     _a.hp=0
     if #_a.reviveitems > 0 then
      sfx(11)
-     dset(_a.reviveitems[1],1)
+     local _reviveitem=_a.reviveitems[1]
+     dset(_reviveitem,max(1,dget(_reviveitem)-10))
      recalcskills()
      add(actors,_a)
      _a.hp=_a.maxhp
