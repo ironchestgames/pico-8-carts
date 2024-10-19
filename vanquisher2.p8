@@ -1705,9 +1705,6 @@ function _update60()
  else
 
   if btn(4) and btn(5) then
-   if avatar.iscasting != true then
-    avatar.iscasting,avatar.staffdx,avatar.staffdy,avatar.staffattack_c=true,0,0,0
-   end
    if _angle then
     local _staffdspd=min(.25+avatar.staffskill_level*.125,1.5)
     avatar.staffdx+=norm(cos(avatar.a))*_staffdspd
@@ -1720,12 +1717,12 @@ function _update60()
     'readying',
     1,
     avatar.ss[3],
-    function() end
+    avatar.staffattack
 
    avatar.staffattack_c+=1
    local _staffskill=dget(16)%10
    if avatar.staffattack_c%staffskills_attackintervals[_staffskill] == 1 then
-    avatar.staffattack(avatar)
+    avatar.attack(avatar)
    end
    if staffskills_castingmarker[_staffskill] == 1 then
     addcastingmarkerfx()
@@ -1765,14 +1762,9 @@ function _update60()
     avatar.skill_hit,avatar.skill_c=true,0
    end
    avatar.attackstate,avatar.attackstate_c='striking',28
-   avatar.attack(avatar)
+   avatar.attack(avatar,true) -- note: 2nd arg only matters for staffs
 
-   -- teleport
-   if avatar.iscasting then
-    avatar.staffattack(avatar,true)
-   end
-
-   avatar.bow_c,avatar.iscasting=0
+   avatar.bow_c,avatar.staffdx,avatar.staffdy,avatar.staffattack_c=0,0,0,0
   elseif avatar.attackstate_c <= 0 then
    avatar.attackstate=nil
   end
