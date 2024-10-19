@@ -370,9 +370,9 @@ function drawinventoryskills(_itemnr)
  end
  spr(192+_itemskill%10,_x,_y-8)
 
- for _i=6,8 do
+ for _i=14,16 do
   if drawinventoryskills_getifbtn(_itemnr,_itemskill%10,_i) then
-   spr(227+_i,_x,_y) -- note: sprite is offset to accomodate _i
+   spr(219+_i,_x,_y) -- note: sprite is offset to accomodate _i
    _y+=3
   end
  end
