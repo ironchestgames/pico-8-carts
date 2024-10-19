@@ -1730,9 +1730,7 @@ function _update60()
    if staffskills_castingmarker[_staffskill] == 1 then
     addcastingmarkerfx()
    end
-   if avatar.staffattack != staffskills[1] then
-    avatar.hp-=.0096
-   end
+   avatar.hp-=.0096
 
   elseif btnp(4) then
    avatar.attackstate,
