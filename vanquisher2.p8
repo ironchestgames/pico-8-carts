@@ -564,16 +564,30 @@ function addvenomspikes(_a,_lvl,_x,_y)
  })
 end
 
-function deflectattack(_attack)
- for _other in all(attacks) do
-  if _other.isenemy and dist(_attack.x,_attack.y,_other.x,_other.y) < _attack.hw then
-   sfx(25)
-   if _other.a then
-    _other.a-=.5
+function deflectattack(_x,_y,_size,_durc)
+ sfx(27)
+ add(fxs,{
+  x=_x,y=_y,
+  dur=_durc,durc=_durc,
+  vx=0,vy=0,ax=0,ay=0,
+  draw=function(_fx)
+   for _other in all(attacks) do
+    if _other.isenemy and dist(_fx.x,_fx.y,_other.x,_other.y) < _size then
+     sfx(25)
+     if _other.a then
+      _other.a-=.5
+     end
+     _other.isenemy=nil
+    end
    end
-   _other.isenemy=nil
-  end
- end
+   circ(_fx.x,_fx.y-2,_size,6)
+   fillp(rnd(32768))
+   if rnd() < .5 then
+    circfill(_fx.x,_fx.y-2,_size,13)
+   end
+   fillp()
+  end,
+  })
 end
 
 
@@ -683,9 +697,12 @@ swordskills={
  end,
 
  function (_actor) -- 9 - deflect
-  local _a=getswordattack(_actor,9,1)
-  _a.durc,_a.update=6,deflectattack
-  add(attacks,_a)
+  add(attacks,getswordattack(_actor,9,1))
+  deflectattack(
+   avatar.x+cos(avatar.a)*8,
+   avatar.y+sin(avatar.a)*8,
+   3+avatar.swordskill_level*.5,
+   16)
  end,
 }
 
@@ -812,7 +829,13 @@ bowskills={
 
  function(_actor) -- 9 - deflect
   local _a=getbowattack(_actor,1,9)
-  _a.bounce=true
+  _a.onmiss=function(_attack)
+   deflectattack(
+    _attack.x,
+    _attack.y,
+    3+avatar.bowskill_level,
+    avatar.bowskill_level*16)
+  end
   add(attacks,_a)
  end,
 }
@@ -850,36 +873,15 @@ function staffhealing(_actor)
  end
 end
 
-function deflectstaffattack(_durc,_onmiss)
- local _size=3+avatar.staffattack_c*avatar.staffskill_level*.0078
- sfx(27)
- add(fxs,{
-  x=avatar.x,y=avatar.y,
-  hw=_size, -- note: for deflectattack
-  dur=_durc,durc=_durc,
-  vx=0,vy=0,ax=0,ay=0,
-  draw=function(_fx)
-   deflectattack(_fx)
-   circ(_fx.x,_fx.y-2,_size,6)
-   fillp(rnd(32768))
-   if rnd() < .5 then
-    circfill(_fx.x,_fx.y-2,_size,13)
-   end
-   fillp()
-  end,
-  })
-end
-
 staffskills={
  function (_actor) -- 1 - bruise
-  if _actor.staffattack_c >= 16 then
-   _actor.staffattack_c=0
+  if _actor.staffattack_c%16 == 1 then
    addbruisingswordattack(_actor)
   end
  end,
 
  function (_actor) -- 2 - ice
-  if _actor.staffattack_c >= 24 then
+  if _actor.staffattack_c%24 == 1 then
    addcastingfx()
    for _i=0,1,.125 do
     local _x,_y=_actor.x+cos(_i)*12,_actor.y+sin(_i)*12
@@ -892,7 +894,6 @@ staffskills={
       })
     end
    end
-   _actor.staffattack_c=0
   end
  end,
 
@@ -912,11 +913,10 @@ staffskills={
  end,
 
  function (_actor) -- 5 - venomspikes
-  if  _actor.staffattack_c >= 16 then
+  if  _actor.staffattack_c%16 == 1 then
    addcastingfx()
    addvenomspikes(_actor,min(_actor.staffskill_level*.5,3),
     _actor.x+_actor.staffdx,_actor.y+_actor.staffdy)
-   _actor.staffattack_c=0
   end
   addcastingmarkerfx()
  end,
@@ -924,7 +924,7 @@ staffskills={
  staffhealing, -- 6 - healing
 
  function (_actor) -- 7 - holy/revive
-  if _actor.staffattack_c >= 24 then
+  if _actor.staffattack_c%24 == 1 then
    local _size=4+_actor.staffskill_level
    add(attacks,{
     x=avatar.x,y=avatar.y,
@@ -940,22 +940,32 @@ staffskills={
     end,
    })
    addcastingfx()
-   _actor.staffattack_c=0
   end
  end,
 
- function (_actor) -- 8 - teleport
-  if _actor.staffattack_c >= 16 then
+ function (_actor,_released) -- 8 - teleport
+  if _released then
+   local _x,_y=mid(8,avatar.x+avatar.staffdx,120),mid(10,avatar.y+avatar.staffdy,120)
+   if isinsidewall({x=_x,y=_y,topy=_y-2,hw=avatar.hw,hh=avatar.hh},nil,0,0) then
+    sfx(2)
+   else
+    sfx(19)
+    addteleportfx(208,avatar.x,avatar.y)
+    avatar.x,avatar.y=_x,_y
+    addteleportfx(208,avatar.x,avatar.y)
+   end
+  elseif _actor.staffattack_c%16 == 1 then
    addcastingfx()
-   _actor.staffattack_c=0
   end
   addcastingmarkerfx()
  end,
 
- function (_actor) -- 9 - deflect
-  _actor.staffskill_level=16
-  if _actor.staffattack_c%16 == 1 then
-   deflectstaffattack(16)
+ function (_actor,_released) -- 9 - deflect
+  local _size=3+avatar.staffattack_c*avatar.staffskill_level*.0078
+  if _released then
+   deflectattack(avatar.x,avatar.y,_size,avatar.staffskill_level*16)
+  elseif _actor.staffattack_c%16 == 1 then
+   deflectattack(avatar.x,avatar.y,_size,16)
    addcastingfx()
   end
  end,
@@ -1766,19 +1776,7 @@ function _update60()
 
    -- teleport
    if avatar.iscasting then
-    if avatar.staffattack == staffskills[8] then
-     local _x,_y=mid(8,avatar.x+avatar.staffdx,120),mid(10,avatar.y+avatar.staffdy,120)
-     if isinsidewall({x=_x,y=_y,topy=_y-2,hw=avatar.hw,hh=avatar.hh},nil,0,0) then
-      sfx(2)
-     else
-      sfx(19)
-      addteleportfx(208,avatar.x,avatar.y)
-      avatar.x,avatar.y=_x,_y
-      addteleportfx(208,avatar.x,avatar.y)
-     end
-    elseif avatar.staffattack == staffskills[9] then
-     deflectstaffattack(avatar.staffskill_level*16,function() sfx(27) end)
-    end
+    avatar.staffattack(avatar,true)
    end
 
    avatar.bow_c,avatar.iscasting=0
@@ -2436,11 +2434,11 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000800000008000000088ee
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080800000080000008080000080800
 00000000000000002222222022222220222222202222222022222220222222202222222022222220000000000000000000000000000000000000000000000000
-000000000000000022272220222e22202ddddd20222222202fe2e820227f92202222772026766720000000000000000000000000000000000000000000000000
-000000000000000022277220222ee22022272220222b22202e8888202777f920222b772026766720000000000000000000000000000000000000000000000000
-000000000000000022777c2022eee220222aa2202b2b222028888820227f922022cbb22027767720000000000000000000000000000000000000000000000000
-000000000000000022777c2022efee20222272202b232b2022888220227f922027cc222027667620000000000000000000000000000000000000000000000000
-00000000000000002777cc202eeffe20222272202323232022282220227f92202772222027667620000000000000000000000000000000000000000000000000
+000000000000000022272220222e22202ddddd20222222202fe2e820227f92202222772022767220000000000000000000000000000000000000000000000000
+000000000000000022277220222ee22022272220222b22202e8888202777f920222b772027ddd620000000000000000000000000000000000000000000000000
+000000000000000022777c2022eee220222aa2202b2b222028888820227f922022cbb22027ddd720000000000000000000000000000000000000000000000000
+000000000000000022777c2022efee20222272202b232b2022888220227f922027cc222026ddd620000000000000000000000000000000000000000000000000
+00000000000000002777cc202eeffe20222272202323232022282220227f92202772222022766220000000000000000000000000000000000000000000000000
 00000000000000002222222022222220222222202222222022222220222222202222222022222220000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000110010000000022222220000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040040000
