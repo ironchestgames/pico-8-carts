@@ -97,7 +97,7 @@ cartdata'ironchestgames_vvoe2_v1_dev2'
 
 -- debug: reset
 -- for _i=1,16 do -- inventory
---   dset(_i,0)
+--   dset(_i,8)
 -- end
 -- dset(62,0) -- evil kills
 -- dset(63,0) -- last level cleared
@@ -339,6 +339,7 @@ itemcolors={
  -- passives
  split'10,9,4,2', -- 10 - haste
  split'6,3,5,1', -- 11 - arrow bounce
+ split'14,8,4,2', -- 12 - potion
 }
 
 function addflooritem(_typ,_skill)
@@ -411,8 +412,8 @@ function getpsetfx(_x,_y,_dur,_colors,_vx,_vy,_ax,_ay)
   x=_x,y=_y,
   dur=_dur,durc=_dur,
   colors=_colors,
-  vx=_vx,vy=_vy,
-  ax=_ax,ay=_ay,
+  vx=_vx or 0,vy=_vy or 0,
+  ax=_ax or 0,ay=_ay or 0,
   draw=drawfxpset,
  }
 end
@@ -591,6 +592,19 @@ function deflectattack(_x,_y,_size,_durc)
   })
 end
 
+function teleportavatar(_x,_y)
+ for _yy=_y-2,_y+2,2 do
+  if not isinsidewall({x=_x,y=_yy,topy=_yy-2,hw=avatar.hw,hh=avatar.hh},nil,0,0) then
+   sfx(19)
+   addteleportfx(208,avatar.x,avatar.y)
+   avatar.x,avatar.y=_x,_yy
+   addteleportfx(208,avatar.x,avatar.y)
+   return
+  end
+ end
+ sfx(2)
+end
+
 
 -->8
 -- sword attacks
@@ -669,12 +683,12 @@ swordskills={
  end,
 
  function (_actor) -- 6 - healing/leeching
-  local _a=getswordattack(_actor,6)
-  _a.onhit=function()
-   _actor.hp+=0.0312*_actor.swordskill_level*.75
-   addcastingfx(itemcolors[6])
-  end
-  add(attacks,_a)
+  -- local _a=getswordattack(_actor,6)
+  -- _a.onhit=function()
+  --  _actor.hp+=0.0312*_actor.swordskill_level*.75
+  --  addcastingfx(itemcolors[6])
+  -- end
+  -- add(attacks,_a)
  end,
 
  function (_actor) -- 7 - holy/revive
@@ -719,7 +733,7 @@ end
 
 function bowattack_teleportupdate(_attack)
  if isinsidewall(_attack) then
-  add(fxs,getpsetfx(_attack.x,_attack.y,10,itemcolors[8],0,0,0,0))
+  add(fxs,getpsetfx(_attack.x,_attack.y,10,itemcolors[8]))
  end
  missile_update(_attack)
 end
@@ -796,28 +810,13 @@ bowskills={
  end,
 
  function (_actor) -- 6 - healing
-  local _a=getbowattack(_actor,1,6)
-  _a.onhit=function(_attack,_enemy)
-   if _enemy.hp <= 0 then
-    add(attacks,{
-     isenemy=true, -- note: make it collidable w avatar
-     x=_a.x,y=_a.y,
-     hh=3,hw=3,
-     durc=max(60,_actor.staffskill_level*20),
-     onhit=function()
-      add(fxs,getfx(227,_a.x,_a.y,6,itemcolors[6]))
-      avatar.hp+=2
-      avatar.afflic=1
-     end,
-     draw=function(_attack)
-      if _attack.durc > 120 or _attack.durc%4 < 2 then
-       spr(239,_attack.x-4,_attack.y-4)
-      end
-     end,
-    })
-   end
-  end
-  add(attacks,_a)
+  -- local _a=getbowattack(_actor,1,6)
+  -- _a.onhit=function(_attack,_enemy)
+  --  if _enemy.hp <= 0 then
+    
+  --  end
+  -- end
+  -- add(attacks,_a)
  end,
 
  function (_actor) -- 7 - holy/revive
@@ -825,8 +824,12 @@ bowskills={
  end,
 
  function(_actor) -- 8 - teleport
-  local _a=getbowattack(_actor,1,8)
-  _a.update,_a.wallaware=bowattack_teleportupdate
+  local _a,_onmiss=getbowattack(_actor,1,8)
+  _a.onmiss=function()
+   teleportavatar(_a.x,_a.y)
+   _onmiss(_a)
+  end
+  -- _a.update,_a.wallaware=bowattack_teleportupdate
   add(attacks,_a)
  end,
 
@@ -854,7 +857,7 @@ function addcastingfx(_colors)
     avatar.y+1,
     12+rnd(8),
     _colors or itemcolors[dget(16)%20],
-    0,-.375,0,0))
+    0,-.375))
  end
 end
 
@@ -864,20 +867,11 @@ function addcastingmarkerfx()
   avatar.y+avatar.staffdy,
   5,
   itemcolors[dget(16)%20],
-  .5-rnd(1),.5-rnd(1),0,0))
+  .5-rnd(1),.5-rnd(1)))
 end
 
-function staffhealing(_actor)
- _actor.staffattack_c+=1
- if _actor.staffattack_c >= 56-_actor.staffskill_level*3 then
-  addcastingfx()
-  _actor.hp+=0.5
-  _actor.staffattack_c=0
- end
-end
-
-staffskills_attackintervals=split'16,24,2,16,16,0,24,16,16,16'
-staffskills_castingmarker=split'0,0,1,0,1,0,0,1,0,0,0'
+staffskills_attackintervals=split'16,24,2,16,16,0,24,16,16,16,16'
+staffskills_castingmarker=split'0,0,1,0,1,0,0,1,0,0,0,0'
 staffskills={
  function (_actor) -- 1 - bruise
   addbruisingswordattack(_actor)
@@ -916,7 +910,9 @@ staffskills={
    _actor.x+_actor.staffdx,_actor.y+_actor.staffdy)
  end,
 
- staffhealing, -- 6 - healing
+ function (_actor) -- 6 - healing
+  -- pass
+ end,
 
  function (_actor) -- 7 - holy/revive
   add(attacks,getswordattack(_actor,7))
@@ -925,14 +921,7 @@ staffskills={
  function (_actor,_released) -- 8 - teleport
   if _released then
    local _x,_y=mid(8,avatar.x+avatar.staffdx,120),mid(10,avatar.y+avatar.staffdy,120)
-   if isinsidewall({x=_x,y=_y,topy=_y-2,hw=avatar.hw,hh=avatar.hh},nil,0,0) then
-    sfx(2)
-   else
-    sfx(19)
-    addteleportfx(208,avatar.x,avatar.y)
-    avatar.x,avatar.y=_x,_y
-    addteleportfx(208,avatar.x,avatar.y)
-   end
+   teleportavatar(_x,_y)
   else
    addcastingfx()
   end
@@ -988,7 +977,7 @@ end
 
 function fireballthrow_update(_attack)
  missile_update(_attack)
- add(fxs,getpsetfx(_attack.x,_attack.y,6,itemcolors[3],0,0,0,0)) -- todo: use firefx instead?
+ add(fxs,getpsetfx(_attack.x,_attack.y,6,itemcolors[3])) -- todo: use firefx instead?
 end
 function fireballthrow_onmiss(_attack)
  addfissure(_attack,_attack.x,_attack.y,5)
@@ -1009,7 +998,7 @@ end
 
 function venomspit_attack_update(_attack)
  missile_update(_attack)
- add(fxs,getpsetfx(_attack.x,_attack.y,6,itemcolors[5],0,0,0,0))
+ add(fxs,getpsetfx(_attack.x,_attack.y,6,itemcolors[5]))
 end
 function venomspit_attack(_actor)
  local _a=getbowattack(_actor,5)
@@ -1039,7 +1028,7 @@ function boltskillfactory(_afflic,_colors)
    update=function(_attack)
     missile_update(_attack)
     for _i=0,3 do
-     add(fxs,getpsetfx(_attack.x+_i%2,_attack.y+flr(_i/2),rnd(6),_colors,0,0,0,0))
+     add(fxs,getpsetfx(_attack.x+_i%2,_attack.y+flr(_i/2),rnd(6),_colors))
     end
    end,
    onmiss=function(_attack)
@@ -1130,8 +1119,7 @@ function lastbossondeath(_actor)
      _actor.y+_y,
      200+rnd(60),
      {_col,_col,_col,1},
-     0,-rnd()*.025,
-     0,0))
+     0,-rnd()*.025))
    end
   end
  end
@@ -1349,8 +1337,9 @@ function recalcskills()
  avatar.bowskill_level,
  avatar.staffskill_level,
  avatar.spd,
- avatar.arrow_bounce=
-  {},0,0,0,.5,0
+ avatar.arrow_bounce,
+ avatar_potionlvl=
+  {},0,0,0,.5,0,0
  for _typ=1,16 do
   local _skill=dget(_typ)
   local _skillwoepic,_skill_lvl=_skill%20,ceil(_skill/20)
@@ -1374,6 +1363,10 @@ function recalcskills()
 
   if _skillwoepic == 11 then
    avatar.arrow_bounce+=(_skill == 11 and 1 or 2)
+  end
+
+  if _skillwoepic == 12 then
+   avatar_potionlvl+=(_skill == 12 and 1 or 2)
   end
  end
 
@@ -1561,6 +1554,25 @@ function mapinit()
 
  avatar.iswarping,avatar.afflic,avatar.hp=true,2,.0125
 
+ -- add potions
+ for _i=1,avatar_potionlvl do
+  local _x,_y=getrandomfloorpos()
+  add(attacks,{
+   isenemy=true, -- note: make it collidable w avatar
+   x=_x,y=_y,
+   hh=3,hw=3,
+   durc=9999,
+   onhit=function()
+    sfx(1) -- todo: add better potion sfx
+    avatar.hp+=99
+    avatar.afflic=1
+   end,
+   draw=function()
+    spr(239,_x-4,_y-4)
+   end,
+  })
+ end
+
  if level == 0 then
   music(0)
  else
@@ -1722,11 +1734,13 @@ function _update60()
    avatar.attackstate,
    avatar.attackstate_c,
    avatar.s,
-   avatar.attack=
+   avatar.attack,
+   avatar.iscasting=
     'readying',
     1,
     avatar.ss[3],
-    avatar.staffattack
+    avatar.staffattack,
+    true
 
    avatar.staffattack_c+=1
    local _staffskill=dget(16)%20
@@ -1771,7 +1785,12 @@ function _update60()
     avatar.skill_hit,avatar.skill_c=true,0
    end
    avatar.attackstate,avatar.attackstate_c='striking',28
-   avatar.attack(avatar,true) -- note: 2nd arg only matters for staffs
+   if avatar.iscasting then
+    avatar.staffattack(avatar,true)
+    avatar.iscasting=nil
+   else
+    avatar.attack(avatar,true)
+   end
 
    avatar.bow_c,avatar.staffdx,avatar.staffdy,avatar.staffattack_c=0,0,0,0
   elseif avatar.attackstate_c <= 0 then
@@ -1977,7 +1996,7 @@ function _update60()
     _a.y-_a.hh*2-3,
     5,
     split'7,2,10,2',
-    0,0.5,0,0))
+    0,.5))
   elseif _a.afflic == 5 then
    if _a.walking then
     _a.hp-=.025
@@ -2026,14 +2045,13 @@ function _update60()
     3+flrrnd(2),
     {_a.bloodcolors[1]},
     0,0,
-    0,.075,0,0))
+    0,.075))
    if rnd() < .025 then
     local _fx=getpsetfx(
      _a.x,
      _a.y,
      110,
-     {_a.bloodcolors[3]},
-     0,0,0,0)
+     {_a.bloodcolors[3]})
     _fx.isfloor=true
     add(fxs,_fx)
    end
@@ -2152,14 +2170,14 @@ function _update60()
      split'12,13,14,15,16,17,18' or _nonepicskills)
    end
    local _skills,_types=
-    split'1,2,3,4,5,6,7,8,9',
+    split'1,2,3,4,5,6,7,8,9,10,11',
     split'6,7,8,9,10,11,12,13,14,14,14,15,15,15,16,16,16'
    addflooritem(rnd(_types),rnd(_skills))
    if level%3 == 2 then
     addflooritem(rnd(_types),getrndskill(_skills))
    end
    if level%3 == 0 then
-    addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,8,9'))
+    addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,8,9,10,11'))
    end
   end
 
@@ -2433,13 +2451,13 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000888e0000888e00000800000008000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000800000008000000088ee
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080800000080000008080000080800
-00000000000000002222222022222220222222202222222022222220222222202222222022222220111111101111111000000000000000000000000000000000
-000000000000000022272220222e22202ddddd20222222202fe2e820227f92202222772022767220171117101711551000000000000000000000000000000000
-000000000000000022277220222ee22022272220222b22202e8888202777f920222b772027ddd620116446101161551000000000000000000000000000000000
-000000000000000022777c2022eee220222aa2202b2b222028888820227f922022cbb22027ddd72011199110111d551000000000000000000000000000000000
-000000000000000022777c2022efee20222272202b232b2022888220227f922027cc222026ddd6201114991011d1551000000000000000000000000000000000
-00000000000000002777cc202eeffe20222272202323232022282220227f92202772222022766220111144101511551000000000000000000000000000000000
-00000000000000002222222022222220222222202222222022222220222222202222222022222220111111101111111000000000000000000000000000000000
+00000000000000002222222022222220222222202222222022222220222222202222222022222220111111101111111011111110000000000000000000000000
+000000000000000022272220222e22202ddddd20222222202fe2e820227f92202222772022767220171117101711551011442110000000000000000000000000
+000000000000000022277220222ee22022272220222b22202e8888202777f920222b772027ddd62011644610116155101666dd10000000000000000000000000
+000000000000000022777c2022eee220222aa2202b2b222028888820227f922022cbb22027ddd72011199110111d551011ddd110000000000000000000000000
+000000000000000022777c2022efee20222272202b232b2022888220227f922027cc222026ddd6201114991011d1551016888d10000000000000000000000000
+00000000000000002777cc202eeffe20222272202323232022282220227f9220277222202276622011114410151155101ddddd10000000000000000000000000
+00000000000000002222222022222220222222202222222022222220222222202222222022222220111111101111111011111110000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000110010000000022222220000000001111111000000000000000000000000000000000000000000000000000000000000000000000000040040000
 0000100000011001000010002000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000004dd40000
