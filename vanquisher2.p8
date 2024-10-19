@@ -616,6 +616,7 @@ function addbruisingswordattack(_actor)
  add(attacks,getswordattack(_actor,1))
 end
 
+addavatarlightningattack_strikesperlevel=split'1,2,3,4,5,6,7,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20'
 function addavatarlightningattack(_level)
  for _fx in all(fxs) do
    if _fx.colors == getlightningstrikefx_colors then
@@ -627,7 +628,7 @@ function addavatarlightningattack(_level)
     del(attacks,_attack)
    end
   end
-  for _i=1,flr(_level/2) do
+  for _i=1,addavatarlightningattack_strikesperlevel[_level] do
    addlightningstrike(avatar,8+rnd(120),8+rnd(120))
   end
 end
@@ -904,7 +905,7 @@ staffskills={
 
  function (_actor) -- 4 - lightning
   addcastingfx()
-  addavatarlightningattack(_actor.staffskill_level+1)
+  addavatarlightningattack(_actor.staffskill_level)
  end,
 
  function (_actor) -- 5 - venomspikes
