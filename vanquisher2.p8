@@ -102,10 +102,10 @@ cartdata'ironchestgames_vvoe2_v1_dev2'
 -- dset(62,0) -- evil kills
 -- dset(63,0) -- last level cleared
 
--- dset(14,6)
--- dset(15,6)
--- dset(16,6)
--- dset(6,6)
+-- dset(14,13)
+-- dset(15,13)
+-- dset(16,13)
+-- dset(6,13)
 
 poke(0x5f5c,-1) -- set auto-repeat delay for btnp to none
 poke(0x5f36,0x2) -- allow circ & circfill w even diameter
@@ -340,6 +340,7 @@ itemcolors={
  split'10,9,4,2', -- 10 - haste
  split'7,6,13,2', -- 11 - arrow bounce
  split'14,8,4,2', -- 12 - potion
+ split'7,11,3,1', -- 13 - arrow walltravel
 }
 
 function addflooritem(_typ,_skill)
@@ -722,13 +723,6 @@ end
 -->8
 -- bow attacks
 
-function bowattack_teleportupdate(_attack)
- if isinsidewall(_attack) then
-  add(fxs,getpsetfx(_attack.x,_attack.y,10,itemcolors[8]))
- end
- missile_update(_attack)
-end
-
 function getbowattack(_actor,_afflic,_itemcolorsi)
  local _onmiss=function(_attack)
   sfx(5)
@@ -742,8 +736,8 @@ function getbowattack(_actor,_afflic,_itemcolorsi)
   afflic=_afflic,
   hw=2,hh=2,
   durc=_actor.bow_c,
-  wallaware=true,
   bounce=_actor.arrow_bounce,
+  walltravel=_actor.arrow_walltravel,
   missile_spd=2,
   update=missile_update,
   onmiss=_onmiss,
@@ -822,7 +816,6 @@ bowskills={
    teleportavatar(_a.x,_a.y)
    _onmiss(_a)
   end
-  -- _a.update,_a.wallaware=bowattack_teleportupdate
   add(attacks,_a)
  end,
 }
@@ -851,8 +844,8 @@ function addcastingmarkerfx()
   .5-rnd(1),.5-rnd(1)))
 end
 
-staffskills_attackintervals=split'16,24,2,16,16,16,24,16,16,16,16,16'
-staffskills_castingmarker=split'0,0,1,0,1,0,0,1,0,0,0,0'
+staffskills_attackintervals=split'16,24,2,16,16,16,24,16,16,16,16,16,16'
+staffskills_castingmarker=split'0,0,1,0,1,0,0,1,0,0,0,0,0'
 staffskills={
  function (_actor) -- 1 - bruise
   addbruisingswordattack(_actor)
@@ -1000,7 +993,6 @@ function boltskillfactory(_afflic,_colors)
    afflic=_afflic,
    hw=3,hh=3,
    durc=999,
-   wallaware=true,
    missile_spd=1,
    update=function(_attack)
     missile_update(_attack)
@@ -1315,8 +1307,9 @@ function recalcskills()
  avatar.staffskill_level,
  avatar.spd,
  avatar.arrow_bounce,
+ avatar.arrow_walltravel,
  avatar_potionlvl=
-  {},0,0,0,.5,0,0
+  {},0,0,0,.5,0,0,0
  for _typ=1,16 do
   local _skill=dget(_typ)
   local _skillwoepic,_skill_lvl=_skill%20,ceil(_skill/20)
@@ -1344,6 +1337,10 @@ function recalcskills()
 
   if _skillwoepic == 12 then
    avatar_potionlvl+=(_skill == 12 and 1 or 2)
+  end
+
+  if _skillwoepic == 13 then
+   avatar.arrow_walltravel+=(_skill == 13 and 1 or 2)*2
   end
  end
 
@@ -2039,26 +2036,29 @@ function _update60()
  for _a in all(attacks) do
   _a.durc-=1
 
-  if _a.x <= 0 or _a.x >= 128 or _a.y <= 0 or _a.y >= 128 then
+  if _a.x <= 2 or _a.x >= 125 or _a.y <= 2 or _a.y >= 125 then
    _a.durc=0
-  end
-
-  if _a.wallaware then
+  elseif _a.missile_spd then -- note: is missile
    local _dx,_dy=cos(_a.a)*_a.missile_spd,sin(_a.a)*_a.missile_spd
    local _postcolldx,_postcolldy=collideaabbs(isinsidewall,_a,nil,_dx,_dy)
    if _postcolldx != _dx or _postcolldy != _dy then
-    if _a.bounce and _a.bounce > 0 then
-     _a.bounce-=1
-     sfx(25)
-     if _postcolldx != _dx then
-      _dx=-_dx
+    if not _a.walltravel or _a.walltravel <= 0 then
+     if _a.bounce and _a.bounce > 0 then
+      _a.bounce-=1
+      sfx(25)
+      if _postcolldx != _dx then
+       _dx=-_dx
+      end
+      if _postcolldy != _dy then
+       _dy=-_dy
+      end
+      _a.a=atan2(_dx,_dy)
+     else
+      _a.wallcollision,_a.durc=true,0
      end
-     if _postcolldy != _dy then
-      _dy=-_dy
-     end
-     _a.a=atan2(_dx,_dy)
     else
-     _a.wallcollision,_a.durc=true,0
+     _a.walltravel-=1
+     add(fxs,getpsetfx(_a.x,_a.y,10,itemcolors[13]))
     end
    end
   end
@@ -2144,17 +2144,17 @@ function _update60()
    sfx(14)
    function getrndskill(_nonepicskills)
     return rnd(rnd() < dget(62)*.0625 and
-     split'12,13,14,15,16,17,18,30,31,32' or _nonepicskills)
+     split'12,13,14,15,16,17,18,30,31,32,33' or _nonepicskills)
    end
    local _skills,_types=
-    split'1,2,3,4,5,6,7,8,10,11,12',
+    split'1,2,3,4,5,6,7,8,10,11,12,13',
     split'6,7,8,9,10,11,12,13,14,14,14,15,15,15,16,16,16'
    addflooritem(rnd(_types),rnd(_skills))
    if level%3 == 2 then
     addflooritem(rnd(_types),getrndskill(_skills))
    end
    if level%3 == 0 then
-    addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,8,10,11,12'))
+    addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,8,10,11,12,13'))
    end
   end
 
@@ -2428,13 +2428,13 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000888e0000888e00000800000008000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000800000008000000088ee
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080800000080000008080000080800
-00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110000000000000000000000000
-000000000000000022272220222e22202ddddd202222222022dcc220227f92202222772000000000171117101711221011442110000000000000000000000000
-000000000000000022277220222ee22022272220222b22202c111d202777f920222b77200000000011644610116122101666dd10000000000000000000000000
-000000000000000022777c2022eee220222aa2202b2b22202c111c20227f922022cbb2200000000011199110111d221011ddd110000000000000000000000000
-000000000000000022777c2022efee20222272202b232b202d111c20227f922027cc2220000000001114991011d1221016888d10000000000000000000000000
-00000000000000002777cc202eeffe20222272202323232022ccd220227f9220277222200000000011114410151122101ddddd10000000000000000000000000
-00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110000000000000000000000000
+00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110111111100000000000000000
+000000000000000022272220222e22202ddddd202222222022dcc220227f92202222772000000000171117101711221011442110111555100000000000000000
+000000000000000022277220222ee22022272220222b22202c111d202777f920222b77200000000011644610116122101666dd10111555100000000000000000
+000000000000000022777c2022eee220222aa2202b2b22202c111c20227f922022cbb2200000000011199110111d221011ddd110131b57100000000000000000
+000000000000000022777c2022efee20222272202b232b202d111c20227f922027cc2220000000001114991011d1221016888d10111555100000000000000000
+00000000000000002777cc202eeffe20222272202323232022ccd220227f9220277222200000000011114410151122101ddddd10111555100000000000000000
+00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110111111100000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000110010000000022222220000000001111111000000000000000000000000000000000000000000000000000000000000000000000000040040000
 0000000000011001000010002000000000000000100000000000100000000000000000000000000000000000000000000000000000000000000000004dd40000
