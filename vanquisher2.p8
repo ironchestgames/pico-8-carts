@@ -2039,23 +2039,21 @@ function _update60()
    local _dx,_dy=cos(_a.a)*_a.missile_spd,sin(_a.a)*_a.missile_spd
    local _postcolldx,_postcolldy=collideaabbs(isinsidewall,_a,nil,_dx,_dy)
    if _postcolldx != _dx or _postcolldy != _dy then
-    if not _a.walltravel or _a.walltravel <= 0 then
-     if _a.bounce and _a.bounce > 0 then
-      _a.bounce-=1
-      sfx(25)
-      if _postcolldx != _dx then
-       _dx=-_dx
-      end
-      if _postcolldy != _dy then
-       _dy=-_dy
-      end
-      _a.a=atan2(_dx,_dy)
-     else
-      _a.wallcollision,_a.durc=true,0
+    if _a.bounce and _a.bounce > 0 then
+     _a.bounce-=1
+     sfx(25)
+     if _postcolldx != _dx then
+      _dx=-_dx
      end
-    else
+     if _postcolldy != _dy then
+      _dy=-_dy
+     end
+     _a.a=atan2(_dx,_dy)
+    elseif _a.walltravel and _a.walltravel > 0 then
      _a.walltravel-=1
      add(fxs,getpsetfx(_a.x,_a.y,10,itemcolors[13]))
+    else
+     _a.wallcollision,_a.durc=true,0
     end
    end
   end
@@ -2141,7 +2139,7 @@ function _update60()
    sfx(14)
    function getrndskill(_nonepicskills)
     return rnd(rnd() < dget(62)*.0625 and
-     split'12,13,14,15,16,17,18,30,31,32,33' or _nonepicskills)
+     split'22,23,24,25,26,27,28,30,31,32,33' or _nonepicskills)
    end
    local _skills,_types=
     split'1,2,3,4,5,6,7,8,10,11,12,13',
