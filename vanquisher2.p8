@@ -173,13 +173,6 @@ function isinsidewall(_aabb)
    return isinsidewall_wallabb,_aabb.topy
   end
  end
-
- for _dw in all(dynwalls) do
-  local _result,_y=ismiddleinsideaabb(_aabb,_dw)
-  if _result then
-   return _dw,_y
-  end
- end
 end
 
 collideaabbs_aabb={}
@@ -298,7 +291,6 @@ function getrandomfloorpos()
  if walls[flr(_y/8)][flr(_x/8)] != 0 then
   goto randomfloorpos
  end
- -- todo: add dynwalls?
  return _x,_y
 end
 
@@ -459,29 +451,31 @@ function missile_update(_attack)
 end
 
 addicewall_colors=split'6,6,6,6,6,6,13'
-function addicewall(_x,_y,_lvl)
- local _durc,_dw=12+_lvl*8,{
+function addicewall(_actor,_x,_y,_lvl)
+ sfx(17)
+ local _durc=12+_lvl*8
+ local _fx=getfx(229,_x,_y,_durc,addicewall_colors)
+ local _a={
+  isenemy=_actor.isenemy,
   x=_x,y=_y,
+  afflic=2,
   hw=4,hh=4,
- }
- if isaabbscollidingwith(_dw,actors) == nil and
-   isaabbscollidingwith(_dw,dynwalls) == nil then
-  sfx(17)
-  add(dynwalls,_dw)
-  local _fx=getfx(229,_dw.x,_dw.y,_durc,addicewall_colors)
-  _fx.isfloor=true
-  add(fxs,_fx)
-  add(attacks,{
-   x=1,y=1, -- note: outside, this is just to have a counter to remove it in onmiss
-   durc=_durc,
-   hw=0,hh=0,
-   onmiss=function()
-    sfx(18)
-    del(dynwalls,_dw)
+  durc=_durc,
+  update=function(_attack)
+   for _other in all(attacks) do
+    if _other.isenemy != _attack.isenemy and
+       dist(_attack.x,_attack.y,_other.x,_other.y) < 4 then
+     sfx(18)
+     _other.durc,_attack.durc,_fx.durc=0,0,6
+    end
    end
-   })
-  return true
- end
+  end,
+  onmiss=function()
+   sfx(18)
+  end,
+ }
+ add(fxs,_fx)
+ add(attacks,_a)
 end
 
 function addfissure(_a,_x,_y,_lvl)
@@ -654,12 +648,12 @@ swordskills={
 
  function (_actor) -- 2 - freeze/icewall
   local _attack=getswordattack(_actor,2)
-  if not addicewall(
-    _attack.x+cos(_attack.a)*6,
-    _attack.y+sin(_attack.a)*6,
-    _actor.swordskill_level or 7) then
-   add(attacks,_attack)
-  end
+  addicewall(
+    _actor,
+    _attack.x+cos(_attack.a+.5)*18,
+    _attack.y+sin(_attack.a+.5)*18,
+    _actor.swordskill_level or 7)
+  add(attacks,_attack)
  end,
 
  function (_actor) -- 3 - fire/fissure
@@ -761,9 +755,7 @@ bowskills={
  function (_actor) -- 2 - icewall
   local _a,_onmiss=getbowattack(_actor,2)
   _a.onmiss=function(_attack)
-   if not addicewall(_attack.x,_attack.y,_actor.bowskill_level) then
-    _onmiss(_attack)
-   end
+   addicewall(_actor,_attack.x,_attack.y,_actor.bowskill_level)
   end
   add(attacks,_a)
  end,
@@ -855,14 +847,7 @@ staffskills={
   addcastingfx()
   for _i=0,1,.125 do
    local _x,_y=_actor.x+cos(_i)*12,_actor.y+sin(_i)*12
-   if not addicewall(_x,_y,_actor.staffskill_level) then
-    add(attacks,{
-     x=_x,y=_y,
-     durc=2,
-     hw=3,hh=3,
-     afflic=2,
-     })
-   end
+   addicewall(_actor,_x,_y,_actor.staffskill_level)
   end
  end,
 
@@ -931,6 +916,11 @@ end
 
 function enemyattack_freeze(_actor)
  add(attacks,getswordattack(_actor,2))
+end
+
+function enemyattack_icewall(_actor)
+ local _x,_y=getrandomfloorpos()
+ addicewall(_actor,_x,_y,20)
 end
 
 function enemyattack_stunandknockback(_actor)
@@ -1115,13 +1105,20 @@ enemyclasses={
   },
 
   { -- big ice orc
-   attack=swordskills[2],
+   attack=enemyattack_freeze,
    conf='maxhp=16,hp=16,spd=.25,sight=64,range=8,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- ice orc caster
    attack=iceboltattack,
-   conf='maxhp=20,hp=20,spd=.25,sight=90,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,isboss=1',
+   attacks={
+    iceboltattack,
+    iceboltattack,
+    enemyattack_icewall,
+   },
+   attack=enemy_rollingattacks,
+   attack_colors=split'12,12,12',
+   conf='maxhp=20,hp=20,spd=.25,sight=90,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1',
   },
 
   { -- bear (stun)
@@ -1441,8 +1438,8 @@ function addenemy(_x,_y,_enemyclass,_spritestart)
 end
 
 function mapinit()
- world,walls,dynwalls,actors,attacks,fxs,flooritems,deathts=
-  getworld(),{},{},{},{},{},{} -- note: deathts is set to nil
+ world,walls,actors,attacks,fxs,flooritems,deathts=
+  getworld(),{},{},{},{},{} -- note: deathts is set to nil
  for _y=0,15 do
   walls[_y]={[0]=1,unpack(split'1,1,1,1,1,1,1,1,1,1,1,1,1,1,1')}
  end
@@ -2300,12 +2297,6 @@ function _draw()
    _fx.draw(_fx)
   end
  end
-
- -- debug draw dynwalls
- -- for _dw in all(dynwalls) do
- --  rect(_dw.x-_dw.hw,_dw.y-_dw.hh,_dw.x+_dw.hw,_dw.y+_dw.hh,4)
- --  pset(_dw.x,_dw.y,4)
- -- end
 
  -- draw warping
  if avatar.iswarping then
