@@ -8,15 +8,7 @@ __lua__
 
 todo:
 
- - dimensions skill?
- sword: teleport enemy away, higher skill further away
- bow: arrow split in perpendicular arrows, more splits with higher skill
- staff: create an incasing room from the avatar and out, create it when released
-
- - shadow skill? (enemy sight is greatly reduced, higher skill the more hits until it goes back)
- sword: gain shadow attacks on hit, ceiling is skill level
- bow: gain shadow attacks on hit, ceiling is skill level
- staff: gain shadow, skill level is speed and ceiling
+ - add passive sneak skill
 
  - change the evils fireballs to be venomfireballs!
 
@@ -144,13 +136,15 @@ end
 
 
 -- collision funcs
-
 function ismiddleinsideaabb(_a,_b)
- local _xcheck=_a.x > _b.x-_b.hw and _a.x < _b.x+_b.hw
+ local _xcheck,byplusbhh,byminusbhh=
+  _a.x > _b.x-_b.hw and _a.x < _b.x+_b.hw,
+  _b.y+_b.hh,
+  _b.y-_b.hh
  if _a.topy then
-  return _xcheck and _a.topy > _b.y-_b.hh and _a.topy < _b.y+_b.hh, _a.topy
+  return _xcheck and _a.topy > byminusbhh and _a.topy < byplusbhh, _a.topy
  end
- return _xcheck and _a.y > _b.y-_b.hh and _a.y < _b.y+_b.hh, _a.y
+ return _xcheck and _a.y > byminusbhh and _a.y < byplusbhh, _a.y
 end
 
 function isaabbscolliding(a,b)
@@ -159,18 +153,20 @@ function isaabbscolliding(a,b)
 end
 
 isinsidewall_wallabb={hw=4,hh=4}
-function isinsidewall(_aabb)
- local _mapx,_mapy=flr(_aabb.x/8),flr(_aabb.y/8)
- if walls[_mapy][_mapx] != 0 then
+function isinsidewall_check(_aabbx,_aabby)
+ local _mapx,_mapy=flr(_aabbx/8),flr(_aabby/8)
+ if walls[_mapy] == nil or walls[_mapy][_mapx] != 0 then
   isinsidewall_wallabb.x,isinsidewall_wallabb.y=_mapx*8+4,_mapy*8+4
-  return isinsidewall_wallabb,_aabb.y
+  return isinsidewall_wallabb
  end
-
- if _aabb.topy then
-  _mapx,_mapy=flr(_aabb.x/8),flr(_aabb.topy/8)
-  if walls[_mapy][_mapx] != 0 then
-   isinsidewall_wallabb.x,isinsidewall_wallabb.y=_mapx*8+4,_mapy*8+4
-   return isinsidewall_wallabb,_aabb.topy
+end
+isinsidewall_yprops=split'y,topy'
+function isinsidewall(_aabb)
+ for _ykey in all(isinsidewall_yprops) do
+  local _y=_aabb[_ykey]
+  local _result=_y and isinsidewall_check(_aabb.x,_y)
+  if _result then
+   return _result,_y
   end
  end
 end
@@ -216,7 +212,7 @@ function detectandresolvehit(_attack,_actor)
   _attack.durc=0
   add(fxs,getfx(227,_attack.x,_attack.y,8,detectandresolvehit_fxcolors))
 
-  if _attack.knockback then
+  if _attack.knockback and not _actor.nonknockable then
    _actor.knockbackangle=_attack.a or atan2(_actor.x-_attack.x,_actor.y-_attack.y)
   end
 
@@ -324,15 +320,16 @@ itemcolors={
  split'15,14,8,2', -- 3 - fire/fissure
  split'7,10,6,13', -- 4 - stun/lightning
  split'11,3,5,2', -- 5 - venom/spikes
- split'12,13,5,1', -- 6 - deflection
+ split'7,6,13,1', -- 6 - deflection
  split'7,7,15,9', -- 7 - holy/revive
  split'7,11,12,3', -- 8 - teleportation
  nil,
  -- passives
  split'10,9,4,2', -- 10 - haste
- split'7,6,13,2', -- 11 - arrow bounce
- split'14,8,4,2', -- 12 - potion
- split'7,11,3,1', -- 13 - arrow walltravel
+ split'14,8,4,2', -- 11 - potion
+ split'7,9,4,1', -- 12 - sword mastery
+ split'7,6,4,2', -- 13 - arrow bounce
+ split'7,11,3,1', -- 14 - arrow walltravel
 }
 
 function addflooritem(_typ,_skill)
@@ -345,9 +342,11 @@ function addflooritem(_typ,_skill)
  add(flooritems,_flooritem)
 end
 
-function drawinventoryskills_getifbtn(_itemnr,_itemskill,_skilltype)
- return  _itemnr == _skilltype or
-  (_itemskill > 1 and _itemskill < 9) and _itemskill == dget(_skilltype)
+function drawinventoryskills_getifbtn(_itemnr,_itemskill,_attacktype)
+ return  _itemnr == _attacktype or
+  (_itemskill > 1 and _itemskill < 9) and _itemskill == dget(_attacktype)%20 or
+  (_attacktype == 14 and _itemskill == 12) or
+  (_attacktype == 15 and _itemskill >= 13)
 end
 function drawinventoryskills(_itemnr)
  local _itemskill,_x,_y=dget(_itemnr),
@@ -577,8 +576,9 @@ function deflectattack(_x,_y,_size,_durc)
      _other.isenemy=nil
     end
    end
-   circ(_fx.x,_fx.y-2,_size,12)
+   circ(_fx.x,_fx.y-2,_size,6)
    fillp(rnd(32768))
+   circ(_fx.x,_fx.y-2,_size,5)
    if rnd() < .5 then
     circfill(_fx.x,_fx.y-2,_size,13)
    end
@@ -633,11 +633,6 @@ function addavatarlightningattack(_level)
     del(fxs,_fx)
    end
   end
-  for _attack in all(attacks) do
-   if _attack.islightning and not _attack.isenemy then
-    del(attacks,_attack)
-   end
-  end
   for _i=1,addavatarlightningattack_strikesperlevel[_level] do
    addlightningstrike(avatar,8+rnd(120),8+rnd(120))
   end
@@ -664,9 +659,11 @@ swordskills={
   add(attacks,_a)
  end,
 
- function (_actor) -- 4 - stun/lightning strike
-  add(attacks,getswordattack(_actor,4))
-  addavatarlightningattack(_actor.swordskill_level)
+ function (_actor,_n) -- 4 - stun/lightning strike
+  add(attacks,getswordattack(avatar,4))
+  if _n == 1 then
+   addavatarlightningattack(avatar.swordskill_level)
+  end
  end,
 
  function (_actor) -- 5 - venom/spikes
@@ -678,7 +675,7 @@ swordskills={
  end,
 
  function (_actor) -- 6 - deflect
-  add(attacks,getswordattack(_actor,6,1))
+  add(attacks,getswordattack(_actor,6))
   deflectattack(
    avatar.x+cos(avatar.a)*8,
    avatar.y+sin(avatar.a)*8,
@@ -829,15 +826,15 @@ end
 
 function addcastingmarkerfx()
  add(fxs,getpsetfx(
-  avatar.x+avatar.staffdx,
-  avatar.y+avatar.staffdy,
+  avatar.staffx,
+  avatar.staffy,
   5,
   itemcolors[dget(16)%20],
   .5-rnd(1),.5-rnd(1)))
 end
 
-staffskills_attackintervals=split'16,24,2,16,16,16,24,16,16,16,16,16,16'
-staffskills_castingmarker=split'0,0,1,0,1,0,0,1,0,0,0,0,0'
+staffskills_attackintervals=split'16,24,2,16,16,16,24,16,16,16,16,16,16,16'
+staffskills_castingmarker=split'0,0,1,0,1,0,0,1,0,0,0,0,0,0'
 staffskills={
  function (_actor) -- 1 - bruise
   addbruisingswordattack(_actor)
@@ -854,7 +851,7 @@ staffskills={
  function (_actor) -- 3 - fire
   if rnd() < .5 then
    addcastingfx()
-   addfissure(_actor,-4+rnd(8)+_actor.x+_actor.staffdx,-4+rnd(8)+_actor.y+_actor.staffdy,_actor.staffskill_level)
+   addfissure(_actor,-4+rnd(8)+_actor.staffx,-4+rnd(8)+_actor.staffy,_actor.staffskill_level)
   end
  end,
 
@@ -866,13 +863,13 @@ staffskills={
  function (_actor) -- 5 - venomspikes
   addcastingfx()
   addvenomspikes(_actor,min(_actor.staffskill_level*.5,3),
-   _actor.x+_actor.staffdx,_actor.y+_actor.staffdy)
+   _actor.staffx,_actor.staffy)
  end,
 
  function (_actor,_released) -- 6 - deflect
-  local _size=3+avatar.staffattack_c*avatar.staffskill_level*.0078
+  local _size=3+avatar.staffattack_c*avatar.staffskill_level*.025
   if _released then
-   deflectattack(avatar.x,avatar.y,_size,avatar.staffskill_level*16)
+   deflectattack(avatar.x,avatar.y,_size,avatar.staffskill_level*20)
   else
    deflectattack(avatar.x,avatar.y,_size,16)
    addcastingfx()
@@ -885,7 +882,7 @@ staffskills={
 
  function (_actor,_released) -- 8 - teleport
   if _released then
-   local _x,_y=mid(8,avatar.x+avatar.staffdx,120),mid(10,avatar.y+avatar.staffdy,120)
+   local _x,_y=mid(8,avatar.staffx,120),mid(10,avatar.staffy,120)
    teleportavatar(_x,_y)
   else
    addcastingfx()
@@ -1142,7 +1139,7 @@ enemyclasses={
   { -- battle troll champion
    attack=enemyattack_stunandknockback,
    ondeath=bossondeath,
-   conf='maxhp=24,hp=24,spd=.5,sight=96,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,isboss=1',
+   conf='maxhp=24,hp=24,spd=.5,sight=96,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,isboss=1,nonknockable=1',
   },
 
   { -- fireball thrower
@@ -1200,13 +1197,13 @@ enemyclasses={
     },
     skeletonarcher,
    },
-   conf='maxhp=32,hp=32,spd=0,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=0',
+   conf='maxhp=32,hp=32,spd=0,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=0,nonknockable=1',
   },
 
   { -- skeleton queen
    bloodcolors=split'7,7,6',
    attack=enemyattack_confusionball,
-   conf='maxhp=20,hp=20,spd=.25,sight=90,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,isboss=1',
+   conf='maxhp=20,hp=30,spd=.25,sight=90,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,isboss=1',
   },
 
   { -- venomous bat
@@ -1242,7 +1239,7 @@ enemyclasses={
      conf='maxhp=4,hp=4,spd=.375,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
     },
    },
-   conf='maxhp=42,hp=42,spd=0,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=140',
+   conf='maxhp=42,hp=42,spd=0,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=140,nonknockable=1',
   },
 
   { -- the evil
@@ -1265,7 +1262,7 @@ enemyclasses={
     sspr(flr(_a.f-1)*15,72,15,18,_a.x-7.5,_a.y-12,15,18,_a.sflip)
     pal()
    end,
-   conf='maxhp=52,hp=52,spd=.5,sight=128,range=86,hw=3,hh=4,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1',
+   conf='maxhp=52,hp=52,spd=.5,sight=128,range=86,hw=3,hh=4,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,nonknockable=1',
   },
   
   { -- devil confusor
@@ -1297,6 +1294,12 @@ for _i=10,#itemcolors do
   staffskills[1]
 end
 
+recalcskills_avatarskillprops,
+recalcskills_passiveprops,
+recalcskills_passiveaddition=
+ split',,,,,,,,,,,,,swordskill_level,bowskill_level,staffskill_level',
+ split',,,,,,,,,spd,potionlvl,swordmasterylvl,arrow_bounce,arrow_walltravel',
+ split',,,,,,,,,.03125,1,1,1,3'
 function recalcskills()
  avatar.reviveitems,
  avatar.swordskill_level,
@@ -1305,39 +1308,27 @@ function recalcskills()
  avatar.spd,
  avatar.arrow_bounce,
  avatar.arrow_walltravel,
- avatar_potionlvl=
-  {},0,0,0,.5,0,0,0
+ avatar.potionlvl,
+ avatar.swordmasterylvl=
+  {},unpack(split'0,0,0,.5,0,0,0,1')
+
  for _typ=1,16 do
   local _skill=dget(_typ)
   local _skillwoepic,_skill_lvl=_skill%20,ceil(_skill/20)
-  if _skillwoepic == dget(14)%20 then
-   avatar.swordskill_level+=_skill_lvl
-  end
-  if _skillwoepic == dget(15)%20 then
-   avatar.bowskill_level+=_skill_lvl
-  end
-  if _skillwoepic == dget(16)%20 then
-   avatar.staffskill_level+=_skill_lvl
+  for _i=14,16 do
+   if _skillwoepic == dget(_i)%20 then
+    avatar[recalcskills_avatarskillprops[_i]]+=_skill_lvl
+   end
   end
 
   if _skillwoepic == 7 then
    add(avatar.reviveitems,_typ)
   end
 
-  if _skillwoepic == 10 then
-   avatar.spd+=.03125*(_skill == 10 and 1 or 2)
-  end
-
-  if _skillwoepic == 11 then
-   avatar.arrow_bounce+=(_skill == 11 and 1 or 2)
-  end
-
-  if _skillwoepic == 12 then
-   avatar_potionlvl+=(_skill == 12 and 1 or 2)
-  end
-
-  if _skillwoepic == 13 then
-   avatar.arrow_walltravel+=(_skill == 13 and 1 or 2)*2
+  for _i=10,14 do
+   if _skillwoepic == _i then
+    avatar[recalcskills_passiveprops[_i]]+=recalcskills_passiveaddition[_i]*_skill_lvl
+   end
   end
  end
 
@@ -1387,8 +1378,8 @@ function setupavatar()
   bow_c=0,
 
   staffattack_c=0,
-  staffdx=0,
-  staffdy=0,
+  -- staffx=0, -- note: start as nil
+  -- staffy=0,
  }
 
  recalcskills()
@@ -1526,7 +1517,7 @@ function mapinit()
  avatar.iswarping,avatar.afflic,avatar.hp=true,2,.0125
 
  -- add potions
- for _i=1,avatar_potionlvl do
+ for _i=1,avatar.potionlvl do
   local _x,_y=getrandomfloorpos()
   add(attacks,{
    isenemy=true, -- note: make it collidable w avatar
@@ -1603,7 +1594,7 @@ function _update60()
    level=getworld()*3+1
    mapinit()
   end
-  if btnp(4) or btnp(5) then
+  if btnp(4) or btnp(5) then -- todo: token hunt, can remove btnp5
    warpstone.iswarping=nil
   end
   if level == 15 then
@@ -1642,10 +1633,9 @@ function _update60()
  end
 
  -- player input
- -- todo: the filtering does not seem to work properly!
+ -- todo: the filtering does not seem to work properly! repro?
  local _btnmask=band(btn(),0b1111) -- note: filter out o/x buttons from dpad input
- local _angle=btnmasktoa[_btnmask]
- local _diagangle=diagbtnmasktoa[_btnmask]
+ local _angle,_diagangle=btnmasktoa[_btnmask],diagbtnmasktoa[_btnmask]
 
  if isinsidewall(avatar) then
   avatar.hp-=.125
@@ -1697,10 +1687,13 @@ function _update60()
  else
 
   if btn(4) and btn(5) then
+   if not avatar.staffx then
+    avatar.staffx,avatar.staffy=avatar.x,avatar.y
+   end
    if _angle then
-    local _staffdspd=min(.25+avatar.staffskill_level*.125,1.5)
-    avatar.staffdx+=norm(cos(avatar.a))*_staffdspd
-    avatar.staffdy+=norm(sin(avatar.a))*_staffdspd
+    local _staffspd=min(.25+avatar.staffskill_level*.125,1.5)
+    avatar.staffx+=norm(cos(avatar.a))*_staffspd
+    avatar.staffy+=norm(sin(avatar.a))*_staffspd
    end
    avatar.attackstate,
    avatar.attackstate_c,
@@ -1758,12 +1751,24 @@ function _update60()
    avatar.attackstate,avatar.attackstate_c='striking',28
    if avatar.iscasting then
     avatar.staffattack(avatar,true)
-    avatar.iscasting=nil
+    avatar.iscasting,avatar.staffx,avatar.staffy=nil
    else
-    avatar.attack(avatar,true)
+    -- note: clear all previous lightnings
+    for _attack in all(attacks) do
+     if _attack.islightning and not _attack.isenemy then
+      del(attacks,_attack)
+     end
+    end
+    local _origx,_origy=avatar.x,avatar.y
+    for _i=1,avatar.attack == avatar.swordattack and avatar.swordmasterylvl or 1 do
+     avatar.attack(avatar,_i)
+     avatar.x+=cos(avatar.a)*6
+     avatar.y+=sin(avatar.a)*6
+    end
+    avatar.x,avatar.y=_origx,_origy
    end
 
-   avatar.bow_c,avatar.staffdx,avatar.staffdy,avatar.staffattack_c=0,0,0,0
+   avatar.bow_c,avatar.staffattack_c=0,0
   elseif avatar.attackstate_c <= 0 then
    avatar.attackstate=nil
   end
@@ -2051,7 +2056,7 @@ function _update60()
      _a.a=atan2(_dx,_dy)
     elseif _a.walltravel and _a.walltravel > 0 then
      _a.walltravel-=1
-     add(fxs,getpsetfx(_a.x,_a.y,10,itemcolors[13]))
+     add(fxs,getpsetfx(_a.x,_a.y,10,itemcolors[14]))
     else
      _a.wallcollision,_a.durc=true,0
     end
@@ -2141,15 +2146,16 @@ function _update60()
     return rnd(rnd() < dget(62)*.0625 and
      split'22,23,24,25,26,27,28,30,31,32,33' or _nonepicskills)
    end
-   local _skills,_types=
-    split'1,2,3,4,5,6,7,8,10,11,12,13',
-    split'6,7,8,9,10,11,12,13,14,14,14,15,15,15,16,16,16'
-   addflooritem(rnd(_types),rnd(_skills))
+   local _types,_skills=
+    split'6,7,8,9,10,11,12,13,14,14,14,15,15,15,16,16',
+    dget(62) > 2 and split'1,2,3,4,5,6,7,8,10,11,12,13,14' or
+     split'1,2,3,4,5,6,7,8'
+   addflooritem(rnd(_types),getrndskill(_skills))
    if level%3 == 2 then
     addflooritem(rnd(_types),getrndskill(_skills))
    end
    if level%3 == 0 then
-    addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,8,10,11,12,13'))
+    addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,8,10,11,12,13,14'))
    end
   end
 
@@ -2417,13 +2423,13 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000888e0000888e00000800000008000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000800000008000000088ee
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080800000080000008080000080800
-00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110111111100000000000000000
-000000000000000022272220222e22202ddddd202222222022dcc220227f92202222772000000000171117101711221011442110111555100000000000000000
-000000000000000022277220222ee22022272220222b22202c111d202777f920222b77200000000011644610116122101666dd10111555100000000000000000
-000000000000000022777c2022eee220222aa2202b2b22202c111c20227f922022cbb2200000000011199110111d221011ddd110131b57100000000000000000
-000000000000000022777c2022efee20222272202b232b202d111c20227f922027cc2220000000001114991011d1221016888d10111555100000000000000000
-00000000000000002777cc202eeffe20222272202323232022ccd220227f9220277222200000000011114410151122101ddddd10111555100000000000000000
-00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110111111100000000000000000
+00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110111111101111111000000000
+000000000000000022272220222e22202ddddd202222222022766220227f92202222772000000000171117101144211011777110171155101115551000000000
+000000000000000022277220222ee22022272220222b222026d117202777f920222b772000000000116446101666dd1011177710116155101115551000000000
+000000000000000022777c2022eee220222aa2202b2b2220261d1620227f922022cbb220000000001119911011ddd1101197771011145510131b571000000000
+000000000000000022777c2022efee20222272202b232b202711d620227f922027cc2220000000001114991016888d1014966610114155101115551000000000
+00000000000000002777cc202eeffe20222272202323232022667220227f92202772222000000000111144101ddddd1011911110121155101115551000000000
+00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110111111101111111000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000110010000000022222220000000001111111000000000000000000000000000000000000000000000000000000000000000000000000040040000
 0000000000011001000010002000000000000000100000000000100000000000000000000000000000000000000000000000000000000000000000004dd40000
