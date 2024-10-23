@@ -221,7 +221,7 @@ function detectandresolvehit(_attack,_actor)
    if _actor.hp <= 1 then
     _s=232
    end
-   for _i=1,flr(_actor.maxhp-_actor.hp) do
+   for _i=1,min(ceil(_actor.maxhp-_actor.hp),4) do
     add(fxs,getfx(
      _s,
      _actor.x-_actor.hw+flrrnd(4),
@@ -250,7 +250,7 @@ end
 -- geometry
 
 function atodirections(_a)
- return flr((_a%1)*8)/8 -- todo: maybe %1 is not needed
+ return flr((_a%1)*8)/8
 end
 
 function dist(_x1,_y1,_x2,_y2)
@@ -395,8 +395,8 @@ function getfx(_s,_x,_y,_dur,_colors,_vx,_vy,_ax,_ay)
   x=_x,y=_y,
   dur=_dur,durc=_dur,
   colors=_colors,
-  vx=_vx or 0,vy=_vy or 0,
-  ax=_ax or 0,ay=_ay or 0,
+  vx=_vx,vy=_vy,
+  ax=_ax,ay=_ay,
   draw=drawfx,
  }
 end
@@ -409,8 +409,8 @@ function getpsetfx(_x,_y,_dur,_colors,_vx,_vy,_ax,_ay)
   x=_x,y=_y,
   dur=_dur,durc=_dur,
   colors=_colors,
-  vx=_vx or 0,vy=_vy or 0,
-  ax=_ax or 0,ay=_ay or 0,
+  vx=_vx,vy=_vy,
+  ax=_ax,ay=_ay,
   draw=drawfxpset,
  }
 end
@@ -454,32 +454,35 @@ function missile_update(_attack)
  _attack.y+=sin(_attack.a)*_attack.missile_spd
 end
 
-addicewall_colors=split'6,6,6,6,6,6,13'
-function addicewall(_actor,_lvl,_x,_y)
+addicewalls_colors=split'6,6,6,6,6,6,13'
+function addicewalls(_isenemy,_lvl,_diam,_origx,_origy)
  sfx(17)
- local _durc=12+_lvl*8
- local _fx=getfx(229,_x,_y,_durc,addicewall_colors)
- local _a={
-  isenemy=_actor.isenemy,
-  x=_x,y=_y,
-  afflic=2,
-  hw=4,hh=4,
-  durc=_durc,
-  update=function(_attack)
-   for _other in all(attacks) do
-    if _other.isenemy != _attack.isenemy and
-       dist(_attack.x,_attack.y,_other.x,_other.y) < 4 then
-     sfx(18)
-     _other.durc,_attack.durc,_fx.durc=0,0,6
+ for _i=1,ceil(_lvl*.5) do
+  local _x,_y=getxywithindiameter(_origx,_origy,_diam)
+  local _durc=12+_lvl*8
+  local _fx=getfx(229,_x,_y,_durc,addicewalls_colors)
+  local _a={
+   isenemy=_isenemy,
+   x=_x,y=_y,
+   afflic=2,
+   hw=4,hh=4,
+   durc=_durc,
+   update=function(_attack)
+    for _other in all(attacks) do
+     if _other.isenemy != _attack.isenemy and
+        dist(_attack.x,_attack.y,_other.x,_other.y) < 4 then
+      sfx(18)
+      _other.durc,_attack.durc,_fx.durc=0,0,6
+     end
     end
-   end
-  end,
-  onmiss=function()
-   sfx(18)
-  end,
- }
- add(fxs,_fx)
- add(attacks,_a)
+   end,
+   onmiss=function()
+    sfx(18)
+   end,
+  }
+  add(fxs,_fx)
+  add(attacks,_a)
+ end
 end
 
 function addfissure(_a,_lvl,_x,_y)
@@ -536,7 +539,7 @@ function addlightningstrike(_actor,_x,_y)
  end
  add(fxs,{
   dur=10,durc=10,
-  x=0,y=0,vx=0,vy=0,ax=0,ay=0,
+  x=_x,y=_y,
   xs=_xs,ys=_ys,
   draw=lightningfx_draw,
  })
@@ -570,7 +573,6 @@ function deflectattack(_x,_y,_size,_durc)
  add(fxs,{
   x=_x,y=_y,
   dur=_durc,durc=_durc,
-  vx=0,vy=0,ax=0,ay=0,
   draw=function(_fx)
    for _other in all(attacks) do
     if _other.isenemy and dist(_fx.x,_fx.y,_other.x,_other.y) < _size then
@@ -649,12 +651,7 @@ swordskills={
  function (_actor,_n) -- 2 - freeze/icewall
   local _attack=getswordattack(_actor,2)
   if _n == 1 then
-   for _i=1,_actor.swordskill_level do
-    addicewall(
-     _actor,
-     _actor.swordskill_level,
-     getrandomfloorpos())
-   end
+   addicewalls(_actor.isenemy,_actor.swordskill_level,64,_attack.x,_attack.y)
   end
   add(attacks,_attack)
  end,
@@ -760,12 +757,7 @@ bowskills={
  function (_actor) -- 2 - icewall
   local _a,_onmiss=getbowattack(_actor,2)
   _a.onmiss=function(_attack)
-   for _i=1,flr(_actor.bowskill_level/2) do
-    addicewall(
-     _actor,
-     _actor.bowskill_level,
-     getxywithindiameter(_attack.x,_attack.y,_actor.bowskill_level*4))
-   end
+   addicewalls(_actor.isenemy,_actor.bowskill_level,_actor.bowskill_level*4,_attack.x,_attack.y)
   end
   add(attacks,_a)
  end,
@@ -856,7 +848,7 @@ staffskills={
 
  function (_actor) -- 2 - ice
   addcastingfx()
-  addicewall(_actor,_actor.staffskill_level,getxywithindiameter(_actor.staffx,_actor.staffy,6))
+  addicewalls(_actor.isenemy,_actor.staffskill_level,64,_actor.x,_actor.y)
  end,
 
  function (_actor) -- 3 - fire
@@ -926,10 +918,6 @@ function enemyattack_freeze(_actor)
  add(attacks,getswordattack(_actor,2))
 end
 
-function enemyattack_icewall(_actor)
- addicewall(_actor,20,getrandomfloorpos())
-end
-
 function enemyattack_stunandknockback(_actor)
  local _a=getswordattack(_actor,4)
  _a.knockback=true
@@ -944,7 +932,7 @@ end
 
 function fireballthrow_update(_attack)
  missile_update(_attack)
- add(fxs,getpsetfx(_attack.x,_attack.y,6,itemcolors[3])) -- todo: use firefx instead?
+ add(fxs,getpsetfx(_attack.x,_attack.y,6,itemcolors[3]))
 end
 function fireballthrow_onmiss(_attack)
  addfissure(_attack,5,_attack.x,_attack.y)
@@ -1121,7 +1109,9 @@ enemyclasses={
    attacks={
     iceboltattack,
     iceboltattack,
-    enemyattack_icewall,
+    function (_actor)
+     addicewalls(true,12+dget(62),120,64,64)
+    end,
    },
    attack=enemy_rollingattacks,
    attack_colors=split'12,12,12',
@@ -1604,7 +1594,7 @@ function _update60()
    level=getworld()*3+1
    mapinit()
   end
-  if btnp(4) or btnp(5) then -- todo: token hunt, can remove btnp5
+  if btnp(4) then
    warpstone.iswarping=nil
   end
   if level == 15 then
@@ -1978,11 +1968,15 @@ function _update60()
    if _a.wallcollisiondx then
     _a.hp+=.05
    end
-   add(fxs,getpsetfx(_a.x-2+rnd(2),
-    _a.y-_a.hh*2-3,
-    5,
-    split'7,2,10,2',
-    0,.5))
+   local _x,_y=_a.x-2,_a.y-_a.hh*2-1
+   add(fxs,{
+    x=_x,y=_y,
+    durc=2,
+    draw=function()
+     local _s=rnd() < .5 and 236 or 237
+     spr(_s,_x,_y)
+    end,
+    })
   elseif _a.afflic == 5 then
    if _a.walking then
     _a.hp-=.025
@@ -1990,8 +1984,7 @@ function _update60()
     _a.hp+=.025
    end
   elseif _a.afflic == 7 then
-   -- todo: use addholyfx
-   add(fxs,getpsetfx(_a.x-2+rnd(4),_a.y-5+rnd(3),11,itemcolors[7],0,-.0125,0,-.0375))
+   addholyfx(_a.x-2+rnd(4),_a.y-5+rnd(3))
    if _dx == 0 and _dy == 0 then
     _a.hp-=.0125
    else
@@ -2034,8 +2027,7 @@ function _update60()
     0,.075))
    if rnd() < .025 then
     local _fx=getpsetfx(
-     _a.x,
-     _a.y,
+     _a.x,_a.y,
      110,
      {_a.bloodcolors[3]})
     _fx.isfloor=true
@@ -2100,10 +2092,15 @@ function _update60()
    _fx.durc=_fx.dur
   end
 
-  _fx.vx+=_fx.ax
-  _fx.vy+=_fx.ay
-  _fx.x+=_fx.vx
-  _fx.y+=_fx.vy
+  if _fx.ax then
+   _fx.vx+=_fx.ax
+   _fx.vy+=_fx.ay
+  end
+
+  if _fx.vx then
+   _fx.x+=_fx.vx
+   _fx.y+=_fx.vy
+  end
 
   _fx.durc-=1
   if _fx.durc <= 0 then
@@ -2449,8 +2446,8 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 00000000001111010000100020000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000011111010000000020000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000001001010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00005000000050000000500000000000000000000000700000051500066666600000000000000000000000000000000000000000000000000100000000000000
-0000550000005500000055000000000000000000000777000055120066666666000000000e8888000f9999000e88999000000000000000000301001000042000
+0000500000005000000050000000000000000000000070000005150006666660000000000000000000000000000000000a000000a0a000000100000000000000
+0000550000005500000055000000000000000000000777000055120066666666000000000e8888000f9999000e88999070700000070000000301001000042000
 00051500000575000005050000011000000000000007717005551110d666666d00000000e8111880f9191990e811919900000000000000000003003000666d00
 00055500000555000005550000111100000000000077177055551111d11611dd00011000881818209991994088181994000000000000000010030000000dd000
 00515500005755000050550000111100000010000077177055500111d11611dd0001100088111220991914408811914400000000000000003000010000600d00
