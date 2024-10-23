@@ -85,7 +85,7 @@ end
 --  end
 -- end
 
-cartdata'ironchestgames_vvoe2_v1_dev2'
+cartdata'ironchestgames_vvoe2_v1_dev3'
 
 -- debug: reset
 -- for _i=1,16 do -- inventory
@@ -96,8 +96,8 @@ cartdata'ironchestgames_vvoe2_v1_dev2'
 
 -- dset(14,13)
 -- dset(15,13)
--- dset(16,13)
--- dset(6,13)
+-- dset(16,2)
+-- dset(6,2)
 
 poke(0x5f5c,-1) -- set auto-repeat delay for btnp to none
 poke(0x5f36,0x2) -- allow circ & circfill w even diameter
@@ -290,6 +290,10 @@ function getrandomfloorpos()
  return _x,_y
 end
 
+function getxywithindiameter(_x,_y,_dia)
+ return _x+rnd(_dia)-_dia/2,_y+rnd(_dia)-_dia/2
+end
+
 
 -- drawing funcs
 
@@ -320,15 +324,16 @@ itemcolors={
  split'15,14,8,2', -- 3 - fire/fissure
  split'7,10,6,13', -- 4 - stun/lightning
  split'11,3,5,2', -- 5 - venom/spikes
- split'7,6,13,1', -- 6 - deflection
+ split'7,6,13,2', -- 6 - deflection
  split'7,7,15,9', -- 7 - holy/revive
  split'7,11,12,3', -- 8 - teleportation
  nil,
  -- passives
  split'10,9,4,2', -- 10 - haste
  split'14,8,4,2', -- 11 - potion
- split'7,9,4,1', -- 12 - sword mastery
- split'7,6,4,2', -- 13 - arrow bounce
+ split'7,6,4,2', -- 12 - sword mastery
+ -- split'6,13,5,1', -- 13 - sneak
+ split'7,6,3,5', -- 13 - arrow bounce
  split'7,11,3,1', -- 14 - arrow walltravel
 }
 
@@ -450,7 +455,7 @@ function missile_update(_attack)
 end
 
 addicewall_colors=split'6,6,6,6,6,6,13'
-function addicewall(_actor,_x,_y,_lvl)
+function addicewall(_actor,_lvl,_x,_y)
  sfx(17)
  local _durc=12+_lvl*8
  local _fx=getfx(229,_x,_y,_durc,addicewall_colors)
@@ -477,7 +482,7 @@ function addicewall(_actor,_x,_y,_lvl)
  add(attacks,_a)
 end
 
-function addfissure(_a,_x,_y,_lvl)
+function addfissure(_a,_lvl,_x,_y)
  sfx(21)
  local _lvl=max(1,_lvl*.75)
  add(attacks,{
@@ -641,20 +646,23 @@ end
 swordskills={
  addbruisingswordattack, -- 1 - bruise
 
- function (_actor) -- 2 - freeze/icewall
+ function (_actor,_n) -- 2 - freeze/icewall
   local _attack=getswordattack(_actor,2)
-  addicewall(
-    _actor,
-    _attack.x+cos(_attack.a+.5)*18,
-    _attack.y+sin(_attack.a+.5)*18,
-    _actor.swordskill_level or 7)
+  if _n == 1 then
+   for _i=1,_actor.swordskill_level do
+    addicewall(
+     _actor,
+     _actor.swordskill_level,
+     getrandomfloorpos())
+   end
+  end
   add(attacks,_attack)
  end,
 
  function (_actor) -- 3 - fire/fissure
   local _a=getswordattack(_actor,3)
   _a.onmiss=function(_attack)
-   addfissure(_attack,_a.x,_a.y,_actor.swordskill_level or 7)
+   addfissure(_attack,_actor.swordskill_level or 7,_a.x,_a.y)
   end
   add(attacks,_a)
  end,
@@ -752,7 +760,12 @@ bowskills={
  function (_actor) -- 2 - icewall
   local _a,_onmiss=getbowattack(_actor,2)
   _a.onmiss=function(_attack)
-   addicewall(_actor,_attack.x,_attack.y,_actor.bowskill_level)
+   for _i=1,flr(_actor.bowskill_level/2) do
+    addicewall(
+     _actor,
+     _actor.bowskill_level,
+     getxywithindiameter(_attack.x,_attack.y,_actor.bowskill_level*4))
+   end
   end
   add(attacks,_a)
  end,
@@ -760,7 +773,7 @@ bowskills={
  function (_actor) -- 3 - fire fissure
   local _a,_onmiss=getbowattack(_actor,3)
   _a.onmiss=function(_attack)
-   addfissure(_attack,_attack.x,_attack.y,_actor.bowskill_level)
+   addfissure(_attack,_actor.bowskill_level,_attack.x,_attack.y)
    _onmiss(_attack)
   end
   add(attacks,_a)
@@ -801,6 +814,7 @@ bowskills={
 
  function(_actor) -- 8 - teleport
   local _a,_onmiss=getbowattack(_actor,1,8)
+  _a.durc=min(_a.durc,_actor.bowskill_level*6)
   _a.onmiss=function()
    teleportavatar(_a.x,_a.y)
    _onmiss(_a)
@@ -833,8 +847,8 @@ function addcastingmarkerfx()
   .5-rnd(1),.5-rnd(1)))
 end
 
-staffskills_attackintervals=split'16,24,2,16,16,16,24,16,16,16,16,16,16,16'
-staffskills_castingmarker=split'0,0,1,0,1,0,0,1,0,0,0,0,0,0'
+staffskills_attackintervals=split'16,12,2,16,16,16,24,16,16,16,16,16,16,16'
+staffskills_castingmarker=split'0,1,1,0,1,0,0,1,0,0,0,0,0,0'
 staffskills={
  function (_actor) -- 1 - bruise
   addbruisingswordattack(_actor)
@@ -842,16 +856,13 @@ staffskills={
 
  function (_actor) -- 2 - ice
   addcastingfx()
-  for _i=0,1,.125 do
-   local _x,_y=_actor.x+cos(_i)*12,_actor.y+sin(_i)*12
-   addicewall(_actor,_x,_y,_actor.staffskill_level)
-  end
+  addicewall(_actor,_actor.staffskill_level,getxywithindiameter(_actor.staffx,_actor.staffy,6))
  end,
 
  function (_actor) -- 3 - fire
   if rnd() < .5 then
    addcastingfx()
-   addfissure(_actor,-4+rnd(8)+_actor.staffx,-4+rnd(8)+_actor.staffy,_actor.staffskill_level)
+   addfissure(_actor,_actor.staffskill_level,getxywithindiameter(actor.staffx,_actor.staffy,8))
   end
  end,
 
@@ -916,8 +927,7 @@ function enemyattack_freeze(_actor)
 end
 
 function enemyattack_icewall(_actor)
- local _x,_y=getrandomfloorpos()
- addicewall(_actor,_x,_y,20)
+ addicewall(_actor,20,getrandomfloorpos())
 end
 
 function enemyattack_stunandknockback(_actor)
@@ -937,7 +947,7 @@ function fireballthrow_update(_attack)
  add(fxs,getpsetfx(_attack.x,_attack.y,6,itemcolors[3])) -- todo: use firefx instead?
 end
 function fireballthrow_onmiss(_attack)
- addfissure(_attack,_attack.x,_attack.y,5)
+ addfissure(_attack,5,_attack.x,_attack.y)
 end
 function fireballthrow(_actor)
  local _a=getbowattack(_actor,3)
