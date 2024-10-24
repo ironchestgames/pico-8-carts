@@ -12,9 +12,6 @@ todo:
 
  - add deflect attack for skeleton queen
 
- - structure cartdata to be in sequence (prepare for companion cart for characters)
-   63/21=3, can be 3 characters in total, just set 62,63 to be 20,21 instead
-
  - add resetting menu on house? or add companion app to handle characters?
 
  - change the evils fireballs to be venomfireballs!
@@ -57,8 +54,8 @@ cartdata layout:
 15- bow
 16- staff
 
-62 - last boss kills
-63 - level completion (boss levels only: 3,6,9,12)
+20 - last boss kills
+21 - level completion (boss levels only: 3,6,9,12)
 
 button mask:
 -- [0x0001]=0.5, -- left
@@ -99,8 +96,8 @@ cartdata'ironchestgames_vvoe2_v1_dev3'
 -- for _i=1,16 do -- inventory
 --   dset(_i,0)
 -- end
--- dset(62,0) -- evil kills
--- dset(63,0) -- last level cleared
+-- dset(20,0) -- evil kills
+-- dset(21,0) -- last level cleared
 
 poke(0x5f5c,-1) -- set auto-repeat delay for btnp to none
 poke(0x5f36,0x2) -- allow circ & circfill w even diameter
@@ -1060,7 +1057,7 @@ function bossondeath(_actor)
 end
 
 function lastbossondeath(_actor)
- dset(62,dget(62)+1)
+ dset(20,dget(20)+1)
  bossondeath(_actor)
  sfx(10)
  -- local _sgetystart,_sgetyend,_sgetxstart,_sgetxend=89,72,60,74
@@ -1114,7 +1111,7 @@ enemyclasses={
     iceboltattack,
     iceboltattack,
     function (_actor)
-     addicewalls(true,12+dget(62),120,64,64)
+     addicewalls(true,12+dget(20),120,64,64)
     end,
    },
    attack=enemy_rollingattacks,
@@ -1446,7 +1443,7 @@ function mapinit()
   split'3,4,5,4,6,7,5,8,12,4,6,6,4,6,6'
  -- _enemycs=split'1,2,3,1,2,3,1,2,3,1,2,3,1,2,3'
  local curx,cury,a,enemy_c,steps,angles=
-  avatarx,avatary,0,_enemycs[level] and _enemycs[level]+flr(dget(62)/2) or 0,
+  avatarx,avatary,0,_enemycs[level] and _enemycs[level]+flr(dget(20)/2) or 0,
   split'440,600,420,600,450'[world],
   ({split'0,0.25,-0.25',split'0,0,0,0.25,-0.25',split'0,0,0,0,0,0,0,0.5,0.5,0.25,-0.25',
   split'0,0,0,0,0,0,0,0,0,0.25',split'0,0,0.25'})[world]
@@ -1467,7 +1464,7 @@ function mapinit()
  end
 
  -- setup enemies
- local _extraenemyc=ceil(dget(62)/2)
+ local _extraenemyc=ceil(dget(20)/2)
  for _i=1,enemy_c do
   ::setupenemies::
   local _x,_y=flrrnd(15),flrrnd(15)
@@ -1609,7 +1606,7 @@ function _update60()
 
  if warpstone.iswarping then
   function _godownaworld()
-   dset(63,max(dget(63),level))
+   dset(21,max(dget(21),level))
    level=getworld()*3+1
    mapinit()
   end
@@ -1618,13 +1615,13 @@ function _update60()
   end
   if level == 15 then
    if btnp(2) then
-    dset(63,0)
+    dset(21,0)
     level=0
     mapinit()
    end
   elseif level == 0 then
-   if dget(63) != 0 and btnp(3) then
-    level=dget(63)+1
+   if dget(21) != 0 and btnp(3) then
+    level=dget(21)+1
     mapinit()
    elseif btnp(1) then
     level=1
@@ -1634,7 +1631,7 @@ function _update60()
    if btnp(3) then
     _godownaworld()
    end
-  elseif dget(63) > level then
+  elseif dget(21) > level then
    if btnp(3) then
     _godownaworld()
    elseif btnp(1) then
@@ -2180,12 +2177,12 @@ function _update60()
   if level > 0 and walls[warpstone.wy][warpstone.wx] != 225 then
    sfx(14)
    function getrndskill(_nonepicskills)
-    return rnd(rnd() < dget(62)*.0625 and
+    return rnd(rnd() < dget(20)*.0625 and
      split'22,23,24,25,26,27,28,30,31,32,33,34,35' or _nonepicskills)
    end
    local _types,_skills=
     split'6,7,8,9,10,11,12,13,14,14,14,15,15,15,16,16',
-    dget(62) > 2 and split'1,2,3,4,5,6,7,8,10,11,12,13,14,15' or
+    dget(20) > 2 and split'1,2,3,4,5,6,7,8,10,11,12,13,14,15' or
      split'1,2,3,4,5,6,7,8'
    addflooritem(rnd(_types),getrndskill(_skills))
    if level%3 == 2 then
@@ -2234,7 +2231,7 @@ function _draw()
  if warpstone.iswarping then
   rectfill(warpstone.x-3,0,warpstone.x+3,warpstone.y+4,7)
   local _str='\f6  ➡️\n⬇️'
-  if level == 0 and dget(63) > 0 then
+  if level == 0 and dget(21) > 0 then
    -- pass
   elseif level == 15 then
    _str='\n\f3⬆️'
@@ -2242,7 +2239,7 @@ function _draw()
    _str='\f6  ➡️'
   elseif level%3 == 0 then
    _str='\n\f6⬇️'
-  elseif level >= dget(63) then
+  elseif level >= dget(21) then
    _str='\f6  ➡️'
   end
   ?_str,warpstone.x-3,warpstone.y
@@ -2368,7 +2365,7 @@ function _draw()
   pal()
   cls(0)
   rectfill(0,42,128,85,1)
-  for _i=0,dget(62)-1 do
+  for _i=0,dget(20)-1 do
    spr(223,2+flr(_i/21)*106+_i%3*7,44+flr(_i%21/3)*6)
   end
   for _i=1,16 do
