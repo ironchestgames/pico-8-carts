@@ -8,7 +8,14 @@ __lua__
 
 todo:
 
- - add passive sneak skill
+ - structure warping for token hunt
+
+ - add deflect attack for skeleton queen
+
+ - structure cartdata to be in sequence (prepare for companion cart for characters)
+   63/21=3, can be 3 characters in total, just set 62,63 to be 20,21 instead
+
+ - add resetting menu on house? or add companion app to handle characters?
 
  - change the evils fireballs to be venomfireballs!
 
@@ -85,6 +92,7 @@ end
 --  end
 -- end
 
+-- cartdata'ironchestgames_vvoe2_v1_otto2'
 cartdata'ironchestgames_vvoe2_v1_dev3'
 
 -- debug: reset
@@ -93,11 +101,6 @@ cartdata'ironchestgames_vvoe2_v1_dev3'
 -- end
 -- dset(62,0) -- evil kills
 -- dset(63,0) -- last level cleared
-
--- dset(14,13)
--- dset(15,13)
--- dset(16,2)
--- dset(6,2)
 
 poke(0x5f5c,-1) -- set auto-repeat delay for btnp to none
 poke(0x5f36,0x2) -- allow circ & circfill w even diameter
@@ -323,7 +326,8 @@ itemcolors={
  split'7,6,12,13', -- 2 - ice/icewall
  split'15,14,8,2', -- 3 - fire/fissure
  split'7,10,6,13', -- 4 - stun/lightning
- split'11,3,5,2', -- 5 - venom/spikes
+ split'10,11,3,2', -- 5 - venom/spikes
+ -- split'11,3,5,2', -- 5 - venom/spikes
  split'7,6,13,2', -- 6 - deflection
  split'7,7,15,9', -- 7 - holy/revive
  split'7,11,12,3', -- 8 - teleportation
@@ -332,9 +336,9 @@ itemcolors={
  split'10,9,4,2', -- 10 - haste
  split'14,8,4,2', -- 11 - potion
  split'7,6,4,2', -- 12 - sword mastery
- -- split'6,13,5,1', -- 13 - sneak
- split'7,6,3,5', -- 13 - arrow bounce
- split'7,11,3,1', -- 14 - arrow walltravel
+ split'6,13,5,1', -- 13 - sneak
+ split'7,6,3,5', -- 14 - arrow bounce
+ split'7,11,3,1', -- 15 - arrow walltravel
 }
 
 function addflooritem(_typ,_skill)
@@ -854,7 +858,7 @@ staffskills={
  function (_actor) -- 3 - fire
   if rnd() < .5 then
    addcastingfx()
-   addfissure(_actor,_actor.staffskill_level,getxywithindiameter(actor.staffx,_actor.staffy,8))
+   addfissure(_actor,_actor.staffskill_level,getxywithindiameter(_actor.staffx,_actor.staffy,8))
   end
  end,
 
@@ -1087,7 +1091,7 @@ skeletonarcher={
  bloodcolors=split'7,7,6',
  basecolors=split',4', -- note: arrow color
  attack=addbruisingbowattack,
- conf='maxhp=6,hp=6,spd=.375,sight=80,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
+ conf='maxhp=6,hp=6,spd=.375,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
 }
 
 enemyclasses={
@@ -1096,12 +1100,12 @@ enemyclasses={
  {
   { -- ice orc stonethrower
    attack=stonethrow,
-   conf='maxhp=12,hp=12,spd=.375,sight=80,range=58,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=1,bow_c=999',
+   conf='maxhp=12,hp=12,spd=.375,range=58,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=1,bow_c=999',
   },
 
   { -- big ice orc
    attack=enemyattack_freeze,
-   conf='maxhp=16,hp=16,spd=.25,sight=64,range=8,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=16,hp=16,spd=.25,range=8,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- ice orc caster
@@ -1115,12 +1119,12 @@ enemyclasses={
    },
    attack=enemy_rollingattacks,
    attack_colors=split'12,12,12',
-   conf='maxhp=20,hp=20,spd=.25,sight=90,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1',
+   conf='maxhp=20,hp=20,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1',
   },
 
   { -- bear (stun)
    attack=enemyattack_stunandknockback,
-   conf='maxhp=16,hp=16,spd=.25,sight=64,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=16,hp=16,spd=.25,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 
@@ -1128,24 +1132,24 @@ enemyclasses={
  {
   { -- troll w club
    attack=enemyattack_stunandknockback,
-   conf='maxhp=10,hp=10,spd=.375,sight=96,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=10,hp=10,spd=.375,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- troll stonethrower (stun)
    attack=stonethrow,
-   conf='maxhp=10,hp=10,spd=.25,sight=96,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=4,bow_c=999',
+   conf='maxhp=10,hp=10,spd=.25,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=4,bow_c=999',
   },
 
   { -- battle troll champion
    attack=enemyattack_stunandknockback,
    ondeath=bossondeath,
-   conf='maxhp=24,hp=24,spd=.5,sight=96,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,isboss=1,nonknockable=1',
+   conf='maxhp=24,hp=24,spd=.5,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,isboss=1,nonknockable=1',
   },
 
   { -- fireball thrower
    attack=fireballthrow,
    basecolors=split',14', -- note: arrow color
-   conf='maxhp=6,hp=6,spd=.5,sight=96,range=48,hw=1.5,hh=1.5,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
+   conf='maxhp=6,hp=6,spd=.5,range=48,hw=1.5,hh=1.5,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
   },
  },
 
@@ -1154,12 +1158,12 @@ enemyclasses={
   { -- venom spitting snake
    basecolors=split',11', -- note: arrow color
    attack=venomspit_attack,
-   conf='maxhp=6,hp=6,spd=.5,sight=80,range=58,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
+   conf='maxhp=6,hp=6,spd=.5,range=58,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
   },
 
   { -- venomspike-tailed lizard
    attack=enemyattack_venomandknockback,
-   conf='maxhp=16,hp=16,spd=.375,sight=64,range=8,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=16,hp=16,spd=.375,range=8,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- poison druid
@@ -1171,12 +1175,12 @@ enemyclasses={
     venomboltattack,
    },
    attack=enemy_rollingattacks,
-   conf='maxhp=20,hp=20,spd=.375,sight=90,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1',
+   conf='maxhp=20,hp=20,spd=.375,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1',
   },
 
   { -- ice vulture
    attack=enemyattack_freeze,
-   conf='maxhp=16,hp=16,spd=.5,sight=64,range=8,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=16,hp=16,spd=.5,range=8,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 
@@ -1193,22 +1197,22 @@ enemyclasses={
      s=split'112,113,114,115',
      bloodcolors=split'7,7,6',
      attack=addbruisingswordattack,
-     conf='maxhp=10,hp=10,spd=.25,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+     conf='maxhp=10,hp=10,spd=.25,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
     },
     skeletonarcher,
    },
-   conf='maxhp=32,hp=32,spd=0,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=0,nonknockable=1',
+   conf='maxhp=32,hp=32,spd=0,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=0,nonknockable=1',
   },
 
   { -- skeleton queen
    bloodcolors=split'7,7,6',
    attack=enemyattack_confusionball,
-   conf='maxhp=20,hp=30,spd=.25,sight=90,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,isboss=1',
+   conf='maxhp=20,hp=30,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,isboss=1',
   },
 
   { -- venomous bat
    attack=enemyattack_venomandknockback,
-   conf='maxhp=6,hp=6,spd=.75,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=6,hp=6,spd=.75,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 
@@ -1217,7 +1221,7 @@ enemyclasses={
   { -- big devil
    attack=swordskills[3],
    bloodcolors=split'9,9,4',
-   conf='maxhp=12,hp=12,spd=.5,sight=64,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=12,hp=12,spd=.5,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- evil warpstone
@@ -1230,16 +1234,16 @@ enemyclasses={
      basecolors=split',14', -- note: arrow color
      attack=fireballthrow,
      bloodcolors=split'9,9,4',
-     conf='maxhp=2,hp=2,spd=.5,sight=96,range=48,hw=1.5,hh=1.5,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
+     conf='maxhp=2,hp=2,spd=.5,range=48,hw=1.5,hh=1.5,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
     },
     { -- devil fighter
      s=split'188,189,190,191',
      bloodcolors=split'9,9,4',
      attack=swordskills[3],
-     conf='maxhp=4,hp=4,spd=.375,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+     conf='maxhp=4,hp=4,spd=.375,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
     },
    },
-   conf='maxhp=42,hp=42,spd=0,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=140,nonknockable=1',
+   conf='maxhp=42,hp=42,spd=0,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=140,nonknockable=1',
   },
 
   { -- the evil
@@ -1262,13 +1266,13 @@ enemyclasses={
     sspr(flr(_a.f-1)*15,72,15,18,_a.x-7.5,_a.y-12,15,18,_a.sflip)
     pal()
    end,
-   conf='maxhp=52,hp=52,spd=.5,sight=128,range=86,hw=3,hh=4,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,nonknockable=1',
+   conf='maxhp=52,hp=52,spd=.5,range=86,hw=3,hh=4,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,nonknockable=1',
   },
   
   { -- devil confusor
    bloodcolors=split'9,9,4',
    attack=enemyattack_confusionball,
-   conf='maxhp=8,hp=8,spd=.25,sight=90,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=8,hp=8,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 }
@@ -1298,8 +1302,8 @@ recalcskills_avatarskillprops,
 recalcskills_passiveprops,
 recalcskills_passiveaddition=
  split',,,,,,,,,,,,,swordskill_level,bowskill_level,staffskill_level',
- split',,,,,,,,,spd,potionlvl,swordmasterylvl,arrow_bounce,arrow_walltravel',
- split',,,,,,,,,.03125,1,1,1,3'
+ split',,,,,,,,,spd,potionlvl,swordmasterylvl,sneaklvl,arrow_bounce,arrow_walltravel',
+ split',,,,,,,,,.03125,1,1,3,1,3'
 function recalcskills()
  avatar.reviveitems,
  avatar.swordskill_level,
@@ -1309,8 +1313,9 @@ function recalcskills()
  avatar.arrow_bounce,
  avatar.arrow_walltravel,
  avatar.potionlvl,
- avatar.swordmasterylvl=
-  {},unpack(split'0,0,0,.5,0,0,0,1')
+ avatar.swordmasterylvl,
+ avatar.sneaklvl=
+  {},unpack(split'0,0,0,.5,0,0,0,1,0')
 
  for _typ=1,16 do
   local _skill=dget(_typ)
@@ -1325,9 +1330,10 @@ function recalcskills()
    add(avatar.reviveitems,_typ)
   end
 
-  for _i=10,14 do
+  for _i=10,15 do
    if _skillwoepic == _i then
-    avatar[recalcskills_passiveprops[_i]]+=recalcskills_passiveaddition[_i]*_skill_lvl
+    avatar[recalcskills_passiveprops[_i]]+=
+     _skill_lvl*recalcskills_passiveaddition[_i]
    end
   end
  end
@@ -1350,6 +1356,7 @@ function recalcskills()
 end
 
 function setupavatar()
+ local _sneakcolors=split'1,1,1,1,1,1,1,1'
  avatar={
   x=68,y=60,
   a=0,
@@ -1368,7 +1375,7 @@ function setupavatar()
 
   attackstate_c=0,
   draw=function(_a)
-   pal(_a.basecolors)
+   pal(_a.isseen and _a.basecolors or _sneakcolors)
    drawactor(_a)
    pal()
   end,
@@ -1406,7 +1413,7 @@ function addenemy(_x,_y,_enemyclass,_spritestart)
   _s[_i]=(_spritestart or 0)+_i-1
  end
  add(actors,lmerge({
-  -- ex: conf='maxhp=10,hp=10,spd=.375,sight=64,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1'
+  -- ex: conf='maxhp=10,hp=10,spd=.375,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1'
 
   -- need to haves:
   -- s=split'48,49,50,51',
@@ -1484,14 +1491,23 @@ function mapinit()
  end
 
  -- add warpstone
- warpstone={x=curx*8,y=cury*8,hw=6,hh=8,wx=curx,wy=cury,draw=function()
-  spr(226,warpstone.x-4,warpstone.y-4)
- end}
+ function getinteractivewall(_s,_wx,_wy)
+  local _x,_y=_wx*8,_wy*8
+  return {
+   x=_x,y=_y,
+   hw=8,hh=8,
+   wx=_wx,wy=_wy,
+   draw=function()
+    spr(_s,_x,_y)
+   end
+  }
+ end
+ warpstone=getinteractivewall(226,curx,cury)
  add(actors,warpstone)
+ -- house=getinteractivewall(230,avatarx-1,avatary)
 
  -- populate actors
  add(actors,avatar)
- -- ...
 
  -- remove walls around actors
  local _clearingarr=split'-1,-1, 0,-1, 1,-1, -1,0, 0,0, 1,0, -1,1, 0,1, 1,1'
@@ -1513,6 +1529,9 @@ function mapinit()
  warpstone.y+=4
  del(actors,warpstone)
  walls[cury][curx]=224
+
+ -- house.x+=4
+ -- house.y+=4
 
  avatar.iswarping,avatar.afflic,avatar.hp=true,2,.0125
 
@@ -1631,6 +1650,11 @@ function _update60()
   warpstone.iswarping=true
   return
  end
+
+ -- if house.istouching and btnp(4) then
+ --  house.isinside=true
+ --  return
+ -- end
 
  -- player input
  -- todo: the filtering does not seem to work properly! repro?
@@ -1782,16 +1806,16 @@ function _update60()
  local _enemy=actors[update60_curenemyi]
  if _enemy and _enemy.isenemy then
   _enemy.spdfactor=1
-  local _disttoavatar,_haslostoavatar=
-   dist(_enemy.x,_enemy.y,avatar.x,avatar.y),
-   haslos(_enemy.x,_enemy.y,avatar.x,avatar.y)
+  local _disttoavatar=dist(_enemy.x,_enemy.y,avatar.x,avatar.y)
+  _enemy.canseeavatar=haslos(_enemy.x,_enemy.y,avatar.x,avatar.y) and
+   _disttoavatar < max(6,80-avatar.sneaklvl)
 
   if _enemy.isboss then
    _enemy.afflic=1
   end
 
   if _enemy.afflic == 4 then
-   _disttoavatar,_haslostoavatar=nil
+   _enemy.canseeavatar=nil
   end
 
   if _enemy.afflic == 2 then
@@ -1824,7 +1848,7 @@ function _update60()
    _enemy.walking=true
    _enemy.a+=rnd(.01)-.005
 
-  elseif _enemy.wallcollisiondx == nil and _haslostoavatar and
+  elseif _enemy.wallcollisiondx == nil and _enemy.canseeavatar and
     (_disttoavatar < _enemy.range*.375 or
     (_enemy.afflic == 5 and _disttoavatar < 18) or
     _enemy.afflic == 7) and not _enemy.isboss then
@@ -1833,7 +1857,7 @@ function _update60()
    _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)+.5
    _enemy.moving_c=30
 
-  elseif _haslostoavatar and _disttoavatar < _enemy.range then
+  elseif _enemy.canseeavatar and _disttoavatar < _enemy.range then
    -- decisiondebug('attack avatar')
 
    if t()-update60_enemyattackts > .375 then
@@ -1860,8 +1884,7 @@ function _update60()
     _enemy.moving_c,_enemy.targetx=45
    end
    
-  elseif _haslostoavatar and
-    _disttoavatar < _enemy.sight and
+  elseif _enemy.canseeavatar and
     _disttoavatar > _enemy.range and not 
     _enemy.moving_c then
    -- decisiondebug('move towards avatar')
@@ -1892,6 +1915,7 @@ function _update60()
  end
 
  -- update actors
+ avatar.isseen=avatar.sneaklvl == 0
  for _a in all(actors) do
   _a.a%=1 -- note: normalise angle
 
@@ -2012,10 +2036,15 @@ function _update60()
   _a.x=mid(8,_a.x+_dx,120)
   _a.y=mid(8,_a.y+_dy,120)
 
-  -- add bleeding
-  if _a.isenemy and _a.bleeding == nil and _a.hp/_a.maxhp < .5 then
-   _a.maxhp*=.5
-   _a.bleeding=true
+  -- add avatar seen and bleeding
+  if _a.isenemy then
+   if _a.canseeavatar then
+    avatar.isseen=true
+   end
+   if _a.bleeding == nil and _a.hp/_a.maxhp < .5 then
+    _a.maxhp*=.5
+    _a.bleeding=true
+   end
   end
 
   if _a.bleeding then
@@ -2147,22 +2176,23 @@ function _update60()
 
  -- update warpstone
  if _enemycount == 0 then
+
   if level > 0 and walls[warpstone.wy][warpstone.wx] != 225 then
    sfx(14)
    function getrndskill(_nonepicskills)
     return rnd(rnd() < dget(62)*.0625 and
-     split'22,23,24,25,26,27,28,30,31,32,33' or _nonepicskills)
+     split'22,23,24,25,26,27,28,30,31,32,33,34,35' or _nonepicskills)
    end
    local _types,_skills=
     split'6,7,8,9,10,11,12,13,14,14,14,15,15,15,16,16',
-    dget(62) > 2 and split'1,2,3,4,5,6,7,8,10,11,12,13,14' or
+    dget(62) > 2 and split'1,2,3,4,5,6,7,8,10,11,12,13,14,15' or
      split'1,2,3,4,5,6,7,8'
    addflooritem(rnd(_types),getrndskill(_skills))
    if level%3 == 2 then
     addflooritem(rnd(_types),getrndskill(_skills))
    end
    if level%3 == 0 then
-    addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,8,10,11,12,13,14'))
+    addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,8,10,11,12,13,14,15'))
    end
   end
 
@@ -2172,6 +2202,11 @@ function _update60()
   if ismiddleinsideaabb(avatar,warpstone) then
    warpstone.istouching=true
   end
+
+  -- house.istouching=nil
+  -- if ismiddleinsideaabb(avatar,house) then
+  --  house.istouching=true
+  -- end
 
   if rnd() < .125 then
    add(fxs,getpsetfx(warpstone.x-2+rnd(4),warpstone.y+3-rnd(5),30,split'12,12,3,1',0,0,0,-.0125))
@@ -2214,6 +2249,11 @@ function _draw()
   warpstone.draw()
   return
  end
+
+ -- if house.isinside then
+ --  ?'\f8❎ to reset all progress\n   and items',18,50
+ --  return
+ -- end
 
  -- draw player affliction
  if avatar.hp < avatar.maxhp then
@@ -2318,6 +2358,10 @@ function _draw()
  if warpstone.istouching then
   ?'\f7\#0🅾️✽',warpstone.x-7,warpstone.y+6
  end
+
+ -- if house.istouching then
+ --  ?'\f5\#0🅾️⌂',house.x-7,house.y+6
+ -- end
 
  -- draw inventory
  if btn(6) then
@@ -2430,18 +2474,18 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000888e0000888e00000800000008000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000800000008000000088ee
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080800000080000008080000080800
-00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110111111101111111000000000
-000000000000000022272220222e22202ddddd202222222022766220227f92202222772000000000171117101144211011777110171155101115551000000000
-000000000000000022277220222ee22022272220222b222026d117202777f920222b772000000000116446101666dd1011177710116155101115551000000000
-000000000000000022777c2022eee220222aa2202b2b2220261d1620227f922022cbb220000000001119911011ddd1101197771011145510131b571000000000
-000000000000000022777c2022efee20222272202b232b202711d620227f922027cc2220000000001114991016888d1014966610114155101115551000000000
-00000000000000002777cc202eeffe20222272202323232022667220227f92202772222000000000111144101ddddd1011911110121155101115551000000000
-00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110111111101111111000000000
+00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110111111101111111011111110
+000000000000000022272220222e22202ddddd202222222022766220227f92202222772000000000171117101144211011777110111111101711551011155510
+000000000000000022277220222ee22022272220222b222026d117202777f920222b772000000000116446101666dd1011177710111010101161551011155510
+000000000000000022777c2022eee220222aa2202b2b2220261d1620227f922022cbb220000000001119911011ddd110114777101000001011135510131b5710
+000000000000000022777c2022efee20222272202b232b202711d620227f922027cc2220000000001114991016888d1012466610100011101131551011155510
+00000000000000002777cc202eeffe20222272202323232022667220227f92202772222000000000111144101ddddd1011411110110101101511551011155510
+00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110111111101111111011111110
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000110010000000022222220000000001111111000000000000000000000000000000000000000000000000000000000000000000000000040040000
-0000000000011001000010002000000000000000100000000000100000000000000000000000000000000000000000000000000000000000000000004dd40000
-0000000000111101000111002000000000000000100000000001110000000000000000000000000000000000000000000000000000000000000000000ddd0000
-00000000001111110000100020000000000dd000100000000000100000000000000000000000000000000000000000000000000000000000000000000ddd0000
+00000000000110010000000022222220000000001111111000000000000000000000000000000000000000000000000000000000000000000111000040040000
+0000000000011001000010002000000000000000100000000000100000000000000000000000000000000000000000000000000000000000110110004dd40000
+0000000000111101000111002000000000000000100000000001110000000000000000000000000000000000000000000000000000000000110110000ddd0000
+00000000001111110000100020000000000dd000100000000000100000000000000000000000000000000000000000000000000000000000011100000ddd0000
 00000000001111010000100020000000000dd0001000000000010100000000000000000000000000000000000000000000000000000000000000000000500000
 00000000001111010000100020000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000011111010000000020000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
