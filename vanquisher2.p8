@@ -324,14 +324,13 @@ itemcolors={
  split'15,14,8,2', -- 3 - fire/fissure
  split'7,10,6,13', -- 4 - stun/lightning
  split'10,11,3,2', -- 5 - venom/spikes
- -- split'11,3,5,2', -- 5 - venom/spikes
  split'7,6,13,2', -- 6 - deflection
  split'7,7,15,9', -- 7 - holy/revive
  split'7,11,12,3', -- 8 - teleportation
  nil,
  -- passives
  split'10,9,4,2', -- 10 - haste
- split'14,8,4,2', -- 11 - potion
+ split'14,8,13,2', -- 11 - potion
  split'7,6,4,2', -- 12 - sword mastery
  split'6,13,5,1', -- 13 - sneak
  split'7,6,3,5', -- 14 - arrow bounce
