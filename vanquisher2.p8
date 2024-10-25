@@ -1572,6 +1572,20 @@ end
 update60_hurtsfxts,update60_curenemyi,update60_enemyattackts=0,1,0
 function _update60()
 
+ -- draw inventory
+ if btn(6) then
+  cls(0)
+  rectfill(0,42,128,85,1)
+  for _i=0,dget(20)-1 do
+   spr(223,2+flr(_i/21)*106+_i%3*7,44+flr(_i%21/3)*6)
+  end
+  for _i=1,16 do
+   drawinventoryskills(_i)
+  end
+  flip()
+  return
+ end
+
  -- dead
  if deathts and t() > deathts and btnp(4) then
   level=0
@@ -2358,19 +2372,6 @@ function _draw()
  -- if house.istouching then
  --  ?'\f5\#0🅾️⌂',house.x-7,house.y+6
  -- end
-
- -- draw inventory
- if btn(6) then
-  pal()
-  cls(0)
-  rectfill(0,42,128,85,1)
-  for _i=0,dget(20)-1 do
-   spr(223,2+flr(_i/21)*106+_i%3*7,44+flr(_i%21/3)*6)
-  end
-  for _i=1,16 do
-   drawinventoryskills(_i)
-  end
- end
 end
 
 __gfx__
