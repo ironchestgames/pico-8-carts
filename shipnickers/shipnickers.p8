@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
--- shipnickers 0.4
+-- shipnickers 1.0
 -- by ironchest games
 
 --[[
