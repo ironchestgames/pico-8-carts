@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
--- shipnickers 1.0
+-- shipnickers 1.1
 -- by ironchest games
 
 --[[
@@ -32,6 +32,7 @@ sfx channels:
 --]]
 
 cartdata'ironchestgames_shipnickers_v1'
+-- cartdata'ironchestgames_shipnickers_v1-dev20'
 -- cartdata'ironchestgames_shipnickers_v1-dev14'
 -- cartdata'ironchestgames_shipnickers_v1-qa' -- ottos
 -- cartdata'ironchestgames_shipnickers_v1-dev9' -- all unlocked
