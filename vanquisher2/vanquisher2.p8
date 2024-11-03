@@ -104,11 +104,42 @@ cartdata'ironchestgames_vvoe2_v1_dev6'
 poke(0x5f5c,-1) -- set auto-repeat delay for btnp to none
 poke(0x5f36,0x2) -- allow circ & circfill w even diameter
 
-btnmasktoa,diagbtnmasktoa,confusedbtnmasktoa=
- split'0.5,0,,0.25,0.375,0.125,,0.75,0.625,0.875',
- split',,,,0.375,0.125,,,0.625,0.875',
- split'0,0.5,,0.75,0.875,0.625,,0.25,0.125,0.375'
-
+btnmasktoa,
+diagbtnmasktoa,
+confusedbtnmasktoa,
+isinsidewall_wallabb,
+isinsidewall_yprops,
+collideaabbs_aabb,
+detectandresolvehit_fxcolors,
+drawactor_affliccolors,
+getfirefx_draw_r,
+getlightningstrikefx_colors,
+addicewalls_colors,
+addvenomspikes_colors,
+addavatarlightningattack_strikesperlevel,
+staffskills_attackintervals,
+staffskills_castingmarker,
+_draw_affliccolors=
+ split'0.5,0,,0.25,0.375,0.125,,0.75,0.625,0.875', -- btnmasktoa
+ split',,,,0.375,0.125,,,0.625,0.875', -- diagbtnmasktoa
+ split'0,0.5,,0.75,0.875,0.625,,0.25,0.125,0.375', -- confusedbtnmasktoa
+ {hw=4,hh=4}, -- isinsidewall_wallabb
+ split'y,topy', -- isinsidewall_yprops
+ {}, -- collideaabbs_aabb
+ split'7', -- detectandresolvehit_fxcolors
+ { -- drawactor_affliccolors
+  [2]=split'12,12,12,7,12,7,7,7,7,7,7,7,12,7,7',
+  [5]=split'3,3,3,11,3,11,11,11,11,11,11,11,3,11,11',
+  [7]=split'6,6,6,15,6,15,15,15,15,15,15,15,6,15,15',
+ },
+ split'1,1,1,1,1,2,2,2,2.5,2.5,2.5,2,2,1,1,1,1,1', -- getfirefx_draw_r
+ split'7,7,10,5', -- getlightningstrikefx_colors
+ split'6,6,6,6,6,6,13', -- addicewalls_colors
+ split'0,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,0', -- addvenomspikes_colors
+ split'1,2,3,4,5,6,7,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20', -- addavatarlightningattack_strikesperlevel
+ split'16,12,2,16,16,16,24,16,16,16,16,16,16,16', -- staffskills_attackintervals
+ split'0,1,1,0,1,0,0,1,0,0,0,0,0,0', -- staffskills_castingmarker
+ split'2,12,14,10,3,9' -- _draw_affliccolors
 
 -- utils
 
@@ -155,7 +186,6 @@ function isaabbscolliding(a,b)
   a.y-a.hh < b.y+b.hh and a.y+a.hh > b.y-b.hh and b
 end
 
-isinsidewall_wallabb={hw=4,hh=4}
 function isinsidewall_check(_aabbx,_aabby)
  local _mapx,_mapy=flr(_aabbx/8),flr(_aabby/8)
  if walls[_mapy] == nil or walls[_mapy][_mapx] != 0 then
@@ -163,7 +193,6 @@ function isinsidewall_check(_aabbx,_aabby)
   return isinsidewall_wallabb
  end
 end
-isinsidewall_yprops=split'y,topy'
 function isinsidewall(_aabb)
  for _ykey in all(isinsidewall_yprops) do
   local _y=_aabb[_ykey]
@@ -174,7 +203,6 @@ function isinsidewall(_aabb)
  end
 end
 
-collideaabbs_aabb={}
 function collideaabbs(_func,_aabb,_other,_dx,_dy)
  _dx,_dy=_dx or 0,_dy or 0
  local _sgndx,_sgndy=sgn(_dx),sgn(_dy)
@@ -197,7 +225,6 @@ function collideaabbs(_func,_aabb,_other,_dx,_dy)
  return _dx,_dy
 end
 
-detectandresolvehit_fxcolors=split'7'
 function detectandresolvehit(_attack,_actor)
  -- detect
  local _dx,_dy=collideaabbs(isaabbscolliding,_attack,_actor)
@@ -308,11 +335,6 @@ end
 
 -- drawing funcs
 
-drawactor_affliccolors={
- [2]=split'12,12,12,7,12,7,7,7,7,7,7,7,12,7,7',
- [5]=split'3,3,3,11,3,11,11,11,11,11,11,11,3,11,11',
- [7]=split'6,6,6,15,6,15,15,15,15,15,15,15,6,15,15',
-}
 function drawactor(_a)
  local _affliccolors=drawactor_affliccolors[_a.afflic]
  if _affliccolors then
@@ -426,7 +448,6 @@ function getpsetfx(_x,_y,_dur,_colors,_vx,_vy,_ax,_ay)
  }
 end
 
-getfirefx_draw_r=split'1,1,1,1,1,2,2,2,2.5,2.5,2.5,2,2,1,1,1,1,1'
 function getfirefx_draw(_fx)
  circfill(_fx.x,_fx.y,getfirefx_draw_r[_fx.durc],drawfx_getfxcolor(_fx))
 end
@@ -441,7 +462,6 @@ function getfirefx(_x,_y)
  }
 end
 
-getlightningstrikefx_colors=split'7,7,10,5'
 function getlightningstrikefx(_x,_y)
  if rnd() > .25 then
   return getpsetfx(_x,_y,14,getlightningstrikefx_colors,0,0,0,-.0375)
@@ -465,7 +485,6 @@ function missile_update(_attack)
  _attack.y+=sin(_attack.a)*_attack.missile_spd
 end
 
-addicewalls_colors=split'6,6,6,6,6,6,13'
 function addicewalls(_isenemy,_lvl,_diam,_origx,_origy)
  sfx(17)
  for _i=1,ceil(_lvl*.5) do
@@ -556,7 +575,6 @@ function addlightningstrike(_actor,_x,_y)
  })
 end
 
-addvenomspikes_colors=split'0,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,0'
 function addvenomspikes(_a,_angle,_lvl,_x,_y)
  sfx(15)
  local _durc=_lvl*20
@@ -645,7 +663,6 @@ function addbruisingswordattack(_actor)
  add(attacks,getswordattack(_actor,1))
 end
 
-addavatarlightningattack_strikesperlevel=split'1,2,3,4,5,6,7,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20'
 function addavatarlightningattack(_level)
  for _fx in all(fxs) do
    if _fx.colors == getlightningstrikefx_colors then
@@ -804,8 +821,7 @@ bowskills={
   local _a=getbowattack(_actor,1,6)
   _a.onmiss=function(_attack)
    deflectattack(
-    _attack.x,
-    _attack.y,
+    _attack.x,_attack.y,
     3+avatar.bowskill_level,
     avatar.bowskill_level*16)
   end
@@ -818,11 +834,12 @@ bowskills={
 
  function(_actor) -- 8 - teleport
   local _a,_onmiss=getbowattack(_actor,1,8)
-  _a.durc=min(_a.durc,_actor.bowskill_level*6)
-  _a.onmiss=function()
-   teleportavatar(_a.x,_a.y)
-   _onmiss(_a)
-  end
+  _a.durc,_a.onmiss=
+   min(_a.durc,_actor.bowskill_level*6),
+   function()
+    teleportavatar(_a.x,_a.y)
+    _onmiss(_a)
+   end
   add(attacks,_a)
  end,
 }
@@ -834,8 +851,7 @@ bowskills={
 function addcastingfx(_colors)
  for _i=-2,1 do
   add(fxs,getpsetfx(
-    avatar.x+_i,
-    avatar.y+1,
+    avatar.x+_i,avatar.y+1,
     12+rnd(8),
     _colors or itemcolors[dget(16)%20],
     0,-.375))
@@ -844,16 +860,12 @@ end
 
 function addcastingmarkerfx()
  add(fxs,getpsetfx(
-  avatar.staffx,
-  avatar.staffy,
+  avatar.staffx,avatar.staffy,
   5,
   itemcolors[dget(16)%20],
   .5-rnd(1),.5-rnd(1)))
 end
 
-staffskills_attackintervals,staffskills_castingmarker=
- split'16,12,2,16,16,16,24,16,16,16,16,16,16,16',
- split'0,1,1,0,1,0,0,1,0,0,0,0,0,0'
 staffskills={
  function (_actor) -- 1 - bruise
   addbruisingswordattack(_actor)
@@ -1579,7 +1591,6 @@ function mapinit()
    onhit=function(_attack)
     sfx(1) -- todo: add better potion sfx
     avatar.hp+=99
-    avatar.afflic=1
     _attack.durc=0
    end,
    draw=function()
@@ -1616,7 +1627,7 @@ function drawinventory()
  for _i=1,16 do
   drawinventoryskills(_i)
  end
- flip()
+ flip() -- todo: does this really fix it?
 end
 
 update60_hurtsfxts,update60_curenemyi,update60_enemyattackts=0,1,0
@@ -2247,7 +2258,6 @@ end
 -->8
 -- system draw
 
-_draw_affliccolors=split'2,12,14,10,3,9'
 function _draw()
  cls()
 
@@ -2377,7 +2387,6 @@ function _draw()
     ?'\f7\#0🅾️✽',_warpstone.x-7,_warpstone.y+6
    end
   end
-
  end
 
 end
