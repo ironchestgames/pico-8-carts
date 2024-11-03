@@ -1600,9 +1600,9 @@ function gameupdate()
   add(enemies,_enemy)
  end
  enemiestoadd={}
- local _spawninterval=max(0.75,6*lockedpercentage)
+ local _spawninterval=max(1,10*lockedpercentage)
  if escapeelapsed then
-  _spawninterval=max(0.5,2*lockedpercentage)
+  _spawninterval=max(0.75,5*lockedpercentage)
  end
  local gamestartdone=issuperboss or boss and t()-gamestartts > 1.25 or true
  if gamestartdone and
