@@ -8,15 +8,19 @@ __lua__
 
 todo:
 
- - structure warping for token hunt
-
- - add deflect attack for skeleton queen
+ - add warpstone navigation icons
 
  - add resetting menu on house? or add companion app to handle characters?
+
+ - remove revive skill
+
+ - add deflect attack for skeleton queen
 
  - change the evils fireballs to be venomfireballs!
 
  - change the evils staff to blink in attack colors
+
+ - add fire-lightnings for when standing still too long
 
 --]]
 
@@ -76,10 +80,10 @@ known bugs:
 
 -- misc setup
 
--- printh('debug started','debug',true)
--- function debug(s)
---  printh(tostr(s),'debug',false)
--- end
+printh('debug started','debug',true)
+function debug(s)
+ printh(tostr(s),'debug',false)
+end
 
 -- _decisiondebug_laststr=''
 -- function decisiondebug(_str)
@@ -93,7 +97,9 @@ known bugs:
 -- cartdata'ironchestgames_vvoe2_v1_dev3' -- fire staff, tele-bow, sneak, potions
 -- cartdata'ironchestgames_vvoe2_v1_dev4' -- deflect sword, poison bow, sword mastery, haste
 -- cartdata'ironchestgames_vvoe2_v1_dev6' -- poison bow + arrow bounce, telestaff, firesword
-cartdata'ironchestgames_vvoe2_v1_dev7'
+-- cartdata'ironchestgames_vvoe2_v1_dev7' -- tele-sword + mastery, deflect bow, ice staff
+-- cartdata'ironchestgames_vvoe2_v1_dev8' -- poison sword + 8 mastery, tele-bow + bounce, 13 (!) sneak
+cartdata'ironchestgames_vvoe2_v1_dev9'
 
 -- debug: reset
 -- for _i=1,16 do -- inventory
@@ -1513,47 +1519,15 @@ function mapinit()
   end
  end
 
- -- add warpstones
- function _getwarpstone(_world,_wx,_wy)
-  local _x,_y=_wx*8,_wy*8
-  return {
-   x=_x+4,y=_y+4,
-   s=208+_world,
-   isopen=(_world-1)*3 < dget(21)+1,
-   hw=8,hh=8,
-   wx=_wx,wy=_wy,
-   handlewarp=function(_warpstone)
-    -- left, back home
-    if btnp(0) and level ~= 0 then
-     level=0
-     mapinit()
-
-    -- right, next level
-    elseif btnp(1) and (level == 0 or level%3 ~= 0) then
-     if level == 0 then
-      level=(_world-1)*3+1
-     else
-      level+=1
-     end
-     mapinit()
-    end
-   end,
-  }
- end
-
- if level == 0 then
-  warpstones={}
-  for _i=1,5 do
-   add(warpstones,_getwarpstone(_i,getrandomnonwall()))
-  end
- else
-  warpstones={_getwarpstone(getworld(),curx,cury)}
- end
-
- for _warpstone in all(warpstones) do
-  walls[_warpstone.wy][_warpstone.wx]=_warpstone.s
-  add(actors,_warpstone)
- end
+ -- add warpstone
+ warpstone={
+  x=curx*8+4,y=cury*8+4,
+  s=221,
+  hw=8,hh=8,
+  wx=curx,wy=cury,
+ }
+ walls[cury][curx]=221
+ add(actors,warpstone)
 
  -- populate actors
  add(actors,avatar)
@@ -1575,10 +1549,8 @@ function mapinit()
   walls[avatary][avatarx-1]=230 -- note: house
  end
 
- -- remove warpstones from actors
- for _warpstone in all(warpstones) do
-  del(actors,_warpstone)
- end
+ -- remove warpstone from actors
+ del(actors,warpstone)
 
  avatar.iswarping,avatar.afflic,avatar.hp=true,2,.0125
 
@@ -1672,21 +1644,37 @@ function _update60()
   update60_hurtsfxts=t()
  end
 
- for _warpstone in all(warpstones) do
-  if _warpstone.iswarping then
-   if btnp(4) then
-    _warpstone.iswarping=nil
-   end
-
-   if _warpstone.isopen then
-    _warpstone.handlewarp(_warpstone)
-   end
-   return
-
-  elseif _warpstone.istouching and btnp(4) then
-   _warpstone.iswarping=true
-   return
+ if warpstone.iswarping then
+  walls[warpstone.wy][warpstone.wx]=223
+  if btnp(4) then
+   warpstone.iswarping=nil
   end
+
+  if warpstone.isopen then
+   -- left, back home
+   if btnp(0) and level ~= 0 then
+    level=0
+    mapinit()
+
+   -- right, next level
+   elseif btnp(1) then
+    if level == 0 then
+     level=max(flr(dget(21)/3)*3+1,1)
+    elseif level == 15 then
+     dset(21,0)
+     level=0
+    else
+     dset(21,max(dget(21),level))
+     level+=1
+    end
+    mapinit()
+   end
+  end
+  return
+
+ elseif warpstone.istouching and btnp(4) then
+  warpstone.iswarping=true
+  return
  end
 
  -- player input
@@ -2218,7 +2206,6 @@ function _update60()
   -- spawn items
   if level > 0 and not hasspawneditems then
    hasspawneditems=true
-   dset(21,max(dget(21),level))
 
    sfx(14)
    function getrndskill(_nonepicskills)
@@ -2238,12 +2225,12 @@ function _update60()
    end
   end
 
-  -- update warpstones
-  for _warpstone in all(warpstones) do
-   _warpstone.istouching=nil
-   if _warpstone.isopen and ismiddleinsideaabb(avatar,_warpstone) then
-    _warpstone.istouching=true
-   end
+  -- update warpstone
+  warpstone.istouching=nil
+  warpstone.isopen=true
+  walls[warpstone.wy][warpstone.wx]=222
+  if ismiddleinsideaabb(avatar,warpstone) then
+   warpstone.istouching=true
   end
  end
 
@@ -2270,15 +2257,12 @@ function _draw()
  end
 
  -- draw warpstone menu
- local _warpstonestrs=split'\f3⬅️  \f6➡️,\f3⬅️  \f6➡️,\f3⬅️,\f3⬅️  \f6➡️,\f3⬅️  \f6➡️,\f3⬅️,\f3⬅️  \f6➡️,\f3⬅️  \f6➡️,\f3⬅️,\f3⬅️  \f6➡️,\f3⬅️  \f6➡️,\f3⬅️,\f3⬅️  \f6➡️,\f3⬅️  \f6➡️,\f3⬅️'
- for _warpstone in all(warpstones) do
-  if _warpstone.iswarping then
-   rectfill(_warpstone.x-3,0,_warpstone.x+3,_warpstone.y+4,7)
-   local _str=level == 0 and '    \f6➡️' or _warpstonestrs[level]
-   ?_str,_warpstone.x-11,_warpstone.y
-   spr(222,_warpstone.x-4,_warpstone.y-4)
-   return
-  end
+ if warpstone.iswarping then
+  rectfill(warpstone.x-3,0,warpstone.x+3,warpstone.y+4,7)
+  local _str=level == 0 and '    \f8☉\n    \f8➡️' or '\f3⌂  \f8☉\n\f3⬅️  \f8➡️'
+  ?_str,warpstone.x-11,warpstone.y-6
+  spr(223,warpstone.x-4,warpstone.y-4)
+  return
  end
 
  -- draw player affliction
@@ -2378,16 +2362,13 @@ function _draw()
   pal(0,1,1)
  end
 
- -- draw warpstones
- for _warpstone in all(warpstones) do
-  if hasspawneditems and _warpstone.isopen then
-   if rnd() < .125 then
-    add(fxs,getpsetfx(_warpstone.x-2+rnd(4),_warpstone.y+3-rnd(5),30,split'12,12,3,1',0,0,0,-.0125))
-   end
-   spr(221,_warpstone.x-4,_warpstone.y-4)
-   if _warpstone.istouching then
-    ?'\f7\#0🅾️✽',_warpstone.x-7,_warpstone.y+6
-   end
+ -- draw warpstone
+ if hasspawneditems and warpstone.isopen then
+  if rnd() < .125 then
+   add(fxs,getpsetfx(warpstone.x-2+rnd(4),warpstone.y+3-rnd(5),30,split'12,12,3,1',0,0,0,-.0125))
+  end
+  if warpstone.istouching then
+   ?'\f7\#0🅾️✽',warpstone.x-7,warpstone.y+6
   end
  end
 
@@ -2498,14 +2479,14 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 00000000000000002777cc202eeffe20222272202323232022667220227f92202772222000000000111144101ddddd1011411110110101101511551011155510
 00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110111111101111111011111110
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000000d0000000500000003000000040000000200000006000000000000000000000000000000000000000000000000000000000000777177700000000
-000000000000dd000000550000003300000044000000220000006600000000000000000000000000000000000000000000000000000000000777117700000000
-00000000000d1d000005150000031300000414000002120000061600000000000000000000000000000000000000000000000000000070000771717700000000
-00000000000ddd000005550000033300000444000002220000066600000000000000000000000000000000000000000000000000000000000771117700000000
-0000000000d1dd000051550000313300004144000021220000616600000000000000000000000000000000000000000000000000000700000717117700000000
-0000000000dddd000055550000333300004444000022220000666600000000000000000000000000000000000000000000000000000000000711117700000000
-0000000000dd1dd00055155000331330004414400022122000661660000000000000000000000000000000000000000000000000000070000711711700000000
-0000000000ddddd00055555000333330004444400022222000666660000000000000000000000000000000000000000000000000000000000711111700000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000050000000500007771777
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055000000550007771177
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000515000005750007717177
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000555000005550007711177
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005155000057550007171177
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005555000055550007111177
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005515500055755007117117
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005555500055555007111117
 0000000000000000000000000000000000000000000070000005150006666660000000000000000000000000000000000a000000a0a000000100000000000000
 0000000000000000000000000000000000000000000777000055120066666666000000000e8888000f9999000e88999070700000070000000301001000042000
 00000000000000000000000000011000000000000007717005551110d666666d00000000e8111880f9191990e811919900000000000000000003003000666d00
