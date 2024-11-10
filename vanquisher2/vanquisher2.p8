@@ -1127,7 +1127,7 @@ enemyclasses={
    },
    attack=enemy_rollingattacks,
    attack_colors=split'12,12,12',
-   conf='maxhp=20,hp=20,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1',
+   conf='maxhp=30,hp=30,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1',
   },
 
   { -- bear (stun)
@@ -1151,7 +1151,7 @@ enemyclasses={
   { -- battle troll champion
    attack=enemyattack_stunandknockback,
    ondeath=bossondeath,
-   conf='maxhp=24,hp=24,spd=.5,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,isboss=1,nonknockable=1',
+   conf='maxhp=44,hp=44,spd=.5,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,isboss=1,nonknockable=1',
   },
 
   { -- fireball thrower
@@ -1183,7 +1183,7 @@ enemyclasses={
     venomboltattack,
    },
    attack=enemy_rollingattacks,
-   conf='maxhp=20,hp=20,spd=.375,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1',
+   conf='maxhp=38,hp=38,spd=.375,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1',
   },
 
   { -- ice vulture
@@ -1209,13 +1209,13 @@ enemyclasses={
     },
     skeletonarcher,
    },
-   conf='maxhp=32,hp=32,spd=0,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=0,nonknockable=1',
+   conf='maxhp=34,hp=34,spd=0,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=0,nonknockable=1',
   },
 
   { -- skeleton queen
    bloodcolors=split'7,7,6',
    attack=enemyattack_confusionball,
-   conf='maxhp=20,hp=30,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,isboss=1',
+   conf='maxhp=40,hp=40,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,isboss=1',
   },
 
   { -- venomous bat
@@ -1251,7 +1251,7 @@ enemyclasses={
      conf='maxhp=4,hp=4,spd=.375,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
     },
    },
-   conf='maxhp=42,hp=42,spd=0,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=140,nonknockable=1',
+   conf='maxhp=38,hp=38,spd=0,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=140,nonknockable=1',
   },
 
   { -- the evil
@@ -1274,7 +1274,7 @@ enemyclasses={
     sspr(flr(_a.f-1)*15,72,15,18,_a.x-7.5,_a.y-12,15,18,_a.sflip)
     pal()
    end,
-   conf='maxhp=52,hp=52,spd=.5,range=86,hw=3,hh=4,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,nonknockable=1',
+   conf='maxhp=90,hp=90,spd=.5,range=86,hw=3,hh=4,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,nonknockable=1',
   },
   
   { -- devil confusor
