@@ -8,6 +8,12 @@ __lua__
 
 todo:
 
+ - streamline dset for level completion, only needed after warping from boss levels
+
+ - add staff mastery skill? (casting marker speed?)
+
+ - add storing items at house? (have x-choice on pickup with house icon?)
+
  - add resetting menu on house? or add companion app to handle characters?
 
  - add deflect attack for skeleton queen?
