@@ -53,7 +53,7 @@ cartdata layout:
 15- bow
 16- staff
 
-20 - last boss kills
+20 - stars
 21 - level completion (boss levels only: 3,6,9,12)
 
 button mask:
@@ -101,7 +101,7 @@ cartdata'ironchestgames_vvoe2_v1_dev10'
 -- for _i=1,16 do -- inventory
 --   dset(_i,0)
 -- end
--- dset(20,0) -- evil kills
+-- dset(20,0) -- stars
 -- dset(21,0) -- last level cleared
 
 poke(0x5f5c,-1) -- set auto-repeat delay for btnp to none
@@ -1073,7 +1073,6 @@ function bossondeath(_actor)
 end
 
 function lastbossondeath(_actor)
- dset(20,dget(20)+1)
  bossondeath(_actor)
  sfx(10)
  -- local _sgetystart,_sgetyend,_sgetxstart,_sgetxend=89,72,60,74
@@ -1572,11 +1571,13 @@ end
 
 -- system update
 
+drawinventory_starsposx=split' 3,13, 3,13, 3,13, 3,13, 3,13, 3,13,108,118,108,118,108,118,108,118,108,118,108,118,118,118,118,118,118,118,109,100, 91, 82, 73, 64, 55, 46, 37, 28, 19, 10,  1,  1,  1,  1,  1,  1, 10, 19, 28, 37, 46, 46, 46, 46, 46, 55, 55, 55, 55, 55, 64, 73, 82, 91, 100, 109, 118'
+drawinventory_starsposy=split'44,44,51,51,58,58,65,65,72,72,79,79, 44, 44, 51, 51, 58, 58, 65, 65, 72, 72, 79, 79, 88, 95,102,109,116,123,123,123,123,123,123,123,123,123,123,123,123,123,123,116,109,102, 95, 88, 88, 88, 88, 88, 88, 95,102,109,116,116,109,102, 95, 88, 88, 88, 88, 88,  88,  88,  88'
 function drawinventory()
  cls(0)
  rectfill(0,42,128,85,1)
- for _i=0,dget(20)-1 do
-  spr(170,2+flr(_i/21)*106+_i%3*7,44+flr(_i%21/3)*6)
+ for _i=0,dget(20) do
+  ?'\fe★',drawinventory_starsposx[_i] or 200,drawinventory_starsposy[_i] or 200
  end
  for _i=1,16 do
   drawinventoryskills(_i)
@@ -1641,6 +1642,7 @@ function _update60()
     if level == 0 then
      level=max(flr(dget(21)/3)*3+1,1)
     elseif level == 15 then
+     dset(20,dget(20)+1) -- note: set stars
      dset(21,0)
      level=0
     else
@@ -2218,7 +2220,7 @@ end
 -- boss eye: \^:1c3677361c0000
 -- house: \^:1c3e7f2a3a000000
 
-warpstonenav=split'\f3\^:1c3e7f2a3a000000  \fc\^:6c6c3e1c14000000\n\f3⬅️  \fc➡️,\f3\^:1c3e7f2a3a000000  \fc\^:1c3677361c000000\n\f3⬅️  \fc➡️,\f3\^:1c3e7f2a3a000000  \f9\^:2c2c3e1c14000000\n\f3⬅️  \f9➡️,\f3\^:1c3e7f2a3a000000  \f9\^:2c2c3e1c14000000\n\f3⬅️  \f9➡️,\f3\^:1c3e7f2a3a000000  \f9\^:1c3677361c000000\n\f3⬅️  \f9➡️,\f3\^:1c3e7f2a3a000000  \fb\^:000003423e000000\n\f3⬅️  \fb➡️,\f3\^:1c3e7f2a3a000000  \fb\^:000003423e000000\n\f3⬅️  \fb➡️,\f3\^:1c3e7f2a3a000000  \fb\^:1c3677361c000000\n\f3⬅️  \fb➡️,\f3\^:1c3e7f2a3a000000  \f6\^:1a1a7e7028000000\n\f3⬅️  \f6➡️,\f3\^:1c3e7f2a3a000000  \f6\^:1a1a7e7028000000\n\f3⬅️  \f6➡️,\f3\^:1c3e7f2a3a000000  \f6\^:1c3677361c000000\n\f3⬅️  \f6➡️,\f3\^:1c3e7f2a3a000000  \f8\^:141c5c3e14000000\n\f3⬅️  \f8➡️,\f3\^:1c3e7f2a3a000000  \f8\^:141c5c3e14000000\n\f3⬅️  \f8➡️,\f3\^:1c3e7f2a3a000000  \f8\^:1c3677361c000000\n\f3⬅️  \f8➡️,\f3\^:1c3e7f2a3a000000  \fa\^:1c3e7f2a3a000000\n\f3⬅️  \fa➡️'
+warpstonenav=split'\f3\^:1c3e7f2a3a000000  \fc\^:6c6c3e1c14000000\n\f3⬅️  \fc➡️,\f3\^:1c3e7f2a3a000000  \fc\^:1c3677361c000000\n\f3⬅️  \fc➡️,\f3\^:1c3e7f2a3a000000  \f9\^:2c2c3e1c14000000\n\f3⬅️  \f9➡️,\f3\^:1c3e7f2a3a000000  \f9\^:2c2c3e1c14000000\n\f3⬅️  \f9➡️,\f3\^:1c3e7f2a3a000000  \f9\^:1c3677361c000000\n\f3⬅️  \f9➡️,\f3\^:1c3e7f2a3a000000  \fb\^:000003423e000000\n\f3⬅️  \fb➡️,\f3\^:1c3e7f2a3a000000  \fb\^:000003423e000000\n\f3⬅️  \fb➡️,\f3\^:1c3e7f2a3a000000  \fb\^:1c3677361c000000\n\f3⬅️  \fb➡️,\f3\^:1c3e7f2a3a000000  \f6\^:1a1a7e7028000000\n\f3⬅️  \f6➡️,\f3\^:1c3e7f2a3a000000  \f6\^:1a1a7e7028000000\n\f3⬅️  \f6➡️,\f3\^:1c3e7f2a3a000000  \f6\^:1c3677361c000000\n\f3⬅️  \f6➡️,\f3\^:1c3e7f2a3a000000  \f8\^:141c5c3e14000000\n\f3⬅️  \f8➡️,\f3\^:1c3e7f2a3a000000  \f8\^:141c5c3e14000000\n\f3⬅️  \f8➡️,\f3\^:1c3e7f2a3a000000  \f8\^:1c3677361c000000\n\f3⬅️  \f8➡️,\f3\^:1c3e7f2a3a000000  \fe★\n\f3⬅️  \fa➡️'
 
 function _draw()
  cls()
