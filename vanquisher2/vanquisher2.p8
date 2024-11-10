@@ -10,7 +10,7 @@ todo:
 
  - add resetting menu on house? or add companion app to handle characters?
 
- - add deflect attack for skeleton queen
+ - add deflect attack for skeleton queen?
 
  - add fire-lightnings for when standing still too long
 
@@ -123,7 +123,7 @@ addvenomspikes_colors,
 addavatarlightningattack_strikesperlevel,
 staffskills_attackintervals,
 staffskills_castingmarker,
-_draw_affliccolors=
+draw_affliccolors=
  split'0.5,0,,0.25,0.375,0.125,,0.75,0.625,0.875', -- btnmasktoa
  split',,,,0.375,0.125,,,0.625,0.875', -- diagbtnmasktoa
  split'0,0.5,,0.75,0.875,0.625,,0.25,0.125,0.375', -- confusedbtnmasktoa
@@ -142,7 +142,7 @@ _draw_affliccolors=
  split'1,2,3,4,5,6,7,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20', -- addavatarlightningattack_strikesperlevel
  split'16,12,2,16,16,16,24,16,16,16,16,16,16,16', -- staffskills_attackintervals
  split'0,0,1,0,1,0,0,1,0,0,0,0,0,0', -- staffskills_castingmarker
- split'2,12,14,10,3,9' -- _draw_affliccolors
+ split'2,12,14,10,3,9' -- draw_affliccolors
 
 -- utils
 
@@ -1783,6 +1783,9 @@ function _update60()
      avatar.attack(avatar,_i)
      avatar.x+=cos(avatar.a)*6
      avatar.y+=sin(avatar.a)*6
+     if isinsidewall(avatar) then
+      break
+     end
     end
     avatar.x,avatar.y=_origx,_origy
    end
@@ -2156,7 +2159,7 @@ function _update60()
    sfx(14)
    function getrndskill(_nonepicskills)
     return rnd(rnd() < dget(20)*.0625 and
-     split'22,23,24,25,26,27,28,30,31,32,33,34,35' or _nonepicskills)
+     split'22,23,24,25,26,27,30,31,32,33,34,35' or _nonepicskills)
    end
    local _types,_skills=
     split'6,7,8,9,10,11,12,13,14,14,14,15,15,15,16,16',
@@ -2230,7 +2233,7 @@ function _draw()
  if avatar.hp < avatar.maxhp then
   local _clipsize=127*(avatar.hp/avatar.maxhp)
   local _y=mid(0,avatar.y-_clipsize/2,129-_clipsize)
-  cls(_draw_affliccolors[avatar.afflic] or 1)
+  cls(draw_affliccolors[avatar.afflic] or 1)
   if avatar.hp <= 0 then
    spr(231,mid(0,avatar.x-4,120),mid(0,avatar.y-6,120))
    if deathts and t() > deathts then
