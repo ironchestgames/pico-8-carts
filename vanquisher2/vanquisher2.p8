@@ -8,19 +8,15 @@ __lua__
 
 todo:
 
- - add warpstone navigation icons
-
  - add resetting menu on house? or add companion app to handle characters?
 
- - remove revive skill
-
  - add deflect attack for skeleton queen
+
+ - add fire-lightnings for when standing still too long
 
  - change the evils fireballs to be venomfireballs!
 
  - change the evils staff to blink in attack colors
-
- - add fire-lightnings for when standing still too long
 
 --]]
 
@@ -33,7 +29,6 @@ afflictions:
 4 - stunned
 5 - envenomed
 6 - confused (only player)
-7 - holyburn (only enemies)
 
 epic items start from 20
 
@@ -139,7 +134,6 @@ _draw_affliccolors=
  { -- drawactor_affliccolors
   [2]=split'12,12,12,7,12,7,7,7,7,7,7,7,12,7,7',
   [5]=split'3,3,3,11,3,11,11,11,11,11,11,11,3,11,11',
-  [7]=split'6,6,6,15,6,15,15,15,15,15,15,15,6,15,15',
  },
  split'1,1,1,1,1,2,2,2,2.5,2.5,2.5,2,2,1,1,1,1,1', -- getfirefx_draw_r
  split'7,7,10,5', -- getlightningstrikefx_colors
@@ -147,7 +141,7 @@ _draw_affliccolors=
  split'0,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,0', -- addvenomspikes_colors
  split'1,2,3,4,5,6,7,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20', -- addavatarlightningattack_strikesperlevel
  split'16,12,2,16,16,16,24,16,16,16,16,16,16,16', -- staffskills_attackintervals
- split'0,1,1,0,1,0,0,1,0,0,0,0,0,0', -- staffskills_castingmarker
+ split'0,0,1,0,1,0,0,1,0,0,0,0,0,0', -- staffskills_castingmarker
  split'2,12,14,10,3,9' -- _draw_affliccolors
 
 -- utils
@@ -367,8 +361,8 @@ itemcolors={
  split'7,10,6,13', -- 4 - stun/lightning
  split'10,11,3,2', -- 5 - venom/spikes
  split'7,6,13,2', -- 6 - deflection
- split'7,7,15,9', -- 7 - holy/revive
- split'7,11,12,3', -- 8 - teleportation
+ split'7,11,12,3', -- 7 - teleportation
+ nil,
  nil,
  -- passives
  split'10,9,4,2', -- 10 - haste
@@ -478,11 +472,7 @@ function getlightningstrikefx(_x,_y)
 end
 
 function addteleportfx(_s,_x,_y)
- add(fxs,getfx(_s,_x,_y,10,itemcolors[8]))
-end
-
-function addholyfx(_x,_y)
- add(fxs,getpsetfx(_x,_y,11,itemcolors[7],0,-.0125,0,-.0375))
+ add(fxs,getfx(_s,_x,_y,10,itemcolors[7]))
 end
 
 
@@ -726,12 +716,8 @@ swordskills={
    16)
  end,
 
- function (_actor) -- 7 - holy/revive
-  add(attacks,getswordattack(_actor,7))
- end,
-
- function (_actor) -- 8 - teleport
-  local _a=getswordattack(_actor,8)
+ function (_actor) -- 7 - teleport
+  local _a=getswordattack(_actor,7)
   _a.onhit=function(_attack,_enemy)
    if _actor.skill_hit then
     addteleportfx(155,_actor.x,_actor.y-3)
@@ -837,12 +823,8 @@ bowskills={
   add(attacks,_a)
  end,
 
- function (_actor) -- 7 - holy/revive
-  add(attacks,(getbowattack(_actor,7)))
- end,
-
- function(_actor) -- 8 - teleport
-  local _a,_onmiss=getbowattack(_actor,1,8)
+ function(_actor) -- 7 - teleport
+  local _a,_onmiss=getbowattack(_actor,1,7)
   _a.durc,_a.onmiss=
    min(_a.durc,_actor.bowskill_level*6),
    function()
@@ -913,11 +895,7 @@ staffskills={
   end
  end,
 
- function (_actor) -- 7 - holy/revive
-  add(attacks,getswordattack(_actor,7))
- end,
-
- function (_actor,_released) -- 8 - teleport
+ function (_actor,_released) -- 7 - teleport
   if _released then
    local _x,_y=mid(8,avatar.staffx,120),mid(10,avatar.staffy,120)
    teleportavatar(_x,_y)
@@ -1335,7 +1313,6 @@ recalcskills_passiveaddition=
  split',,,,,,,,,spd,potionlvl,swordmasterylvl,sneaklvl,arrow_bounce,arrow_walltravel',
  split',,,,,,,,,.03125,1,1,3,1,3'
 function recalcskills()
- avatar.reviveitems,
  avatar.swordskill_level,
  avatar.bowskill_level,
  avatar.staffskill_level,
@@ -1345,7 +1322,7 @@ function recalcskills()
  avatar.potionlvl,
  avatar.swordmasterylvl,
  avatar.sneaklvl=
-  {},unpack(split'0,0,0,.5,0,0,0,1,0')
+  unpack(split'0,0,0,.5,0,0,0,1,0')
 
  for _typ=1,16 do
   local _skill=dget(_typ)
@@ -1354,10 +1331,6 @@ function recalcskills()
    if _skillwoepic == dget(_i)%20 then
     avatar[recalcskills_avatarskillprops[_i]]+=_skill_lvl
    end
-  end
-
-  if _skillwoepic == 7 then
-   add(avatar.reviveitems,_typ)
   end
 
   for _i=10,15 do
@@ -1872,8 +1845,7 @@ function _update60()
 
   elseif _enemy.wallcollisiondx == nil and _enemy.canseeavatar and
     (_disttoavatar < _enemy.range*.375 or
-    (_enemy.afflic == 5 and _disttoavatar < 18) or
-    _enemy.afflic == 7) and not _enemy.isboss then
+    (_enemy.afflic == 5 and _disttoavatar < 18)) and not _enemy.isboss then
    -- decisiondebug('run away from avatar')
    _enemy.walking,
    _enemy.targetx,
@@ -2034,13 +2006,6 @@ function _update60()
    else
     _a.hp+=.025
    end
-  elseif _a.afflic == 7 then
-   addholyfx(_a.x-2+rnd(4),_a.y-5+rnd(3))
-   if _dx == 0 and _dy == 0 then
-    _a.hp-=.0125
-   else
-    _a.hp+=.025
-   end
   else -- catch all (other afflictions)
    _a.hp+=.0078
   end
@@ -2175,26 +2140,6 @@ function _update60()
    end
    if _a == avatar then
     _a.hp=0
-    if #_a.reviveitems > 0 then
-     sfx(11)
-     local _reviveitem=_a.reviveitems[1]
-     dset(_reviveitem,max(1,dget(_reviveitem)-20))
-     recalcskills()
-     add(actors,_a)
-     _a.hp=_a.maxhp
-     add(fxs,getfx(137,_a.x,_a.y,240,itemcolors[7],0,-.125))
-     for _i=1,10 do
-      add(attacks,{
-       x=64,y=64,
-       hw=64,hh=64,
-       durc=2,
-       afflic=7,
-       draw=function(_attack)
-        cls(7)
-       end
-      })
-     end
-    end
    end
   elseif _a.isenemy then
    _enemycount+=1
@@ -2215,14 +2160,14 @@ function _update60()
    end
    local _types,_skills=
     split'6,7,8,9,10,11,12,13,14,14,14,15,15,15,16,16',
-    dget(20) > 2 and split'1,2,3,4,5,6,7,8,10,11,12,13,14,15' or
-     split'1,2,3,4,5,6,7,8'
+    dget(20) > 2 and split'1,2,3,4,5,6,7,10,11,12,13,14,15' or
+     split'1,2,3,4,5,6,7'
    addflooritem(rnd(_types),getrndskill(_skills))
    if level%3 == 2 then
     addflooritem(rnd(_types),getrndskill(_skills))
    end
    if level%3 == 0 then
-    addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,8,10,11,12,13,14,15'))
+    addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,10,11,12,13,14,15'))
    end
   end
 
@@ -2487,13 +2432,13 @@ ccd55c00ccd55c0000555000005555cccc555cc0cc555cc0cc55500055cc500000222d0000222d00
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000888e0000888e00000800000008000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000800000008000000088ee
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080800000080000008080000080800
-00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110111111101111111011111110
-000000000000000022272220222e22202ddddd202222222022766220227f92202222772000000000171117101144211011777110111111101711551011155510
-000000000000000022277220222ee22022272220222b222026d117202777f920222b772000000000116446101666dd1011177710111010101161551011155510
-000000000000000022777c2022eee220222aa2202b2b2220261d1620227f922022cbb220000000001119911011ddd110114777101000001011135510131b5710
-000000000000000022777c2022efee20222272202b232b202711d620227f922027cc2220000000001114991016888d1012466610100011101131551011155510
-00000000000000002777cc202eeffe20222272202323232022667220227f92202772222000000000111144101ddddd1011411110110101101511551011155510
-00000000000000002222222022222220222222202222222022222220222222202222222000000000111111101111111011111110111111101111111011111110
+00000000000000002222222022222220222222202222222022222220222222200000000000000000111111101111111011111110111111101111111011111110
+000000000000000022272220222e22202ddddd202222222022766220222277200000000000000000171117101144211011777110111111101711551011155510
+000000000000000022277220222ee22022272220222b222026d11720222b77200000000000000000116446101666dd1011177710111010101161551011155510
+000000000000000022777c2022eee220222aa2202b2b2220261d162022cbb22000000000000000001119911011ddd110114777101000001011135510131b5710
+000000000000000022777c2022efee20222272202b232b202711d62027cc222000000000000000001114991016888d1012466610100011101131551011155510
+00000000000000002777cc202eeffe20222272202323232022667220277222200000000000000000111144101ddddd1011411110110101101511551011155510
+00000000000000002222222022222220222222202222222022222220222222200000000000000000111111101111111011111110111111101111111011111110
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000050000000500007771777
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055000000550007771177
