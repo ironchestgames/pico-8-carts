@@ -612,6 +612,11 @@ function deflectattack(_x,_y,_size,_durc)
      _other.isenemy=nil
     end
    end
+   for _actor in all(actors) do
+    if _actor.isenemy and dist(_fx.x,_fx.y,_actor.x,_actor.y) < _size then
+      _actor.cantmove=true
+    end
+   end
    circ(_fx.x,_fx.y-2,_size,6)
    fillp(rnd(32768))
    circ(_fx.x,_fx.y-2,_size,5)
@@ -1910,6 +1915,11 @@ function _update60()
    _enemy.a+=rnd(.01)-.005
   end
 
+  -- update enemy cant move
+  if _enemy.cantmove then
+    _enemy.walking=nil
+  end
+
   if (_enemy.afflic == 1 or _enemy.afflic == nil) and
    not _enemy.targetx then
    _enemy.spdfactor=.25
@@ -2030,6 +2040,9 @@ function _update60()
   -- move
   _a.x=mid(8,_a.x+_dx,120)
   _a.y=mid(8,_a.y+_dy,120)
+
+  -- update cant move
+  _a.cantmove=nil
 
   -- add avatar seen and bleeding
   if _a.isenemy then
