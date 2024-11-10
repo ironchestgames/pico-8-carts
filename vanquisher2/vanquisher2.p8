@@ -99,7 +99,8 @@ end
 -- cartdata'ironchestgames_vvoe2_v1_dev6' -- poison bow + arrow bounce, telestaff, firesword
 -- cartdata'ironchestgames_vvoe2_v1_dev7' -- tele-sword + mastery, deflect bow, ice staff
 -- cartdata'ironchestgames_vvoe2_v1_dev8' -- poison sword + 8 mastery, tele-bow + bounce, 13 (!) sneak
-cartdata'ironchestgames_vvoe2_v1_dev9'
+-- cartdata'ironchestgames_vvoe2_v1_dev9'
+cartdata'ironchestgames_vvoe2_v1_dev10'
 
 -- debug: reset
 -- for _i=1,16 do -- inventory
@@ -2247,6 +2248,16 @@ end
 -->8
 -- system draw
 
+-- ice orcs: \^:6c6c3e1c14000000
+-- battle trolls: \^:2c2c3e1c14000000
+-- snakes: \^:000003423e000000
+-- skeltons: \^:1a1a7e7028000000
+-- demons: \^:141c5c3e14000000
+-- boss eye: \^:1c3677361c0000
+-- house: \^:1c3e7f2a3a000000
+
+warpstonenav=split'\f3\^:1c3e7f2a3a000000  \fc\^:6c6c3e1c14000000\n\f3⬅️  \fc➡️,\f3\^:1c3e7f2a3a000000  \fc\^:1c3677361c000000\n\f3⬅️  \fc➡️,\f3\^:1c3e7f2a3a000000  \f9\^:2c2c3e1c14000000\n\f3⬅️  \f9➡️,\f3\^:1c3e7f2a3a000000  \f9\^:2c2c3e1c14000000\n\f3⬅️  \f9➡️,\f3\^:1c3e7f2a3a000000  \f9\^:1c3677361c000000\n\f3⬅️  \f9➡️,\f3\^:1c3e7f2a3a000000  \fb\^:000003423e000000\n\f3⬅️  \fb➡️,\f3\^:1c3e7f2a3a000000  \fb\^:000003423e000000\n\f3⬅️  \fb➡️,\f3\^:1c3e7f2a3a000000  \fb\^:1c3677361c000000\n\f3⬅️  \fb➡️,\f3\^:1c3e7f2a3a000000  \f6\^:1a1a7e7028000000\n\f3⬅️  \f6➡️,\f3\^:1c3e7f2a3a000000  \f6\^:1a1a7e7028000000\n\f3⬅️  \f6➡️,\f3\^:1c3e7f2a3a000000  \f6\^:1c3677361c000000\n\f3⬅️  \f6➡️,\f3\^:1c3e7f2a3a000000  \f8\^:141c5c3e14000000\n\f3⬅️  \f8➡️,\f3\^:1c3e7f2a3a000000  \f8\^:141c5c3e14000000\n\f3⬅️  \f8➡️,\f3\^:1c3e7f2a3a000000  \f8\^:1c3677361c000000\n\f3⬅️  \f8➡️,\f3\^:1c3e7f2a3a000000  \fa\^:1c3e7f2a3a000000\n\f3⬅️  \fa➡️'
+
 function _draw()
  cls()
 
@@ -2259,9 +2270,14 @@ function _draw()
  -- draw warpstone menu
  if warpstone.iswarping then
   rectfill(warpstone.x-3,0,warpstone.x+3,warpstone.y+4,7)
-  local _str=level == 0 and '    \f8☉\n    \f8➡️' or '\f3⌂  \f8☉\n\f3⬅️  \f8➡️'
-  ?_str,warpstone.x-11,warpstone.y-6
+  local _str=warpstonenav[level]
+  if level == 0 then
+   pal(3,0)
+   _str=warpstonenav[flr(dget(21)/3)*3] or '\f3\^:1c3e7f2a3a000000  \fc\^:6c6c3e1c14000000\n\f3⬅️  \fc➡️'
+  end
+  ?_str,warpstone.x-11,warpstone.y-8
   spr(223,warpstone.x-4,warpstone.y-4)
+  pal()
   return
  end
 
