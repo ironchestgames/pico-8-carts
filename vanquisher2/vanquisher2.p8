@@ -1537,7 +1537,7 @@ function mapinit()
  for _i=1,avatar.potionlvl do
   local _x,_y=getrandomfloorpos()
   add(attacks,{
-   isenemy=true, -- note: make it collidable w avatar
+   -- isenemy=true, -- note: make it collidable w avatar
    x=_x,y=_y,
    hh=3,hw=3,
    durc=9999,
@@ -1546,7 +1546,8 @@ function mapinit()
     avatar.hp+=99
     _attack.durc=0
    end,
-   draw=function()
+   draw=function(_attack)
+    _attack.isenemy=true
     spr(239,_x-4,_y-4)
    end,
   })
