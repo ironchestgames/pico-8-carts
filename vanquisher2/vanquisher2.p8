@@ -138,10 +138,10 @@ draw_affliccolors=
  split'1,1,1,1,1,2,2,2,2.5,2.5,2.5,2,2,1,1,1,1,1', -- getfirefx_draw_r
  split'7,7,10,5', -- getlightningstrikefx_colors
  split'6,6,6,6,6,6,13', -- addicewalls_colors
- split'0,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,0', -- addvenomspikes_colors
+ split'0,11,11,11,11,11,11,11,11,11,11,11,11,11,11,0', -- addvenomspikes_colors
  split'1,2,3,4,5,6,7,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20', -- addavatarlightningattack_strikesperlevel
  split'16,12,2,16,16,16,24,16,16,16,16,16,16,16', -- staffskills_attackintervals
- split'0,0,1,0,1,0,0,1,0,0,0,0,0,0', -- staffskills_castingmarker
+ split'0,0,1,0,1,0,1,0,0,0,0,0,0,0', -- staffskills_castingmarker
  split'2,12,14,10,3,9' -- draw_affliccolors
 
 -- utils
