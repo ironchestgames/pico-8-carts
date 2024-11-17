@@ -8,13 +8,11 @@ __lua__
 
 todo:
 
- - streamline dset for level completion, only needed after warping from boss levels
+ - tweak boss decision-making
 
  - add staff mastery skill? (casting marker speed?)
 
  - add storing items at house? (have x-choice on pickup with house icon?)
-
- - add resetting menu on house? or add companion app to handle characters?
 
  - add deflect attack for skeleton queen?
 
@@ -103,13 +101,6 @@ end
 -- cartdata'ironchestgames_vvoe2_v1_dev9'
 -- cartdata'ironchestgames_vvoe2_v1_dev10' -- deflect sword + mastery, ice bow, telestaff
 cartdata'ironchestgames_vvoe2_v1_dev11'
-
--- debug: reset
--- for _i=1,16 do -- inventory
---   dset(_i,0)
--- end
--- dset(20,0) -- stars
--- dset(21,0) -- last level cleared
 
 poke(0x5f5c,-1) -- set auto-repeat delay for btnp to none
 poke(0x5f36,0x2) -- allow circ & circfill w even diameter
@@ -1716,13 +1707,15 @@ function _update60()
    -- right, next level
    elseif btnp(1) then
     if level == 0 then
-     level=max(flr(dget(21)/3)*3+1,1)
+     level=max(dget(21)+1,1)
     elseif level == 15 then
      dset(20,dget(20)+1) -- note: set stars
      dset(21,0)
      level=0
     else
-     dset(21,max(dget(21),level))
+     if level%3 == 0 then
+      dset(21,max(dget(21),level))
+     end
      level+=1
     end
     mapinit()
@@ -2299,7 +2292,7 @@ function _draw()
   local _str=warpstonenav[level]
   if level == 0 then
    pal(3,0)
-   _str=warpstonenav[flr(dget(21)/3)*3] or '\f3\^:1c3e7f2a3a000000  \fc\^:6c6c3e1c14000000\n\f3⬅️  \fc➡️'
+   _str=warpstonenav[dget(21)] or '\f3\^:1c3e7f2a3a000000  \fc\^:6c6c3e1c14000000\n\f3⬅️  \fc➡️'
   end
   ?_str,warpstone.x-11,warpstone.y-8
   spr(223,warpstone.x-4,warpstone.y-4)
