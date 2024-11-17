@@ -397,11 +397,11 @@ function addflooritem(_typ,_skill)
    end
    recalcskills()
   end,
-  draw=function(_item)
+  draw=function(_istouching,_item)
    pal(itemcolors[_item.skill%20])
    spr((_item.skill > 20 and 35 or 19)+_item.typ,_item.x-4,_item.y-4)
    pal()
-   if avatar.touchingitem == _item then -- todo: standardise?
+   if _istouching then
     ?'\f1\#0🅾️',_item.x-4,_item.y-10
    end
   end,
@@ -1530,9 +1530,15 @@ function mapinit()
   s=221,
   hw=8,hh=8,
   wx=curx,wy=cury,
+  draw=function(_istouching)
+   if warpstone.isopen and _istouching then
+    ?'\f7\#0🅾️✽',warpstone.x-7,warpstone.y+6
+   end
+  end,
  }
  walls[cury][curx]=221
  add(actors,warpstone) -- note: just to remove walls around it below
+ add(flooritems,warpstone)
 
  -- populate actors
  add(actors,avatar)
@@ -1679,10 +1685,6 @@ function _update60()
    end
   end
   return
-
- elseif warpstone.istouching and btnp(4) then
-  warpstone.iswarping=true
-  return
  end
 
  -- player input
@@ -1702,7 +1704,7 @@ function _update60()
   end
  end
 
- if avatar.touchingitem and btnp(4) then
+ if avatar.touchingitem and avatar.touchingitem.onpress and btnp(4) then
   avatar.touchingitem.onpress(avatar.touchingitem)
   return
  end
@@ -2184,6 +2186,13 @@ function _update60()
  -- when all enemies are dead
  if _enemycount == 0 then
 
+  -- update warpstone
+  warpstone.isopen=true
+  warpstone.onpress=function()
+   warpstone.iswarping=true
+  end
+  walls[warpstone.wy][warpstone.wx]=222
+
   -- spawn items
   if level > 0 and not hasspawneditems then
    hasspawneditems=true
@@ -2204,14 +2213,6 @@ function _update60()
    if level%3 == 0 then
     addflooritem(getworld(),getrndskill(split'2,3,4,5,6,7,10,11,12,13,14,15'))
    end
-  end
-
-  -- update warpstone
-  warpstone.istouching=nil
-  warpstone.isopen=true
-  walls[warpstone.wy][warpstone.wx]=222
-  if ismiddleinsideaabb(avatar,warpstone) then
-   warpstone.istouching=true
   end
  end
 
@@ -2327,9 +2328,7 @@ function _draw()
 
  -- draw flooritems
  for _item in all(flooritems) do
-  if _item.draw then
-   _item.draw(_item)
-  end
+  _item.draw(avatar.touchingitem == _item,_item)
  end
 
  -- draw actors
@@ -2360,9 +2359,6 @@ function _draw()
  if hasspawneditems and warpstone.isopen then
   if rnd() < .125 then
    add(fxs,getpsetfx(warpstone.x-2+rnd(4),warpstone.y+3-rnd(5),30,split'12,12,3,1',0,0,0,-.0125))
-  end
-  if warpstone.istouching then
-   ?'\f7\#0🅾️✽',warpstone.x-7,warpstone.y+6
   end
  end
 
