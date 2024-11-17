@@ -1150,12 +1150,12 @@ enemyclasses={
    },
    attack=enemy_rollingattacks,
    attack_colors=split'12,12,12',
-   conf='maxhp=30,hp=30,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1',
+   conf='maxhp=32,hp=32,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1',
   },
 
   { -- bear (stun)
    attack=enemyattack_stunandknockback,
-   conf='maxhp=16,hp=16,spd=.25,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=24,hp=24,spd=.25,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 
@@ -1174,13 +1174,13 @@ enemyclasses={
   { -- battle troll champion
    attack=enemyattack_stunandknockback,
    ondeath=bossondeath,
-   conf='maxhp=44,hp=44,spd=.5,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,isboss=1,nonknockable=1',
+   conf='maxhp=50,hp=50,spd=.5,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,isboss=1,nonknockable=1',
   },
 
   { -- fireball thrower
    attack=fireballthrow,
    basecolors=split',14', -- note: arrow color
-   conf='maxhp=6,hp=6,spd=.5,range=48,hw=1.5,hh=1.5,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
+   conf='maxhp=8,hp=8,spd=.5,range=48,hw=1.5,hh=1.5,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
   },
  },
 
@@ -1200,8 +1200,8 @@ enemyclasses={
   { -- poison druid
    attacks={
     function(_a)
-     for _i=1,10 do
-      addvenomspikes(_a,nil,5,getrandomfloorpos())
+     for _i=1,10+dget(20) do
+      addvenomspikes(_a,nil,5+dget(20),getrandomfloorpos())
      end
     end,
     venomboltattack,
@@ -1213,7 +1213,7 @@ enemyclasses={
 
   { -- ice vulture
    attack=enemyattack_freeze,
-   conf='maxhp=16,hp=16,spd=.5,range=8,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=20,hp=20,spd=.5,range=8,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 
@@ -1240,12 +1240,12 @@ enemyclasses={
   { -- skeleton queen
    bloodcolors=split'7,7,6',
    attack=enemyattack_confusionball,
-   conf='maxhp=40,hp=40,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,isboss=1',
+   conf='maxhp=50,hp=50,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,isboss=1',
   },
 
   { -- venomous bat
    attack=enemyattack_venomandknockback,
-   conf='maxhp=6,hp=6,spd=.75,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=8,hp=8,spd=.75,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 
@@ -1305,7 +1305,7 @@ enemyclasses={
   { -- devil confusor
    bloodcolors=split'9,9,4',
    attack=enemyattack_confusionball,
-   conf='maxhp=8,hp=8,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=10,hp=10,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 }
