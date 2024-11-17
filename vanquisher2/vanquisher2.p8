@@ -384,6 +384,27 @@ function addflooritem(_typ,_skill)
   hw=3,hh=3,
   typ=_typ,
   skill=_skill,
+  onpress=function(_item)
+   sfx(24)
+   local _tmpskill=dget(_item.typ)
+   dset(_item.typ,_item.skill)
+   _item.skill=_tmpskill
+   if _tmpskill == 0 then
+    del(flooritems,_item)
+   else
+    _item.x+=-.5
+    _item.y+=-.5
+   end
+   recalcskills()
+  end,
+  draw=function(_item)
+   pal(itemcolors[_item.skill%20])
+   spr((_item.skill > 20 and 35 or 19)+_item.typ,_item.x-4,_item.y-4)
+   pal()
+   if avatar.touchingitem == _item then -- todo: standardise?
+    ?'\f1\#0🅾️',_item.x-4,_item.y-10
+   end
+  end,
  }
  _flooritem.x,_flooritem.y=getrandomfloorpos()
  add(flooritems,_flooritem)
@@ -1511,7 +1532,7 @@ function mapinit()
   wx=curx,wy=cury,
  }
  walls[cury][curx]=221
- add(actors,warpstone)
+ add(actors,warpstone) -- note: just to remove walls around it below
 
  -- populate actors
  add(actors,avatar)
@@ -1533,8 +1554,7 @@ function mapinit()
   walls[avatary][avatarx-1]=230 -- note: house
  end
 
- -- remove warpstone from actors
- del(actors,warpstone)
+ del(actors,warpstone) -- note: remove warpstone from actors when walls around it was removed
 
  avatar.iswarping,avatar.afflic,avatar.hp=true,2,.0125
 
@@ -1683,17 +1703,7 @@ function _update60()
  end
 
  if avatar.touchingitem and btnp(4) then
-  sfx(24)
-  local _tmpskill=dget(avatar.touchingitem.typ)
-  dset(avatar.touchingitem.typ,avatar.touchingitem.skill)
-  avatar.touchingitem.skill=_tmpskill
-  if _tmpskill == 0 then
-   del(flooritems,avatar.touchingitem)
-  else
-   avatar.touchingitem.x+=-.5
-   avatar.touchingitem.y+=-.5
-  end
-  recalcskills()
+  avatar.touchingitem.onpress(avatar.touchingitem)
   return
  end
  
@@ -2212,6 +2222,7 @@ function _update60()
    avatar.touchingitem=_item
   end
  end
+
 end
 
 
@@ -2316,11 +2327,8 @@ function _draw()
 
  -- draw flooritems
  for _item in all(flooritems) do
-  pal(itemcolors[_item.skill%20])
-  spr((_item.skill > 20 and 35 or 19)+_item.typ,_item.x-4,_item.y-4)
-  pal()
-  if avatar.touchingitem == _item then
-   ?'\f1\#0🅾️',_item.x-4,_item.y-10
+  if _item.draw then
+   _item.draw(_item)
   end
  end
 
