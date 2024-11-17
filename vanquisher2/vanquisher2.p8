@@ -233,7 +233,7 @@ function detectandresolvehit(_attack,_actor)
   -- resolve
  if _dx != 0 or _dy != 0 then
   sfx(5)
-  _actor.afflic=_attack.afflic
+  _actor.afflic,_actor.cantbeafraid=_attack.afflic
   _actor.hp-=1
 
   if _attack.onhit then
@@ -1150,7 +1150,7 @@ enemyclasses={
    },
    attack=enemy_rollingattacks,
    attack_colors=split'12,12,12',
-   conf='maxhp=32,hp=32,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1',
+   conf='maxhp=32,hp=32,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1',
   },
 
   { -- bear (stun)
@@ -1174,7 +1174,7 @@ enemyclasses={
   { -- battle troll champion
    attack=enemyattack_stunandknockback,
    ondeath=bossondeath,
-   conf='maxhp=50,hp=50,spd=.5,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,isboss=1,nonknockable=1',
+   conf='maxhp=50,hp=50,spd=.5,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,isboss=1,cantbeafraid=1,nonknockable=1',
   },
 
   { -- fireball thrower
@@ -1208,7 +1208,7 @@ enemyclasses={
     venomboltattack,
    },
    attack=enemy_rollingattacks,
-   conf='maxhp=38,hp=38,spd=.375,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1',
+   conf='maxhp=38,hp=38,spd=.375,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1',
   },
 
   { -- ice vulture
@@ -1240,7 +1240,7 @@ enemyclasses={
   { -- skeleton queen
    bloodcolors=split'7,7,6',
    attack=enemyattack_confusionball,
-   conf='maxhp=50,hp=50,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,isboss=1',
+   conf='maxhp=50,hp=50,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,isboss=1,cantbeafraid=1',
   },
 
   { -- venomous bat
@@ -1299,7 +1299,7 @@ enemyclasses={
     sspr(flr(_a.f-1)*15,72,15,18,_a.x-7.5,_a.y-12,15,18,_a.sflip)
     pal()
    end,
-   conf='maxhp=90,hp=90,spd=.5,range=86,hw=3,hh=4,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,nonknockable=1',
+   conf='maxhp=90,hp=90,spd=.5,range=86,hw=3,hh=4,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1,nonknockable=1',
   },
   
   { -- devil confusor
@@ -1875,6 +1875,9 @@ function _update60()
 
   if _enemy.isboss then
    _enemy.afflic=1
+   if _enemy.hp < 20 then
+    _enemy.spdfactor=2
+   end
   end
 
   if _enemy.afflic == 4 then
@@ -1913,13 +1916,15 @@ function _update60()
 
   elseif _enemy.wallcollisiondx == nil and _enemy.canseeavatar and
     (_disttoavatar < _enemy.range*.375 or
-    (_enemy.afflic == 5 and _disttoavatar < 18)) and not _enemy.isboss then
+    (_enemy.afflic == 5 and _disttoavatar < 18)) and not _enemy.cantbeafraid then
    -- decisiondebug('run away from avatar')
    _enemy.walking,
+   _enemy.cantbeafraid,
    _enemy.targetx,
    _enemy.targety,
    _enemy.moving_c=
     true,
+    _enemy.isboss,
     avatar.x,
     avatar.y,
     30
@@ -1933,7 +1938,7 @@ function _update60()
     _enemy.a=atan2(_enemy.targetx-_enemy.x,_enemy.targety-_enemy.y)
 
     if not _enemy.attackstate then
-     _enemy.attackstate,_enemy.attackstate_c='readying',36
+     _enemy.attackstate,_enemy.attackstate_c='readying',_enemy.isboss and 20 or 36
     end
 
     update60_enemyattackts=t()
