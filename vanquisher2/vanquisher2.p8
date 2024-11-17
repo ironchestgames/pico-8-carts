@@ -1200,7 +1200,9 @@ enemyclasses={
   { -- poison druid
    attacks={
     function(_a)
-     addvenomspikes(_a,nil,5,getrandomfloorpos())
+     for _i=1,10 do
+      addvenomspikes(_a,nil,5,getrandomfloorpos())
+     end
     end,
     venomboltattack,
     venomboltattack,
