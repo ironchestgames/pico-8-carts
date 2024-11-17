@@ -101,7 +101,8 @@ end
 -- cartdata'ironchestgames_vvoe2_v1_dev7' -- tele-sword + mastery, deflect bow, ice staff
 -- cartdata'ironchestgames_vvoe2_v1_dev8' -- poison sword + 8 mastery, tele-bow + bounce, 13 (!) sneak
 -- cartdata'ironchestgames_vvoe2_v1_dev9'
-cartdata'ironchestgames_vvoe2_v1_dev10'
+-- cartdata'ironchestgames_vvoe2_v1_dev10' -- deflect sword + mastery, ice bow, telestaff
+cartdata'ironchestgames_vvoe2_v1_dev11'
 
 -- debug: reset
 -- for _i=1,16 do -- inventory
@@ -1320,13 +1321,6 @@ enemyclasses={
 -->8
 -- avatar
 
-if dget(14) == 0 then -- note: first session
- for _i=14,16 do
-  dset(_i,1) -- note: set mundane items (sword,bow,staff)
- end
- dset(6,1) -- note: ...and shield
-end
-
 -- prep passive skills w mundane attacks
 for _i=10,#itemcolors do
  swordskills[_i],
@@ -1344,6 +1338,12 @@ recalcskills_passiveaddition=
  split',,,,,,,,,spd,potionlvl,swordmasterylvl,sneaklvl,arrow_bounce,arrow_walltravel',
  split',,,,,,,,,.03125,1,1,3,1,3'
 function recalcskills()
+ if dget(14) == 0 then -- note: first session / just deleted character
+  for _i=1,4 do
+   dset(split'14,15,16,6'[_i],1) -- note: set mundane items (sword,bow,staff,shield)
+  end
+ end
+
  avatar.swordskill_level,
  avatar.bowskill_level,
  avatar.staffskill_level,
@@ -1557,7 +1557,20 @@ function mapinit()
 
  -- add house
  if level == 0 then
-  walls[avatary][avatarx-1]=230 -- note: house
+  local _housex=avatarx-1
+  walls[avatary][_housex]=230
+  add(flooritems,{
+   x=_housex*8+4,y=avatary*8+4,
+   hw=8,hh=8,
+   onpress=function()
+    insidehouse=true
+   end,
+   draw=function(_istouching,_item)
+    if _istouching then
+     ?'\f2\#0🅾️웃',_item.x-7,_item.y+6
+    end
+   end,
+  })
  end
 
  del(actors,warpstone) -- note: remove warpstone from actors when walls around it was removed
@@ -1607,12 +1620,20 @@ drawinventory_starsposx=split' 3,13, 3,13, 3,13, 3,13, 3,13, 3,13,108,118,108,11
 drawinventory_starsposy=split'44,44,51,51,58,58,65,65,72,72,79,79, 44, 44, 51, 51, 58, 58, 65, 65, 72, 72, 79, 79, 88, 95,102,109,116,123,123,123,123,123,123,123,123,123,123,123,123,123,123,116,109,102, 95, 88, 88, 88, 88, 88, 88, 95,102,109,116,116,109,102, 95, 88, 88, 88, 88, 88,  88,  88,  88'
 function drawinventory()
  cls(0)
- rectfill(0,42,128,85,1)
+ rectfill(unpack(split'0,42,128,85,1'))
  for _i=0,dget(20) do
   ?'\fe★',drawinventory_starsposx[_i] or 200,drawinventory_starsposy[_i] or 200
  end
  for _i=1,16 do
   drawinventoryskills(_i)
+ end
+ if insidehouse then
+  rectfill(unpack(split'29,45,97,82,0'))
+  local _avatarx,_avatary=avatar.x,avatar.y
+  avatar.x,avatar.y=63,53
+  avatar.draw(avatar)
+  avatar.x,avatar.y=_avatarx,_avatary
+  ?'\f2⬅️            ➡️\n\n\n    \f8❎🅾️ \^:110a040a11000000\n    \f2  🅾️ \^:0e1f1d1f1f000000',32,49
  end
  flip() -- todo: does this really fix it?
 end
@@ -1641,6 +1662,29 @@ function _update60()
    deathts=t()+2
   end
   return -- dead
+ end
+
+ -- inside house
+ if insidehouse then
+  if btnp(0) or btnp(1) then
+   sfx(28)
+   -- todo: token hunt
+   for _i=1,21 do
+    local _char1val,_char2val=dget(_i),dget(_i+21)
+    dset(_i,_char2val)
+    dset(_i+21,_char1val)
+   end
+   recalcskills()
+  elseif btn(5) and btnp(4) then
+   -- todo: token hunt
+   for _i=1,21 do
+    dset(_i,0)
+   end
+   recalcskills()
+  elseif btnp(4) then
+   insidehouse=nil
+  end
+  return
  end
 
  -- warping
@@ -2244,7 +2288,7 @@ function _draw()
  cls()
 
  -- draw inventory
- if btn(6) then
+ if btn(6) or insidehouse then
   drawinventory()
   return
  end
@@ -2650,7 +2694,7 @@ __sfx__
 000100003c11000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
 000a00001d4111d4151f4141840424400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000000000000
 b82400001f62412615006000060000600006000060000600006000060000600006000060000600006000060000600006000060000600006000060000600006000060000600006000060000600006000060000600
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000300002d01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
