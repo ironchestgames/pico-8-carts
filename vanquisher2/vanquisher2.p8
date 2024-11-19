@@ -1172,9 +1172,15 @@ enemyclasses={
   },
 
   { -- battle troll champion
-   attack=enemyattack_stunandknockback,
+   attacks={
+    enemyattack_stunandknockback,
+    enemyattack_stunandknockback,
+    enemyattack_stunandknockback,
+    enemy_lightningstrikeattack,
+   },
+   attack=enemy_rollingattacks,
    ondeath=bossondeath,
-   conf='maxhp=50,hp=50,spd=.5,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,isboss=1,cantbeafraid=1,nonknockable=1',
+   conf='maxhp=50,hp=50,spd=.5,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1,nonknockable=1',
   },
 
   { -- fireball thrower
@@ -1199,13 +1205,13 @@ enemyclasses={
 
   { -- poison druid
    attacks={
+    venomboltattack,
+    venomboltattack,
     function(_a)
      for _i=1,10+dget(20) do
       addvenomspikes(_a,nil,5+dget(20),getrandomfloorpos())
      end
     end,
-    venomboltattack,
-    venomboltattack,
    },
    attack=enemy_rollingattacks,
    conf='maxhp=38,hp=38,spd=.375,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1',
@@ -1239,8 +1245,16 @@ enemyclasses={
 
   { -- skeleton queen
    bloodcolors=split'7,7,6',
-   attack=enemyattack_confusionball,
-   conf='maxhp=50,hp=50,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,isboss=1,cantbeafraid=1',
+   attacks={
+    enemyattack_confusionball,
+    enemyattack_confusionball,
+    function(_actor)
+     sfx(23)
+     addenemy(_actor.x,_actor.y,skeletonarcher)
+    end,
+   },
+   attack=enemy_rollingattacks,
+   conf='maxhp=50,hp=50,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1',
   },
 
   { -- venomous bat
@@ -1284,12 +1298,10 @@ enemyclasses={
    ondeath=lastbossondeath,
    attacks={
     fireboltattack,
+    fireboltattack,
     iceboltattack,
-    fireboltattack,
     venomboltattack,
-    fireboltattack,
     enemy_lightningstrikeattack,
-    fireboltattack,
     lastboss_teleport,
    },
    attack=enemy_rollingattacks,
