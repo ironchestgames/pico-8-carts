@@ -1878,7 +1878,7 @@ function _update60()
    if _enemy.hp < 20 then
     _enemy.spdfactor=2
    end
-   if rnd() < .05 then
+   if avatar.isseen and rnd() < .05 then
      _enemy.attackstate,_enemy.attackstate_c,_enemy.cur_attack='readying',36,1
    end
   end
