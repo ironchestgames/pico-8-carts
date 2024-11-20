@@ -8,8 +8,6 @@ __lua__
 
 todo:
 
- - tweak boss decision-making
-
  - fix knockback into walls? to remove invertknock from spikes?
 
  - add storing items at house? (have x-choice on pickup with house icon?)
@@ -1134,11 +1132,11 @@ enemyclasses={
   { -- ice orc caster
    attack=iceboltattack,
    attacks={
-    iceboltattack,
-    iceboltattack,
     function (_actor)
      addicewalls(true,12+dget(20),120,64,64)
     end,
+    iceboltattack,
+    iceboltattack,
    },
    attack=enemy_rollingattacks,
    attack_colors=split'12,12,12',
@@ -1165,10 +1163,9 @@ enemyclasses={
 
   { -- battle troll champion
    attacks={
-    enemyattack_stunandknockback,
-    enemyattack_stunandknockback,
-    enemyattack_stunandknockback,
     enemy_lightningstrikeattack,
+    enemyattack_stunandknockback,
+    enemyattack_stunandknockback,
    },
    attack=enemy_rollingattacks,
    ondeath=bossondeath,
@@ -1197,13 +1194,13 @@ enemyclasses={
 
   { -- poison druid
    attacks={
-    venomboltattack,
-    venomboltattack,
     function(_a)
      for _i=1,10+dget(20) do
       addvenomspikes(_a,nil,5+dget(20),getrandomfloorpos())
      end
     end,
+    venomboltattack,
+    venomboltattack,
    },
    attack=enemy_rollingattacks,
    conf='maxhp=38,hp=38,spd=.375,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1',
@@ -1238,12 +1235,12 @@ enemyclasses={
   { -- skeleton queen
    bloodcolors=split'7,7,6',
    attacks={
-    enemyattack_confusionball,
-    enemyattack_confusionball,
     function(_actor)
      sfx(23)
      addenemy(_actor.x,_actor.y,skeletonarcher)
     end,
+    enemyattack_confusionball,
+    enemyattack_confusionball,
    },
    attack=enemy_rollingattacks,
    conf='maxhp=50,hp=50,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1',
@@ -1289,15 +1286,14 @@ enemyclasses={
    bloodcolors=split'9,9,4',
    ondeath=lastbossondeath,
    attacks={
-    fireboltattack,
-    fireboltattack,
-    iceboltattack,
-    venomboltattack,
     enemy_lightningstrikeattack,
+    venomboltattack,
+    iceboltattack,
+    fireboltattack,
     lastboss_teleport,
    },
    attack=enemy_rollingattacks,
-   attack_colors=split'8,12,8,11,8,10,8,7',
+   attack_colors=split'10,11,12,8,7',
    draw=function(_a)
     pal(8,_a.attack_colors[_a.cur_attack])
     sspr(flr(_a.f-1)*15,72,15,18,_a.x-7.5,_a.y-12,15,18,_a.sflip)
@@ -1865,7 +1861,7 @@ function _update60()
   end
  end
 
- -- enemy decision-making
+ -- update enemy decision-making
  update60_curenemyi+=1
  if update60_curenemyi > #actors then
   update60_curenemyi=1
@@ -1881,6 +1877,9 @@ function _update60()
    _enemy.afflic=1
    if _enemy.hp < 20 then
     _enemy.spdfactor=2
+   end
+   if rnd() < .05 then
+     _enemy.attackstate,_enemy.attackstate_c,_enemy.cur_attack='readying',36,1
    end
   end
 
