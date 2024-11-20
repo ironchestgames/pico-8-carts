@@ -10,7 +10,7 @@ todo:
 
  - tweak boss decision-making
 
- - add staff mastery skill? (casting marker speed?)
+ - fix knockback into walls? to remove invertknock from spikes?
 
  - add storing items at house? (have x-choice on pickup with house icon?)
 
@@ -92,14 +92,6 @@ end
 --  end
 -- end
 
--- cartdata'ironchestgames_vvoe2_v1_otto2'
--- cartdata'ironchestgames_vvoe2_v1_dev3' -- fire staff, tele-bow, sneak, potions
--- cartdata'ironchestgames_vvoe2_v1_dev4' -- deflect sword, poison bow, sword mastery, haste
--- cartdata'ironchestgames_vvoe2_v1_dev6' -- poison bow + arrow bounce, telestaff, firesword
--- cartdata'ironchestgames_vvoe2_v1_dev7' -- tele-sword + mastery, deflect bow, ice staff
--- cartdata'ironchestgames_vvoe2_v1_dev8' -- poison sword + 8 mastery, tele-bow + bounce, 13 (!) sneak
--- cartdata'ironchestgames_vvoe2_v1_dev9'
--- cartdata'ironchestgames_vvoe2_v1_dev10' -- deflect sword + mastery, ice bow, telestaff
 cartdata'ironchestgames_vvoe2_v1_dev11'
 
 poke(0x5f5c,-1) -- set auto-repeat delay for btnp to none
