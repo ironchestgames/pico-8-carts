@@ -1276,7 +1276,7 @@ function layerupdate(_e)
   _e.spdx,_e.spdy=0,0
   if t()-_e.ts > 1.75 and not _e.icec then
    enemyweapons[_e.primary](_e)
-   _e.ts,_e.duration,_e.target=t(),1+rnd(2),{x=4+rnd(128),y=rnd(116)}
+   _e.ts,_e.duration,_e.target=t(),1+rnd(2),{x=-16+rnd(160),y=rnd(116)}
    local _a=atan2(_e.target.x-_e.x,_e.target.y-_e.y)
    _e.spdx,_e.spdy=cos(_a)*0.75,sin(_a)*0.75
   end
