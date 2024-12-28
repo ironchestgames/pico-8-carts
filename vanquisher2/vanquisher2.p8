@@ -1633,6 +1633,7 @@ end
 
 update60_curenemyi,update60_enemyattackts=1,0
 function _update60()
+ avatar.isseen=avatar.sneaklvl == 0 -- note: needs to be here for drawinventory
 
  -- draw inventory
  if btn(6) then
@@ -1990,7 +1991,6 @@ function _update60()
  end
 
  -- update actors
- avatar.isseen=avatar.sneaklvl == 0
  for _a in all(actors) do
   _a.a%=1 -- note: normalise angle
 
