@@ -1631,7 +1631,7 @@ function drawinventory()
  flip() -- todo: does this really fix it?
 end
 
-update60_hurtsfxts,update60_curenemyi,update60_enemyattackts=0,1,0
+update60_curenemyi,update60_enemyattackts=1,0
 function _update60()
 
  -- draw inventory
@@ -1687,11 +1687,6 @@ function _update60()
    avatar.iswarping,avatar.afflic=nil
   end
   return
- end
-
- if avatar.hp < avatar.maxhp and avatar.hp*.25 < t()-update60_hurtsfxts then
-  sfx(1)
-  update60_hurtsfxts=t()
  end
 
  if warpstone.iswarping then
