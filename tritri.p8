@@ -21,7 +21,7 @@ function getpxcolor(_px)
  return _px.colors[flr(#_px.colors*((_px.dur-_px.durc)/_px.dur))+1]
 end
 
-pxcolors={7,7,10,13}
+pxcolors={7,10,7,6,10,6,13}
 
 blocktypes={
  {{x=0,y=0,c=8},{x=1,y=0,c=8},{x=0,y=1,c=8}},
@@ -30,10 +30,6 @@ blocktypes={
  {{x=1,y=0,c=9},{x=0,y=1,c=9},{x=1,y=1,c=9}},
 }
 
-blocks=nil
-comingblocks=nil
-rowcount=18
-fallingblockxoff=0
 
 function getnewblocks()
  local _newblocks=clone(rnd(blocktypes))
@@ -43,7 +39,11 @@ function getnewblocks()
  return _newblocks
 end
 
-function _init()
+function resetgame()
+ rowcount=23
+ blinkrow={}
+ frame=0
+ isgameover=nil
  blocks={}
  pxs={}
  rowscore=0
@@ -58,6 +58,8 @@ function _init()
   end
  end
 end
+
+_init=resetgame
 
 function getminy()
  local _miny=rowcount
@@ -84,7 +86,12 @@ end
 
 function _update60()
 
+ frame+=1
+
  if isgameover then
+  if btnp(5) then
+   resetgame()
+  end
   return
  end
 
@@ -99,7 +106,7 @@ function _update60()
   _keypressed,fallingblockxoff=true,2
  end
 
- if btnp(4) and skipcountdown <= 0 then
+ if btnp(2) and skipcountdown <= 0 then
   comingblocks[1],comingblocks[2]=comingblocks[2],comingblocks[1]
   skipcountdown=2
  end
@@ -139,6 +146,8 @@ function _update60()
 
     for _b in all(blockrow) do
      del(blocks,_b)
+     _b.durc=2
+     add(blinkrow,_b)
     end
 
     _pxs={}
@@ -147,8 +156,8 @@ function _update60()
      add(_pxs,{
       x=96,
       y=22+_y*6,
-      dur=25,
-      durc=25,
+      dur=20,
+      durc=20,
       vx=3-rnd(6),
       vy=0,
       colors=pxcolors,
@@ -190,6 +199,14 @@ function _update60()
   end
  end
 
+ -- update blinkrow
+ for _b in all(blinkrow) do
+  _b.durc-=1
+  if _b.durc <= 0 then
+   del(blinkrow,_b)
+  end
+ end
+
  if dget(63) < rowscore then
   dset(63,rowscore)
  end
@@ -199,24 +216,34 @@ function _draw()
  cls()
 
  local _miny=getminy()
+ local _blinkcolor=band(frame,16) != 0 and 7 or 14
 
  rectfill(84,16,84+23,123,5)
-
+ 
  for _i=1,skipcountdown do
   circfill(10+_i*8,18,3,10)
  end
 
- local _blocksize=6
+ local _blocksize=4
  for _b in all(blocks) do
   local _screenx,_screeny=84+_b.x*_blocksize,16+_b.y*_blocksize
-  rectfill(_screenx,_screeny,_screenx+_blocksize-1,_screeny+_blocksize-1,_b.outofbounds and 7 or _b.c)
+  rectfill(_screenx,_screeny,_screenx+_blocksize-1,_screeny+_blocksize-1,_b.outofbounds and _blinkcolor or _b.c)
+ end
+
+ function drawcomingblocks(_x,_y,_blocks)
+  for _b in all(_blocks) do
+   local _bx,_by=_x+_b.x*_blocksize,_y+_b.y*_blocksize
+   rectfill(_bx,_by,_bx+_blocksize-1,_by+_blocksize-1,_b.c)
+  end
  end
  
  for _i,_blocks in ipairs(comingblocks) do
-  for _b in all(_blocks) do
-   local _screenx,_screeny=80+_i*-24+_b.x*_blocksize,8+_b.y*_blocksize+_miny*6
-   rectfill(_screenx,_screeny,_screenx+_blocksize-1,_screeny+_blocksize-1,_b.c)
-  end
+  drawcomingblocks(90+_i*-34,8+_miny*6,_blocks)
+ end
+
+ for _b in all(blinkrow) do
+  local _screenx,_screeny=84+_b.x*_blocksize,16+_b.y*_blocksize
+  rectfill(_screenx,_screeny,_screenx+_blocksize-1,_screeny+_blocksize-1,7)
  end
 
  for _p in all(pxs) do
@@ -226,7 +253,7 @@ function _draw()
  ?dget(63)..'\n'..rowscore,1,1,10
 
  if isgameover then
-  ?'game over',48,64,7
+  ?'  game over\n❎ to restart',30,64,_blinkcolor
  end
 end
 
