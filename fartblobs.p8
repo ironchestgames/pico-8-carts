@@ -50,8 +50,6 @@ function getinterpolatedvalue(_t,_dur,_durc)
  return _t[flr(#_t*((_dur-_durc)/_dur))+1]
 end
 
-stufftypes={32,33,34,35,36,37}
-
 function addheart(_x,_y)
  sfx(rnd{1,2})
  add(hearts,{
@@ -109,7 +107,7 @@ function friendupdate(_f)
   for _stuff in all(stuffs) do
    if dist(_f.x,_f.y,_stuff.x,_stuff.y) < 10 then
     del(stuffs,_stuff)
-    if _stuff.s == _f.want and _stuff.playercolor == _f.wantplayercolor then
+    if _stuff.typ == _f.want and _stuff.playercolor == _f.wantplayercolor then
      _f.feeling=0
      _f.spd*=4
      addheart(_f.x,_f.y)
@@ -127,6 +125,8 @@ function friendupdate(_f)
   end
  end
 end
+
+stufftypes={1,2,3,4,5,6}
 
 function updatestuff(_stuff)
  if _stuff.isdropping then
@@ -175,7 +175,7 @@ function updatestuff(_stuff)
     for _s in all(trashed) do
      del(_stufftypes,_s.s)
     end
-    addstuff(rnd(_stufftypes) or 39,_stuff.x)
+    addstuff(rnd(_stufftypes),_stuff.x)
     trashed={}
     for _i=0,15 do
      local _dur=40+rnd(35)
@@ -198,8 +198,9 @@ function updatestuff(_stuff)
  end
 end
 
+drawstuff_typetosprite={32,33,34,35,36,37}
 function drawstuff(_stuff)
- spr(_stuff.s+_stuff.playercolor*16,_stuff.isdropping and _stuff.droppingx or _stuff.x,_stuff.isdropping and _stuff.droppingy or _stuff.y)
+ spr(drawstuff_typetosprite[_stuff.typ]+_stuff.playercolor*16,_stuff.isdropping and _stuff.droppingx or _stuff.x,_stuff.isdropping and _stuff.droppingy or _stuff.y)
 end
 
 function isxyfreefromfriends(_x,_y)
@@ -223,8 +224,8 @@ function addstuff(_type,_droppingx)
   droppingvy=0,
   droppingx=_droppingx or _x,droppingy=-12,
   vx=0,vy=0,
-  s=_type,
-  playercolor=stufftypeplayerdefault[_type-31],
+  typ=_type,
+  playercolor=stufftypeplayerdefault[_type],
   update=updatestuff,
   draw=drawstuff,
  })
@@ -357,21 +358,22 @@ function blobupdate(_blob)
  _blob.spd=max(1,_blob.spd*.98)
 
  if _blob.spitc <= 0 and _blob.poopc <= 0 then
-  if btnp(0,_blob.player) then
+  if btn(0,_blob.player) then
    _blob.vx=-_blob.spd
    _blob.flip=nil
   end
-  if btnp(1,_blob.player) then
+  if btn(1,_blob.player) then
    _blob.vx=_blob.spd
    _blob.flip=true
   end
-  if btnp(2,_blob.player) then
+  if btn(2,_blob.player) then
    _blob.vy=-_blob.spd
    _blob.lookingup=true
-  end
-  if btnp(3,_blob.player) then
-   _blob.vy=_blob.spd
+  else
    _blob.lookingup=nil
+  end
+  if btn(3,_blob.player) then
+   _blob.vy=_blob.spd
   end
  end
 
@@ -382,6 +384,12 @@ function blobupdate(_blob)
  _blob.y=mid(8,_blob.y,128)
 end
 
+blobcolors={
+ {14,2},
+ {12,5},
+ {9,2},
+ {11,3},
+}
 function blobdraw(_b)
  local _y=_b.y
  local _lookingupoffset=(_b.lookingup and 1 or 0)
@@ -401,7 +409,12 @@ function blobdraw(_b)
    _blobsprite=123
   end
  end
- spr(_blobsprite+_b.player*16,_b.x,_y,1,1,_b.flip)
+ local _colors=blobcolors[_b.player+1]
+ pal(14,_colors[1])
+ pal(2,_colors[2])
+ spr(_blobsprite,_b.x,_y,1,1,_b.flip)
+ pal(14,14)
+ pal(2,2)
 end
 
 blobstartingposy={80,40,60,100}
@@ -468,7 +481,7 @@ function playerselectinit()
    feeling=1,
    blechc=0,
    want=_wanttype,
-   wantplayercolor=stufftypeplayerdefault[_wanttype-31],
+   wantplayercolor=stufftypeplayerdefault[_wanttype],
    update=friendupdate,
    draw=_friendsdraw,
   })
@@ -538,10 +551,10 @@ function gameinit()
 end
 
 wantplayercolors={
- split'0,0,1,1,1',
- split'0,0,0,1,1,2,2',
- split'0,0,0,1,1,2,2,3,3',
- split'0,0,0,0,1,1,2,2,3,3,4,4',
+ split'0,0',
+ split'0,0,0',
+ split'0,0,0',
+ split'0,0,0,0',
 }
 
 function gameupdate()
@@ -569,9 +582,14 @@ function gameupdate()
   local _a=atan2(128,_y)
   local _i=rnd{1,2,3,4}
   local _wantstufftype=rnd(stufftypes)
-  local _wantplayercolor=rnd(wantplayercolors[#blobs])
+  local _wantplayercolors=clone(wantplayercolors[#blobs])
+  for _b in all(blobs) do
+   add(_wantplayercolors,_b.player+1)
+   add(_wantplayercolors,_b.player+1)
+  end
+  local _wantplayercolor=rnd(_wantplayercolors)
   if _wantplayercolor == 0 then
-   _wantplayercolor=stufftypeplayerdefault[_wantstufftype-31]
+   _wantplayercolor=stufftypeplayerdefault[_wantstufftype]
   end
 
   add(friends,{
@@ -640,7 +658,7 @@ function gamedraw()
   if _f.wantplayercolor == -1 then
    spr(252+flr(t())%4,_f.x,_f.y-10)
   elseif _f.x > 16 and _f.feeling ~= 0 and _f.feeling ~= 5 then
-   spr(_f.want+8+_f.wantplayercolor*16,_f.x,_f.y-10)
+   spr(31+_f.want+8+_f.wantplayercolor*16,_f.x,_f.y-10)
   end
  end
 
