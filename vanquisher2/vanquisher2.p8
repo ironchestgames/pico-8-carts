@@ -1096,7 +1096,7 @@ skeletonarcher={
  bloodcolors=split'7,7,6',
  basecolors=split',4', -- note: arrow color
  attack=addbruisingbowattack,
- conf='maxhp=6,hp=6,spd=.375,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
+ conf='maxhp=4,hp=4,spd=.375,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
 }
 
 enemyclasses={
@@ -1105,12 +1105,12 @@ enemyclasses={
  {
   { -- ice orc stonethrower
    attack=stonethrow,
-   conf='maxhp=12,hp=12,spd=.375,range=58,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=1,bow_c=999',
+   conf='maxhp=10,hp=10,spd=.375,range=58,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=1,bow_c=999',
   },
 
   { -- big ice orc
    attack=enemyattack_freeze,
-   conf='maxhp=16,hp=16,spd=.25,range=8,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=14,hp=14,spd=.25,range=8,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- ice orc caster
@@ -1137,12 +1137,12 @@ enemyclasses={
  {
   { -- troll w club
    attack=enemyattack_stunandknockback,
-   conf='maxhp=10,hp=10,spd=.375,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=8,hp=8,spd=.375,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- troll stonethrower (stun)
    attack=stonethrow,
-   conf='maxhp=10,hp=10,spd=.25,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=4,bow_c=999',
+   conf='maxhp=8,hp=8,spd=.25,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=4,bow_c=999',
   },
 
   { -- battle troll champion
@@ -1153,13 +1153,13 @@ enemyclasses={
    },
    attack=enemy_rollingattacks,
    ondeath=bossondeath,
-   conf='maxhp=50,hp=50,spd=.5,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1,nonknockable=1',
+   conf='maxhp=42,hp=42,spd=.5,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1,nonknockable=1',
   },
 
   { -- fireball thrower
    attack=fireballthrow,
    basecolors=split',14', -- note: arrow color
-   conf='maxhp=8,hp=8,spd=.5,range=48,hw=1.5,hh=1.5,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
+   conf='maxhp=6,hp=6,spd=.5,range=48,hw=1.5,hh=1.5,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
   },
  },
 
@@ -1173,7 +1173,7 @@ enemyclasses={
 
   { -- venomspike-tailed lizard
    attack=enemyattack_venomandknockback,
-   conf='maxhp=16,hp=16,spd=.375,range=8,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=14,hp=14,spd=.375,range=8,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- poison druid
@@ -1192,7 +1192,7 @@ enemyclasses={
 
   { -- ice vulture
    attack=enemyattack_freeze,
-   conf='maxhp=20,hp=20,spd=.5,range=8,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=14,hp=14,spd=.5,range=8,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 
@@ -1213,7 +1213,7 @@ enemyclasses={
     },
     skeletonarcher,
    },
-   conf='maxhp=34,hp=34,spd=0,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=0,nonknockable=1',
+   conf='maxhp=32,hp=32,spd=0,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=0,nonknockable=1',
   },
 
   { -- skeleton queen
@@ -1241,7 +1241,7 @@ enemyclasses={
   { -- big devil
    attack=swordskills[3],
    bloodcolors=split'9,9,4',
-   conf='maxhp=12,hp=12,spd=.5,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=10,hp=10,spd=.5,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- evil warpstone
@@ -1263,7 +1263,7 @@ enemyclasses={
      conf='maxhp=4,hp=4,spd=.375,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
     },
    },
-   conf='maxhp=38,hp=38,spd=0,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=140,nonknockable=1',
+   conf='maxhp=32,hp=32,spd=0,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=140,nonknockable=1',
   },
 
   { -- the evil
@@ -1283,13 +1283,13 @@ enemyclasses={
     sspr(flr(_a.f-1)*15,72,15,18,_a.x-7.5,_a.y-12,15,18,_a.sflip)
     pal()
    end,
-   conf='maxhp=90,hp=90,spd=.5,range=86,hw=3,hh=4,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1,nonknockable=1',
+   conf='maxhp=74,hp=74,spd=.5,range=86,hw=3,hh=4,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1,nonknockable=1',
   },
   
   { -- devil confusor
    bloodcolors=split'9,9,4',
    attack=enemyattack_confusionball,
-   conf='maxhp=10,hp=10,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=8,hp=8,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 }
