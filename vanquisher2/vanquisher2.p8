@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
--- virtuous vanquisher of evil 2  v1.0
+-- virtuous vanquisher of evil 2  v1.1
 -- by ironchest games
 
 --[[
@@ -74,7 +74,7 @@ function debug(s)
  printh(tostr(s),'debug',false)
 end
 
-cartdata'ironchestgames_vvoe2_v1_dev11'
+cartdata'ironchestgames_vvoe2_v1'
 
 poke(0x5f5c,-1) -- set auto-repeat delay for btnp to none
 poke(0x5f36,0x2) -- allow circ & circfill w even diameter
@@ -1105,12 +1105,12 @@ enemyclasses={
  {
   { -- ice orc stonethrower
    attack=stonethrow,
-   conf='maxhp=10,hp=10,spd=.375,range=58,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=1,bow_c=999',
+   conf='maxhp=6,hp=6,spd=.375,range=58,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=1,bow_c=999',
   },
 
   { -- big ice orc
    attack=enemyattack_freeze,
-   conf='maxhp=14,hp=14,spd=.25,range=8,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=10,hp=10,spd=.25,range=8,hw=2,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- ice orc caster
@@ -1129,7 +1129,7 @@ enemyclasses={
 
   { -- bear (stun)
    attack=enemyattack_stunandknockback,
-   conf='maxhp=24,hp=24,spd=.25,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=16,hp=16,spd=.25,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 
@@ -1137,12 +1137,12 @@ enemyclasses={
  {
   { -- troll w club
    attack=enemyattack_stunandknockback,
-   conf='maxhp=8,hp=8,spd=.375,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=6,hp=6,spd=.375,range=8,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- troll stonethrower (stun)
    attack=stonethrow,
-   conf='maxhp=8,hp=8,spd=.25,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=4,bow_c=999',
+   conf='maxhp=6,hp=6,spd=.25,range=58,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,stonethrow_afflic=4,bow_c=999',
   },
 
   { -- battle troll champion
@@ -1153,13 +1153,13 @@ enemyclasses={
    },
    attack=enemy_rollingattacks,
    ondeath=bossondeath,
-   conf='maxhp=42,hp=42,spd=.5,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1,nonknockable=1',
+   conf='maxhp=32,hp=32,spd=.5,range=10,hw=3,hh=3,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1,nonknockable=1',
   },
 
   { -- fireball thrower
    attack=fireballthrow,
    basecolors=split',14', -- note: arrow color
-   conf='maxhp=6,hp=6,spd=.5,range=48,hw=1.5,hh=1.5,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
+   conf='maxhp=4,hp=4,spd=.5,range=48,hw=1.5,hh=1.5,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
   },
  },
 
@@ -1168,12 +1168,12 @@ enemyclasses={
   { -- venom spitting snake
    basecolors=split',11', -- note: arrow color
    attack=venomspit_attack,
-   conf='maxhp=6,hp=6,spd=.5,range=58,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
+   conf='maxhp=2,hp=2,spd=.5,range=58,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1,bow_c=999',
   },
 
   { -- venomspike-tailed lizard
    attack=enemyattack_venomandknockback,
-   conf='maxhp=14,hp=14,spd=.375,range=8,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=10,hp=10,spd=.375,range=8,hw=3,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
 
   { -- poison druid
@@ -1187,7 +1187,7 @@ enemyclasses={
     venomboltattack,
    },
    attack=enemy_rollingattacks,
-   conf='maxhp=38,hp=38,spd=.375,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1',
+   conf='maxhp=32,hp=32,spd=.375,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1',
   },
 
   { -- ice vulture
@@ -1209,11 +1209,11 @@ enemyclasses={
      s=split'112,113,114,115',
      bloodcolors=split'7,7,6',
      attack=addbruisingswordattack,
-     conf='maxhp=10,hp=10,spd=.25,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+     conf='maxhp=8,hp=8,spd=.25,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
     },
     skeletonarcher,
    },
-   conf='maxhp=32,hp=32,spd=0,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=0,nonknockable=1',
+   conf='maxhp=20,hp=20,spd=0,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=0,nonknockable=1',
   },
 
   { -- skeleton queen
@@ -1227,12 +1227,12 @@ enemyclasses={
     enemyattack_confusionball,
    },
    attack=enemy_rollingattacks,
-   conf='maxhp=50,hp=50,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1',
+   conf='maxhp=40,hp=40,spd=.25,range=64,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,cur_attack=1,isboss=1,cantbeafraid=1',
   },
 
   { -- venomous bat
    attack=enemyattack_venomandknockback,
-   conf='maxhp=8,hp=8,spd=.75,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
+   conf='maxhp=6,hp=6,spd=.75,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
   },
  },
 
@@ -1263,7 +1263,7 @@ enemyclasses={
      conf='maxhp=4,hp=4,spd=.375,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1',
     },
    },
-   conf='maxhp=32,hp=32,spd=0,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=140,nonknockable=1',
+   conf='maxhp=22,hp=22,spd=0,range=8,hw=2,hh=2,dx=0,dy=0,f=1,spdfactor=1,summoningc=160,nonknockable=1',
   },
 
   { -- the evil
@@ -1315,7 +1315,8 @@ recalcskills_passiveaddition=
  split',,,,,,,,,spd,potionlvl,swordmasterylvl,sneaklvl,arrow_bounce,arrow_walltravel',
  split',,,,,,,,,.03125,1,1,3,1,3'
 function recalcskills()
- if dget(14) == 0 then -- note: first session / just deleted character
+ -- todo: move this check, since delete is removed?
+ if dget(14) == 0 then -- note: first session
   for _i=1,4 do
    dset(split'14,15,16,6'[_i],1) -- note: set mundane items (sword,bow,staff,shield)
   end
@@ -1610,7 +1611,7 @@ function drawinventory()
   avatar.x,avatar.y=63,53
   avatar.draw(avatar)
   avatar.x,avatar.y=_avatarx,_avatary
-  ?'\f2⬅️            ➡️\n\n\n    \f8❎🅾️ \^:110a040a11000000\n    \f2  🅾️ \^:0e1f1d1f1f000000',32,49
+  ?'\f2⬅️            ➡️\n\n\n\n    \f2  🅾️ \^:0e1f1d1f1f000000',32,49
  end
  flip() -- todo: does this really fix it?
 end
@@ -1653,12 +1654,12 @@ function _update60()
     dset(_i+21,_char1val)
    end
    recalcskills()
-  elseif btn(5) and btnp(4) then
-   -- todo: token hunt
-   for _i=1,21 do
-    dset(_i,0)
-   end
-   recalcskills()
+  -- elseif btn(5) and btnp(4) then
+  --  -- todo: token hunt
+  --  for _i=1,21 do
+  --   dset(_i,0)
+  --  end
+  --  recalcskills()
   elseif btnp(4) then
    insidehouse=nil
   end
