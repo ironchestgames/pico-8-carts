@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
--- virtuous vanquisher of evil 2  v1.1
+-- virtuous vanquisher of evil 2  v1.2
 -- by ironchest games
 
 --[[
@@ -112,8 +112,8 @@ draw_affliccolors=
  split'6,6,6,6,6,6,13', -- addicewalls_colors
  split'0,11,11,11,11,11,11,11,11,11,11,11,11,11,11,0', -- addvenomspikes_colors
  split'1,2,3,4,5,6,7,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20', -- addavatarlightningattack_strikesperlevel
- split'16,12,2,16,16,16,24,16,16,16,16,16,16,16', -- staffskills_attackintervals
- split'0,0,1,0,1,0,1,0,0,0,0,0,0,0', -- staffskills_castingmarker
+ split'16,12,2,16,16,16,24,16,16,16,16,16,16,16,16', -- staffskills_attackintervals
+ split'0,0,1,0,1,0,1,0,0,0,0,0,0,0,0', -- staffskills_castingmarker
  split'2,12,14,10,3,9' -- draw_affliccolors
 
 -- utils
@@ -1068,11 +1068,6 @@ end
 function lastbossondeath(_actor)
  bossondeath(_actor)
  sfx(10)
- -- local _sgetystart,_sgetyend,_sgetxstart,_sgetxend=89,72,60,74
- -- local _xoff=(_sgetxend-_sgetxstart)/2
- -- for _y=_sgetyend-_sgetystart,0 do
- --  for _x=0,_sgetxend-_sgetxstart do
- --   local _col=sget(_sgetxstart+_x,_sgetystart+_y)
  for _y=-17,0 do
   for _x=0,14 do
    local _col=sget(60+_x,89+_y)
@@ -1647,19 +1642,12 @@ function _update60()
  if insidehouse then
   if btnp(0) or btnp(1) then
    sfx(28)
-   -- todo: token hunt
    for _i=1,21 do
     local _char1val,_char2val=dget(_i),dget(_i+21)
     dset(_i,_char2val)
     dset(_i+21,_char1val)
    end
    recalcskills()
-  -- elseif btn(5) and btnp(4) then
-  --  -- todo: token hunt
-  --  for _i=1,21 do
-  --   dset(_i,0)
-  --  end
-  --  recalcskills()
   elseif btnp(4) then
    insidehouse=nil
   end
