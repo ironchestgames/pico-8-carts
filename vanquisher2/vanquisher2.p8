@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 42
+version 41
 __lua__
 -- virtuous vanquisher of evil 2  v1.2
 -- by ironchest games
@@ -1478,7 +1478,7 @@ function mapinit()
  for _i=1,enemy_c do
   ::setupenemies::
   local _x,_y=flrrnd(15),flrrnd(15)
-  if walls[_y][_x] != 0 do
+  if walls[_y][_x] != 0 then
    goto setupenemies
   end
   _x,_y=_x*8+4,_y*8+4
