@@ -10,12 +10,16 @@ end
 poke(0x5f2d,3) -- NOTE: enable mouse
 
 itemsperrow=10
+swatchesoffx=32
+swatchesoffy=2
+colpalsoffx=60
+colpalsoffy=2
 
-function isinsideswatch(_px,_py,_swatch)
- return _px >= _swatch.x and 
-  _px < _swatch.x + _swatch.size and 
-  _py >= _swatch.y and 
-  _py < _swatch.y + _swatch.size
+function ispointinside(_px,_py,_x,_y,_w,_h)
+ return _px >= _x and
+  _px < _x+_w and
+  _py >= _y and
+  _py < _y+_h
 end
 
 --[[
@@ -35,27 +39,59 @@ function newswatch(_x,_y,_size,_color)
 end
 
 swatches={
- newswatch(12+0,1+0,8,2),
- newswatch(12+1+8,1+0,8,12),
- newswatch(12+1+8,1+9,8,13),
- newswatch(12+1+8,1+18,8,14),
- newswatch(12+1+8,1+27,8,15),
+ newswatch(swatchesoffx+0,swatchesoffy+0,8,rnd({1,2,3,4,5,13})),
+ newswatch(swatchesoffx+0,swatchesoffy+9,8,0),
+
+ newswatch(swatchesoffx+1+8,swatchesoffy+0,8,5),
+ newswatch(swatchesoffx+1+8,swatchesoffy+9,8,13),
+ newswatch(swatchesoffx+1+8,swatchesoffy+18,8,6),
+ newswatch(swatchesoffx+1+8,swatchesoffy+27,8,7),
 }
+
+colpals={}
+for _i=0,15 do
+ colpals[_i+1]={
+  x=colpalsoffx+(_i%4)*7,
+  y=colpalsoffy+flr(_i/4)*7,
+  size=6,
+  color=_i,
+ }
+end
 
 function _draw()
  local _mx,_my=stat(32),stat(33)
 
- cls(swatches[1].color)
+ cls(0)
+
+ pal({
+  [0]=swatches[1].color,
+  swatches[2].color,
+  swatches[3].color,
+  swatches[4].color,
+  swatches[5].color,
+  swatches[6].color,
+ })
+
+ rectfill(0,40,128,128,0)
+
+ print('bg',swatchesoffx-9,4,10)
+ print('strokes',swatchesoffx-25,13,10)
 
  for _i=0,65 do
   local _x,_y=_i%itemsperrow,flr(_i/itemsperrow)
-  spr(_i,6+_x*12,40+_y*12)
+  spr(_i,6+_x*12,44+_y*12)
  end
 
- if btn() == 32 then
-  for _i=1,#swatches do
-   swatches[_i].selected=nil
-  end
+ pal()
+
+ for _i=1,#swatches do
+  local _swatch=swatches[_i]
+  rect(
+   _swatch.x-1,
+   _swatch.y-1,
+   _swatch.x+_swatch.size+1,
+   _swatch.y+_swatch.size+1,
+   1)
  end
 
  for _i=1,#swatches do
@@ -73,16 +109,49 @@ function _draw()
      _swatch.y,
      _swatch.x+_swatch.size,
      _swatch.y+_swatch.size,
-     9)
+     _swatch.color == 10 and 7 or 10)
+
+     for _j=1,#colpals do
+      local _colpal=colpals[_j]
+
+      rectfill(
+       _colpal.x,
+       _colpal.y,
+       _colpal.x+_colpal.size,
+       _colpal.y+_colpal.size,
+       _colpal.color)
+
+      if _colpal.color == _swatch.color then
+       rect(
+        _colpal.x,
+        _colpal.y,
+        _colpal.x+_colpal.size,
+        _colpal.y+_colpal.size,
+        _colpal.color == 7 and 10 or 7)
+      end
+
+      if ispointinside(_mx,_my,_colpal.x,_colpal.y,_colpal.size,_colpal.size) then
+       if btn() == 32 then
+        _swatch.color=_colpal.color
+       end
+
+       rect(
+       _colpal.x,
+       _colpal.y,
+       _colpal.x+_colpal.size,
+       _colpal.y+_colpal.size,
+       _colpal.color == 7 and 10 or 7)
+      end
+     end
    end
 
-   if isinsideswatch(_mx,_my,_swatch) then
+   if ispointinside(_mx,_my,_swatch.x,_swatch.y,_swatch.size,_swatch.size) then
     rect(
      _swatch.x,
      _swatch.y,
      _swatch.x+_swatch.size,
      _swatch.y+_swatch.size,
-     0)
+     _swatch.color == 7 and 10 or 7)
     if btn() == 32 then
      for _i=1,#swatches do
       swatches[_i].selected=nil
@@ -95,13 +164,6 @@ function _draw()
  palt(0,true)
  spr(255,_mx,_my)
  palt(0,false)
-
- pal({
-  [0]=swatches[1].color,
-  swatches[2].color,
-  swatches[3].color,
-  swatches[4].color,
-  swatches[5].color})
  
 end
 
