@@ -1,18 +1,41 @@
 pico-8 cartridge // http://www.pico-8.com
 version 41
 __lua__
+-- rpg items 2nd ed. v1.0
+-- by ironchest games
+
+cartdata'rpgitems2nded_v1'
+
+-- note: it's uninitialised
+if dget(63) == 0 then
+ dset(63,1) -- note: 1/2 save slot
+
+ dset(1,1)
+ dset(2,0)
+ dset(3,5)
+ dset(4,13)
+ dset(5,6)
+ dset(6,7)
+
+ dset(11,2)
+ dset(12,0)
+ dset(13,2)
+ dset(14,4)
+ dset(15,9)
+ dset(16,10)
+end
 
 printh('debug started','debug',true)
 function debug(s)
  printh(tostr(s),'debug',false)
 end
 
-poke(0x5f2d,3) -- NOTE: enable mouse
+poke(0x5f2d,3) -- note: enable mouse
 
 itemsperrow=10
-swatchesoffx=32
+swatchesoffx=27
 swatchesoffy=89
-colpalsoffx=60
+colpalsoffx=51
 colpalsoffy=89
 
 spriteorder={
@@ -20,9 +43,9 @@ spriteorder={
  2,3,4,5,6,27,7,0,1,57,
  18,19,20,21,22,23,24,25,26,37,
  32,33,34,35,36,29,30,31,38,39,
- 42,43,44,45,46,47,54,55,41,40,
+ 42,43,44,45,46,47,53,55,41,40,
  48,49,50,51,52,28,68,69,58,57,
- 56,59,53,61,62,63,64,65,66,67,
+ 56,59,54,61,62,63,64,65,66,67,
 }
 
 function ispointinside(_px,_py,_x,_y,_w,_h)
@@ -57,6 +80,7 @@ swatches={
  newswatch(swatchesoffx+1+8,swatchesoffy+18,8,6),
  newswatch(swatchesoffx+1+8,swatchesoffy+27,8,7),
 }
+swatches[1].selected=true
 
 colpals={}
 for _i=0,15 do
@@ -73,6 +97,19 @@ function _draw()
 
  cls(0)
 
+ if btnp(4) then
+  local _prevslotoffset=dget(63) == 1 and 0 or 10
+  local _nextslotoffset=dget(63) == 1 and 10 or 0
+  dset(63,dget(63) == 1 and 2 or 1)
+
+  for _i=1,#swatches do
+   local _swatch=swatches[_i]
+   dset(_i+_prevslotoffset,_swatch.color)
+   _swatch.color=dget(_i+_nextslotoffset)
+  end
+  
+ end
+
  pal({
   [0]=swatches[1].color,
   swatches[2].color,
@@ -84,15 +121,21 @@ function _draw()
 
  rectfill(0,0,128,128,0)
 
- print('bg',swatchesoffx-9,90,10)
- print('strokes',swatchesoffx-25,99,10)
-
  for _i=0,69 do
   local _x,_y=_i%itemsperrow,flr(_i/itemsperrow)
   spr(spriteorder[_i+1],6+_x*12,2+_y*12)
  end
 
  pal()
+
+ print('bg',swatchesoffx-9,91,10)
+ print('strokes',swatchesoffx-25,100,10)
+
+ rectfill(84,88,126,119,0)
+ print('🅾️ switch',88,92,5)
+ local _slot=dget(63) == 1 and 1 or 2
+ print(_slot == 1 and '> bank 1' or '  bank 1',92,102,_slot == 1 and 10 or 9)
+ print(_slot == 2 and '> bank 2' or '  bank 2',92,110,_slot == 2 and 10 or 9)
 
  for _i=1,#swatches do
   local _swatch=swatches[_i]
@@ -106,6 +149,7 @@ function _draw()
 
  for _i=1,#swatches do
   local _swatch=swatches[_i]
+ 
   rectfill(
    _swatch.x,
    _swatch.y,
@@ -113,69 +157,77 @@ function _draw()
    _swatch.y+_swatch.size,
    _swatch.color)
 
-   if _swatch.selected then
-    rect(
-     colpalsoffx-1,
-     colpalsoffy-1,
-     colpalsoffx+4*6+4,
-     colpalsoffy+4*6+4,
-     swatches[1].color == 0 and 1 or 0)
+  if _swatch.selected then
+   rect(
+    colpalsoffx-1,
+    colpalsoffy-1,
+    colpalsoffx+4*6+4,
+    colpalsoffy+4*6+4,
+    swatches[1].color == 0 and 1 or 0)
 
-    rect(
-     _swatch.x,
-     _swatch.y,
-     _swatch.x+_swatch.size,
-     _swatch.y+_swatch.size,
-     _swatch.color == 10 and 7 or 10)
-
-     for _j=1,#colpals do
-      local _colpal=colpals[_j]
-
-      rectfill(
-       _colpal.x,
-       _colpal.y,
-       _colpal.x+_colpal.size,
-       _colpal.y+_colpal.size,
-       _colpal.color)
-
-      if _colpal.color == _swatch.color then
-       rect(
-        _colpal.x,
-        _colpal.y,
-        _colpal.x+_colpal.size,
-        _colpal.y+_colpal.size,
-        _colpal.color == 7 and 10 or 7)
-      end
-
-      if ispointinside(_mx,_my,_colpal.x,_colpal.y,_colpal.size,_colpal.size) then
-       if btn() == 32 then
-        _swatch.color=_colpal.color
-       end
-
-       rect(
-       _colpal.x,
-       _colpal.y,
-       _colpal.x+_colpal.size,
-       _colpal.y+_colpal.size,
-       _colpal.color == 7 and 10 or 7)
-      end
-     end
-   end
-
-   if ispointinside(_mx,_my,_swatch.x,_swatch.y,_swatch.size,_swatch.size) then
-    rect(
-     _swatch.x,
-     _swatch.y,
-     _swatch.x+_swatch.size,
-     _swatch.y+_swatch.size,
-     _swatch.color == 7 and 10 or 7)
-    if btn() == 32 then
-     for _i=1,#swatches do
-      swatches[_i].selected=nil
-     end
-     _swatch.selected=true
+   rect(
+    _swatch.x,
+    _swatch.y,
+    _swatch.x+_swatch.size,
+    _swatch.y+_swatch.size,
+    _swatch.color == 10 and 7 or 10)
+  end
+  
+  if ispointinside(_mx,_my,_swatch.x,_swatch.y,_swatch.size,_swatch.size) then
+   rect(
+    _swatch.x,
+    _swatch.y,
+    _swatch.x+_swatch.size,
+    _swatch.y+_swatch.size,
+    _swatch.color == 7 and 10 or 7)
+   if btn() == 32 then
+    for _i=1,#swatches do
+     swatches[_i].selected=nil
     end
+    _swatch.selected=true
    end
+  end
+ end
+
+ local _selectedswatch=nil
+ for _i=1,#swatches do
+  local _swatch=swatches[_i]
+  if _swatch.selected then
+   _selectedswatch=_swatch
+  end
+ end
+
+ for _j=1,#colpals do
+  local _colpal=colpals[_j]
+
+  rectfill(
+   _colpal.x,
+   _colpal.y,
+   _colpal.x+_colpal.size,
+   _colpal.y+_colpal.size,
+   _colpal.color)
+
+  if _colpal.color == _selectedswatch.color then
+   rect(
+    _colpal.x,
+    _colpal.y,
+    _colpal.x+_colpal.size,
+    _colpal.y+_colpal.size,
+    _colpal.color == 7 and 10 or 7)
+  end
+
+  if ispointinside(_mx,_my,_colpal.x,_colpal.y,_colpal.size,_colpal.size) then
+   if btn() == 32 then
+    _selectedswatch.color=_colpal.color
+   end
+
+   rect(
+   _colpal.x,
+   _colpal.y,
+   _colpal.x+_colpal.size,
+   _colpal.y+_colpal.size,
+   _colpal.color == 7 and 10 or 7)
+  end
  end
 
  palt(0,true)
@@ -211,12 +263,12 @@ __gfx__
 00000000141113211411132114111321141113210011110001343331012322211414432113133231144114310134431001344310133113210123321001233210
 00000000011001100110011001111110011111100000000000155410001554101313321014144310144114310134431001344310133113210123321001233210
 00000000000000000111110001111000011110000001000000000000001111000111000000111110011111000011110000111100000001110001110000000000
-00111100001111001222221012222100122221000015100000111000014443101544100001333310141555100144441001555510000012210013321000111000
-00154100014543101211112112111210121112100155410001444100145543211413100013555410111555101444444115555551000131210133222101444100
-01343210145433210121331101244331012443311554441014554410145533211433100012222410001555101311411114225221001423100132222114524310
-13111121141111210013543100141311001453511443331014553410144332210111310012232410001555101311411114225221015341001111411114423310
-13111121131111210013443100014131000143310143310014333410133322210001431012322410001511110133133101442441014510001322510001333100
-01222210012232100001331000013310000133100014100001444100012222100000143112332410001144410014341000154510121100000151510000111000
+00111100001111001222221012222100122221000015100000111000015443101544100001333310141555100144441001555510000012210013321000111000
+00154100014543101211112112111210121112100155410001444100155443311413100013555410111555101444444115555551000131210133222101444100
+01343210145433210121331101244331012443311554441014554410144554411433100012222410001555101311411114225221001423100132222114524310
+13111121141111210013543100141311001453511443331014553410144554410111310012232410001555101311411114225221015341001111411114423310
+13111121131111210013443100014131000143310143310014333410133443310001431012322410001511110133133101442441014510001322510001333100
+01222210012232100001331000013310000133100014100001444100013443100000143112332410001144410014341000154510121100000151510000111000
 00111100001111000000110000001100000011000001000000111000001111000000011112222100000111100001110000011100110000000141410000000000
 00000110000000000000000000000000001111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00011131000110000000000000000000001321000000110000000000000000000000000000000000000000000000000000000000000000000000000000000000
