@@ -72,13 +72,13 @@ function newswatch(_x,_y,_size,_color)
 end
 
 swatches={
- newswatch(swatchesoffx+0,swatchesoffy+0,8,rnd({1,2,3,4,5,13})),
- newswatch(swatchesoffx+0,swatchesoffy+9,8,0),
+ newswatch(swatchesoffx+0,swatchesoffy+0,8,dget(1)),
+ newswatch(swatchesoffx+0,swatchesoffy+9,8,dget(2)),
 
- newswatch(swatchesoffx+1+8,swatchesoffy+0,8,5),
- newswatch(swatchesoffx+1+8,swatchesoffy+9,8,13),
- newswatch(swatchesoffx+1+8,swatchesoffy+18,8,6),
- newswatch(swatchesoffx+1+8,swatchesoffy+27,8,7),
+ newswatch(swatchesoffx+1+8,swatchesoffy+0,8,dget(3)),
+ newswatch(swatchesoffx+1+8,swatchesoffy+9,8,dget(4)),
+ newswatch(swatchesoffx+1+8,swatchesoffy+18,8,dget(5)),
+ newswatch(swatchesoffx+1+8,swatchesoffy+27,8,dget(6)),
 }
 swatches[1].selected=true
 
@@ -97,7 +97,7 @@ function _draw()
 
  cls(0)
 
- if btnp(4) then
+ if (ispointinside(_mx,_my,84,88,126,119) and btnp() == 32) or btnp(4) then
   local _prevslotoffset=dget(63) == 1 and 0 or 10
   local _nextslotoffset=dget(63) == 1 and 10 or 0
   dset(63,dget(63) == 1 and 2 or 1)
@@ -132,7 +132,7 @@ function _draw()
  print('strokes',swatchesoffx-25,100,10)
 
  rectfill(84,88,126,119,0)
- print('🅾️ switch',88,92,5)
+ print('🅾️ switch',88,92,6)
  local _slot=dget(63) == 1 and 1 or 2
  print(_slot == 1 and '> bank 1' or '  bank 1',92,102,_slot == 1 and 10 or 9)
  print(_slot == 2 and '> bank 2' or '  bank 2',92,110,_slot == 2 and 10 or 9)
@@ -180,7 +180,7 @@ function _draw()
     _swatch.x+_swatch.size,
     _swatch.y+_swatch.size,
     _swatch.color == 7 and 10 or 7)
-   if btn() == 32 then
+   if btnp() == 32 then
     for _i=1,#swatches do
      swatches[_i].selected=nil
     end
