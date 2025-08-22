@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 41
 __lua__
--- virtuous vanquisher of evil 2  v1.2
+-- virtuous vanquisher of evil 2  v1.3
 -- by ironchest games
 
 --[[
@@ -69,10 +69,10 @@ known bugs:
 
 -- misc setup
 
-printh('debug started','debug',true)
-function debug(s)
- printh(tostr(s),'debug',false)
-end
+-- printh('debug started','debug',true)
+-- function debug(s)
+--  printh(tostr(s),'debug',false)
+-- end
 
 cartdata'ironchestgames_vvoe2_v1'
 
@@ -1465,7 +1465,8 @@ function mapinit()
   
   if nextx > 0 and nextx < 15 and
      nexty > 0 and nexty < 15 then
-   if nextx != avatarx or nexty != avatary then
+   -- note: not on avatar nor on house
+   if not ((nextx == avatarx or nextx == avatarx-1) and nexty == avatary) then
     curx,cury=nextx,nexty
     walls[cury][curx]=0
    end
